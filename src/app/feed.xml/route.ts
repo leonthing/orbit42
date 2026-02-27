@@ -11,7 +11,7 @@ export async function GET() {
     language: "ko",
   });
 
-  const posts = getAllPosts();
+  const posts = await getAllPosts();
 
   posts.forEach((post) => {
     feed.item({

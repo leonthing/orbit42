@@ -2,8 +2,11 @@ import { getAllPosts } from "@/lib/posts";
 import { RecentPosts } from "@/components/home/RecentPosts";
 import { SITE } from "@/lib/constants";
 
-export default function Home() {
-  const posts = getAllPosts().slice(0, 5);
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const allPosts = await getAllPosts();
+  const posts = allPosts.slice(0, 5);
 
   return (
     <div className="space-y-12">

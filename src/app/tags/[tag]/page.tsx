@@ -1,15 +1,11 @@
 import { Metadata } from "next";
-import { getAllTags, getPostsByTag } from "@/lib/posts";
+import { getPostsByTag } from "@/lib/posts";
 import { PostList } from "@/components/blog/PostList";
+
+export const dynamic = "force-dynamic";
 
 interface Props {
   params: { tag: string };
-}
-
-export async function generateStaticParams() {
-  return getAllTags().map(({ tag }) => ({
-    tag: tag.toLowerCase(),
-  }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -20,9 +16,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default function TagPage({ params }: Props) {
+export default async function TagPage({ params }: Props) {
   const tag = decodeURIComponent(params.tag);
-  const posts = getPostsByTag(tag);
+  const posts = await getPostsByTag(tag);
 
   return (
     <div className="space-y-6">

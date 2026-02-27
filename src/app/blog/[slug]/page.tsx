@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getAllSlugs, getPostBySlug, getAdjacentPosts } from "@/lib/posts";
+import { getPostBySlug, getAdjacentPosts } from "@/lib/posts";
 import { compilePost } from "@/lib/mdx";
 import { TagBadge } from "@/components/blog/TagBadge";
 import { ShareButtons } from "@/components/blog/ShareButtons";
@@ -8,16 +8,14 @@ import { PostNavigation } from "@/components/blog/PostNavigation";
 import { TableOfContents } from "@/components/blog/TableOfContents";
 import { SITE } from "@/lib/constants";
 
+export const dynamic = "force-dynamic";
+
 interface Props {
   params: { slug: string };
 }
 
-export async function generateStaticParams() {
-  return getAllSlugs().map((slug) => ({ slug }));
-}
-
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const post = getPostBySlug(params.slug);
+  const post = await getPostBySlug(params.slug);
   if (!post) return {};
 
   return {
@@ -40,11 +38,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function PostPage({ params }: Props) {
-  const post = getPostBySlug(params.slug);
+  const post = await getPostBySlug(params.slug);
   if (!post) notFound();
 
   const content = await compilePost(post.content);
-  const { prev, next } = getAdjacentPosts(params.slug);
+  const { prev, next } = await getAdjacentPosts(params.slug);
 
   return (
     <div className="relative">
