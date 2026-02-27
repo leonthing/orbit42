@@ -35,6 +35,14 @@ export const metadata: Metadata = {
     siteName: SITE.title,
     locale: "ko_KR",
     type: "website",
+    images: [
+      {
+        url: "/icon-512.png",
+        width: 512,
+        height: 512,
+        alt: SITE.title,
+      },
+    ],
   },
   icons: {
     icon: [
@@ -42,6 +50,12 @@ export const metadata: Metadata = {
       { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
     ],
     apple: "/apple-touch-icon.png",
+  },
+  twitter: {
+    card: "summary",
+    title: SITE.title,
+    description: SITE.description,
+    images: ["/icon-512.png"],
   },
   robots: {
     index: true,

@@ -30,11 +30,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       publishedTime: post.date,
       url: `${SITE.url}/blog/${post.slug}`,
       tags: post.tags,
+      images: [
+        {
+          url: post.image || "/icon-512.png",
+          width: 512,
+          height: 512,
+          alt: post.title,
+        },
+      ],
     },
     twitter: {
       card: "summary_large_image",
       title: post.title,
       description: post.description,
+      images: [post.image || "/icon-512.png"],
     },
   };
 }
@@ -47,8 +56,39 @@ export default async function PostPage({ params }: Props) {
   const { prev, next } = await getAdjacentPosts(params.slug);
   const isAdmin = cookies().get("admin_session")?.value === "authenticated";
 
+  const blogPostingJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: post.title,
+    description: post.description,
+    datePublished: post.date,
+    url: `${SITE.url}/blog/${post.slug}`,
+    image: post.image ? `${SITE.url}${post.image}` : `${SITE.url}/icon-512.png`,
+    author: {
+      "@type": "Person",
+      name: SITE.author,
+    },
+    publisher: {
+      "@type": "Organization",
+      name: SITE.title,
+      logo: {
+        "@type": "ImageObject",
+        url: `${SITE.url}/icon-512.png`,
+      },
+    },
+    keywords: post.tags.join(", "),
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": `${SITE.url}/blog/${post.slug}`,
+    },
+  };
+
   return (
     <div className="relative">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(blogPostingJsonLd) }}
+      />
       <TableOfContents />
       <article>
         <header className="mb-8">
