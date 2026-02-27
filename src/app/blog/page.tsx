@@ -1,8 +1,9 @@
 import { Suspense } from "react";
 import { Metadata } from "next";
-import { getAllPosts, getPostsByCategory } from "@/lib/posts";
+import { getAllPosts, getAllTags, getPostsByCategory, getPostsByTag } from "@/lib/posts";
 import { PostList } from "@/components/blog/PostList";
 import { CategoryFilter } from "@/components/blog/CategoryFilter";
+import { TagCloud } from "@/components/blog/TagCloud";
 
 export const dynamic = "force-dynamic";
 
@@ -12,17 +13,23 @@ export const metadata: Metadata = {
 };
 
 interface Props {
-  searchParams: { category?: string };
+  searchParams: { category?: string; tag?: string };
 }
 
 export default async function BlogPage({ searchParams }: Props) {
   const allPosts = await getAllPosts();
   const category = searchParams.category || "All";
-  const posts =
-    category === "All" ? allPosts : await getPostsByCategory(category);
+  const tag = searchParams.tag || "";
 
-  // Extract unique categories from actual posts
+  let posts = allPosts;
+  if (tag) {
+    posts = await getPostsByTag(tag);
+  } else if (category !== "All") {
+    posts = await getPostsByCategory(category);
+  }
+
   const categories = Array.from(new Set(allPosts.map((p) => p.category))).sort();
+  const tags = await getAllTags();
 
   return (
     <div className="space-y-6">
@@ -37,6 +44,11 @@ export default async function BlogPage({ searchParams }: Props) {
       {categories.length > 1 && (
         <Suspense>
           <CategoryFilter categories={categories} />
+        </Suspense>
+      )}
+      {tags.length > 0 && (
+        <Suspense>
+          <TagCloud tags={tags} />
         </Suspense>
       )}
       <PostList posts={posts} />
