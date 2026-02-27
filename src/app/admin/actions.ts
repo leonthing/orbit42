@@ -8,6 +8,7 @@ import {
   getAllPostsAdmin,
   getPostBySlugAdmin,
 } from "@/lib/supabase-posts";
+import { getAdminClient } from "@/lib/supabase";
 
 const COOKIE_NAME = "admin_session";
 
@@ -86,6 +87,42 @@ export async function savePost(formData: {
     }
 
     return { success: true, slug };
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : "저장에 실패했습니다.";
+    return { error: message };
+  }
+}
+
+// --- Pages ---
+
+export async function fetchPage(slug: string) {
+  if (!(await isAuthenticated())) return { error: "Unauthorized" };
+  const admin = getAdminClient();
+  const { data } = await admin
+    .from("pages")
+    .select("*")
+    .eq("slug", slug)
+    .single();
+  return { page: data };
+}
+
+export async function savePage(slug: string, content: string, title: string) {
+  if (!(await isAuthenticated())) return { error: "Unauthorized" };
+
+  try {
+    const admin = getAdminClient();
+    const { data: existing } = await admin
+      .from("pages")
+      .select("id")
+      .eq("slug", slug)
+      .single();
+
+    if (existing) {
+      await admin.from("pages").update({ content, title }).eq("slug", slug);
+    } else {
+      await admin.from("pages").insert({ slug, content, title });
+    }
+    return { success: true };
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "저장에 실패했습니다.";
     return { error: message };
