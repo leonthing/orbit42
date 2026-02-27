@@ -9,11 +9,11 @@ import {
   getPostBySlugAdmin,
 } from "@/lib/supabase-posts";
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "orbit42admin";
 const COOKIE_NAME = "admin_session";
 
 export async function login(password: string) {
-  if (password !== ADMIN_PASSWORD) {
+  const adminPassword = process.env.ADMIN_PASSWORD || "orbit42admin";
+  if (password !== adminPassword) {
     return { error: "비밀번호가 올바르지 않습니다." };
   }
   cookies().set(COOKIE_NAME, "authenticated", {
