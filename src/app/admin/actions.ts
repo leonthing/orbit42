@@ -8,7 +8,7 @@ import {
   getAllPostsAdmin,
   getPostBySlugAdmin,
 } from "@/lib/supabase-posts";
-import { getAdminClient } from "@/lib/supabase";
+import { supabase, getAdminClient } from "@/lib/supabase";
 
 const COOKIE_NAME = "admin_session";
 
@@ -127,6 +127,29 @@ export async function savePage(slug: string, content: string, title: string) {
     const message = e instanceof Error ? e.message : "저장에 실패했습니다.";
     return { error: message };
   }
+}
+
+// --- Categories ---
+
+const DEFAULT_CATEGORIES = ["Thoughts"];
+
+export async function fetchCategories(): Promise<string[]> {
+  const { data } = await supabase
+    .from("pages")
+    .select("content")
+    .eq("slug", "categories")
+    .single();
+  if (!data?.content) return DEFAULT_CATEGORIES;
+  return data.content
+    .split("\n")
+    .map((c: string) => c.trim())
+    .filter(Boolean);
+}
+
+export async function saveCategories(categories: string[]) {
+  if (!(await isAuthenticated())) return { error: "Unauthorized" };
+  const content = categories.filter((c) => c.trim()).join("\n");
+  return savePage("categories", content, "Categories");
 }
 
 export async function togglePostPublished(slug: string, published: boolean) {

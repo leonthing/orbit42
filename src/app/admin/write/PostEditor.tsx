@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { savePost, fetchPost } from "../actions";
-import { CATEGORIES } from "@/lib/constants";
+import { savePost, fetchPost, fetchCategories } from "../actions";
 import { TiptapEditor } from "@/components/editor/TiptapEditor";
 
 export function PostEditor() {
@@ -16,29 +15,37 @@ export function PostEditor() {
   const [slug, setSlug] = useState("");
   const [description, setDescription] = useState("");
   const [content, setContent] = useState("");
-  const [category, setCategory] = useState("Thoughts");
+  const [category, setCategory] = useState("");
+  const [categories, setCategories] = useState<string[]>([]);
   const [tagsInput, setTagsInput] = useState("");
   const [published, setPublished] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(!!editSlug);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (editSlug) {
-      fetchPost(editSlug).then((result) => {
-        if ("post" in result && result.post) {
-          const p = result.post;
-          setTitle(p.title);
-          setSlug(p.slug);
-          setDescription(p.description);
-          setContent(p.content);
-          setCategory(p.category);
-          setTagsInput(p.tags.join(", "));
-          setPublished(p.published);
-        }
+    const load = async () => {
+      const cats = await fetchCategories();
+      setCategories(cats);
+      if (!editSlug) {
+        setCategory(cats[0] || "");
         setLoading(false);
-      });
-    }
+        return;
+      }
+      const result = await fetchPost(editSlug);
+      if ("post" in result && result.post) {
+        const p = result.post;
+        setTitle(p.title);
+        setSlug(p.slug);
+        setDescription(p.description);
+        setContent(p.content);
+        setCategory(p.category);
+        setTagsInput(p.tags.join(", "));
+        setPublished(p.published);
+      }
+      setLoading(false);
+    };
+    load();
   }, [editSlug]);
 
   const handleTitleChange = (value: string) => {
@@ -336,7 +343,7 @@ export function PostEditor() {
                   onChange={(e) => setCategory(e.target.value)}
                   className="w-full appearance-none rounded-xl border border-charcoal-200 bg-charcoal-50 px-4 py-3 pr-10 text-charcoal-900 transition-all focus:border-navy-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-navy-500/20 dark:border-charcoal-600 dark:bg-charcoal-900/50 dark:text-charcoal-100 dark:focus:bg-charcoal-900"
                 >
-                  {CATEGORIES.filter((c) => c !== "All").map((cat) => (
+                  {categories.map((cat) => (
                     <option key={cat} value={cat}>
                       {cat}
                     </option>
@@ -368,7 +375,7 @@ export function PostEditor() {
                 value={tagsInput}
                 onChange={(e) => setTagsInput(e.target.value)}
                 className="w-full rounded-xl border border-charcoal-200 bg-charcoal-50 px-4 py-3 text-charcoal-900 transition-all placeholder:text-charcoal-400 focus:border-navy-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-navy-500/20 dark:border-charcoal-600 dark:bg-charcoal-900/50 dark:text-charcoal-100 dark:placeholder:text-charcoal-500 dark:focus:bg-charcoal-900"
-                placeholder="Next.js, React, 블로그"
+                placeholder=""
               />
             </div>
           </div>

@@ -13,14 +13,4 @@ export const NAV_LINKS = [
   { href: "/about", label: "About" },
 ] as const;
 
-export const CATEGORIES = [
-  "All",
-  "AgTech",
-  "Development",
-  "DevOps",
-  "Thoughts",
-] as const;
-
-export type Category = (typeof CATEGORIES)[number];
-
 export const POSTS_PER_PAGE = 10;

@@ -528,6 +528,54 @@ export function AdminDashboard() {
                 </svg>
               </Link>
             </div>
+
+            {/* Categories */}
+            <div className="flex items-center justify-between px-5 py-4 transition-colors hover:bg-charcoal-50/50 dark:hover:bg-charcoal-700/30">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-navy-50 dark:bg-navy-950/50">
+                  <svg
+                    className="h-4 w-4 text-navy-600 dark:text-navy-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-medium text-charcoal-900 dark:text-charcoal-100">
+                    카테고리
+                  </h3>
+                  <p className="text-sm text-charcoal-500 dark:text-charcoal-400">
+                    글 작성 시 선택 가능한 카테고리
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/admin/pages/categories"
+                className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium text-navy-600 transition-colors hover:bg-navy-50 dark:text-navy-400 dark:hover:bg-navy-950/50"
+              >
+                편집
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="m8.25 4.5 7.5 7.5-7.5 7.5"
+                  />
+                </svg>
+              </Link>
+            </div>
           </div>
         </div>
       </div>
