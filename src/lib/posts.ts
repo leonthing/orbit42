@@ -7,6 +7,19 @@ import { supabase } from "./supabase";
 
 const POSTS_DIR = path.join(process.cwd(), "content/posts");
 
+function generateExcerpt(content: string, maxLength = 150): string {
+  const text = content
+    .replace(/```[\s\S]*?```/g, "")
+    .replace(/#+\s+/g, "")
+    .replace(/!\[.*?\]\(.*?\)/g, "")
+    .replace(/\[([^\]]*)\]\(.*?\)/g, "$1")
+    .replace(/[*_~`>]/g, "")
+    .replace(/\n+/g, " ")
+    .trim();
+  if (text.length <= maxLength) return text;
+  return text.slice(0, maxLength).replace(/\s+\S*$/, "") + "…";
+}
+
 // --- MDX file-based posts ---
 
 function getPostFiles(): string[] {
@@ -44,9 +57,8 @@ function getAllMdxPosts(): PostMeta[] {
       const slug = file.replace(/\.mdx$/, "");
       const post = getMdxPostBySlug(slug);
       if (!post || !post.published) return null;
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { content: _, ...meta } = post;
-      return meta;
+      const { content, ...meta } = post;
+      return { ...meta, excerpt: generateExcerpt(content) };
     })
     .filter(Boolean) as PostMeta[];
 }
@@ -72,6 +84,7 @@ async function getSupabasePostsMeta(): Promise<PostMeta[]> {
       tags: row.tags || [],
       published: true,
       readingTime: readingTime(row.content).text,
+      excerpt: generateExcerpt(row.content),
     }));
   } catch {
     return [];

@@ -29,9 +29,16 @@ export function PostCard({ post }: PostCardProps) {
           <h2 className="mb-2 text-xl font-semibold text-charcoal-900 group-hover:text-navy-600 dark:text-charcoal-100 dark:group-hover:text-navy-400">
             {post.title}
           </h2>
-          <p className="mb-3 text-charcoal-600 dark:text-charcoal-400">
-            {post.description}
-          </p>
+          {post.description && (
+            <p className="mb-2 text-charcoal-600 dark:text-charcoal-400">
+              {post.description}
+            </p>
+          )}
+          {post.excerpt && (
+            <p className="mb-3 text-sm leading-relaxed text-charcoal-500 dark:text-charcoal-500">
+              {post.excerpt}
+            </p>
+          )}
           <div className="flex flex-wrap gap-2">
             {post.tags.map((tag) => (
               <TagBadge key={tag} tag={tag} />
