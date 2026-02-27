@@ -12,7 +12,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-charcoal-200 bg-white/80 backdrop-blur-md dark:border-charcoal-800 dark:bg-charcoal-950/80">
-      <nav className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
+      <nav className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
         <Link
           href="/"
           className="text-xl font-bold text-charcoal-900 dark:text-charcoal-100"
