@@ -1,6 +1,5 @@
 import { getAllPosts } from "@/lib/posts";
 import { RecentPosts } from "@/components/home/RecentPosts";
-import { SITE } from "@/lib/constants";
 import { supabase } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -12,19 +11,25 @@ export default async function Home() {
   ]);
   const posts = allPosts.slice(0, 5);
 
-  const title = homePage?.title || SITE.title;
-  const description = homePage?.content || SITE.description;
+  const title = homePage?.title || "";
+  const description = homePage?.content || "";
 
   return (
     <div className="space-y-12">
-      <section className="py-8">
-        <h1 className="mb-4 text-4xl font-bold tracking-tight text-charcoal-900 dark:text-charcoal-100">
-          {title}
-        </h1>
-        <p className="text-lg text-charcoal-600 dark:text-charcoal-400">
-          {description}
-        </p>
-      </section>
+      {(title || description) && (
+        <section className="py-8">
+          {title && (
+            <h1 className="mb-4 text-4xl font-bold tracking-tight text-charcoal-900 dark:text-charcoal-100">
+              {title}
+            </h1>
+          )}
+          {description && (
+            <p className="text-lg text-charcoal-600 dark:text-charcoal-400">
+              {description}
+            </p>
+          )}
+        </section>
+      )}
       <RecentPosts posts={posts} />
     </div>
   );
