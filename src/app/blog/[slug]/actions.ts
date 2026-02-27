@@ -8,6 +8,7 @@ export interface Comment {
   post_slug: string;
   author: string;
   content: string;
+  parent_id: string | null;
   created_at: string;
 }
 
@@ -20,7 +21,12 @@ export async function getComments(postSlug: string): Promise<Comment[]> {
   return data || [];
 }
 
-export async function addComment(postSlug: string, author: string, content: string) {
+export async function addComment(
+  postSlug: string,
+  author: string,
+  content: string,
+  parentId?: string
+) {
   if (!author.trim() || !content.trim()) {
     return { error: "이름과 내용을 입력해주세요." };
   }
@@ -28,9 +34,12 @@ export async function addComment(postSlug: string, author: string, content: stri
     return { error: "댓글은 2000자 이내로 작성해주세요." };
   }
 
-  const { error } = await supabase
-    .from("comments")
-    .insert({ post_slug: postSlug, author: author.trim(), content: content.trim() });
+  const { error } = await supabase.from("comments").insert({
+    post_slug: postSlug,
+    author: author.trim(),
+    content: content.trim(),
+    parent_id: parentId || null,
+  });
 
   if (error) {
     return { error: "댓글 작성에 실패했습니다." };
