@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { savePost, fetchPost } from "../actions";
 import { CATEGORIES } from "@/lib/constants";
+import { TiptapEditor } from "@/components/editor/TiptapEditor";
 
 export function PostEditor() {
   const router = useRouter();
@@ -376,7 +377,7 @@ export function PostEditor() {
 
       {/* Content Card */}
       <div className="overflow-hidden rounded-xl border border-charcoal-200 bg-white shadow-sm dark:border-charcoal-700 dark:bg-charcoal-800/80">
-        <div className="flex items-center justify-between border-b border-charcoal-100 px-6 py-4 dark:border-charcoal-700/50">
+        <div className="border-b border-charcoal-100 px-6 py-4 dark:border-charcoal-700/50">
           <div className="flex items-center gap-2">
             <svg
               className="h-4 w-4 text-charcoal-400"
@@ -395,18 +396,12 @@ export function PostEditor() {
               내용 <span className="text-red-400">*</span>
             </h2>
           </div>
-          <span className="rounded-md bg-charcoal-100 px-2 py-1 text-xs font-medium text-charcoal-500 dark:bg-charcoal-700 dark:text-charcoal-400">
-            Markdown
-          </span>
         </div>
         <div className="p-6">
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            rows={24}
-            className="w-full rounded-xl border border-charcoal-200 bg-charcoal-50 px-4 py-3 font-mono text-sm leading-relaxed text-charcoal-900 transition-all placeholder:text-charcoal-400 focus:border-navy-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-navy-500/20 dark:border-charcoal-600 dark:bg-charcoal-900/50 dark:text-charcoal-100 dark:placeholder:text-charcoal-500 dark:focus:bg-charcoal-900"
-            placeholder="마크다운으로 글을 작성하세요..."
-            required
+          <TiptapEditor
+            content={content}
+            onChange={setContent}
+            placeholder="글을 작성하세요..."
           />
         </div>
       </div>

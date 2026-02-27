@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { fetchPage, savePage } from "../../actions";
+import { TiptapEditor } from "@/components/editor/TiptapEditor";
 
 export function AboutEditor() {
   const router = useRouter();
@@ -238,17 +239,12 @@ export function AboutEditor() {
               About 내용
             </h2>
           </div>
-          <span className="rounded-md bg-charcoal-100 px-2 py-1 text-xs font-medium text-charcoal-500 dark:bg-charcoal-700 dark:text-charcoal-400">
-            Markdown
-          </span>
         </div>
         <div className="p-6">
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            rows={28}
-            className="w-full rounded-xl border border-charcoal-200 bg-charcoal-50 px-4 py-3 font-mono text-sm leading-relaxed text-charcoal-900 transition-all placeholder:text-charcoal-400 focus:border-navy-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-navy-500/20 dark:border-charcoal-600 dark:bg-charcoal-900/50 dark:text-charcoal-100 dark:placeholder:text-charcoal-500 dark:focus:bg-charcoal-900"
-            placeholder="## About&#10;&#10;마크다운으로 자기소개를 작성하세요..."
+          <TiptapEditor
+            content={content}
+            onChange={setContent}
+            placeholder="자기소개를 작성하세요..."
           />
         </div>
       </div>
