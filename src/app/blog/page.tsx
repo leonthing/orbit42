@@ -22,7 +22,7 @@ export default async function BlogPage({ searchParams }: Props) {
     category === "All" ? allPosts : await getPostsByCategory(category);
 
   // Extract unique categories from actual posts
-  const categories = [...new Set(allPosts.map((p) => p.category))].sort();
+  const categories = Array.from(new Set(allPosts.map((p) => p.category))).sort();
 
   return (
     <div className="space-y-6">
