@@ -421,11 +421,41 @@ export function AdminDashboard() {
         </div>
 
         <div className="overflow-hidden rounded-xl border border-charcoal-200 bg-white shadow-sm dark:border-charcoal-700 dark:bg-charcoal-800/80">
-          <div className="flex items-center justify-between px-5 py-4 transition-colors hover:bg-charcoal-50/50 dark:hover:bg-charcoal-700/30">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-navy-50 dark:bg-navy-950/50">
+          <div className="divide-y divide-charcoal-100 dark:divide-charcoal-700/50">
+            {/* Home */}
+            <div className="flex items-center justify-between px-5 py-4 transition-colors hover:bg-charcoal-50/50 dark:hover:bg-charcoal-700/30">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-navy-50 dark:bg-navy-950/50">
+                  <svg
+                    className="h-4 w-4 text-navy-600 dark:text-navy-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-medium text-charcoal-900 dark:text-charcoal-100">
+                    Home
+                  </h3>
+                  <p className="text-sm text-charcoal-500 dark:text-charcoal-400">
+                    메인 페이지 타이틀 & 헤드라인
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/admin/pages/home"
+                className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium text-navy-600 transition-colors hover:bg-navy-50 dark:text-navy-400 dark:hover:bg-navy-950/50"
+              >
+                편집
                 <svg
-                  className="h-4.5 w-4.5 text-navy-600 dark:text-navy-400"
+                  className="h-4 w-4"
                   fill="none"
                   viewBox="0 0 24 24"
                   strokeWidth={1.5}
@@ -434,38 +464,59 @@ export function AdminDashboard() {
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"
+                    d="m8.25 4.5 7.5 7.5-7.5 7.5"
                   />
                 </svg>
-              </div>
-              <div>
-                <h3 className="font-medium text-charcoal-900 dark:text-charcoal-100">
-                  About
-                </h3>
-                <p className="text-sm text-charcoal-500 dark:text-charcoal-400">
-                  /about 페이지 내용
-                </p>
-              </div>
+              </Link>
             </div>
-            <Link
-              href="/admin/pages/about"
-              className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium text-navy-600 transition-colors hover:bg-navy-50 dark:text-navy-400 dark:hover:bg-navy-950/50"
-            >
-              편집
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
+
+            {/* About */}
+            <div className="flex items-center justify-between px-5 py-4 transition-colors hover:bg-charcoal-50/50 dark:hover:bg-charcoal-700/30">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-navy-50 dark:bg-navy-950/50">
+                  <svg
+                    className="h-4 w-4 text-navy-600 dark:text-navy-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-medium text-charcoal-900 dark:text-charcoal-100">
+                    About
+                  </h3>
+                  <p className="text-sm text-charcoal-500 dark:text-charcoal-400">
+                    /about 페이지 내용
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/admin/pages/about"
+                className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium text-navy-600 transition-colors hover:bg-navy-50 dark:text-navy-400 dark:hover:bg-navy-950/50"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="m8.25 4.5 7.5 7.5-7.5 7.5"
-                />
-              </svg>
-            </Link>
+                편집
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="m8.25 4.5 7.5 7.5-7.5 7.5"
+                  />
+                </svg>
+              </Link>
+            </div>
           </div>
         </div>
       </div>
