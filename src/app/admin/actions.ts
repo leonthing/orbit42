@@ -129,6 +129,17 @@ export async function savePage(slug: string, content: string, title: string) {
   }
 }
 
+export async function togglePostPublished(slug: string, published: boolean) {
+  if (!(await isAuthenticated())) return { error: "Unauthorized" };
+  try {
+    await updatePost(slug, { published });
+    return { success: true };
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : "변경에 실패했습니다.";
+    return { error: message };
+  }
+}
+
 export async function removePost(slug: string) {
   if (!(await isAuthenticated())) return { error: "Unauthorized" };
 

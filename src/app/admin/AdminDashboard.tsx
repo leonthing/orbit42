@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { fetchAllPosts, removePost, logout } from "./actions";
+import { fetchAllPosts, removePost, togglePostPublished, logout } from "./actions";
 import type { SupabasePost } from "@/lib/supabase-posts";
 import Link from "next/link";
 
@@ -27,6 +27,11 @@ export function AdminDashboard() {
   const handleDelete = async (slug: string) => {
     if (!confirm(`"${slug}" 글을 삭제하시겠습니까?`)) return;
     await removePost(slug);
+    loadPosts();
+  };
+
+  const handleTogglePublished = async (slug: string, currentPublished: boolean) => {
+    await togglePostPublished(slug, !currentPublished);
     loadPosts();
   };
 
@@ -297,11 +302,17 @@ export function AdminDashboard() {
                       <h3 className="truncate font-medium text-charcoal-900 dark:text-charcoal-100">
                         {post.title}
                       </h3>
-                      <span
-                        className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleTogglePublished(post.slug, post.published);
+                        }}
+                        title={post.published ? "비공개로 전환" : "공개로 전환"}
+                        className={`inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
                           post.published
-                            ? "bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20 dark:bg-green-500/10 dark:text-green-400 dark:ring-green-500/20"
-                            : "bg-yellow-50 text-yellow-700 ring-1 ring-inset ring-yellow-600/20 dark:bg-yellow-500/10 dark:text-yellow-400 dark:ring-yellow-500/20"
+                            ? "bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20 hover:bg-green-100 dark:bg-green-500/10 dark:text-green-400 dark:ring-green-500/20 dark:hover:bg-green-500/20"
+                            : "bg-yellow-50 text-yellow-700 ring-1 ring-inset ring-yellow-600/20 hover:bg-yellow-100 dark:bg-yellow-500/10 dark:text-yellow-400 dark:ring-yellow-500/20 dark:hover:bg-yellow-500/20"
                         }`}
                       >
                         <span
@@ -312,7 +323,7 @@ export function AdminDashboard() {
                           }`}
                         />
                         {post.published ? "공개" : "비공개"}
-                      </span>
+                      </button>
                     </div>
                     <div className="mt-1.5 flex items-center gap-2 text-sm text-charcoal-500 dark:text-charcoal-400">
                       <span className="inline-flex items-center gap-1">
