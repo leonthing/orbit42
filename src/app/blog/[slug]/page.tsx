@@ -4,6 +4,8 @@ import { getPostBySlug, getAdjacentPosts } from "@/lib/posts";
 import { compilePost } from "@/lib/mdx";
 import { TagBadge } from "@/components/blog/TagBadge";
 import { ShareButtons } from "@/components/blog/ShareButtons";
+import { LikeButton } from "@/components/blog/LikeButton";
+import { ViewCounter } from "@/components/blog/ViewCounter";
 import { PostNavigation } from "@/components/blog/PostNavigation";
 import { TableOfContents } from "@/components/blog/TableOfContents";
 import { SITE } from "@/lib/constants";
@@ -125,7 +127,13 @@ export default async function PostPage({ params }: Props) {
         </div>
 
         <footer className="mt-10 border-t border-charcoal-200 pt-6 dark:border-charcoal-800">
-          <ShareButtons title={post.title} />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <LikeButton slug={params.slug} />
+              <ViewCounter slug={params.slug} />
+            </div>
+            <ShareButtons title={post.title} />
+          </div>
         </footer>
       </article>
       <Comments postSlug={params.slug} isAdmin={isAdmin} />

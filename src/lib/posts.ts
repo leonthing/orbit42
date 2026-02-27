@@ -140,9 +140,41 @@ export async function getAllPosts(): Promise<PostMeta[]> {
     }
   }
 
-  return merged.sort(
+  const sorted = merged.sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   );
+
+  // Attach view/like stats
+  try {
+    const allSlugs = sorted.map((p) => p.slug);
+    const [statsResult, likesResult] = await Promise.all([
+      supabase.from("post_stats").select("post_slug, view_count").in("post_slug", allSlugs),
+      supabase.from("post_likes").select("post_slug"),
+    ]);
+
+    const viewMap: Record<string, number> = {};
+    const likeMap: Record<string, number> = {};
+
+    if (statsResult.data) {
+      for (const row of statsResult.data) {
+        viewMap[row.post_slug] = row.view_count;
+      }
+    }
+    if (likesResult.data) {
+      for (const row of likesResult.data) {
+        likeMap[row.post_slug] = (likeMap[row.post_slug] || 0) + 1;
+      }
+    }
+
+    for (const post of sorted) {
+      post.viewCount = viewMap[post.slug] || 0;
+      post.likeCount = likeMap[post.slug] || 0;
+    }
+  } catch {
+    // Stats fetch failed — continue without stats
+  }
+
+  return sorted;
 }
 
 export async function getPostBySlug(slug: string): Promise<Post | null> {

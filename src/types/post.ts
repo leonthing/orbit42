@@ -14,4 +14,8 @@ export interface Post extends PostFrontmatter {
   content: string;
 }
 
-export type PostMeta = Omit<Post, "content"> & { excerpt?: string };
+export type PostMeta = Omit<Post, "content"> & {
+  excerpt?: string;
+  viewCount?: number;
+  likeCount?: number;
+};
