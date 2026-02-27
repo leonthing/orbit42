@@ -1,9 +1,12 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { CATEGORIES } from "@/lib/constants";
 
-export function CategoryFilter() {
+interface CategoryFilterProps {
+  categories: string[];
+}
+
+export function CategoryFilter({ categories }: CategoryFilterProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const current = searchParams.get("category") || "All";
@@ -16,9 +19,11 @@ export function CategoryFilter() {
     }
   };
 
+  const all = ["All", ...categories];
+
   return (
     <div className="flex flex-wrap gap-2">
-      {CATEGORIES.map((cat) => (
+      {all.map((cat) => (
         <button
           key={cat}
           onClick={() => handleClick(cat)}

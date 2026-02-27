@@ -16,9 +16,13 @@ interface Props {
 }
 
 export default async function BlogPage({ searchParams }: Props) {
+  const allPosts = await getAllPosts();
   const category = searchParams.category || "All";
   const posts =
-    category === "All" ? await getAllPosts() : await getPostsByCategory(category);
+    category === "All" ? allPosts : await getPostsByCategory(category);
+
+  // Extract unique categories from actual posts
+  const categories = [...new Set(allPosts.map((p) => p.category))].sort();
 
   return (
     <div className="space-y-6">
@@ -30,9 +34,11 @@ export default async function BlogPage({ searchParams }: Props) {
           총 {posts.length}개의 글
         </p>
       </div>
-      <Suspense>
-        <CategoryFilter />
-      </Suspense>
+      {categories.length > 1 && (
+        <Suspense>
+          <CategoryFilter categories={categories} />
+        </Suspense>
+      )}
       <PostList posts={posts} />
     </div>
   );
