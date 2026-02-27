@@ -7,6 +7,8 @@ import { ShareButtons } from "@/components/blog/ShareButtons";
 import { PostNavigation } from "@/components/blog/PostNavigation";
 import { TableOfContents } from "@/components/blog/TableOfContents";
 import { SITE } from "@/lib/constants";
+import { Comments } from "@/components/blog/Comments";
+import { cookies } from "next/headers";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +45,7 @@ export default async function PostPage({ params }: Props) {
 
   const content = await compilePost(post.content);
   const { prev, next } = await getAdjacentPosts(params.slug);
+  const isAdmin = cookies().get("admin_session")?.value === "authenticated";
 
   return (
     <div className="relative">
@@ -85,6 +88,7 @@ export default async function PostPage({ params }: Props) {
           <ShareButtons title={post.title} />
         </footer>
       </article>
+      <Comments postSlug={params.slug} isAdmin={isAdmin} />
       <PostNavigation prev={prev} next={next} />
     </div>
   );
