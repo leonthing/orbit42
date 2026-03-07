@@ -18,7 +18,7 @@ export function PostEditor() {
   const [category, setCategory] = useState("");
   const [categories, setCategories] = useState<string[]>([]);
   const [tagsInput, setTagsInput] = useState("");
-  const [published, setPublished] = useState(false);
+  const [published, setPublished] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);

@@ -233,7 +233,13 @@ export function TiptapEditor({ content, onChange, placeholder }: TiptapEditorPro
         openOnClick: false,
         HTMLAttributes: { class: "text-navy-600 underline dark:text-navy-400" },
       }),
-      Image,
+      Image.configure({
+        inline: false,
+        allowBase64: false,
+        HTMLAttributes: {
+          class: "rounded-lg max-w-full",
+        },
+      }),
     ],
     content: "",
     editorProps: {
