@@ -2,9 +2,8 @@ import type { Config } from "tailwindcss";
 
 const config: Config = {
   content: [
-    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/components/**/*.{js,ts,jsx,tsx}",
+    "./src/app/**/*.{js,ts,jsx,tsx}",
   ],
   darkMode: "class",
   theme: {
@@ -38,27 +37,13 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ["var(--font-pretendard)", "var(--font-inter)", "system-ui", "sans-serif"],
+        sans: [
+          "var(--font-pretendard)",
+          "var(--font-inter)",
+          "system-ui",
+          "sans-serif",
+        ],
       },
-      typography: ({ theme }: { theme: (path: string) => string }) => ({
-        DEFAULT: {
-          css: {
-            "--tw-prose-body": theme("colors.charcoal.700"),
-            "--tw-prose-headings": theme("colors.charcoal.900"),
-            "--tw-prose-links": theme("colors.navy.600"),
-            "--tw-prose-code": theme("colors.navy.700"),
-            maxWidth: "none",
-          },
-        },
-        invert: {
-          css: {
-            "--tw-prose-body": theme("colors.charcoal.300"),
-            "--tw-prose-headings": theme("colors.charcoal.100"),
-            "--tw-prose-links": theme("colors.navy.400"),
-            "--tw-prose-code": theme("colors.navy.300"),
-          },
-        },
-      }),
     },
   },
   plugins: [require("@tailwindcss/typography")],

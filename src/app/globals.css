@@ -4,30 +4,8 @@
 
 @layer base {
   body {
-    @apply bg-white text-charcoal-900 dark:bg-charcoal-950 dark:text-charcoal-100;
+    @apply bg-[#0a0a0f] text-charcoal-200;
   }
-}
-
-/* Shiki code block styling */
-[data-rehype-pretty-code-figure] pre {
-  @apply rounded-lg border border-charcoal-200 dark:border-charcoal-700;
-}
-
-[data-rehype-pretty-code-figure] code {
-  @apply text-sm;
-}
-
-[data-rehype-pretty-code-figure] code [data-line] {
-  @apply px-4;
-}
-
-[data-rehype-pretty-code-figure] [data-highlighted-line] {
-  @apply bg-navy-50 dark:bg-navy-950/50;
-}
-
-/* Inline code */
-:not(pre) > code {
-  @apply rounded bg-charcoal-100 px-1.5 py-0.5 text-sm dark:bg-charcoal-800;
 }
 
 /* Scrollbar */
@@ -40,5 +18,10 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply rounded-full bg-charcoal-300 dark:bg-charcoal-600;
+  @apply rounded-full bg-charcoal-700 hover:bg-charcoal-600;
+}
+
+/* Smooth transitions */
+* {
+  @apply transition-colors duration-150;
 }

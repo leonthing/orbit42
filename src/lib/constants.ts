@@ -1,15 +1,14 @@
 export const SITE = {
   title: "Orbit42",
-  description: "기술, 농업, 그리고 그 사이의 모든 것에 대한 블로그",
+  description: "Life Integration Platform",
   url: process.env.NEXT_PUBLIC_SITE_URL || "https://orbit42.org",
-  author: "Leo Kim",
-  email: "leo@orbit42.org",
 } as const;
 
-export const NAV_LINKS = [
-  { href: "/", label: "Home" },
-  { href: "/blog", label: "Blog" },
-  { href: "/about", label: "About" },
+export const NAV_ITEMS = [
+  { href: "/dashboard", label: "Dashboard", icon: "home" },
+  { href: "/business", label: "Business", icon: "briefcase" },
+  { href: "/calendar", label: "Calendar", icon: "calendar" },
+  { href: "/finance", label: "Finance", icon: "banknotes" },
+  { href: "/network", label: "Network", icon: "users" },
+  { href: "/notes", label: "Notes", icon: "pencil" },
 ] as const;
-
-export const POSTS_PER_PAGE = 10;
