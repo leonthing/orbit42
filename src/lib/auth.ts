@@ -91,22 +91,46 @@ export async function getProfile(username: string) {
   const db = getAdminClient();
   const { data } = await db
     .from("users")
-    .select("username, display_name, created_at")
+    .select("username, display_name, birth_date, social_links, created_at")
     .eq("username", username)
     .single();
   return data;
 }
 
-export async function updateProfile(username: string, displayName: string) {
+export type SocialLinks = {
+  instagram?: string;
+  x?: string;
+  youtube?: string;
+  facebook?: string;
+  linkedin?: string;
+};
+
+export async function updateProfile(
+  username: string,
+  displayName: string,
+  birthDate?: string | null,
+  socialLinks?: SocialLinks,
+) {
   const session = await getSession();
   if (!session || session.username !== username) {
     return { error: "권한이 없습니다." };
   }
 
   const db = getAdminClient();
+  const updateData: Record<string, unknown> = {
+    display_name: displayName,
+    updated_at: new Date().toISOString(),
+  };
+  if (birthDate !== undefined) {
+    updateData.birth_date = birthDate || null;
+  }
+  if (socialLinks !== undefined) {
+    updateData.social_links = socialLinks;
+  }
+
   const { error } = await db
     .from("users")
-    .update({ display_name: displayName, updated_at: new Date().toISOString() })
+    .update(updateData)
     .eq("username", username);
 
   if (error) return { error: "프로필 업데이트에 실패했습니다." };

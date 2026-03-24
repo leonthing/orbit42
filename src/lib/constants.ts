@@ -11,4 +11,5 @@ export const NAV_ITEMS = [
   { href: "/finance", label: "Finance", icon: "banknotes" },
   { href: "/network", label: "Network", icon: "users" },
   { href: "/notes", label: "Notes", icon: "pencil" },
+  { href: "/map", label: "Map", icon: "map" },
 ] as const;

@@ -24,6 +24,8 @@ export default async function SettingsPage({
       <SettingsForm
         username={profile.username}
         displayName={profile.display_name || ""}
+        birthDate={profile.birth_date || ""}
+        socialLinks={profile.social_links || {}}
         createdAt={profile.created_at}
       />
     </div>

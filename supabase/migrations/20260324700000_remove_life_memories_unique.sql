@@ -1,0 +1,1 @@
+ALTER TABLE life_memories DROP CONSTRAINT IF EXISTS life_memories_user_id_year_week_key;
