@@ -140,23 +140,25 @@ export default function LifeCalendarView({
   const cellSize = DOT + GAP;
 
   return (
-    <div className="flex gap-5">
-      {/* Left: Life Grid (fit content) */}
-      <div className="shrink-0 rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 px-4 py-5">
+    <div className="flex flex-col gap-5 lg:flex-row">
+      {/* Life Grid */}
+      <div className="shrink-0 rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-4 md:px-4 md:py-5">
         {/* Header */}
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <h2 className="text-sm font-bold text-charcoal-100">YOUR LIFE IN WEEKS</h2>
-            <p className="mt-0.5 text-[10px] text-charcoal-500">
-              {weeksLived.toLocaleString()} lived · {Math.max(0, totalWeeks - weeksLived).toLocaleString()} remaining
-            </p>
-          </div>
-          <div className="flex items-center gap-3 text-[10px] text-charcoal-500">
-            <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-amber-400" />Born</span>
-            <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-navy-400" />Lived</span>
-            <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />Now</span>
-            <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-violet-400" />Memory</span>
-            <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full border border-charcoal-700" />Future</span>
+        <div className="mb-3 md:mb-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="text-xs font-bold text-charcoal-100 sm:text-sm">YOUR LIFE IN WEEKS</h2>
+              <p className="mt-0.5 text-[10px] text-charcoal-500">
+                {weeksLived.toLocaleString()} lived · {Math.max(0, totalWeeks - weeksLived).toLocaleString()} remaining
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-[10px] text-charcoal-500 sm:gap-3">
+              <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-amber-400" />Born</span>
+              <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-navy-400" />Lived</span>
+              <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />Now</span>
+              <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-violet-400" />Memory</span>
+              <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full border border-charcoal-700" />Future</span>
+            </div>
           </div>
         </div>
 
@@ -242,7 +244,7 @@ export default function LifeCalendarView({
         </div>
 
         {/* Progress */}
-        <div className="mt-4 flex items-center gap-3">
+        <div className="mt-3 flex items-center gap-2 md:mt-4 md:gap-3">
           <span className="text-[10px] text-charcoal-600">{birthYear}</span>
           <div className="h-1 flex-1 overflow-hidden rounded-full bg-charcoal-800">
             <div className="h-full rounded-full bg-gradient-to-r from-navy-600 to-navy-400" style={{ width: `${Math.min(100, (weeksLived / totalWeeks) * 100)}%` }} />
@@ -252,12 +254,12 @@ export default function LifeCalendarView({
         </div>
       </div>
 
-      {/* Right: Memory Panel (sticky, fills remaining space) */}
+      {/* Memory Panel */}
       <div className="min-w-0 flex-1 space-y-4 lg:sticky lg:top-5 lg:self-start">
         <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/40">
           {selected ? (
             <>
-              <div className="border-b border-charcoal-800/40 px-5 py-3">
+              <div className="border-b border-charcoal-800/40 px-4 py-3 sm:px-5">
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-sm font-semibold text-charcoal-200">
@@ -288,7 +290,7 @@ export default function LifeCalendarView({
                 </div>
               </div>
 
-              <div className="p-5">
+              <div className="p-4 sm:p-5">
                 {/* Edit / Create form */}
                 {isEditing && (
                   <div className="mb-4 space-y-3 rounded-lg border border-charcoal-800/40 bg-charcoal-800/20 p-3">
@@ -379,7 +381,7 @@ export default function LifeCalendarView({
               </div>
             </>
           ) : (
-            <div className="flex flex-col items-center justify-center px-5 py-12">
+            <div className="flex flex-col items-center justify-center px-5 py-8 sm:py-12">
               <svg className="h-8 w-8 text-charcoal-700" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
               </svg>
@@ -391,7 +393,7 @@ export default function LifeCalendarView({
 
         {/* Memory count */}
         {memories.length > 0 && (
-          <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 px-5 py-3">
+          <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 px-4 py-3 sm:px-5">
             <p className="text-xs text-charcoal-500">
               <span className="font-medium text-violet-400">{memories.length}</span>개의 기억이 기록되어 있습니다
             </p>
