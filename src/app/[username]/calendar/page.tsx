@@ -18,28 +18,16 @@ export default async function CalendarPage({
   const year = today.getFullYear();
   const month = today.getMonth();
 
-  let events: Awaited<ReturnType<typeof getEvents>> = [];
-  let googleConnected = false;
-  let googleCalendars: GoogleCalendarInfo[] = [];
-  let birthDate: string | null = null;
-  let lifeMemories: LifeMemory[] = [];
-
-  try {
-    const [evts, gc, gcals, profile, memories] = await Promise.all([
-      getEvents(year, month),
-      isGoogleCalendarConnected(),
-      getGoogleCalendars(),
-      getProfile(params.username),
+  const [events, googleConnected, googleCalendars, profile, lifeMemories] =
+    await Promise.all([
+      getEvents(year, month).catch(() => []),
+      isGoogleCalendarConnected().catch(() => false),
+      getGoogleCalendars().catch(() => [] as GoogleCalendarInfo[]),
+      getProfile(params.username).catch(() => null),
       getLifeMemories().catch(() => [] as LifeMemory[]),
     ]);
-    events = evts;
-    googleConnected = gc;
-    googleCalendars = gcals;
-    birthDate = profile?.birth_date || null;
-    lifeMemories = memories;
-  } catch {
-    // User not authenticated
-  }
+
+  const birthDate = profile?.birth_date || null;
 
   return (
     <CalendarView

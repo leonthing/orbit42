@@ -57,7 +57,7 @@ function WorldMap({
   );
 
   return (
-    <div className="relative w-full" style={{ height: "calc(100vh - 220px)", minHeight: 500 }}>
+    <div className="relative aspect-[2/1] w-full">
       <ComposableMap
         projectionConfig={{
           rotate: [-10, 0, 0],

@@ -66,7 +66,7 @@ export function TopBar({ username, displayName }: { username: string; displayNam
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-navy-600/20 text-xs font-bold text-navy-400">
             {displayName[0].toUpperCase()}
           </div>
-          <span className="hidden text-sm text-charcoal-300 sm:inline">{displayName}</span>
+          <span className="text-sm text-charcoal-300">{displayName}</span>
           <svg className="hidden h-3 w-3 text-charcoal-500 sm:block" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
           </svg>
