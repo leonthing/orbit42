@@ -86,3 +86,64 @@ export async function getSession() {
 export async function isAuthenticated() {
   return (await getSession()) !== null;
 }
+
+export async function getProfile(username: string) {
+  const db = getAdminClient();
+  const { data } = await db
+    .from("users")
+    .select("username, display_name, created_at")
+    .eq("username", username)
+    .single();
+  return data;
+}
+
+export async function updateProfile(username: string, displayName: string) {
+  const session = await getSession();
+  if (!session || session.username !== username) {
+    return { error: "권한이 없습니다." };
+  }
+
+  const db = getAdminClient();
+  const { error } = await db
+    .from("users")
+    .update({ display_name: displayName, updated_at: new Date().toISOString() })
+    .eq("username", username);
+
+  if (error) return { error: "프로필 업데이트에 실패했습니다." };
+  return { success: true };
+}
+
+export async function changePassword(
+  username: string,
+  currentPassword: string,
+  newPassword: string
+) {
+  const session = await getSession();
+  if (!session || session.username !== username) {
+    return { error: "권한이 없습니다." };
+  }
+  if (newPassword.length < 6) {
+    return { error: "새 비밀번호는 6자 이상이어야 합니다." };
+  }
+
+  const db = getAdminClient();
+
+  // Verify current password
+  const { data: valid } = await db.rpc("verify_user", {
+    p_username: username,
+    p_password: currentPassword,
+  });
+
+  if (!valid) {
+    return { error: "현재 비밀번호가 올바르지 않습니다." };
+  }
+
+  // Update password
+  const { error } = await db.rpc("change_password", {
+    p_username: username,
+    p_new_password: newPassword,
+  });
+
+  if (error) return { error: "비밀번호 변경에 실패했습니다." };
+  return { success: true };
+}

@@ -30,6 +30,15 @@ RETURNS void AS $$
   VALUES (p_username, crypt(p_password, gen_salt('bf')), p_display_name);
 $$ LANGUAGE sql SECURITY DEFINER;
 
+-- RPC: change password
+CREATE OR REPLACE FUNCTION change_password(p_username text, p_new_password text)
+RETURNS void AS $$
+  UPDATE users
+  SET password_hash = crypt(p_new_password, gen_salt('bf')),
+      updated_at = now()
+  WHERE username = p_username;
+$$ LANGUAGE sql SECURITY DEFINER;
+
 -- Seed: Leo's account (password: orbit42admin)
 INSERT INTO users (username, password_hash, display_name)
 VALUES ('leo', crypt('orbit42admin', gen_salt('bf')), 'Leo Kim');
