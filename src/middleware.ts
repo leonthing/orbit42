@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+const PUBLIC_PATHS = ["/", "/login", "/signup"];
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Allow login page and static assets
+  // Allow static assets
   if (
-    pathname === "/login" ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
     pathname.includes(".")
@@ -14,12 +15,31 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const session = request.cookies.get("orbit42_session");
-  if (session?.value !== "authenticated") {
+  // Allow public paths
+  if (PUBLIC_PATHS.includes(pathname)) {
+    return NextResponse.next();
+  }
+
+  // Check session
+  const raw = request.cookies.get("orbit42_session")?.value;
+  if (!raw) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  return NextResponse.next();
+  try {
+    const session = JSON.parse(raw);
+    // Extract username from URL: /leo/dashboard → leo
+    const urlUsername = pathname.split("/")[1];
+
+    // Only allow access to own routes
+    if (session.username !== urlUsername) {
+      return NextResponse.redirect(new URL(`/${session.username}/dashboard`, request.url));
+    }
+
+    return NextResponse.next();
+  } catch {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
 }
 
 export const config = {

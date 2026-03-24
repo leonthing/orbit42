@@ -1,21 +1,71 @@
 "use server";
 
 import { cookies } from "next/headers";
+import { getAdminClient } from "@/lib/supabase";
 
 const COOKIE_NAME = "orbit42_session";
 
-export async function login(password: string) {
-  const adminPassword = process.env.ADMIN_PASSWORD;
-  if (!adminPassword || password !== adminPassword) {
-    return { error: "비밀번호가 올바르지 않습니다." };
+export async function login(username: string, password: string) {
+  const db = getAdminClient();
+  const { data, error } = await db
+    .rpc("verify_user", { p_username: username, p_password: password });
+
+  if (error || !data) {
+    return { error: "아이디 또는 비밀번호가 올바르지 않습니다." };
   }
-  cookies().set(COOKIE_NAME, "authenticated", {
+
+  cookies().set(COOKIE_NAME, JSON.stringify({ username }), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     maxAge: 60 * 60 * 24 * 7, // 7 days
   });
-  return { success: true };
+  return { success: true, username };
+}
+
+export async function signup(username: string, password: string, displayName?: string) {
+  if (!username || !password) {
+    return { error: "아이디와 비밀번호를 입력해주세요." };
+  }
+  if (username.length < 2 || !/^[a-z0-9_-]+$/.test(username)) {
+    return { error: "아이디는 2자 이상, 영문 소문자/숫자/하이픈만 가능합니다." };
+  }
+  if (password.length < 6) {
+    return { error: "비밀번호는 6자 이상이어야 합니다." };
+  }
+
+  const db = getAdminClient();
+
+  // Check if username exists
+  const { data: existing } = await db
+    .from("users")
+    .select("id")
+    .eq("username", username)
+    .single();
+
+  if (existing) {
+    return { error: "이미 사용 중인 아이디입니다." };
+  }
+
+  // Create user with hashed password
+  const { error } = await db.rpc("create_user", {
+    p_username: username,
+    p_password: password,
+    p_display_name: displayName || username,
+  });
+
+  if (error) {
+    return { error: "회원가입에 실패했습니다." };
+  }
+
+  // Auto login
+  cookies().set(COOKIE_NAME, JSON.stringify({ username }), {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 60 * 60 * 24 * 7,
+  });
+  return { success: true, username };
 }
 
 export async function logout() {
@@ -23,6 +73,16 @@ export async function logout() {
   return { success: true };
 }
 
+export async function getSession() {
+  const raw = cookies().get(COOKIE_NAME)?.value;
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as { username: string };
+  } catch {
+    return null;
+  }
+}
+
 export async function isAuthenticated() {
-  return cookies().get(COOKIE_NAME)?.value === "authenticated";
+  return (await getSession()) !== null;
 }

@@ -40,7 +40,7 @@ const icons: Record<string, React.ReactNode> = {
   ),
 };
 
-export function Sidebar() {
+export function Sidebar({ username }: { username: string }) {
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
@@ -69,13 +69,14 @@ export function Sidebar() {
       {/* Nav */}
       <nav className="flex-1 space-y-1 px-2 py-3">
         {NAV_ITEMS.map((item) => {
+          const href = `/${username}${item.href}`;
           const isActive =
-            pathname === item.href ||
-            (item.href !== "/dashboard" && pathname.startsWith(item.href));
+            pathname === href ||
+            (item.href !== "/dashboard" && pathname.startsWith(href));
           return (
             <Link
               key={item.href}
-              href={item.href}
+              href={href}
               className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                 isActive
                   ? "bg-navy-600/15 text-navy-400"
@@ -94,6 +95,12 @@ export function Sidebar() {
 
       {/* Bottom */}
       <div className="border-t border-charcoal-800/60 p-2">
+        {!collapsed && (
+          <div className="mb-2 px-3 py-1.5">
+            <p className="text-xs text-charcoal-500">Signed in as</p>
+            <p className="text-sm font-medium text-charcoal-300">{username}</p>
+          </div>
+        )}
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-charcoal-500 hover:bg-charcoal-800/50 hover:text-charcoal-300"
