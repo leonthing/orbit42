@@ -215,7 +215,7 @@ export default function MapView({
 
         {/* Country side panel */}
         {selectedCountry && (
-          <div className="absolute right-0 top-0 h-full w-72 border-l border-charcoal-800/60 bg-charcoal-900/95 p-5 backdrop-blur-sm">
+          <div className="absolute inset-x-0 bottom-0 max-h-[60%] overflow-y-auto border-t border-charcoal-800/60 bg-charcoal-900/95 p-4 backdrop-blur-sm sm:inset-x-auto sm:right-0 sm:top-0 sm:h-full sm:max-h-full sm:w-72 sm:border-l sm:border-t-0 sm:p-5">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-charcoal-100">
                 {selectedCountry.name}
@@ -373,7 +373,7 @@ export default function MapView({
       {/* Place list */}
       <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/40">
         {/* Tabs + Add button */}
-        <div className="flex items-center justify-between border-b border-charcoal-800/40 px-5 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-charcoal-800/40 px-4 py-3 sm:px-5">
           <div className="flex gap-1">
             <button
               onClick={() => setActiveTab("visited")}

@@ -26,11 +26,11 @@ function StatCard({
   color: string;
 }) {
   return (
-    <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 p-5">
+    <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 p-4 md:p-5">
       <p className="text-xs font-medium uppercase tracking-wider text-charcoal-500">
         {label}
       </p>
-      <p className={`mt-2 text-2xl font-bold ${color}`}>{value}</p>
+      <p className={`mt-1.5 text-xl font-bold md:mt-2 md:text-2xl ${color}`}>{value}</p>
       {sub && <p className="mt-1 text-xs text-charcoal-500">{sub}</p>}
     </div>
   );

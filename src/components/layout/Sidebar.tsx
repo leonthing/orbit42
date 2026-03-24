@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NAV_ITEMS } from "@/lib/constants";
 import { useState } from "react";
+import { useMobileMenu } from "./MobileMenuContext";
 
 const icons: Record<string, React.ReactNode> = {
   home: (
@@ -46,21 +47,18 @@ const icons: Record<string, React.ReactNode> = {
 export function Sidebar({ username }: { username: string }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const { isOpen, close } = useMobileMenu();
 
-  return (
-    <aside
-      className={`flex h-screen flex-col border-r border-charcoal-800/40 bg-[#0d0d14] transition-all ${
-        collapsed ? "w-16" : "w-56"
-      }`}
-    >
+  const navContent = (
+    <>
       {/* Logo */}
       <div className="flex h-12 items-center gap-2 border-b border-charcoal-800/40 px-4">
         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-navy-600/20">
           <span className="text-xs font-bold text-navy-400">O</span>
         </div>
-        {!collapsed && (
-          <span className="text-sm font-semibold text-charcoal-200">Orbit42</span>
-        )}
+        <span className={`text-sm font-semibold text-charcoal-200 ${collapsed ? "hidden" : "md:block"}`}>
+          Orbit42
+        </span>
       </div>
 
       {/* Nav */}
@@ -74,7 +72,8 @@ export function Sidebar({ username }: { username: string }) {
             <Link
               key={item.href}
               href={href}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              onClick={close}
+              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                 isActive
                   ? "bg-navy-600/15 text-navy-400"
                   : "text-charcoal-400 hover:bg-charcoal-800/50 hover:text-charcoal-200"
@@ -84,14 +83,14 @@ export function Sidebar({ username }: { username: string }) {
               <span className={isActive ? "text-navy-400" : "text-charcoal-500"}>
                 {icons[item.icon]}
               </span>
-              {!collapsed && item.label}
+              <span className={collapsed ? "hidden" : ""}>{item.label}</span>
             </Link>
           );
         })}
       </nav>
 
-      {/* Bottom: Collapse only */}
-      <div className="border-t border-charcoal-800/40 p-2">
+      {/* Bottom: Collapse (desktop only) */}
+      <div className="hidden border-t border-charcoal-800/40 p-2 md:block">
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-charcoal-500 hover:bg-charcoal-800/50 hover:text-charcoal-300"
@@ -102,6 +101,32 @@ export function Sidebar({ username }: { username: string }) {
           {!collapsed && "Collapse"}
         </button>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop sidebar */}
+      <aside
+        className={`hidden h-screen flex-col border-r border-charcoal-800/40 bg-[#0d0d14] transition-all md:flex ${
+          collapsed ? "w-16" : "w-56"
+        }`}
+      >
+        {navContent}
+      </aside>
+
+      {/* Mobile overlay */}
+      {isOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
+            onClick={close}
+          />
+          <aside className="fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-[#0d0d14] shadow-2xl md:hidden">
+            {navContent}
+          </aside>
+        </>
+      )}
+    </>
   );
 }

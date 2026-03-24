@@ -72,8 +72,8 @@ export default function NoteEditor({ note: initialNote }: { note: Note }) {
   return (
     <div className="flex h-[calc(100vh-theme(spacing.12))] flex-col">
       {/* Toolbar */}
-      <div className="flex items-center justify-between pb-4">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-4">
+        <div className="flex items-center gap-2 sm:gap-3">
           <button
             onClick={() => router.push(`/${params.username}/notes`)}
             className="rounded-lg p-1.5 text-charcoal-500 hover:bg-charcoal-800/50 hover:text-charcoal-300"
@@ -132,7 +132,7 @@ export default function NoteEditor({ note: initialNote }: { note: Note }) {
           </button>
 
           {/* Save indicator */}
-          <span className="text-xs text-charcoal-600">
+          <span className="hidden text-xs text-charcoal-600 sm:inline">
             {isPending ? "저장 중..." : saved ? "저장됨" : "편집 중..."}
           </span>
         </div>

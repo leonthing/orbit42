@@ -1,5 +1,6 @@
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopBar } from "@/components/layout/TopBar";
+import { MobileMenuProvider } from "@/components/layout/MobileMenuContext";
 import { getProfile } from "@/lib/auth";
 
 export default async function AppLayout({
@@ -13,14 +14,16 @@ export default async function AppLayout({
   const displayName = profile?.display_name || params.username;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#0a0a0f]">
-      <Sidebar username={params.username} />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <TopBar username={params.username} displayName={displayName} />
-        <main className="flex-1 overflow-y-auto">
-          <div className="px-6 py-5">{children}</div>
-        </main>
+    <MobileMenuProvider>
+      <div className="flex h-screen overflow-hidden bg-[#0a0a0f]">
+        <Sidebar username={params.username} />
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <TopBar username={params.username} displayName={displayName} />
+          <main className="flex-1 overflow-y-auto">
+            <div className="px-4 py-4 md:px-6 md:py-5">{children}</div>
+          </main>
+        </div>
       </div>
-    </div>
+    </MobileMenuProvider>
   );
 }

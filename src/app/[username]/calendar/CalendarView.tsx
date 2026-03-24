@@ -432,12 +432,12 @@ export default function CalendarView({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-charcoal-100">Calendar</h1>
           <p className="mt-1 text-sm text-charcoal-500">일정 및 시간 관리</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {googleConnected ? (
             <div className="relative">
               <button
@@ -508,9 +508,9 @@ export default function CalendarView({
       </div>
 
       {/* View Tabs + Navigation */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {/* View mode tabs */}
-        <div className="flex rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 p-0.5">
+        <div className="flex overflow-x-auto rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 p-0.5">
           {(
             [
               ["life", "Life"],
@@ -568,9 +568,9 @@ export default function CalendarView({
       {viewMode === "month" && (
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           {/* Month Calendar Grid */}
-          <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 p-5">
+          <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 p-3 md:p-5">
             {/* Day headers with week number column */}
-            <div className="grid grid-cols-[2rem_repeat(7,1fr)] gap-1">
+            <div className="grid grid-cols-[1.5rem_repeat(7,1fr)] gap-0.5 md:grid-cols-[2rem_repeat(7,1fr)] md:gap-1">
               <div className="py-2 text-center text-[10px] font-medium text-charcoal-600">W</div>
               {DAYS_MON.map((d, i) => (
                 <div
@@ -585,7 +585,7 @@ export default function CalendarView({
             </div>
 
             {/* Date cells with week numbers */}
-            <div className="grid grid-cols-[2rem_repeat(7,1fr)] gap-1">
+            <div className="grid grid-cols-[1.5rem_repeat(7,1fr)] gap-0.5 md:grid-cols-[2rem_repeat(7,1fr)] md:gap-1">
               {days.map((day, i) => {
                 const isToday = isCurrentMonth && day === today.getDate();
                 const isSelected = day === selectedDay;
@@ -611,7 +611,7 @@ export default function CalendarView({
                 return (
                   <>
                     {showWeekNum && (
-                      <div key={`w${i}`} className="flex h-20 items-start justify-center pt-2">
+                      <div key={`w${i}`} className="flex h-14 items-start justify-center pt-1 md:h-20 md:pt-2">
                         <span className="text-[10px] font-medium text-charcoal-600">
                           {weekNum}
                         </span>
@@ -621,7 +621,7 @@ export default function CalendarView({
                       key={i}
                       disabled={!day}
                       onClick={() => day && setSelectedDay(day === selectedDay ? null : day)}
-                      className={`flex h-20 flex-col items-start rounded-lg p-2 text-left text-sm transition-colors ${
+                      className={`flex h-14 flex-col items-start rounded-lg p-1 text-left text-sm transition-colors md:h-20 md:p-2 ${
                       !day
                         ? ""
                         : isToday
@@ -1001,9 +1001,9 @@ function WeekView({
   void events;
 
   return (
-    <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 p-4 overflow-x-auto">
+    <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 p-3 overflow-x-auto md:p-4">
       {/* Day headers */}
-      <div className="grid grid-cols-[60px_repeat(7,1fr)] gap-0 border-b border-charcoal-800/60 pb-2 mb-2">
+      <div className="grid min-w-[600px] grid-cols-[40px_repeat(7,1fr)] gap-0 border-b border-charcoal-800/60 pb-2 mb-2 md:min-w-0 md:grid-cols-[60px_repeat(7,1fr)]">
         <div />
         {weekDates.map((date, i) => {
           const isToday =
@@ -1035,7 +1035,7 @@ function WeekView({
 
       {/* Time grid */}
       <div className="relative max-h-[600px] overflow-y-auto">
-        <div className="grid grid-cols-[60px_repeat(7,1fr)] gap-0">
+        <div className="grid min-w-[600px] grid-cols-[40px_repeat(7,1fr)] gap-0 md:min-w-0 md:grid-cols-[60px_repeat(7,1fr)]">
           {hours.map((hour) => (
             <div key={hour} className="contents">
               {/* Time label */}

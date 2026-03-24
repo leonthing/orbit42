@@ -313,33 +313,35 @@ export default function FinanceDashboard({
                 ) : (
                   <li
                     key={asset.id}
-                    className="flex items-center justify-between rounded-lg border border-charcoal-800/40 px-4 py-3"
+                    className="flex flex-col gap-2 rounded-lg border border-charcoal-800/40 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4"
                   >
-                    <div>
-                      <p className="text-sm font-medium text-charcoal-200">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-charcoal-200">
                         {asset.name}
                       </p>
-                      <p className="text-xs text-charcoal-500">
+                      <p className="truncate text-xs text-charcoal-500">
                         {ASSET_TYPE_LABELS[asset.type] ?? asset.type}
                         {asset.memo ? ` · ${asset.memo}` : ""}
                       </p>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-between gap-3 sm:justify-end">
                       <span className="text-sm font-semibold text-charcoal-200">
                         {formatWon(Number(asset.value))}
                       </span>
-                      <button
-                        onClick={() => startEditAsset(asset)}
-                        className="text-xs text-charcoal-500 hover:text-charcoal-300"
-                      >
-                        수정
-                      </button>
-                      <button
-                        onClick={() => handleDeleteAsset(asset.id)}
-                        className="text-xs text-red-400 hover:text-red-300"
-                      >
-                        삭제
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => startEditAsset(asset)}
+                          className="text-xs text-charcoal-500 hover:text-charcoal-300"
+                        >
+                          수정
+                        </button>
+                        <button
+                          onClick={() => handleDeleteAsset(asset.id)}
+                          className="text-xs text-red-400 hover:text-red-300"
+                        >
+                          삭제
+                        </button>
+                      </div>
                     </div>
                   </li>
                 ),
@@ -440,17 +442,17 @@ export default function FinanceDashboard({
               {transactions.map((tx) => (
                 <li
                   key={tx.id}
-                  className="flex items-center justify-between rounded-lg border border-charcoal-800/40 px-4 py-3"
+                  className="flex flex-col gap-2 rounded-lg border border-charcoal-800/40 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4"
                 >
-                  <div>
-                    <p className="text-sm font-medium text-charcoal-200">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-charcoal-200">
                       {tx.description}
                     </p>
                     <p className="text-xs text-charcoal-500">
                       {tx.category} · {tx.date}
                     </p>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-between gap-3 sm:justify-end">
                     <span
                       className={`text-sm font-semibold ${
                         tx.type === "income"

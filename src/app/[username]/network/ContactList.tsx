@@ -58,7 +58,7 @@ export default function ContactList({
   return (
     <>
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-charcoal-100">Network</h1>
           <p className="mt-1 text-sm text-charcoal-500">인적 네트워크 관리</p>
@@ -180,7 +180,7 @@ export default function ContactList({
                 placeholder="이름 *"
                 className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-500 focus:outline-none"
               />
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <input
                   name="company"
                   placeholder="회사"
@@ -192,7 +192,7 @@ export default function ContactList({
                   className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-500 focus:outline-none"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <input
                   name="email"
                   type="email"
