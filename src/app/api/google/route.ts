@@ -14,5 +14,6 @@ export async function GET(request: NextRequest) {
   const returnTo = new URL(request.url).searchParams.get("return") || "";
   const state = returnTo ? `${username}:${returnTo}` : username;
   const url = getAuthUrl(state);
+  console.log("[Google OAuth] redirect_uri:", process.env.GOOGLE_REDIRECT_URI, "client_id:", process.env.GOOGLE_CLIENT_ID?.slice(0, 10), "url:", url);
   return NextResponse.redirect(url);
 }
