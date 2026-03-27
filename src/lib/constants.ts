@@ -12,4 +12,5 @@ export const NAV_ITEMS = [
   { href: "/network", label: "Network", icon: "users" },
   { href: "/notes", label: "Notes", icon: "pencil" },
   { href: "/map", label: "Map", icon: "map" },
+  { href: "/profile", label: "Profile", icon: "user" },
 ] as const;
