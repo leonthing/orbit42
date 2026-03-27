@@ -132,7 +132,13 @@ export async function deleteContact(id: string): Promise<void> {
 
 export async function syncGoogleContacts(): Promise<{ created: number; updated: number; error?: string }> {
   const userId = await requireUserId();
-  const people = await getAuthenticatedPeopleApi(userId);
+
+  let people;
+  try {
+    people = await getAuthenticatedPeopleApi(userId);
+  } catch {
+    return { created: 0, updated: 0, error: "google_not_connected" };
+  }
 
   if (!people) {
     return { created: 0, updated: 0, error: "google_not_connected" };
@@ -144,14 +150,13 @@ export async function syncGoogleContacts(): Promise<{ created: number; updated: 
   let nextPageToken: string | undefined;
 
   try {
-    // Test API access first
+    // Test API access — catches missing contacts scope
     await people.people.connections.list({
       resourceName: "people/me",
       pageSize: 1,
       personFields: "names",
     });
   } catch {
-    // Token exists but lacks contacts scope — need re-auth
     return { created: 0, updated: 0, error: "google_not_connected" };
   }
 

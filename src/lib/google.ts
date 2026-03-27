@@ -59,7 +59,7 @@ export async function saveGoogleTokens(
     .eq("id", userId);
 }
 
-export async function getAuthenticatedCalendar(userId: string) {
+async function getAuthenticatedClient(userId: string) {
   const tokenData = await getGoogleTokens(userId);
   if (!tokenData?.google_refresh_token) return null;
 
@@ -69,31 +69,28 @@ export async function getAuthenticatedCalendar(userId: string) {
     refresh_token: tokenData.google_refresh_token,
   });
 
-  // Refresh if expired
   if (tokenData.google_token_expiry && new Date(tokenData.google_token_expiry) < new Date()) {
-    const { credentials } = await client.refreshAccessToken();
-    await saveGoogleTokens(userId, credentials);
-    client.setCredentials(credentials);
+    try {
+      const { credentials } = await client.refreshAccessToken();
+      await saveGoogleTokens(userId, credentials);
+      client.setCredentials(credentials);
+    } catch {
+      // Token revoked or invalid — need re-auth
+      return null;
+    }
   }
 
+  return client;
+}
+
+export async function getAuthenticatedCalendar(userId: string) {
+  const client = await getAuthenticatedClient(userId);
+  if (!client) return null;
   return google.calendar({ version: "v3", auth: client });
 }
 
 export async function getAuthenticatedPeopleApi(userId: string) {
-  const tokenData = await getGoogleTokens(userId);
-  if (!tokenData?.google_refresh_token) return null;
-
-  const client = getOAuth2Client();
-  client.setCredentials({
-    access_token: tokenData.google_access_token,
-    refresh_token: tokenData.google_refresh_token,
-  });
-
-  if (tokenData.google_token_expiry && new Date(tokenData.google_token_expiry) < new Date()) {
-    const { credentials } = await client.refreshAccessToken();
-    await saveGoogleTokens(userId, credentials);
-    client.setCredentials(credentials);
-  }
-
+  const client = await getAuthenticatedClient(userId);
+  if (!client) return null;
   return google.people({ version: "v1", auth: client });
 }
