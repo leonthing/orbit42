@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import type { Contact, ContactInput } from "./actions";
-import { createContact } from "./actions";
+import { createContact, syncGoogleContacts } from "./actions";
 
 export default function ContactList({
   contacts: initialContacts,
@@ -16,6 +16,7 @@ export default function ContactList({
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return initialContacts;
@@ -63,12 +64,36 @@ export default function ContactList({
           <h1 className="text-2xl font-bold text-charcoal-100">Network</h1>
           <p className="mt-1 text-sm text-charcoal-500">인적 네트워크 관리</p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="rounded-lg bg-navy-600 px-4 py-2 text-sm font-medium text-white hover:bg-navy-500"
-        >
-          + 연락처 추가
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={async () => {
+              setSyncing(true);
+              try {
+                const result = await syncGoogleContacts();
+                if (result.error === "google_not_connected") {
+                  window.location.href = "/api/google";
+                  return;
+                }
+                alert(`동기화 완료: ${result.created}건 추가, ${result.updated}건 업데이트`);
+                router.refresh();
+              } catch {
+                alert("동기화에 실패했습니다.");
+              } finally {
+                setSyncing(false);
+              }
+            }}
+            disabled={syncing}
+            className="rounded-lg border border-charcoal-700 px-4 py-2 text-sm font-medium text-charcoal-300 hover:bg-charcoal-800 disabled:opacity-50"
+          >
+            {syncing ? "동기화 중..." : "Google 연락처 가져오기"}
+          </button>
+          <button
+            onClick={() => setShowModal(true)}
+            className="rounded-lg bg-navy-600 px-4 py-2 text-sm font-medium text-white hover:bg-navy-500"
+          >
+            + 연락처 추가
+          </button>
+        </div>
       </div>
 
       {/* Search */}

@@ -2,6 +2,7 @@
 
 import { getAdminClient } from "@/lib/supabase";
 import { requireUserId } from "@/lib/db";
+import { getAuthenticatedPeopleApi } from "@/lib/google";
 
 export interface Contact {
   id: string;
@@ -127,4 +128,78 @@ export async function deleteContact(id: string): Promise<void> {
     .eq("user_id", userId);
 
   if (error) throw new Error(error.message);
+}
+
+export async function syncGoogleContacts(): Promise<{ created: number; updated: number; error?: string }> {
+  const userId = await requireUserId();
+  const people = await getAuthenticatedPeopleApi(userId);
+
+  if (!people) {
+    return { created: 0, updated: 0, error: "google_not_connected" };
+  }
+
+  const db = getAdminClient();
+  let created = 0;
+  let updated = 0;
+  let nextPageToken: string | undefined;
+
+  do {
+    const res = await people.people.connections.list({
+      resourceName: "people/me",
+      pageSize: 200,
+      personFields: "names,emailAddresses,phoneNumbers,organizations",
+      pageToken: nextPageToken,
+    });
+
+    const connections = res.data.connections ?? [];
+    nextPageToken = res.data.nextPageToken ?? undefined;
+
+    for (const person of connections) {
+      const name = person.names?.[0]?.displayName;
+      if (!name) continue;
+
+      const googleContactId = person.resourceName ?? null;
+      const email = person.emailAddresses?.[0]?.value ?? null;
+      const phone = person.phoneNumbers?.[0]?.value ?? null;
+      const org = person.organizations?.[0];
+      const company = org?.name ?? null;
+      const role = org?.title ?? null;
+
+      if (googleContactId) {
+        // Check if already synced
+        const { data: existing } = await db
+          .from("contacts")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("google_contact_id", googleContactId)
+          .maybeSingle();
+
+        const now = new Date().toISOString();
+
+        if (existing) {
+          await db
+            .from("contacts")
+            .update({ name, email, phone, company, role, updated_at: now })
+            .eq("id", existing.id);
+          updated++;
+        } else {
+          await db.from("contacts").insert({
+            user_id: userId,
+            google_contact_id: googleContactId,
+            name,
+            email,
+            phone,
+            company,
+            role,
+            tags: [],
+            created_at: now,
+            updated_at: now,
+          });
+          created++;
+        }
+      }
+    }
+  } while (nextPageToken);
+
+  return { created, updated };
 }

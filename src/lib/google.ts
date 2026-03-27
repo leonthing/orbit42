@@ -1,7 +1,11 @@
 import { google } from "googleapis";
 import { getAdminClient } from "@/lib/supabase";
 
-const SCOPES = ["https://www.googleapis.com/auth/calendar.readonly", "https://www.googleapis.com/auth/calendar.events"];
+const SCOPES = [
+  "https://www.googleapis.com/auth/calendar.readonly",
+  "https://www.googleapis.com/auth/calendar.events",
+  "https://www.googleapis.com/auth/contacts.readonly",
+];
 
 export function getOAuth2Client() {
   return new google.auth.OAuth2(
@@ -73,4 +77,23 @@ export async function getAuthenticatedCalendar(userId: string) {
   }
 
   return google.calendar({ version: "v3", auth: client });
+}
+
+export async function getAuthenticatedPeopleApi(userId: string) {
+  const tokenData = await getGoogleTokens(userId);
+  if (!tokenData?.google_refresh_token) return null;
+
+  const client = getOAuth2Client();
+  client.setCredentials({
+    access_token: tokenData.google_access_token,
+    refresh_token: tokenData.google_refresh_token,
+  });
+
+  if (tokenData.google_token_expiry && new Date(tokenData.google_token_expiry) < new Date()) {
+    const { credentials } = await client.refreshAccessToken();
+    await saveGoogleTokens(userId, credentials);
+    client.setCredentials(credentials);
+  }
+
+  return google.people({ version: "v1", auth: client });
 }
