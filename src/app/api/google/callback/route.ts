@@ -6,7 +6,8 @@ import { getAdminClient } from "@/lib/supabase";
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const code = searchParams.get("code");
-  const username = searchParams.get("state");
+  const stateRaw = searchParams.get("state") || "";
+  const [username, returnTo] = stateRaw.includes(":") ? stateRaw.split(":", 2) : [stateRaw, ""];
 
   if (!code || !username) {
     return NextResponse.redirect(new URL("/login", request.url));
@@ -29,7 +30,8 @@ export async function GET(request: NextRequest) {
 
     await saveGoogleTokens(user.id, tokens);
 
-    return NextResponse.redirect(new URL(`/${username}/calendar`, request.url));
+    const redirectPath = returnTo ? `/${username}/${returnTo}` : `/${username}/calendar`;
+    return NextResponse.redirect(new URL(redirectPath, request.url));
   } catch (error) {
     console.error("Google OAuth error:", error);
     return NextResponse.redirect(new URL(`/${username}/settings?error=google_auth_failed`, request.url));

@@ -71,7 +71,7 @@ export default function ContactList({
               try {
                 const result = await syncGoogleContacts();
                 if (result.error === "google_not_connected") {
-                  window.location.href = "/api/google";
+                  window.location.href = "/api/google?return=network";
                   return;
                 }
                 alert(`동기화 완료: ${result.created}건 추가, ${result.updated}건 업데이트`);

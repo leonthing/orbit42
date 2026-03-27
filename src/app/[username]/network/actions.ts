@@ -143,6 +143,18 @@ export async function syncGoogleContacts(): Promise<{ created: number; updated: 
   let updated = 0;
   let nextPageToken: string | undefined;
 
+  try {
+    // Test API access first
+    await people.people.connections.list({
+      resourceName: "people/me",
+      pageSize: 1,
+      personFields: "names",
+    });
+  } catch {
+    // Token exists but lacks contacts scope — need re-auth
+    return { created: 0, updated: 0, error: "google_not_connected" };
+  }
+
   do {
     const res = await people.people.connections.list({
       resourceName: "people/me",
