@@ -160,63 +160,74 @@ export async function syncGoogleContacts(): Promise<{ created: number; updated: 
     return { created: 0, updated: 0, error: "google_not_connected" };
   }
 
+  // Fetch all Google contacts first
+  const allContacts: { googleContactId: string; name: string; email: string | null; phone: string | null; company: string | null; role: string | null }[] = [];
+
   do {
     const res = await people.people.connections.list({
       resourceName: "people/me",
-      pageSize: 200,
+      pageSize: 1000,
       personFields: "names,emailAddresses,phoneNumbers,organizations",
       pageToken: nextPageToken,
     });
 
-    const connections = res.data.connections ?? [];
-    nextPageToken = res.data.nextPageToken ?? undefined;
-
-    for (const person of connections) {
+    for (const person of res.data.connections ?? []) {
       const name = person.names?.[0]?.displayName;
-      if (!name) continue;
-
-      const googleContactId = person.resourceName ?? null;
-      const email = person.emailAddresses?.[0]?.value ?? null;
-      const phone = person.phoneNumbers?.[0]?.value ?? null;
+      if (!name || !person.resourceName) continue;
       const org = person.organizations?.[0];
-      const company = org?.name ?? null;
-      const role = org?.title ?? null;
-
-      if (googleContactId) {
-        // Check if already synced
-        const { data: existing } = await db
-          .from("contacts")
-          .select("id")
-          .eq("user_id", userId)
-          .eq("google_contact_id", googleContactId)
-          .maybeSingle();
-
-        const now = new Date().toISOString();
-
-        if (existing) {
-          await db
-            .from("contacts")
-            .update({ name, email, phone, company, role, updated_at: now })
-            .eq("id", existing.id);
-          updated++;
-        } else {
-          await db.from("contacts").insert({
-            user_id: userId,
-            google_contact_id: googleContactId,
-            name,
-            email,
-            phone,
-            company,
-            role,
-            tags: [],
-            created_at: now,
-            updated_at: now,
-          });
-          created++;
-        }
-      }
+      allContacts.push({
+        googleContactId: person.resourceName,
+        name,
+        email: person.emailAddresses?.[0]?.value ?? null,
+        phone: person.phoneNumbers?.[0]?.value ?? null,
+        company: org?.name ?? null,
+        role: org?.title ?? null,
+      });
     }
+    nextPageToken = res.data.nextPageToken ?? undefined;
   } while (nextPageToken);
+
+  if (allContacts.length === 0) return { created: 0, updated: 0 };
+
+  // Fetch all existing synced contacts in one query
+  const { data: existing } = await db
+    .from("contacts")
+    .select("id, google_contact_id")
+    .eq("user_id", userId)
+    .not("google_contact_id", "is", null);
+
+  const existingMap = new Map((existing ?? []).map((c) => [c.google_contact_id, c.id]));
+  const now = new Date().toISOString();
+
+  const toInsert: Record<string, unknown>[] = [];
+  const toUpdate: { id: string; data: Record<string, unknown> }[] = [];
+
+  for (const c of allContacts) {
+    const existingId = existingMap.get(c.googleContactId);
+    if (existingId) {
+      toUpdate.push({ id: existingId, data: { name: c.name, email: c.email, phone: c.phone, company: c.company, role: c.role, updated_at: now } });
+    } else {
+      toInsert.push({ user_id: userId, google_contact_id: c.googleContactId, name: c.name, email: c.email, phone: c.phone, company: c.company, role: c.role, tags: [], created_at: now, updated_at: now });
+    }
+  }
+
+  // Batch insert
+  if (toInsert.length > 0) {
+    const { error } = await db.from("contacts").insert(toInsert);
+    if (!error) created = toInsert.length;
+  }
+
+  // Batch update (supabase doesn't support bulk update, so batch in parallel)
+  if (toUpdate.length > 0) {
+    const chunks = [];
+    for (let i = 0; i < toUpdate.length; i += 50) {
+      chunks.push(toUpdate.slice(i, i + 50));
+    }
+    for (const chunk of chunks) {
+      await Promise.all(chunk.map((u) => db.from("contacts").update(u.data).eq("id", u.id)));
+    }
+    updated = toUpdate.length;
+  }
 
   return { created, updated };
 }
