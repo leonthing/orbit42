@@ -69,7 +69,11 @@ export default async function ProfilePage({
 
   const socialLinks = (profile.social_links || {}) as SocialLinks;
   const activeSocials = SOCIAL_CONFIG.filter((s) => socialLinks[s.key]);
-  const education = (profile.education || []) as Education[];
+  const education = ((profile.education || []) as Education[]).sort((a, b) => {
+    const yearA = parseInt(a.startYear || "0") || 0;
+    const yearB = parseInt(b.startYear || "0") || 0;
+    return yearA - yearB;
+  });
   const interests = (profile.interests || []) as string[];
 
   const age = profile.birth_date
