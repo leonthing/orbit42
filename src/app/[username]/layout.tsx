@@ -15,7 +15,7 @@ export default async function AppLayout({
 
   return (
     <MobileMenuProvider>
-      <div className="flex h-screen overflow-hidden bg-[#0a0a0f]">
+      <div className="flex h-screen overflow-hidden bg-[rgb(var(--bg-base))]">
         <Sidebar username={params.username} />
         <div className="flex flex-1 flex-col overflow-hidden">
           <TopBar username={params.username} displayName={displayName} />

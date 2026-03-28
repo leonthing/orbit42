@@ -9,7 +9,7 @@ export default async function LandingPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[#0a0a0f]">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-[rgb(var(--bg-base))]">
       <div className="text-center">
         <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-navy-600/20">
           <svg className="h-8 w-8 text-navy-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">

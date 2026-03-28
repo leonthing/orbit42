@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { Inter } from "next/font/google";
 import { SITE } from "@/lib/constants";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import "./globals.css";
 
 const pretendard = localFont({
@@ -35,8 +36,11 @@ export default function RootLayout({
     <html
       lang="ko"
       className={`${pretendard.variable} ${inter.variable} dark`}
+      suppressHydrationWarning
     >
-      <body className="font-sans antialiased">{children}</body>
+      <body className="font-sans antialiased">
+        <ThemeProvider>{children}</ThemeProvider>
+      </body>
     </html>
   );
 }

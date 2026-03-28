@@ -454,7 +454,7 @@ export default function CalendarView({
               {showCalendarPicker && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowCalendarPicker(false)} />
-                  <div className="absolute right-0 z-50 mt-2 w-72 rounded-xl border border-charcoal-800/60 bg-[#0d0d14] p-3 shadow-2xl">
+                  <div className="absolute right-0 z-50 mt-2 w-72 rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] p-3 shadow-2xl">
                     <p className="mb-2 text-xs font-medium text-charcoal-400">Google 캘린더 선택</p>
                     <div className="max-h-64 space-y-1 overflow-y-auto">
                       {googleCalendars.map((cal) => (
@@ -768,7 +768,7 @@ export default function CalendarView({
       {/* ── Create / Edit Modal ── */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-md rounded-xl border border-charcoal-800/60 bg-[#0a0a0f] p-6 shadow-2xl">
+          <div className="w-full max-w-md rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-base))] p-6 shadow-2xl">
             <h3 className="mb-4 text-lg font-semibold text-charcoal-100">
               {editingEvent ? "일정 수정" : "새 일정"}
             </h3>

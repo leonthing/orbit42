@@ -194,7 +194,7 @@ export default function ContactList({
       {/* Create Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-md rounded-xl border border-charcoal-800/60 bg-[#0a0a0f] p-6">
+          <div className="w-full max-w-md rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-base))] p-6">
             <h2 className="text-lg font-semibold text-charcoal-100">
               연락처 추가
             </h2>

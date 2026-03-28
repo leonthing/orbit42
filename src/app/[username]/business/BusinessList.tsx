@@ -64,7 +64,7 @@ function BusinessForm({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="mx-4 w-full max-w-lg rounded-xl border border-charcoal-800/60 bg-[#0a0a0f] p-6 shadow-2xl">
+      <div className="mx-4 w-full max-w-lg rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-base))] p-6 shadow-2xl">
         <h2 className="text-lg font-semibold text-charcoal-100">
           {initial ? "사업체 수정" : "새 사업체"}
         </h2>
@@ -175,7 +175,7 @@ function DeleteConfirm({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="mx-4 w-full max-w-sm rounded-xl border border-charcoal-800/60 bg-[#0a0a0f] p-6 shadow-2xl">
+      <div className="mx-4 w-full max-w-sm rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-base))] p-6 shadow-2xl">
         <h3 className="text-lg font-semibold text-charcoal-100">사업체 삭제</h3>
         <p className="mt-2 text-sm text-charcoal-400">
           <span className="font-medium text-charcoal-200">{name}</span>을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.

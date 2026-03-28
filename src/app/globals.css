@@ -3,12 +3,49 @@
 @tailwind utilities;
 
 @layer base {
+  /* Light mode (default) — charcoal scale is semantically inverted */
+  :root {
+    --c-50: 2 6 23;       /* very dark */
+    --c-100: 15 23 42;
+    --c-200: 30 41 59;
+    --c-300: 51 65 85;
+    --c-400: 71 85 105;
+    --c-500: 100 116 139;
+    --c-600: 148 163 184;
+    --c-700: 203 213 225;
+    --c-800: 226 232 240;
+    --c-900: 241 245 249;
+    --c-950: 248 250 252;
+    --bg-base: 249 250 251;
+    --bg-surface: 255 255 255;
+    --bg-elevated: 243 244 246;
+  }
+
+  /* Dark mode — original charcoal scale */
+  .dark {
+    --c-50: 248 250 252;
+    --c-100: 241 245 249;
+    --c-200: 226 232 240;
+    --c-300: 203 213 225;
+    --c-400: 148 163 184;
+    --c-500: 100 116 139;
+    --c-600: 71 85 105;
+    --c-700: 51 65 85;
+    --c-800: 30 41 59;
+    --c-900: 15 23 42;
+    --c-950: 2 6 23;
+    --bg-base: 10 10 15;
+    --bg-surface: 13 13 20;
+    --bg-elevated: 18 18 28;
+  }
+
   html {
     -webkit-tap-highlight-color: transparent;
   }
 
   body {
-    @apply bg-[#0a0a0f] text-charcoal-200;
+    background-color: rgb(var(--bg-base));
+    @apply text-charcoal-200;
   }
 
   /* Prevent auto-zoom on input focus (iOS) */

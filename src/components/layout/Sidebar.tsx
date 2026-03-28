@@ -113,7 +113,7 @@ export function Sidebar({ username }: { username: string }) {
     <>
       {/* Desktop sidebar */}
       <aside
-        className={`hidden h-screen flex-col border-r border-charcoal-800/40 bg-[#0d0d14] transition-all md:flex ${
+        className={`hidden h-screen flex-col border-r border-charcoal-800/40 bg-[rgb(var(--bg-surface))] transition-all md:flex ${
           collapsed ? "w-16" : "w-56"
         }`}
       >
@@ -127,7 +127,7 @@ export function Sidebar({ username }: { username: string }) {
             className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
             onClick={close}
           />
-          <aside className="fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-[#0d0d14] shadow-2xl md:hidden">
+          <aside className="fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-[rgb(var(--bg-surface))] shadow-2xl md:hidden">
             {navContent}
           </aside>
         </>

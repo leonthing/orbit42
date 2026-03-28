@@ -229,7 +229,7 @@ export default function LifeCalendarView({
                     if (isBeforeBirth) {
                       cls = "bg-transparent";
                     } else if (isSelected) {
-                      cls = "bg-white ring-1 ring-white ring-offset-1 ring-offset-[#0a0a0f]";
+                      cls = "bg-white ring-1 ring-white ring-offset-1 ring-offset-[rgb(var(--bg-base))]";
                     } else if (isBirth) {
                       cls = "bg-amber-400";
                     } else if (isCurrent) {
