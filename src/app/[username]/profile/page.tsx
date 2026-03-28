@@ -72,7 +72,7 @@ export default async function ProfilePage({
   const education = ((profile.education || []) as Education[]).sort((a, b) => {
     const yearA = parseInt(a.startYear || "0") || 0;
     const yearB = parseInt(b.startYear || "0") || 0;
-    return yearA - yearB;
+    return yearB - yearA;
   });
   const interests = (profile.interests || []) as string[];
 
