@@ -257,7 +257,7 @@ export default function LifeCalendarView({
                   <div className="shrink-0 pl-1" style={{ width: LABEL_W - 4 }}>
                     {(i === 0 || i % 10 === 0 || isCurrentYear) && (
                       <span className={`text-[8px] leading-none ${isCurrentYear ? "font-bold text-navy-400" : "text-charcoal-600"}`}>
-                        {i}세
+                        {i}
                       </span>
                     )}
                   </div>
