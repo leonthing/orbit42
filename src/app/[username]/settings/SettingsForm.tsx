@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { updateProfile, changePassword } from "@/lib/auth";
-import type { SocialLinks } from "@/lib/auth";
+import type { SocialLinks, Education } from "@/lib/auth";
 
 const SOCIAL_FIELDS: { key: keyof SocialLinks; label: string; placeholder: string; icon: React.ReactNode }[] = [
   {
@@ -57,22 +57,34 @@ const SOCIAL_FIELDS: { key: keyof SocialLinks; label: string; placeholder: strin
   },
 ];
 
+const EMPTY_EDU: Education = { school: "", degree: "", field: "", startYear: "", endYear: "" };
+
 export function SettingsForm({
   username,
   displayName: initialDisplayName,
   birthDate: initialBirthDate,
+  bio: initialBio,
   socialLinks: initialSocialLinks,
+  education: initialEducation,
+  interests: initialInterests,
   createdAt,
 }: {
   username: string;
   displayName: string;
   birthDate: string;
+  bio: string;
   socialLinks: SocialLinks;
+  education: Education[];
+  interests: string[];
   createdAt: string;
 }) {
   const [displayName, setDisplayName] = useState(initialDisplayName);
   const [birthDate, setBirthDate] = useState(initialBirthDate);
+  const [bio, setBio] = useState(initialBio);
   const [socialLinks, setSocialLinks] = useState<SocialLinks>(initialSocialLinks);
+  const [education, setEducation] = useState<Education[]>(initialEducation);
+  const [interests, setInterests] = useState<string[]>(initialInterests);
+  const [interestInput, setInterestInput] = useState("");
   const [profileMsg, setProfileMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
 
@@ -85,13 +97,21 @@ export function SettingsForm({
   const hasChanges =
     displayName !== initialDisplayName ||
     birthDate !== initialBirthDate ||
-    JSON.stringify(socialLinks) !== JSON.stringify(initialSocialLinks);
+    bio !== initialBio ||
+    JSON.stringify(socialLinks) !== JSON.stringify(initialSocialLinks) ||
+    JSON.stringify(education) !== JSON.stringify(initialEducation) ||
+    JSON.stringify(interests) !== JSON.stringify(initialInterests);
 
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setProfileLoading(true);
     setProfileMsg(null);
-    const result = await updateProfile(username, displayName, birthDate || null, socialLinks);
+    const cleanedEdu = education.filter((e) => e.school.trim());
+    const result = await updateProfile(username, displayName, birthDate || null, socialLinks, {
+      bio: bio || null,
+      education: cleanedEdu,
+      interests,
+    });
     if (result.error) {
       setProfileMsg({ type: "error", text: result.error });
     } else {
@@ -120,6 +140,30 @@ export function SettingsForm({
     setPwLoading(false);
   };
 
+  function addEducation() {
+    setEducation((prev) => [...prev, { ...EMPTY_EDU }]);
+  }
+
+  function updateEducation(index: number, field: keyof Education, value: string) {
+    setEducation((prev) => prev.map((e, i) => (i === index ? { ...e, [field]: value } : e)));
+  }
+
+  function removeEducation(index: number) {
+    setEducation((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function addInterest() {
+    const val = interestInput.trim();
+    if (val && !interests.includes(val)) {
+      setInterests((prev) => [...prev, val]);
+    }
+    setInterestInput("");
+  }
+
+  function removeInterest(tag: string) {
+    setInterests((prev) => prev.filter((t) => t !== tag));
+  }
+
   const inputClass = "w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-4 py-2.5 text-sm text-charcoal-100 focus:border-navy-500 focus:outline-none focus:ring-1 focus:ring-navy-500/50";
 
   return (
@@ -141,6 +185,11 @@ export function SettingsForm({
           <div>
             <label className="mb-1.5 block text-xs font-medium text-charcoal-400">Display Name</label>
             <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className={inputClass} />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-charcoal-400">한 줄 소개</label>
+            <input type="text" value={bio} onChange={(e) => setBio(e.target.value)} placeholder="나를 소개하는 한 마디" className={inputClass} />
           </div>
 
           <div>
@@ -170,6 +219,131 @@ export function SettingsForm({
             {profileLoading ? "저장 중..." : "저장"}
           </button>
         </form>
+      </section>
+
+      {/* Education Section */}
+      <section className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/40">
+        <div className="flex items-center justify-between border-b border-charcoal-800/40 px-5 py-3">
+          <h2 className="text-sm font-semibold text-charcoal-200">학력</h2>
+          <button
+            type="button"
+            onClick={addEducation}
+            className="text-xs font-medium text-navy-400 hover:text-navy-300"
+          >
+            + 추가
+          </button>
+        </div>
+        <div className="space-y-4 p-5">
+          {education.length === 0 ? (
+            <p className="text-sm text-charcoal-600">등록된 학력이 없습니다</p>
+          ) : (
+            education.map((edu, i) => (
+              <div key={i} className="space-y-2 rounded-lg border border-charcoal-800/40 bg-charcoal-800/20 p-4">
+                <div className="flex items-start justify-between">
+                  <span className="text-xs font-medium text-charcoal-500">학력 {i + 1}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeEducation(i)}
+                    className="text-xs text-charcoal-600 hover:text-red-400"
+                  >
+                    삭제
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={edu.school}
+                  onChange={(e) => updateEducation(i, "school", e.target.value)}
+                  placeholder="학교명 *"
+                  className={inputClass}
+                />
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <input
+                    type="text"
+                    value={edu.degree || ""}
+                    onChange={(e) => updateEducation(i, "degree", e.target.value)}
+                    placeholder="학위 (학사, 석사 등)"
+                    className={inputClass}
+                  />
+                  <input
+                    type="text"
+                    value={edu.field || ""}
+                    onChange={(e) => updateEducation(i, "field", e.target.value)}
+                    placeholder="전공"
+                    className={inputClass}
+                  />
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <input
+                    type="text"
+                    value={edu.startYear || ""}
+                    onChange={(e) => updateEducation(i, "startYear", e.target.value)}
+                    placeholder="입학년도 (예: 2015)"
+                    className={inputClass}
+                  />
+                  <input
+                    type="text"
+                    value={edu.endYear || ""}
+                    onChange={(e) => updateEducation(i, "endYear", e.target.value)}
+                    placeholder="졸업년도 (예: 2019)"
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+            ))
+          )}
+          <p className="text-xs text-charcoal-600">변경 후 상단의 저장 버튼을 눌러주세요</p>
+        </div>
+      </section>
+
+      {/* Interests Section */}
+      <section className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/40">
+        <div className="border-b border-charcoal-800/40 px-5 py-3">
+          <h2 className="text-sm font-semibold text-charcoal-200">관심사</h2>
+        </div>
+        <div className="space-y-3 p-5">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={interestInput}
+              onChange={(e) => setInterestInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addInterest();
+                }
+              }}
+              placeholder="관심사를 입력하고 Enter"
+              className={`${inputClass} flex-1`}
+            />
+            <button
+              type="button"
+              onClick={addInterest}
+              className="shrink-0 rounded-lg bg-charcoal-800 px-3 py-2 text-sm text-charcoal-300 hover:bg-charcoal-700"
+            >
+              추가
+            </button>
+          </div>
+          {interests.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {interests.map((tag) => (
+                <span
+                  key={tag}
+                  className="flex items-center gap-1 rounded-full bg-navy-600/15 px-3 py-1 text-xs font-medium text-navy-400"
+                >
+                  {tag}
+                  <button
+                    type="button"
+                    onClick={() => removeInterest(tag)}
+                    className="ml-0.5 text-navy-400/60 hover:text-red-400"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          <p className="text-xs text-charcoal-600">변경 후 상단의 저장 버튼을 눌러주세요</p>
+        </div>
       </section>
 
       {/* SNS Section */}

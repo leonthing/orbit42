@@ -91,7 +91,7 @@ export async function getProfile(username: string) {
   const db = getAdminClient();
   const { data } = await db
     .from("users")
-    .select("username, display_name, birth_date, social_links, created_at")
+    .select("username, display_name, birth_date, bio, social_links, education, interests, created_at")
     .eq("username", username)
     .single();
   return data;
@@ -105,11 +105,20 @@ export type SocialLinks = {
   linkedin?: string;
 };
 
+export type Education = {
+  school: string;
+  degree?: string;
+  field?: string;
+  startYear?: string;
+  endYear?: string;
+};
+
 export async function updateProfile(
   username: string,
   displayName: string,
   birthDate?: string | null,
   socialLinks?: SocialLinks,
+  extra?: { bio?: string | null; education?: Education[]; interests?: string[] },
 ) {
   const session = await getSession();
   if (!session || session.username !== username) {
@@ -126,6 +135,11 @@ export async function updateProfile(
   }
   if (socialLinks !== undefined) {
     updateData.social_links = socialLinks;
+  }
+  if (extra) {
+    if (extra.bio !== undefined) updateData.bio = extra.bio || null;
+    if (extra.education !== undefined) updateData.education = extra.education;
+    if (extra.interests !== undefined) updateData.interests = extra.interests;
   }
 
   const { error } = await db

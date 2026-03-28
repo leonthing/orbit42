@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getProfile } from "@/lib/auth";
 import { notFound } from "next/navigation";
-import type { SocialLinks } from "@/lib/auth";
+import type { SocialLinks, Education } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Profile" };
 export const dynamic = "force-dynamic";
@@ -69,6 +69,8 @@ export default async function ProfilePage({
 
   const socialLinks = (profile.social_links || {}) as SocialLinks;
   const activeSocials = SOCIAL_CONFIG.filter((s) => socialLinks[s.key]);
+  const education = (profile.education || []) as Education[];
+  const interests = (profile.interests || []) as string[];
 
   const age = profile.birth_date
     ? Math.floor((Date.now() - new Date(profile.birth_date).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
@@ -93,8 +95,24 @@ export default async function ProfilePage({
                 {profile.display_name || profile.username}
               </h2>
               <p className="text-sm text-charcoal-500">@{profile.username}</p>
+              {profile.bio && (
+                <p className="mt-1 text-sm text-charcoal-400">{profile.bio}</p>
+              )}
             </div>
           </div>
+
+          {interests.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {interests.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full bg-navy-600/15 px-3 py-1 text-xs font-medium text-navy-400"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
             {profile.birth_date && (
@@ -114,6 +132,44 @@ export default async function ProfilePage({
             </div>
           </div>
         </section>
+
+        {/* Education */}
+        {education.length > 0 && (
+          <section className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/40">
+            <div className="border-b border-charcoal-800/40 px-5 py-3">
+              <h2 className="text-sm font-semibold text-charcoal-200">학력</h2>
+            </div>
+            <div className="space-y-3 p-5">
+              {education.map((edu, i) => (
+                <div key={i} className="flex gap-3">
+                  <div className="flex flex-col items-center">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-charcoal-800/50 text-charcoal-400">
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5" />
+                      </svg>
+                    </div>
+                    {i < education.length - 1 && (
+                      <div className="mt-1 flex-1 border-l border-charcoal-800/40" />
+                    )}
+                  </div>
+                  <div className="pb-4">
+                    <p className="font-medium text-charcoal-100">{edu.school}</p>
+                    {(edu.degree || edu.field) && (
+                      <p className="mt-0.5 text-sm text-charcoal-400">
+                        {[edu.degree, edu.field].filter(Boolean).join(" · ")}
+                      </p>
+                    )}
+                    {(edu.startYear || edu.endYear) && (
+                      <p className="mt-0.5 text-xs text-charcoal-600">
+                        {edu.startYear || "?"} — {edu.endYear || "현재"}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Social Links */}
         {activeSocials.length > 0 && (

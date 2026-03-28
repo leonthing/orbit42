@@ -25,7 +25,10 @@ export default async function SettingsPage({
         username={profile.username}
         displayName={profile.display_name || ""}
         birthDate={profile.birth_date || ""}
+        bio={profile.bio || ""}
         socialLinks={profile.social_links || {}}
+        education={profile.education || []}
+        interests={profile.interests || []}
         createdAt={profile.created_at}
       />
     </div>
