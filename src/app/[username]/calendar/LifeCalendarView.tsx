@@ -1,13 +1,36 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import type { LifeMemory } from "./life-actions";
 import { createLifeMemory, updateLifeMemory, deleteLifeMemory } from "./life-actions";
 
 const LIFE_YEARS = 100;
 const WEEKS_PER_YEAR = 52;
-const DOT = 10;
-const GAP = 2;
+
+function useDotSize() {
+  const [size, setSize] = useState({ dot: 10, gap: 2, label: 30 });
+  useEffect(() => {
+    function calc() {
+      const w = window.innerWidth;
+      if (w < 480) {
+        // Mobile: fit 52 dots + labels in ~360px
+        const available = Math.min(w - 32, 360); // container padding
+        const labelSpace = 42; // year + age labels
+        const dotArea = available - labelSpace;
+        const cellSize = Math.floor(dotArea / WEEKS_PER_YEAR);
+        const dot = Math.max(4, cellSize - 1);
+        const gap = Math.max(1, cellSize - dot);
+        setSize({ dot, gap, label: 22 });
+      } else {
+        setSize({ dot: 10, gap: 2, label: 30 });
+      }
+    }
+    calc();
+    window.addEventListener("resize", calc);
+    return () => window.removeEventListener("resize", calc);
+  }, []);
+  return size;
+}
 
 type SelectedWeek = { year: number; week: number } | null;
 
@@ -18,6 +41,7 @@ export default function LifeCalendarView({
   birthDate?: string | null;
   initialMemories: LifeMemory[];
 }) {
+  const { dot: DOT, gap: GAP, label: LABEL_W } = useDotSize();
   const [selected, setSelected] = useState<SelectedWeek>(null);
   const [memories, setMemories] = useState<LifeMemory[]>(initialMemories);
   const [editTitle, setEditTitle] = useState("");
@@ -162,10 +186,10 @@ export default function LifeCalendarView({
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <div style={{ display: "inline-block" }}>
+        <div>
+          <div>
             {/* Week header */}
-            <div className="flex" style={{ paddingLeft: 32 }}>
+            <div className="flex" style={{ paddingLeft: LABEL_W + 2 }}>
               {Array.from({ length: WEEKS_PER_YEAR }, (_, w) => (
                 <div key={w} style={{ width: cellSize, height: 14 }} className="flex items-end justify-center">
                   {w % 4 === 0 && <span className="text-[8px] leading-none text-charcoal-600">{w + 1}</span>}
@@ -183,7 +207,7 @@ export default function LifeCalendarView({
               return (
                 <div key={yr} className="flex items-center" style={{ height: cellSize }}>
                   {/* Year label */}
-                  <div className="shrink-0 text-right pr-1" style={{ width: 30 }}>
+                  <div className="shrink-0 text-right pr-1" style={{ width: LABEL_W }}>
                     {(i === 0 || i % 5 === 0 || isCurrentYear) && (
                       <span className={`text-[8px] leading-none ${isCurrentYear ? "font-bold text-navy-400" : isDecade ? "text-charcoal-400" : "text-charcoal-600"}`}>
                         {yr}
@@ -230,7 +254,7 @@ export default function LifeCalendarView({
                   })}
 
                   {/* Age */}
-                  <div className="shrink-0 pl-1.5" style={{ width: 28 }}>
+                  <div className="shrink-0 pl-1" style={{ width: LABEL_W - 4 }}>
                     {(i === 0 || i % 10 === 0 || isCurrentYear) && (
                       <span className={`text-[8px] leading-none ${isCurrentYear ? "font-bold text-navy-400" : "text-charcoal-600"}`}>
                         {i}세
