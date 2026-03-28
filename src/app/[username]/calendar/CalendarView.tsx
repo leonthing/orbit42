@@ -122,9 +122,10 @@ export default function CalendarView({
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [form, setForm] = useState<FormData>(emptyForm());
   const [isPending, startTransition] = useTransition();
-  const [selectedCalendars, setSelectedCalendars] = useState<string[]>(
-    googleCalendars.length > 0 ? googleCalendars.map((c) => c.id) : ["primary"]
-  );
+  const [selectedCalendars, setSelectedCalendars] = useState<string[]>(() => {
+    const primary = googleCalendars.find((c) => c.primary);
+    return primary ? [primary.id] : ["primary"];
+  });
   const [showCalendarPicker, setShowCalendarPicker] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("month");
   const [quarter, setQuarter] = useState(getQuarterForMonth(initialMonth));
@@ -1077,18 +1078,18 @@ function WeekView({
                           e.stopPropagation();
                           if (ev.source !== "google") onEdit(ev);
                         }}
-                        className={`absolute inset-x-0.5 top-0.5 z-20 rounded px-1 py-0.5 text-[10px] leading-tight truncate ${
+                        className={`absolute inset-x-0.5 top-0.5 z-20 rounded px-1 py-0.5 text-[10px] leading-tight overflow-hidden max-h-[42px] ${
                           ev.source === "google"
                             ? "bg-blue-500/20 text-blue-300 cursor-default"
                             : "bg-navy-600/30 text-navy-200 cursor-pointer hover:bg-navy-600/50"
                         }`}
                         title={`${ev.title}${ev.all_day ? " (종일)" : ` ${formatTime(ev.start_at)}-${formatTime(ev.end_at)}`}`}
                       >
-                        <span className="flex items-center gap-0.5">
+                        <span className="flex items-center gap-0.5 truncate">
                           {ev.source === "google" && (
                             <span className="shrink-0 text-[8px] font-bold text-blue-400">G</span>
                           )}
-                          {ev.title}
+                          <span className="truncate">{ev.title}</span>
                         </span>
                       </div>
                     ))}
