@@ -15,6 +15,8 @@ const PAGE_TITLES: Record<string, string> = {
   network: "Network",
   notes: "Notes",
   settings: "Settings",
+  profile: "Profile",
+  map: "Map",
 };
 
 export function TopBar({ username, displayName }: { username: string; displayName: string }) {
@@ -77,6 +79,16 @@ export function TopBar({ username, displayName }: { username: string; displayNam
             <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
             <div className="absolute right-0 z-50 mt-1 w-44 rounded-xl border border-charcoal-800/60 bg-[#0d0d14] p-1.5 shadow-2xl">
               <Link
+                href={`/${username}/profile`}
+                onClick={() => setShowMenu(false)}
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-charcoal-300 hover:bg-charcoal-800/50"
+              >
+                <svg className="h-4 w-4 text-charcoal-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                </svg>
+                Profile
+              </Link>
+              <Link
                 href={`/${username}/settings`}
                 onClick={() => setShowMenu(false)}
                 className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-charcoal-300 hover:bg-charcoal-800/50"
@@ -87,6 +99,7 @@ export function TopBar({ username, displayName }: { username: string; displayNam
                 </svg>
                 Settings
               </Link>
+              <div className="my-1 border-t border-charcoal-800/40" />
               <button
                 onClick={handleLogout}
                 className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-charcoal-300 hover:bg-charcoal-800/50 hover:text-red-400"
