@@ -17,7 +17,7 @@ async function getBloggers() {
 
   if (!posts || posts.length === 0) return [];
 
-  const userIds = [...new Set(posts.map((p: { user_id: string }) => p.user_id))];
+  const userIds = Array.from(new Set(posts.map((p: { user_id: string }) => p.user_id)));
 
   const { data: users } = await db
     .from("users")
