@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   const parts = stateRaw.split(":");
   const verifier = parts.pop() || "";
   const username = parts[0] || "";
-  const returnTo = parts.length > 2 ? parts[1] : "";
+  const returnTo = parts.length > 1 ? parts[1] : "";
 
   if (!code || !username || !verifier) {
     return NextResponse.redirect(new URL("/login", request.url));

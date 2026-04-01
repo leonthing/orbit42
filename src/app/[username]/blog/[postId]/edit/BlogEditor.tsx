@@ -389,6 +389,7 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
             title={title}
             content={content}
             slug={slug}
+            postId={post.id}
             username={params.username}
             published={post.published}
           />

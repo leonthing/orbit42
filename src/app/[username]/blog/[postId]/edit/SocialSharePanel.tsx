@@ -13,13 +13,14 @@ interface Props {
   title: string;
   content: string;
   slug: string;
+  postId: string;
   username: string;
   published: boolean;
 }
 
 type Platform = "x" | "facebook" | "linkedin";
 
-export default function SocialSharePanel({ title, content, slug, username, published }: Props) {
+export default function SocialSharePanel({ title, content, slug, postId, username, published }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [xText, setXText] = useState("");
   const [fbText, setFbText] = useState("");
@@ -96,7 +97,7 @@ export default function SocialSharePanel({ title, content, slug, username, publi
       setText: setXText,
       connected: status?.x.connected || false,
       connectedLabel: status?.x.username ? `@${status.x.username}` : null,
-      authUrl: `/api/x?return=${encodeURIComponent(`${username}/blog/${slug}/edit`)}`,
+      authUrl: `/api/x?return=${encodeURIComponent(`${username}/blog/${postId}/edit`)}`,
       maxLen: 280,
     },
     {
@@ -106,7 +107,7 @@ export default function SocialSharePanel({ title, content, slug, username, publi
       setText: setFbText,
       connected: status?.facebook.connected || false,
       connectedLabel: status?.facebook.name || null,
-      authUrl: `/api/facebook?return=${encodeURIComponent(`${username}/blog/${slug}/edit`)}`,
+      authUrl: `/api/facebook?return=${encodeURIComponent(`${username}/blog/${postId}/edit`)}`,
     },
     {
       key: "linkedin",
@@ -115,7 +116,7 @@ export default function SocialSharePanel({ title, content, slug, username, publi
       setText: setLiText,
       connected: status?.linkedin.connected || false,
       connectedLabel: status?.linkedin.name || null,
-      authUrl: `/api/linkedin?return=${encodeURIComponent(`${username}/blog/${slug}/edit`)}`,
+      authUrl: `/api/linkedin?return=${encodeURIComponent(`${username}/blog/${postId}/edit`)}`,
     },
   ];
 
@@ -177,8 +178,8 @@ export default function SocialSharePanel({ title, content, slug, username, publi
                     {p.connected ? (
                       <span className="text-[10px] text-emerald-400">{p.connectedLabel} 연결됨</span>
                     ) : (
-                      <a href={p.authUrl} className="text-[10px] text-navy-400 hover:underline">
-                        계정 연결
+                      <a href={p.authUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-navy-400 hover:underline">
+                        계정 연결 ↗
                       </a>
                     )}
                   </div>
