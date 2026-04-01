@@ -307,7 +307,7 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
   );
 
   return (
-    <div className="flex h-[calc(100vh-theme(spacing.12))] flex-col">
+    <div className="flex min-h-[calc(100vh-theme(spacing.12))] flex-col">
       {/* Top bar */}
       <div className="flex flex-wrap items-center justify-between gap-2 pb-3">
         <div className="flex items-center gap-2 sm:gap-3">
@@ -385,14 +385,6 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
           >
             저장
           </button>
-          <SocialSharePanel
-            title={title}
-            content={content}
-            slug={slug}
-            postId={post.id}
-            username={params.username}
-            published={post.published}
-          />
           <button
             onClick={handleDelete}
             disabled={isPending}
@@ -491,6 +483,16 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
           </div>
         </div>
       )}
+
+      {/* Social Share - inline below editor */}
+      <SocialSharePanel
+        title={title}
+        content={content}
+        slug={slug}
+        postId={post.id}
+        username={params.username}
+        published={post.published}
+      />
     </div>
   );
 }
