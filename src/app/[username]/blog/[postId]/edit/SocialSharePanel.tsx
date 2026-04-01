@@ -27,6 +27,7 @@ export default function SocialSharePanel({ title, content, slug, username, publi
   const [generating, setGenerating] = useState(false);
   const [status, setStatus] = useState<{ x: { connected: boolean; username: string | null }; facebook: { connected: boolean; name: string | null }; linkedin: { connected: boolean; name: string | null } } | null>(null);
   const [results, setResults] = useState<{ x?: string; facebook?: string; linkedin?: string }>({});
+  const [genError, setGenError] = useState("");
   const [isPending, startTransition] = useTransition();
 
   async function handleOpen() {
@@ -40,13 +41,16 @@ export default function SocialSharePanel({ title, content, slug, username, publi
   async function handleGenerate() {
     setGenerating(true);
     setResults({});
+    setGenError("");
     try {
       const generated = await generateSocialPosts(title, content, slug, username);
       setPosts(generated);
       setXText(generated.x);
       setFbText(generated.facebook);
       setLiText(generated.linkedin);
-    } catch (e) {
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "알 수 없는 오류";
+      setGenError(msg);
       console.error(e);
     }
     setGenerating(false);
@@ -123,6 +127,10 @@ export default function SocialSharePanel({ title, content, slug, username, publi
           >
             {generating ? "AI가 요약 생성 중..." : posts ? "다시 생성" : "AI 요약 생성"}
           </button>
+
+          {genError && (
+            <p className="text-xs text-red-400">{genError}</p>
+          )}
 
           {posts && (
             <div className="space-y-4">
