@@ -98,7 +98,7 @@ export default function SocialSharePanel({ title, content, slug, postId, usernam
       setText: setXText,
       connected: status?.x.connected || false,
       connectedLabel: status?.x.username ? `@${status.x.username}` : null,
-      authUrl: `/api/x?return=${encodeURIComponent(`${username}/blog/${postId}/edit`)}`,
+      authUrl: `/api/x?return=${encodeURIComponent(`blog/${postId}/edit`)}`,
       maxLen: 280,
     },
     {
@@ -108,7 +108,7 @@ export default function SocialSharePanel({ title, content, slug, postId, usernam
       setText: setFbText,
       connected: status?.facebook.connected || false,
       connectedLabel: status?.facebook.name || null,
-      authUrl: `/api/facebook?return=${encodeURIComponent(`${username}/blog/${postId}/edit`)}`,
+      authUrl: `/api/facebook?return=${encodeURIComponent(`blog/${postId}/edit`)}`,
     },
     {
       key: "linkedin",
@@ -117,7 +117,7 @@ export default function SocialSharePanel({ title, content, slug, postId, usernam
       setText: setLiText,
       connected: status?.linkedin.connected || false,
       connectedLabel: status?.linkedin.name || null,
-      authUrl: `/api/linkedin?return=${encodeURIComponent(`${username}/blog/${postId}/edit`)}`,
+      authUrl: `/api/linkedin?return=${encodeURIComponent(`blog/${postId}/edit`)}`,
     },
   ];
 
