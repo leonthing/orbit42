@@ -47,6 +47,7 @@ export async function getPublishedPosts(username: string) {
 
 export async function getPublishedPost(username: string, slug: string) {
   const db = getAdminClient();
+  const decodedSlug = decodeURIComponent(slug);
 
   const { data: user } = await db
     .from("users")
@@ -60,7 +61,7 @@ export async function getPublishedPost(username: string, slug: string) {
     .from("blog_posts")
     .select("id, slug, title, content, excerpt, published_at, tags")
     .eq("user_id", user.id)
-    .eq("slug", slug)
+    .eq("slug", decodedSlug)
     .eq("published", true)
     .single();
 
