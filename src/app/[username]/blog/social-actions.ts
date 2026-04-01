@@ -1,0 +1,88 @@
+"use server";
+
+import Anthropic from "@anthropic-ai/sdk";
+import { requireUserId } from "@/lib/db";
+import { getSocialStatus, postToX, postToFacebook } from "@/lib/social";
+
+export interface SocialPosts {
+  x: string;
+  facebook: string;
+}
+
+export async function generateSocialPosts(
+  title: string,
+  content: string,
+  slug: string,
+  username: string
+): Promise<SocialPosts> {
+  const blogUrl = `https://blog.orbit42.org/${username}/${slug}`;
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+
+  if (!apiKey) {
+    // Fallback: simple summary without AI
+    const excerpt = content
+      .replace(/[#*_`>\-\[\]()!]/g, "")
+      .replace(/\n+/g, " ")
+      .trim()
+      .slice(0, 200);
+
+    return {
+      x: `${title}\n\n${excerpt.slice(0, 200)}...\n\n${blogUrl}`,
+      facebook: `${title}\n\n${excerpt}...\n\n${blogUrl}`,
+    };
+  }
+
+  const client = new Anthropic({ apiKey });
+
+  const message = await client.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 1024,
+    messages: [
+      {
+        role: "user",
+        content: `다음 블로그 글을 소셜 미디어용으로 요약해줘. 반드시 한국어로 작성하고, 각 플랫폼 스타일에 맞게 작성해.
+
+제목: ${title}
+URL: ${blogUrl}
+본문:
+${content.slice(0, 3000)}
+
+다음 JSON 형식으로만 응답해 (다른 텍스트 없이):
+{
+  "x": "X(트위터)용 포스트 (280자 이내, 해시태그 2-3개 포함, URL 포함)",
+  "facebook": "페이스북용 포스트 (자연스럽고 읽기 좋게, URL 포함, 이모지 적절히 사용)"
+}`,
+      },
+    ],
+  });
+
+  try {
+    const text = message.content[0].type === "text" ? message.content[0].text : "";
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]) as SocialPosts;
+    }
+  } catch {}
+
+  // Fallback
+  const short = content.replace(/[#*_`>\-\[\]()!]/g, "").replace(/\n+/g, " ").trim().slice(0, 200);
+  return {
+    x: `${title}\n\n${short}...\n\n${blogUrl}`,
+    facebook: `${title}\n\n${short}...\n\n${blogUrl}`,
+  };
+}
+
+export async function getSocialConnectionStatus() {
+  const userId = await requireUserId();
+  return getSocialStatus(userId);
+}
+
+export async function publishToX(text: string) {
+  const userId = await requireUserId();
+  return postToX(userId, text);
+}
+
+export async function publishToFacebook(message: string, link?: string) {
+  const userId = await requireUserId();
+  return postToFacebook(userId, message, link);
+}

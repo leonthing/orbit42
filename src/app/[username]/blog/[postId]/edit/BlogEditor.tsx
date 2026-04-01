@@ -11,6 +11,7 @@ import {
   publishBlogPost,
   unpublishBlogPost,
 } from "../../actions";
+import SocialSharePanel from "./SocialSharePanel";
 
 type ToolbarAction = {
   icon: React.ReactNode;
@@ -384,6 +385,13 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
           >
             저장
           </button>
+          <SocialSharePanel
+            title={title}
+            content={content}
+            slug={slug}
+            username={params.username}
+            published={post.published}
+          />
           <button
             onClick={handleDelete}
             disabled={isPending}
