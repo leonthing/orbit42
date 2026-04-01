@@ -2,11 +2,12 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { requireUserId } from "@/lib/db";
-import { getSocialStatus, postToX, postToFacebook } from "@/lib/social";
+import { getSocialStatus, postToX, postToFacebook, postToLinkedIn } from "@/lib/social";
 
 export interface SocialPosts {
   x: string;
   facebook: string;
+  linkedin: string;
 }
 
 export async function generateSocialPosts(
@@ -29,6 +30,7 @@ export async function generateSocialPosts(
     return {
       x: `${title}\n\n${excerpt.slice(0, 200)}...\n\n${blogUrl}`,
       facebook: `${title}\n\n${excerpt}...\n\n${blogUrl}`,
+      linkedin: `${title}\n\n${excerpt}...\n\n${blogUrl}`,
     };
   }
 
@@ -50,7 +52,8 @@ ${content.slice(0, 3000)}
 다음 JSON 형식으로만 응답해 (다른 텍스트 없이):
 {
   "x": "X(트위터)용 포스트 (280자 이내, 해시태그 2-3개 포함, URL 포함)",
-  "facebook": "페이스북용 포스트 (자연스럽고 읽기 좋게, URL 포함, 이모지 적절히 사용)"
+  "facebook": "페이스북용 포스트 (자연스럽고 읽기 좋게, URL 포함, 이모지 적절히 사용)",
+  "linkedin": "링크드인용 포스트 (전문적이고 인사이트 중심, URL 포함, 해시태그 3-5개)"
 }`,
       },
     ],
@@ -69,6 +72,7 @@ ${content.slice(0, 3000)}
   return {
     x: `${title}\n\n${short}...\n\n${blogUrl}`,
     facebook: `${title}\n\n${short}...\n\n${blogUrl}`,
+    linkedin: `${title}\n\n${short}...\n\n${blogUrl}`,
   };
 }
 
@@ -85,4 +89,9 @@ export async function publishToX(text: string) {
 export async function publishToFacebook(message: string, link?: string) {
   const userId = await requireUserId();
   return postToFacebook(userId, message, link);
+}
+
+export async function publishToLinkedIn(text: string, articleUrl?: string) {
+  const userId = await requireUserId();
+  return postToLinkedIn(userId, text, articleUrl);
 }

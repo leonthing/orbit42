@@ -6,6 +6,7 @@ import {
   getSocialConnectionStatus,
   publishToX,
   publishToFacebook,
+  publishToLinkedIn,
   type SocialPosts,
 } from "../../social-actions";
 
@@ -22,9 +23,10 @@ export default function SocialSharePanel({ title, content, slug, username, publi
   const [posts, setPosts] = useState<SocialPosts | null>(null);
   const [xText, setXText] = useState("");
   const [fbText, setFbText] = useState("");
+  const [liText, setLiText] = useState("");
   const [generating, setGenerating] = useState(false);
-  const [status, setStatus] = useState<{ x: { connected: boolean; username: string | null }; facebook: { connected: boolean; name: string | null } } | null>(null);
-  const [results, setResults] = useState<{ x?: string; facebook?: string }>({});
+  const [status, setStatus] = useState<{ x: { connected: boolean; username: string | null }; facebook: { connected: boolean; name: string | null }; linkedin: { connected: boolean; name: string | null } } | null>(null);
+  const [results, setResults] = useState<{ x?: string; facebook?: string; linkedin?: string }>({});
   const [isPending, startTransition] = useTransition();
 
   async function handleOpen() {
@@ -43,6 +45,7 @@ export default function SocialSharePanel({ title, content, slug, username, publi
       setPosts(generated);
       setXText(generated.x);
       setFbText(generated.facebook);
+      setLiText(generated.linkedin);
     } catch (e) {
       console.error(e);
     }
@@ -70,6 +73,17 @@ export default function SocialSharePanel({ title, content, slug, username, publi
     });
   }
 
+  function handlePostToLinkedIn() {
+    const blogUrl = `https://blog.orbit42.org/${username}/${slug}`;
+    startTransition(async () => {
+      const result = await publishToLinkedIn(liText, blogUrl);
+      setResults((prev) => ({
+        ...prev,
+        linkedin: result.success ? "posted" : result.error || "오류 발생",
+      }));
+    });
+  }
+
   function copyToClipboard(text: string) {
     navigator.clipboard.writeText(text);
   }
@@ -91,7 +105,7 @@ export default function SocialSharePanel({ title, content, slug, username, publi
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-10 z-50 w-[420px] rounded-xl border border-charcoal-700 bg-charcoal-900 p-4 shadow-2xl">
+        <div className="absolute right-0 top-10 z-50 max-h-[80vh] w-[420px] overflow-y-auto rounded-xl border border-charcoal-700 bg-charcoal-900 p-4 shadow-2xl">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-charcoal-100">소셜 공유</h3>
             <button onClick={() => setIsOpen(false)} className="text-charcoal-500 hover:text-charcoal-300">
@@ -201,6 +215,51 @@ export default function SocialSharePanel({ title, content, slug, username, publi
                   </button>
                   {results.facebook && results.facebook !== "posted" && (
                     <span className="self-center text-[10px] text-red-400">{results.facebook}</span>
+                  )}
+                </div>
+              </div>
+
+              {/* LinkedIn */}
+              <div className="rounded-lg border border-charcoal-700 bg-charcoal-800/50 p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-charcoal-200">LinkedIn</span>
+                    {status?.linkedin.connected ? (
+                      <span className="text-[10px] text-emerald-400">{status.linkedin.name} 연결됨</span>
+                    ) : (
+                      <a
+                        href={`/api/linkedin?return=${encodeURIComponent(`${username}/blog/${slug}/edit`)}`}
+                        className="text-[10px] text-navy-400 hover:underline"
+                      >
+                        계정 연결
+                      </a>
+                    )}
+                  </div>
+                </div>
+                <textarea
+                  value={liText}
+                  onChange={(e) => setLiText(e.target.value)}
+                  rows={5}
+                  className="mb-2 w-full resize-none rounded border border-charcoal-700 bg-charcoal-800 px-3 py-2 text-xs text-charcoal-200 focus:border-navy-500 focus:outline-none"
+                />
+                <div className="flex gap-2">
+                  {status?.linkedin.connected && (
+                    <button
+                      onClick={handlePostToLinkedIn}
+                      disabled={isPending || !liText.trim() || results.linkedin === "posted"}
+                      className="rounded-md bg-charcoal-700 px-3 py-1 text-xs font-medium text-charcoal-100 hover:bg-charcoal-600 disabled:opacity-50"
+                    >
+                      {results.linkedin === "posted" ? "게시 완료" : isPending ? "게시 중..." : "포스팅"}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => copyToClipboard(liText)}
+                    className="rounded-md border border-charcoal-700 px-3 py-1 text-xs text-charcoal-400 hover:text-charcoal-200"
+                  >
+                    복사
+                  </button>
+                  {results.linkedin && results.linkedin !== "posted" && (
+                    <span className="self-center text-[10px] text-red-400">{results.linkedin}</span>
                   )}
                 </div>
               </div>

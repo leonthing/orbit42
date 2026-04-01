@@ -232,18 +232,154 @@ export async function saveFacebookTokens(
   }).eq("id", userId);
 }
 
+// ─── LinkedIn OAuth 2.0 ───
+
+const LI_AUTH_URL = "https://www.linkedin.com/oauth/v2/authorization";
+const LI_TOKEN_URL = "https://www.linkedin.com/oauth/v2/accessToken";
+const LI_API_URL = "https://api.linkedin.com/v2";
+
+
+export function getLinkedInAuthUrl(state: string) {
+  const clientId = process.env.LINKEDIN_CLIENT_ID!;
+  const redirectUri = `${process.env.NEXT_PUBLIC_SITE_URL}/api/linkedin/callback`;
+
+  const params = new URLSearchParams({
+    response_type: "code",
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    scope: "openid profile w_member_social",
+    state,
+  });
+
+  return `${LI_AUTH_URL}?${params}`;
+}
+
+export async function exchangeLinkedInCode(code: string) {
+  const clientId = process.env.LINKEDIN_CLIENT_ID!;
+  const clientSecret = process.env.LINKEDIN_CLIENT_SECRET!;
+  const redirectUri = `${process.env.NEXT_PUBLIC_SITE_URL}/api/linkedin/callback`;
+
+  const res = await fetch(LI_TOKEN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "authorization_code",
+      code,
+      client_id: clientId,
+      client_secret: clientSecret,
+      redirect_uri: redirectUri,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`LinkedIn token exchange failed: ${err}`);
+  }
+
+  return res.json();
+}
+
+export async function getLinkedInProfile(accessToken: string) {
+  const res = await fetch(`${LI_API_URL}/userinfo`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) return null;
+  return res.json() as Promise<{ sub: string; name: string }>;
+}
+
+export async function postToLinkedIn(
+  userId: string,
+  text: string,
+  articleUrl?: string
+): Promise<{ success: boolean; error?: string; postId?: string }> {
+  const db = getAdminClient();
+  const { data: user } = await db
+    .from("users")
+    .select("linkedin_access_token, linkedin_sub, linkedin_token_expiry")
+    .eq("id", userId)
+    .single();
+
+  if (!user?.linkedin_access_token || !user?.linkedin_sub) {
+    return { success: false, error: "LinkedIn 계정이 연결되어 있지 않습니다." };
+  }
+
+  const accessToken = user.linkedin_access_token;
+  const authorUrn = `urn:li:person:${user.linkedin_sub}`;
+
+  const body: Record<string, unknown> = {
+    author: authorUrn,
+    lifecycleState: "PUBLISHED",
+    specificContent: {
+      "com.linkedin.ugc.ShareContent": {
+        shareCommentary: { text },
+        shareMediaCategory: articleUrl ? "ARTICLE" : "NONE",
+        ...(articleUrl
+          ? {
+              media: [
+                {
+                  status: "READY",
+                  originalUrl: articleUrl,
+                },
+              ],
+            }
+          : {}),
+      },
+    },
+    visibility: {
+      "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC",
+    },
+  };
+
+  const res = await fetch(`${LI_API_URL}/ugcPosts`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+      "X-Restli-Protocol-Version": "2.0.0",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    return { success: false, error: `포스팅 실패: ${err}` };
+  }
+
+  const postId = res.headers.get("x-restli-id") || "";
+  return { success: true, postId };
+}
+
+export async function saveLinkedInTokens(
+  userId: string,
+  tokens: { access_token: string; refresh_token?: string; expires_in?: number },
+  profile?: { sub: string; name: string }
+) {
+  const db = getAdminClient();
+  await db.from("users").update({
+    linkedin_access_token: tokens.access_token,
+    linkedin_refresh_token: tokens.refresh_token || undefined,
+    linkedin_token_expiry: tokens.expires_in
+      ? new Date(Date.now() + tokens.expires_in * 1000).toISOString()
+      : undefined,
+    linkedin_sub: profile?.sub || undefined,
+    linkedin_name: profile?.name || undefined,
+    updated_at: new Date().toISOString(),
+  }).eq("id", userId);
+}
+
 // ─── Social connection status ───
 
 export async function getSocialStatus(userId: string) {
   const db = getAdminClient();
   const { data } = await db
     .from("users")
-    .select("x_access_token, x_username, fb_page_id, fb_user_name")
+    .select("x_access_token, x_username, fb_page_id, fb_user_name, linkedin_access_token, linkedin_name")
     .eq("id", userId)
     .single();
 
   return {
     x: { connected: !!data?.x_access_token, username: data?.x_username || null },
     facebook: { connected: !!data?.fb_page_id, name: data?.fb_user_name || null },
+    linkedin: { connected: !!data?.linkedin_access_token, name: data?.linkedin_name || null },
   };
 }
