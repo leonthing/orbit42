@@ -84,7 +84,15 @@ ${content.slice(0, 3000)}
 
 export async function getSocialConnectionStatus() {
   const userId = await requireUserId();
-  return getSocialStatus(userId);
+  const status = await getSocialStatus(userId);
+  return {
+    ...status,
+    configured: {
+      x: !!process.env.X_CLIENT_ID,
+      facebook: !!process.env.FACEBOOK_APP_ID,
+      linkedin: !!process.env.LINKEDIN_CLIENT_ID,
+    },
+  };
 }
 
 export async function publishToX(text: string) {

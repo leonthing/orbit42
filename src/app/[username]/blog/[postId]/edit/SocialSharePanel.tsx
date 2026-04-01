@@ -32,6 +32,7 @@ export default function SocialSharePanel({ title, content, slug, postId, usernam
     x: { connected: boolean; username: string | null };
     facebook: { connected: boolean; name: string | null };
     linkedin: { connected: boolean; name: string | null };
+    configured: { x: boolean; facebook: boolean; linkedin: boolean };
   } | null>(null);
   const [results, setResults] = useState<Record<Platform, string>>({ x: "", facebook: "", linkedin: "" });
   const [isPending, startTransition] = useTransition();
@@ -170,7 +171,7 @@ export default function SocialSharePanel({ title, content, slug, postId, usernam
 
           {/* 플랫폼별 섹션 */}
           <div className="space-y-3">
-            {platforms.map((p) => (
+            {platforms.filter((p) => !status?.configured || status.configured[p.key]).map((p) => (
               <div key={p.key} className="rounded-lg border border-charcoal-700 bg-charcoal-800/50 p-3">
                 <div className="mb-2 flex items-center justify-between">
                   <div className="flex items-center gap-2">
