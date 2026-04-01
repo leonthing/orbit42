@@ -8,6 +8,7 @@ import {
   publishToFacebook,
   publishToLinkedIn,
 } from "../../social-actions";
+import { saveSocialTexts } from "../../actions";
 
 interface Props {
   title: string;
@@ -16,17 +17,18 @@ interface Props {
   postId: string;
   username: string;
   published: boolean;
+  initialSocial?: { x: string | null; facebook: string | null; linkedin: string | null };
 }
 
 type Platform = "x" | "facebook" | "linkedin";
 
-export default function SocialSharePanel({ title, content, slug, postId, username, published }: Props) {
-  const [xText, setXText] = useState("");
-  const [fbText, setFbText] = useState("");
-  const [liText, setLiText] = useState("");
+export default function SocialSharePanel({ title, content, slug, postId, username, published, initialSocial }: Props) {
+  const [xText, setXText] = useState(initialSocial?.x || "");
+  const [fbText, setFbText] = useState(initialSocial?.facebook || "");
+  const [liText, setLiText] = useState(initialSocial?.linkedin || "");
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState("");
-  const [generated, setGenerated] = useState(false);
+  const [generated, setGenerated] = useState(!!(initialSocial?.x || initialSocial?.facebook || initialSocial?.linkedin));
   const [status, setStatus] = useState<{
     x: { connected: boolean; username: string | null };
     facebook: { connected: boolean; name: string | null };
@@ -60,6 +62,11 @@ export default function SocialSharePanel({ title, content, slug, postId, usernam
       setFbText(posts.facebook);
       setLiText(posts.linkedin);
       setGenerated(true);
+      await saveSocialTexts(postId, {
+        social_x: posts.x,
+        social_facebook: posts.facebook,
+        social_linkedin: posts.linkedin,
+      });
     } catch (e: unknown) {
       setGenError(e instanceof Error ? e.message : "요약 생성 실패");
     }

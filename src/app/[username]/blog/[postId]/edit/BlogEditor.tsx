@@ -492,6 +492,11 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
         postId={post.id}
         username={params.username}
         published={post.published}
+        initialSocial={{
+          x: post.social_x,
+          facebook: post.social_facebook,
+          linkedin: post.social_linkedin,
+        }}
       />
     </div>
   );

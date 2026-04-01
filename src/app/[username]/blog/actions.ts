@@ -13,6 +13,9 @@ export interface BlogPost {
   published: boolean;
   published_at: string | null;
   tags: string[];
+  social_x: string | null;
+  social_facebook: string | null;
+  social_linkedin: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -150,6 +153,22 @@ export async function unpublishBlogPost(id: string) {
 
   if (error) throw new Error(error.message);
   return post as BlogPost;
+}
+
+export async function saveSocialTexts(
+  id: string,
+  data: { social_x?: string; social_facebook?: string; social_linkedin?: string }
+) {
+  const userId = await requireUserId();
+  const db = getAdminClient();
+
+  const { error } = await db
+    .from("blog_posts")
+    .update(data)
+    .eq("id", id)
+    .eq("user_id", userId);
+
+  if (error) throw new Error(error.message);
 }
 
 export async function deleteBlogPost(id: string) {
