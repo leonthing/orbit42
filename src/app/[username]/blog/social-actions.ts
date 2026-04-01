@@ -1,6 +1,5 @@
 "use server";
 
-import Anthropic from "@anthropic-ai/sdk";
 import { requireUserId } from "@/lib/db";
 import { getSocialStatus, postToX, postToFacebook, postToLinkedIn } from "@/lib/social";
 
@@ -19,30 +18,35 @@ export async function generateSocialPosts(
   const blogUrl = `https://blog.orbit42.org/${username}/${slug}`;
   const apiKey = process.env.ANTHROPIC_API_KEY;
 
-  if (!apiKey) {
-    // Fallback: simple summary without AI
-    const excerpt = content
-      .replace(/[#*_`>\-\[\]()!]/g, "")
-      .replace(/\n+/g, " ")
-      .trim()
-      .slice(0, 200);
+  const excerpt = content
+    .replace(/[#*_`>\-\[\]()!]/g, "")
+    .replace(/\n+/g, " ")
+    .trim()
+    .slice(0, 200);
 
-    return {
-      x: `${title}\n\n${excerpt.slice(0, 200)}...\n\n${blogUrl}`,
-      facebook: `${title}\n\n${excerpt}...\n\n${blogUrl}`,
-      linkedin: `${title}\n\n${excerpt}...\n\n${blogUrl}`,
-    };
-  }
+  const fallback: SocialPosts = {
+    x: `${title}\n\n${excerpt}...\n\n${blogUrl}`,
+    facebook: `${title}\n\n${excerpt}...\n\n${blogUrl}`,
+    linkedin: `${title}\n\n${excerpt}...\n\n${blogUrl}`,
+  };
 
-  const client = new Anthropic({ apiKey });
+  if (!apiKey) return fallback;
 
-  const message = await client.messages.create({
-    model: "claude-3-5-sonnet-20241022",
-    max_tokens: 1024,
-    messages: [
-      {
-        role: "user",
-        content: `다음 블로그 글을 소셜 미디어용으로 요약해줘. 반드시 한국어로 작성하고, 각 플랫폼 스타일에 맞게 작성해.
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-3-5-sonnet-20241022",
+        max_tokens: 1024,
+        messages: [
+          {
+            role: "user",
+            content: `다음 블로그 글을 소셜 미디어용으로 요약해줘. 반드시 한국어로 작성하고, 각 플랫폼 스타일에 맞게 작성해.
 
 제목: ${title}
 URL: ${blogUrl}
@@ -55,25 +59,27 @@ ${content.slice(0, 3000)}
   "facebook": "페이스북용 포스트 (자연스럽고 읽기 좋게, URL 포함, 이모지 적절히 사용)",
   "linkedin": "링크드인용 포스트 (전문적이고 인사이트 중심, URL 포함, 해시태그 3-5개)"
 }`,
-      },
-    ],
-  });
+          },
+        ],
+      }),
+    });
 
-  try {
-    const text = message.content[0].type === "text" ? message.content[0].text : "";
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Anthropic API error: ${res.status} ${err}`);
+    }
+
+    const data = await res.json();
+    const text = data.content?.[0]?.text || "";
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       return JSON.parse(jsonMatch[0]) as SocialPosts;
     }
-  } catch {}
+  } catch (e) {
+    console.error("AI summary generation failed:", e);
+  }
 
-  // Fallback
-  const short = content.replace(/[#*_`>\-\[\]()!]/g, "").replace(/\n+/g, " ").trim().slice(0, 200);
-  return {
-    x: `${title}\n\n${short}...\n\n${blogUrl}`,
-    facebook: `${title}\n\n${short}...\n\n${blogUrl}`,
-    linkedin: `${title}\n\n${short}...\n\n${blogUrl}`,
-  };
+  return fallback;
 }
 
 export async function getSocialConnectionStatus() {

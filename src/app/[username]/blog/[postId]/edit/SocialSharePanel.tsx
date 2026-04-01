@@ -7,7 +7,6 @@ import {
   publishToX,
   publishToFacebook,
   publishToLinkedIn,
-  type SocialPosts,
 } from "../../social-actions";
 
 interface Props {
@@ -18,17 +17,24 @@ interface Props {
   published: boolean;
 }
 
+type Platform = "x" | "facebook" | "linkedin";
+
 export default function SocialSharePanel({ title, content, slug, username, published }: Props) {
   const [isOpen, setIsOpen] = useState(false);
-  const [posts, setPosts] = useState<SocialPosts | null>(null);
   const [xText, setXText] = useState("");
   const [fbText, setFbText] = useState("");
   const [liText, setLiText] = useState("");
   const [generating, setGenerating] = useState(false);
-  const [status, setStatus] = useState<{ x: { connected: boolean; username: string | null }; facebook: { connected: boolean; name: string | null }; linkedin: { connected: boolean; name: string | null } } | null>(null);
-  const [results, setResults] = useState<{ x?: string; facebook?: string; linkedin?: string }>({});
   const [genError, setGenError] = useState("");
+  const [generated, setGenerated] = useState(false);
+  const [status, setStatus] = useState<{
+    x: { connected: boolean; username: string | null };
+    facebook: { connected: boolean; name: string | null };
+    linkedin: { connected: boolean; name: string | null };
+  } | null>(null);
+  const [results, setResults] = useState<Record<Platform, string>>({ x: "", facebook: "", linkedin: "" });
   const [isPending, startTransition] = useTransition();
+  const [copied, setCopied] = useState<Platform | null>(null);
 
   async function handleOpen() {
     setIsOpen(!isOpen);
@@ -40,59 +46,78 @@ export default function SocialSharePanel({ title, content, slug, username, publi
 
   async function handleGenerate() {
     setGenerating(true);
-    setResults({});
     setGenError("");
+    setResults({ x: "", facebook: "", linkedin: "" });
     try {
-      const generated = await generateSocialPosts(title, content, slug, username);
-      setPosts(generated);
-      setXText(generated.x);
-      setFbText(generated.facebook);
-      setLiText(generated.linkedin);
+      const posts = await generateSocialPosts(title, content, slug, username);
+      setXText(posts.x);
+      setFbText(posts.facebook);
+      setLiText(posts.linkedin);
+      setGenerated(true);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "알 수 없는 오류";
-      setGenError(msg);
-      console.error(e);
+      setGenError(e instanceof Error ? e.message : "요약 생성 실패");
     }
     setGenerating(false);
   }
 
-  function handlePostToX() {
-    startTransition(async () => {
-      const result = await publishToX(xText);
-      setResults((prev) => ({
-        ...prev,
-        x: result.success ? "posted" : result.error || "오류 발생",
-      }));
-    });
-  }
-
-  function handlePostToFacebook() {
+  function handlePost(platform: Platform) {
     const blogUrl = `https://blog.orbit42.org/${username}/${slug}`;
     startTransition(async () => {
-      const result = await publishToFacebook(fbText, blogUrl);
-      setResults((prev) => ({
-        ...prev,
-        facebook: result.success ? "posted" : result.error || "오류 발생",
-      }));
+      let result;
+      if (platform === "x") result = await publishToX(xText);
+      else if (platform === "facebook") result = await publishToFacebook(fbText, blogUrl);
+      else result = await publishToLinkedIn(liText, blogUrl);
+      setResults((prev) => ({ ...prev, [platform]: result.success ? "posted" : result.error || "오류" }));
     });
   }
 
-  function handlePostToLinkedIn() {
-    const blogUrl = `https://blog.orbit42.org/${username}/${slug}`;
-    startTransition(async () => {
-      const result = await publishToLinkedIn(liText, blogUrl);
-      setResults((prev) => ({
-        ...prev,
-        linkedin: result.success ? "posted" : result.error || "오류 발생",
-      }));
-    });
-  }
-
-  function copyToClipboard(text: string) {
+  function copyToClipboard(text: string, platform: Platform) {
     navigator.clipboard.writeText(text);
+    setCopied(platform);
+    setTimeout(() => setCopied(null), 2000);
   }
 
   if (!published) return null;
+
+  const platforms: {
+    key: Platform;
+    label: string;
+    text: string;
+    setText: (v: string) => void;
+    connected: boolean;
+    connectedLabel: string | null;
+    authUrl: string;
+    maxLen?: number;
+  }[] = [
+    {
+      key: "x",
+      label: "𝕏",
+      text: xText,
+      setText: setXText,
+      connected: status?.x.connected || false,
+      connectedLabel: status?.x.username ? `@${status.x.username}` : null,
+      authUrl: `/api/x?return=${encodeURIComponent(`${username}/blog/${slug}/edit`)}`,
+      maxLen: 280,
+    },
+    {
+      key: "facebook",
+      label: "Facebook",
+      text: fbText,
+      setText: setFbText,
+      connected: status?.facebook.connected || false,
+      connectedLabel: status?.facebook.name || null,
+      authUrl: `/api/facebook?return=${encodeURIComponent(`${username}/blog/${slug}/edit`)}`,
+    },
+    {
+      key: "linkedin",
+      label: "LinkedIn",
+      text: liText,
+      setText: setLiText,
+      connected: status?.linkedin.connected || false,
+      connectedLabel: status?.linkedin.name || null,
+      authUrl: `/api/linkedin?return=${encodeURIComponent(`${username}/blog/${slug}/edit`)}`,
+    },
+  ];
 
   return (
     <div className="relative">
@@ -109,7 +134,7 @@ export default function SocialSharePanel({ title, content, slug, username, publi
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-10 z-50 max-h-[80vh] w-[420px] overflow-y-auto rounded-xl border border-charcoal-700 bg-charcoal-900 p-4 shadow-2xl">
+        <div className="absolute right-0 top-10 z-50 max-h-[80vh] w-[440px] overflow-y-auto rounded-xl border border-charcoal-700 bg-charcoal-900 p-4 shadow-2xl">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-charcoal-100">소셜 공유</h3>
             <button onClick={() => setIsOpen(false)} className="text-charcoal-500 hover:text-charcoal-300">
@@ -119,160 +144,81 @@ export default function SocialSharePanel({ title, content, slug, username, publi
             </button>
           </div>
 
-          {/* Generate button */}
-          <button
-            onClick={handleGenerate}
-            disabled={generating || !content.trim()}
-            className="mb-4 w-full rounded-lg bg-navy-600 px-4 py-2 text-sm font-medium text-white hover:bg-navy-500 disabled:opacity-50"
-          >
-            {generating ? "AI가 요약 생성 중..." : posts ? "다시 생성" : "AI 요약 생성"}
-          </button>
-
-          {genError && (
-            <p className="text-xs text-red-400">{genError}</p>
-          )}
-
-          {posts && (
-            <div className="space-y-4">
-              {/* X (Twitter) */}
-              <div className="rounded-lg border border-charcoal-700 bg-charcoal-800/50 p-3">
-                <div className="mb-2 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-charcoal-200">𝕏</span>
-                    {status?.x.connected ? (
-                      <span className="text-[10px] text-emerald-400">@{status.x.username} 연결됨</span>
-                    ) : (
-                      <a
-                        href={`/api/x?return=${encodeURIComponent(`${username}/blog/${slug}/edit`)}`}
-                        className="text-[10px] text-navy-400 hover:underline"
-                      >
-                        계정 연결
-                      </a>
-                    )}
-                  </div>
-                  <span className={`text-[10px] ${xText.length > 280 ? "text-red-400" : "text-charcoal-500"}`}>
-                    {xText.length}/280
-                  </span>
-                </div>
-                <textarea
-                  value={xText}
-                  onChange={(e) => setXText(e.target.value)}
-                  rows={4}
-                  className="mb-2 w-full resize-none rounded border border-charcoal-700 bg-charcoal-800 px-3 py-2 text-xs text-charcoal-200 focus:border-navy-500 focus:outline-none"
-                />
-                <div className="flex gap-2">
-                  {status?.x.connected && (
-                    <button
-                      onClick={handlePostToX}
-                      disabled={isPending || !xText.trim() || xText.length > 280 || results.x === "posted"}
-                      className="rounded-md bg-charcoal-700 px-3 py-1 text-xs font-medium text-charcoal-100 hover:bg-charcoal-600 disabled:opacity-50"
-                    >
-                      {results.x === "posted" ? "게시 완료" : isPending ? "게시 중..." : "포스팅"}
-                    </button>
-                  )}
-                  <button
-                    onClick={() => copyToClipboard(xText)}
-                    className="rounded-md border border-charcoal-700 px-3 py-1 text-xs text-charcoal-400 hover:text-charcoal-200"
-                  >
-                    복사
-                  </button>
-                  {results.x && results.x !== "posted" && (
-                    <span className="self-center text-[10px] text-red-400">{results.x}</span>
-                  )}
-                </div>
+          {/* AI 요약 생성 - 별도 섹션 */}
+          <div className="mb-4 rounded-lg border border-charcoal-700 bg-charcoal-800/30 p-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <svg className="h-4 w-4 text-violet-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456Z" />
+                </svg>
+                <span className="text-xs font-medium text-charcoal-200">AI 요약 생성</span>
               </div>
-
-              {/* Facebook */}
-              <div className="rounded-lg border border-charcoal-700 bg-charcoal-800/50 p-3">
-                <div className="mb-2 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-charcoal-200">Facebook</span>
-                    {status?.facebook.connected ? (
-                      <span className="text-[10px] text-emerald-400">{status.facebook.name} 연결됨</span>
-                    ) : (
-                      <a
-                        href={`/api/facebook?return=${encodeURIComponent(`${username}/blog/${slug}/edit`)}`}
-                        className="text-[10px] text-navy-400 hover:underline"
-                      >
-                        페이지 연결
-                      </a>
-                    )}
-                  </div>
-                </div>
-                <textarea
-                  value={fbText}
-                  onChange={(e) => setFbText(e.target.value)}
-                  rows={5}
-                  className="mb-2 w-full resize-none rounded border border-charcoal-700 bg-charcoal-800 px-3 py-2 text-xs text-charcoal-200 focus:border-navy-500 focus:outline-none"
-                />
-                <div className="flex gap-2">
-                  {status?.facebook.connected && (
-                    <button
-                      onClick={handlePostToFacebook}
-                      disabled={isPending || !fbText.trim() || results.facebook === "posted"}
-                      className="rounded-md bg-charcoal-700 px-3 py-1 text-xs font-medium text-charcoal-100 hover:bg-charcoal-600 disabled:opacity-50"
-                    >
-                      {results.facebook === "posted" ? "게시 완료" : isPending ? "게시 중..." : "포스팅"}
-                    </button>
-                  )}
-                  <button
-                    onClick={() => copyToClipboard(fbText)}
-                    className="rounded-md border border-charcoal-700 px-3 py-1 text-xs text-charcoal-400 hover:text-charcoal-200"
-                  >
-                    복사
-                  </button>
-                  {results.facebook && results.facebook !== "posted" && (
-                    <span className="self-center text-[10px] text-red-400">{results.facebook}</span>
-                  )}
-                </div>
-              </div>
-
-              {/* LinkedIn */}
-              <div className="rounded-lg border border-charcoal-700 bg-charcoal-800/50 p-3">
-                <div className="mb-2 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-charcoal-200">LinkedIn</span>
-                    {status?.linkedin.connected ? (
-                      <span className="text-[10px] text-emerald-400">{status.linkedin.name} 연결됨</span>
-                    ) : (
-                      <a
-                        href={`/api/linkedin?return=${encodeURIComponent(`${username}/blog/${slug}/edit`)}`}
-                        className="text-[10px] text-navy-400 hover:underline"
-                      >
-                        계정 연결
-                      </a>
-                    )}
-                  </div>
-                </div>
-                <textarea
-                  value={liText}
-                  onChange={(e) => setLiText(e.target.value)}
-                  rows={5}
-                  className="mb-2 w-full resize-none rounded border border-charcoal-700 bg-charcoal-800 px-3 py-2 text-xs text-charcoal-200 focus:border-navy-500 focus:outline-none"
-                />
-                <div className="flex gap-2">
-                  {status?.linkedin.connected && (
-                    <button
-                      onClick={handlePostToLinkedIn}
-                      disabled={isPending || !liText.trim() || results.linkedin === "posted"}
-                      className="rounded-md bg-charcoal-700 px-3 py-1 text-xs font-medium text-charcoal-100 hover:bg-charcoal-600 disabled:opacity-50"
-                    >
-                      {results.linkedin === "posted" ? "게시 완료" : isPending ? "게시 중..." : "포스팅"}
-                    </button>
-                  )}
-                  <button
-                    onClick={() => copyToClipboard(liText)}
-                    className="rounded-md border border-charcoal-700 px-3 py-1 text-xs text-charcoal-400 hover:text-charcoal-200"
-                  >
-                    복사
-                  </button>
-                  {results.linkedin && results.linkedin !== "posted" && (
-                    <span className="self-center text-[10px] text-red-400">{results.linkedin}</span>
-                  )}
-                </div>
-              </div>
+              <button
+                onClick={handleGenerate}
+                disabled={generating || !content.trim()}
+                className="rounded-md bg-violet-600 px-3 py-1 text-xs font-medium text-white hover:bg-violet-500 disabled:opacity-50"
+              >
+                {generating ? "생성 중..." : generated ? "다시 생성" : "생성"}
+              </button>
             </div>
-          )}
+            {genError && <p className="mt-2 text-xs text-red-400">{genError}</p>}
+            {!generated && !genError && (
+              <p className="mt-2 text-[10px] text-charcoal-500">각 플랫폼에 맞는 요약을 AI가 자동으로 생성합니다</p>
+            )}
+          </div>
+
+          {/* 플랫폼별 섹션 */}
+          <div className="space-y-3">
+            {platforms.map((p) => (
+              <div key={p.key} className="rounded-lg border border-charcoal-700 bg-charcoal-800/50 p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-charcoal-200">{p.label}</span>
+                    {p.connected ? (
+                      <span className="text-[10px] text-emerald-400">{p.connectedLabel} 연결됨</span>
+                    ) : (
+                      <a href={p.authUrl} className="text-[10px] text-navy-400 hover:underline">
+                        계정 연결
+                      </a>
+                    )}
+                  </div>
+                  {p.maxLen && (
+                    <span className={`text-[10px] ${p.text.length > p.maxLen ? "text-red-400" : "text-charcoal-500"}`}>
+                      {p.text.length}/{p.maxLen}
+                    </span>
+                  )}
+                </div>
+                <textarea
+                  value={p.text}
+                  onChange={(e) => p.setText(e.target.value)}
+                  placeholder={`${p.label}에 공유할 내용을 입력하거나 AI 생성을 사용하세요`}
+                  rows={4}
+                  className="mb-2 w-full resize-none rounded border border-charcoal-700 bg-charcoal-800 px-3 py-2 text-xs text-charcoal-200 placeholder:text-charcoal-600 focus:border-navy-500 focus:outline-none"
+                />
+                <div className="flex items-center gap-2">
+                  {p.connected && (
+                    <button
+                      onClick={() => handlePost(p.key)}
+                      disabled={isPending || !p.text.trim() || (p.maxLen ? p.text.length > p.maxLen : false) || results[p.key] === "posted"}
+                      className="rounded-md bg-charcoal-700 px-3 py-1 text-xs font-medium text-charcoal-100 hover:bg-charcoal-600 disabled:opacity-50"
+                    >
+                      {results[p.key] === "posted" ? "게시 완료 ✓" : isPending ? "게시 중..." : "포스팅"}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => copyToClipboard(p.text, p.key)}
+                    disabled={!p.text.trim()}
+                    className="rounded-md border border-charcoal-700 px-3 py-1 text-xs text-charcoal-400 hover:text-charcoal-200 disabled:opacity-50"
+                  >
+                    {copied === p.key ? "복사됨 ✓" : "복사"}
+                  </button>
+                  {results[p.key] && results[p.key] !== "posted" && (
+                    <span className="text-[10px] text-red-400 truncate">{results[p.key]}</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
