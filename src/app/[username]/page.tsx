@@ -188,6 +188,11 @@ export default async function PublicProfile({
           <ActionPill href={`/${params.username}/slots`} label="Open slot" icon="🪙" highlight />
           <ActionPill href={`/${params.username}/calendar`} label="Add event" icon="🗓️" />
           <ActionPill
+            href={`/${params.username}/book`}
+            label="Share booking link"
+            icon="🔗"
+          />
+          <ActionPill
             href={`/${params.username}/settings`}
             label="Visibility"
             icon="🔓"
