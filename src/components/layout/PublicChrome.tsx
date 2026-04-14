@@ -33,7 +33,7 @@ export function PublicChrome({
                 Feed
               </Link>
               <Link
-                href={`/${viewerUsername}/calendar`}
+                href={`/${viewerUsername}`}
                 className="rounded-lg bg-navy-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-navy-500"
               >
                 My Orbit

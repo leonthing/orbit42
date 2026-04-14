@@ -64,6 +64,38 @@ const icons: Record<string, React.ReactNode> = {
   ),
 };
 
+function NavLink({
+  href,
+  label,
+  icon,
+  active,
+  collapsed,
+  onClick,
+}: {
+  href: string;
+  label: string;
+  icon: React.ReactNode;
+  active: boolean;
+  collapsed: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+        active
+          ? "bg-navy-600/15 text-navy-400"
+          : "text-charcoal-400 hover:bg-charcoal-800/50 hover:text-charcoal-200"
+      }`}
+      title={collapsed ? label : undefined}
+    >
+      <span className={active ? "text-navy-400" : "text-charcoal-500"}>{icon}</span>
+      <span className={collapsed ? "hidden" : ""}>{label}</span>
+    </Link>
+  );
+}
+
 export function Sidebar({ username }: { username: string }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
@@ -83,26 +115,52 @@ export function Sidebar({ username }: { username: string }) {
 
       {/* Nav */}
       <nav className="flex-1 space-y-1 px-2 py-3">
+        {/* Social — what other people are doing */}
+        <NavLink
+          href="/feed"
+          label="Feed"
+          icon={icons.home}
+          active={pathname === "/feed"}
+          collapsed={collapsed}
+          onClick={close}
+        />
+        <NavLink
+          href="/explore"
+          label="Explore"
+          icon={icons.users}
+          active={pathname === "/explore"}
+          collapsed={collapsed}
+          onClick={close}
+        />
+        <NavLink
+          href={`/${username}`}
+          label="My profile"
+          icon={icons.user}
+          active={pathname === `/${username}`}
+          collapsed={collapsed}
+          onClick={close}
+        />
+
+        <div className="my-3 border-t border-charcoal-800/40" />
+        {!collapsed && (
+          <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-charcoal-500">
+            Manage
+          </p>
+        )}
+
         {NAV_ITEMS.map((item) => {
           const href = `/${username}${item.href}`;
           const isActive = pathname === href || pathname.startsWith(href + "/");
           return (
-            <Link
+            <NavLink
               key={item.href}
               href={href}
+              label={item.label}
+              icon={icons[item.icon]}
+              active={isActive}
+              collapsed={collapsed}
               onClick={close}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                isActive
-                  ? "bg-navy-600/15 text-navy-400"
-                  : "text-charcoal-400 hover:bg-charcoal-800/50 hover:text-charcoal-200"
-              }`}
-              title={collapsed ? item.label : undefined}
-            >
-              <span className={isActive ? "text-navy-400" : "text-charcoal-500"}>
-                {icons[item.icon]}
-              </span>
-              <span className={collapsed ? "hidden" : ""}>{item.label}</span>
-            </Link>
+            />
           );
         })}
       </nav>

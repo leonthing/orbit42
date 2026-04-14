@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 export default async function LandingPage() {
   const session = await getSession();
   if (session) {
-    redirect(`/${session.username}/calendar`);
+    redirect("/feed");
   }
 
   return (

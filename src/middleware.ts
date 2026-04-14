@@ -45,7 +45,7 @@ export function middleware(request: NextRequest) {
   try {
     const session = JSON.parse(raw);
     if (session.username !== urlUsername) {
-      return NextResponse.redirect(new URL(`/${session.username}/calendar`, request.url));
+      return NextResponse.redirect(new URL("/feed", request.url));
     }
     return NextResponse.next();
   } catch {
