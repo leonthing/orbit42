@@ -29,7 +29,7 @@ export default function MenusManager({ initial }: { initial: Menu[] }) {
         <div>
           <h1 className="text-2xl font-bold text-charcoal-100">Menus</h1>
           <p className="mt-1 text-sm text-charcoal-500">
-            슬롯에 연결할 수 있는 메뉴/스킬을 관리하세요. 예약할 때 게스트가 선택해요.
+            슬롯에 연결할 수 있는 항목을 관리하세요. 예약할 때 게스트가 선택해요.
           </p>
         </div>
         {!showNew && (
@@ -56,10 +56,10 @@ export default function MenusManager({ initial }: { initial: Menu[] }) {
       {initial.length === 0 && !showNew ? (
         <div className="rounded-2xl border border-dashed border-charcoal-800/60 bg-charcoal-900/20 p-12 text-center">
           <p className="text-base font-semibold text-charcoal-200">
-            메뉴가 없어요
+            아직 등록된 항목이 없어요
           </p>
           <p className="mt-2 text-sm text-charcoal-500">
-            예: 컷 · 펌 · 남성 디자인 컷 / 1:1 멘토링 · 포트폴리오 리뷰 등
+            첫 항목을 추가해보세요.
           </p>
           <button
             type="button"
@@ -144,7 +144,6 @@ function NewMenuForm({
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="예: 남성 컷"
           className={INPUT}
           required
         />
@@ -155,7 +154,6 @@ function NewMenuForm({
             type="text"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            placeholder="예: 컷 / 멘토링"
             className={INPUT}
           />
         </Field>
@@ -175,7 +173,6 @@ function NewMenuForm({
           rows={2}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="짧은 부연 설명"
           className={INPUT}
         />
       </Field>
