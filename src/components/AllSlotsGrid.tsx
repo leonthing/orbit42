@@ -14,6 +14,10 @@ type SlotCard = {
   slot_type: string;
   location_detail: string | null;
   description: string | null;
+  pricing_model?: "fixed" | "auction";
+  reserve_price_cents?: number | null;
+  current_high_bid_cents?: number | null;
+  auction_ends_at?: string | null;
 };
 
 export function AllSlotsGrid({
@@ -32,21 +36,30 @@ export function AllSlotsGrid({
   return (
     <div className="grid gap-3 md:grid-cols-2">
       {slots.map((s) => {
-        const priceLabel =
-          s.price_cents === 0
+        const isAuction = s.pricing_model === "auction";
+        const topBid = s.current_high_bid_cents ?? s.reserve_price_cents ?? 0;
+        const priceLabel = isAuction
+          ? `₩${(topBid / 100).toLocaleString("ko-KR")}`
+          : s.price_cents === 0
             ? "FREE"
             : `₩${(s.price_cents / 100).toLocaleString("ko-KR")}`;
+        const badgeClass = isAuction
+          ? "shrink-0 rounded-md bg-amber-500/15 px-2 py-0.5 text-xs font-bold text-amber-800 ring-1 ring-amber-500/40 dark:text-amber-200 dark:ring-0"
+          : "shrink-0 rounded-md bg-red-500/15 px-2 py-0.5 text-xs font-bold text-red-800 ring-1 ring-red-500/30 dark:text-red-300 dark:ring-0";
         const cardInner = (
           <>
             <div className="flex items-baseline justify-between gap-2">
               <h3 className="truncate text-sm font-semibold text-charcoal-100 group-hover:text-red-700 dark:group-hover:text-red-200">
                 {s.title}
               </h3>
-              <span className="shrink-0 rounded-md bg-red-500/15 px-2 py-0.5 text-xs font-bold text-red-800 ring-1 ring-red-500/30 dark:text-red-300 dark:ring-0">
-                {priceLabel}
-              </span>
+              <span className={badgeClass}>{priceLabel}</span>
             </div>
             <p className="mt-1 text-xs text-charcoal-500">
+              {isAuction && (
+                <span className="mr-1 inline-flex items-center rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-800 ring-1 ring-amber-500/40 dark:text-amber-200 dark:ring-0">
+                  경매
+                </span>
+              )}
               {s.duration_min}분 · {s.slot_type}
               {s.location_detail && ` · ${s.location_detail}`}
             </p>

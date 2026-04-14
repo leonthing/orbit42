@@ -264,6 +264,10 @@ export default async function PublicProfile({
                 slot_type: s.slot_type,
                 location_detail: s.location_detail,
                 description: s.description,
+                pricing_model: s.pricing_model,
+                reserve_price_cents: s.reserve_price_cents,
+                current_high_bid_cents: s.current_high_bid_cents,
+                auction_ends_at: s.auction_ends_at,
               }))}
               reactionsBySlot={Array.from(slotReactions.entries())}
               loggedIn={!!session}
