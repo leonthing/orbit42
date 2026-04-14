@@ -5,6 +5,7 @@ import { getAdminClient } from "@/lib/supabase";
 import { listFollowing } from "@/lib/follows";
 import { getReactionsForMany } from "@/lib/reactions";
 import { ReactionStrip } from "@/components/ReactionStrip";
+import { Avatar } from "@/components/Avatar";
 
 export const metadata: Metadata = { title: "Explore" };
 export const dynamic = "force-dynamic";
@@ -24,21 +25,21 @@ export default async function ExplorePage() {
   const [recentPostUsers, recentSlotUsers, latestUsers, openSlots] = await Promise.all([
     db
       .from("blog_posts")
-      .select("user_id, published_at, user:users!blog_posts_user_id_fkey(username, display_name, bio)")
+      .select("user_id, published_at, user:users!blog_posts_user_id_fkey(username, display_name, bio, avatar_url)")
       .eq("published", true)
       .gte("published_at", recentSince)
       .order("published_at", { ascending: false })
       .limit(30),
     db
       .from("time_slots")
-      .select("host_id, created_at, host:users!time_slots_host_id_fkey(username, display_name, bio)")
+      .select("host_id, created_at, host:users!time_slots_host_id_fkey(username, display_name, bio, avatar_url)")
       .eq("active", true)
       .gte("created_at", recentSince)
       .order("created_at", { ascending: false })
       .limit(30),
     db
       .from("users")
-      .select("username, display_name, bio, created_at")
+      .select("username, display_name, bio, avatar_url, created_at")
       .order("created_at", { ascending: false })
       .limit(20),
     db
@@ -56,13 +57,19 @@ export default async function ExplorePage() {
     username: string;
     display_name: string | null;
     bio: string | null;
+    avatar_url: string | null;
     last_active: string;
     activity: "글" | "슬롯" | "신규";
   };
   const peopleMap = new Map<string, ActiveUser>();
 
   for (const p of recentPostUsers.data ?? []) {
-    const u = p.user as unknown as { username: string; display_name: string | null; bio: string | null };
+    const u = p.user as unknown as {
+      username: string;
+      display_name: string | null;
+      bio: string | null;
+      avatar_url: string | null;
+    };
     if (!u || !u.username) continue;
     if (session && u.username === session.username) continue;
     if (!peopleMap.has(u.username)) {
@@ -70,13 +77,19 @@ export default async function ExplorePage() {
         username: u.username,
         display_name: u.display_name,
         bio: u.bio,
+        avatar_url: u.avatar_url,
         last_active: p.published_at as string,
         activity: "글",
       });
     }
   }
   for (const s of recentSlotUsers.data ?? []) {
-    const u = s.host as unknown as { username: string; display_name: string | null; bio: string | null };
+    const u = s.host as unknown as {
+      username: string;
+      display_name: string | null;
+      bio: string | null;
+      avatar_url: string | null;
+    };
     if (!u || !u.username) continue;
     if (session && u.username === session.username) continue;
     if (!peopleMap.has(u.username)) {
@@ -84,6 +97,7 @@ export default async function ExplorePage() {
         username: u.username,
         display_name: u.display_name,
         bio: u.bio,
+        avatar_url: u.avatar_url,
         last_active: s.created_at as string,
         activity: "슬롯",
       });
@@ -96,6 +110,7 @@ export default async function ExplorePage() {
         username: u.username as string,
         display_name: (u.display_name as string | null) ?? null,
         bio: (u.bio as string | null) ?? null,
+        avatar_url: (u.avatar_url as string | null) ?? null,
         last_active: u.created_at as string,
         activity: "신규",
       });
@@ -143,6 +158,7 @@ export default async function ExplorePage() {
                 username={p.username}
                 displayName={p.display_name}
                 bio={p.bio}
+                avatarUrl={p.avatar_url}
                 badge={p.activity}
                 isFollowing={followingUsernames.has(p.username)}
               />
@@ -227,12 +243,14 @@ function PersonCard({
   username,
   displayName,
   bio,
+  avatarUrl,
   badge,
   isFollowing,
 }: {
   username: string;
   displayName: string | null;
   bio: string | null;
+  avatarUrl: string | null;
   badge: string;
   isFollowing: boolean;
 }) {
@@ -242,9 +260,7 @@ function PersonCard({
       className="group block rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5 transition-colors hover:border-red-500/60"
     >
       <div className="flex items-start gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-red-600/20 text-base font-bold text-red-400">
-          {(displayName || username).charAt(0).toUpperCase()}
-        </div>
+        <Avatar url={avatarUrl} name={displayName || username} size={44} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <p className="truncate text-sm font-semibold text-charcoal-100 group-hover:text-red-300">
