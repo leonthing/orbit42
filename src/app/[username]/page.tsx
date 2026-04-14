@@ -155,6 +155,24 @@ export default async function PublicProfile({
         )}
       </header>
 
+      {Object.values(socialLinks).some(Boolean) && (
+        <section className="flex flex-wrap gap-2">
+          {Object.entries(socialLinks)
+            .filter(([, v]) => !!v)
+            .map(([k, v]) => (
+              <a
+                key={k}
+                href={v as string}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-lg border border-charcoal-800/60 bg-charcoal-800/20 px-3 py-1.5 text-xs font-medium text-charcoal-700 hover:border-charcoal-600 hover:text-charcoal-900 dark:text-charcoal-300 dark:hover:text-charcoal-100"
+              >
+                {k}
+              </a>
+            ))}
+        </section>
+      )}
+
       {profile.bio && (
         <p className="max-w-2xl text-sm leading-relaxed text-charcoal-300">{profile.bio}</p>
       )}
@@ -451,23 +469,6 @@ export default async function PublicProfile({
         </section>
       )}
 
-      {Object.values(socialLinks).some(Boolean) && (
-        <section className="flex flex-wrap gap-2">
-          {Object.entries(socialLinks)
-            .filter(([, v]) => !!v)
-            .map(([k, v]) => (
-              <a
-                key={k}
-                href={v as string}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-lg border border-charcoal-800/60 bg-charcoal-800/20 px-3 py-1.5 text-xs font-medium text-charcoal-300 hover:border-charcoal-600 hover:text-charcoal-100"
-              >
-                {k}
-              </a>
-            ))}
-        </section>
-      )}
     </div>
   );
 }
