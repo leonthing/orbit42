@@ -89,7 +89,7 @@ export default function ContactList({
           </button>
           <button
             onClick={() => setShowModal(true)}
-            className="rounded-lg bg-navy-600 px-4 py-2 text-sm font-medium text-white hover:bg-navy-500"
+            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500"
           >
             + 연락처 추가
           </button>
@@ -116,7 +116,7 @@ export default function ContactList({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="이름, 회사, 태그로 검색..."
-          className="w-full rounded-lg border border-charcoal-800 bg-charcoal-900/40 py-2.5 pl-10 pr-4 text-sm text-charcoal-200 placeholder:text-charcoal-600 focus:border-navy-500 focus:outline-none focus:ring-1 focus:ring-navy-500/50"
+          className="w-full rounded-lg border border-charcoal-800 bg-charcoal-900/40 py-2.5 pl-10 pr-4 text-sm text-charcoal-200 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500/50"
         />
       </div>
 
@@ -154,7 +154,7 @@ export default function ContactList({
               className="flex items-start gap-3 rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 p-4 text-left transition-colors hover:border-charcoal-700 hover:bg-charcoal-800/30"
             >
               {/* Avatar */}
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-navy-600/20 text-sm font-semibold text-navy-400">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-600/20 text-sm font-semibold text-red-400">
                 {contact.name.charAt(0).toUpperCase()}
               </div>
               <div className="min-w-0 flex-1">
@@ -173,7 +173,7 @@ export default function ContactList({
                     {contact.tags.slice(0, 3).map((tag) => (
                       <span
                         key={tag}
-                        className="rounded-full bg-navy-600/15 px-2 py-0.5 text-[10px] font-medium text-navy-400"
+                        className="rounded-full bg-red-600/15 px-2 py-0.5 text-[10px] font-medium text-red-400"
                       >
                         {tag}
                       </span>
@@ -203,18 +203,18 @@ export default function ContactList({
                 name="name"
                 required
                 placeholder="이름 *"
-                className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-500 focus:outline-none"
+                className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none"
               />
               <div className="grid gap-3 sm:grid-cols-2">
                 <input
                   name="company"
                   placeholder="회사"
-                  className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-500 focus:outline-none"
+                  className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none"
                 />
                 <input
                   name="role"
                   placeholder="직책"
-                  className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-500 focus:outline-none"
+                  className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none"
                 />
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -222,18 +222,18 @@ export default function ContactList({
                   name="email"
                   type="email"
                   placeholder="이메일"
-                  className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-500 focus:outline-none"
+                  className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none"
                 />
                 <input
                   name="phone"
                   placeholder="전화번호"
-                  className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-500 focus:outline-none"
+                  className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none"
                 />
               </div>
               <input
                 name="tags"
                 placeholder="태그 (쉼표로 구분)"
-                className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-500 focus:outline-none"
+                className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none"
               />
               <div className="flex justify-end gap-2 pt-2">
                 <button
@@ -246,7 +246,7 @@ export default function ContactList({
                 <button
                   type="submit"
                   disabled={saving}
-                  className="rounded-lg bg-navy-600 px-4 py-2 text-sm font-medium text-white hover:bg-navy-500 disabled:opacity-50"
+                  className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-50"
                 >
                   {saving ? "저장 중..." : "저장"}
                 </button>

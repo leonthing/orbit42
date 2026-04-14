@@ -86,7 +86,7 @@ export default function ContactDetail({
   }
 
   const inputClass = editing
-    ? "w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 focus:border-navy-500 focus:outline-none"
+    ? "w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 focus:border-red-500 focus:outline-none"
     : "w-full rounded-lg border border-transparent bg-transparent px-3 py-2 text-sm text-charcoal-100";
 
   return (
@@ -126,7 +126,7 @@ export default function ContactDetail({
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="rounded-lg bg-navy-600 px-4 py-2 text-sm font-medium text-white hover:bg-navy-500 disabled:opacity-50"
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-50"
               >
                 {saving ? "저장 중..." : "저장"}
               </button>
@@ -135,7 +135,7 @@ export default function ContactDetail({
             <>
               <button
                 onClick={() => setEditing(true)}
-                className="rounded-lg bg-navy-600 px-4 py-2 text-sm font-medium text-white hover:bg-navy-500"
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500"
               >
                 수정
               </button>
@@ -154,7 +154,7 @@ export default function ContactDetail({
       {/* Profile card */}
       <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 p-6">
         <div className="flex items-center gap-4">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-navy-600/20 text-2xl font-bold text-navy-400">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-red-600/20 text-2xl font-bold text-red-400">
             {name.charAt(0).toUpperCase()}
           </div>
           <div className="flex-1 space-y-1">
@@ -163,7 +163,7 @@ export default function ContactDetail({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="이름"
-                className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-lg font-semibold text-charcoal-100 focus:border-navy-500 focus:outline-none"
+                className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-lg font-semibold text-charcoal-100 focus:border-red-500 focus:outline-none"
               />
             ) : (
               <p className="text-lg font-semibold text-charcoal-100">{name}</p>
@@ -174,13 +174,13 @@ export default function ContactDetail({
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
                   placeholder="직책"
-                  className="flex-1 rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-1.5 text-sm text-charcoal-100 focus:border-navy-500 focus:outline-none"
+                  className="flex-1 rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-1.5 text-sm text-charcoal-100 focus:border-red-500 focus:outline-none"
                 />
                 <input
                   value={company}
                   onChange={(e) => setCompany(e.target.value)}
                   placeholder="회사"
-                  className="flex-1 rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-1.5 text-sm text-charcoal-100 focus:border-navy-500 focus:outline-none"
+                  className="flex-1 rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-1.5 text-sm text-charcoal-100 focus:border-red-500 focus:outline-none"
                 />
               </div>
             ) : (
@@ -262,13 +262,13 @@ export default function ContactDetail({
           {tags.map((tag) => (
             <span
               key={tag}
-              className="inline-flex items-center gap-1 rounded-full bg-navy-600/15 px-3 py-1 text-xs font-medium text-navy-400"
+              className="inline-flex items-center gap-1 rounded-full bg-red-600/15 px-3 py-1 text-xs font-medium text-red-400"
             >
               {tag}
               {editing && (
                 <button
                   onClick={() => removeTag(tag)}
-                  className="ml-0.5 text-navy-400/60 hover:text-navy-300"
+                  className="ml-0.5 text-red-400/60 hover:text-red-300"
                 >
                   &times;
                 </button>
@@ -282,7 +282,7 @@ export default function ContactDetail({
               onKeyDown={handleTagKeyDown}
               onBlur={addTag}
               placeholder="태그 입력 후 Enter"
-              className="rounded-full border border-dashed border-charcoal-700 bg-transparent px-3 py-1 text-xs text-charcoal-300 placeholder:text-charcoal-600 focus:border-navy-500 focus:outline-none"
+              className="rounded-full border border-dashed border-charcoal-700 bg-transparent px-3 py-1 text-xs text-charcoal-300 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none"
             />
           )}
           {!editing && tags.length === 0 && (
@@ -300,7 +300,7 @@ export default function ContactDetail({
             onChange={(e) => setMemo(e.target.value)}
             rows={5}
             placeholder="메모를 입력하세요..."
-            className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-500 focus:outline-none"
+            className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none"
           />
         ) : (
           <p className="whitespace-pre-wrap text-sm text-charcoal-300">

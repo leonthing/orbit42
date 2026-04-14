@@ -77,8 +77,8 @@ export default async function BookingSharePage({
           </p>
         )}
         {isOwner && (
-          <div className="mt-4 flex items-center justify-between gap-2 rounded-lg border border-amber-500/40 bg-amber-500/5 px-3 py-2">
-            <p className="text-xs text-amber-300">
+          <div className="mt-4 flex items-center justify-between gap-2 rounded-lg border border-red-500/40 bg-red-500/5 px-3 py-2">
+            <p className="text-xs text-red-300">
               이 페이지가 공유용 예약 링크예요. 내 다른 일정은 보이지 않고,
               예약 가능한 슬롯만 노출됩니다.
             </p>

@@ -33,8 +33,8 @@ export default async function BlogRootPage() {
   return (
     <>
       <header className="mb-12 text-center">
-        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-navy-600/20">
-          <span className="text-2xl font-bold text-navy-400">O</span>
+        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-red-600/20">
+          <span className="text-2xl font-bold text-red-400">O</span>
         </div>
         <h1 className="text-3xl font-bold text-charcoal-100">Orbit42 Blog</h1>
         <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-charcoal-400">
@@ -75,7 +75,7 @@ export default async function BlogRootPage() {
         <div className="flex flex-col items-center rounded-xl border border-dashed border-charcoal-700 py-16">
           <p className="text-sm text-charcoal-500">아직 게시된 글이 없습니다.</p>
           <p className="mt-1 text-xs text-charcoal-600">
-            <a href="https://orbit42.org" className="text-navy-400 hover:underline">Orbit42</a>에서 첫 글을 작성해보세요.
+            <a href="https://orbit42.org" className="text-red-400 hover:underline">Orbit42</a>에서 첫 글을 작성해보세요.
           </p>
         </div>
       )}

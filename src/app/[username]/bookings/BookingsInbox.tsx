@@ -6,10 +6,10 @@ import { updateBookingStatus } from "@/lib/slots";
 import type { BookingRow } from "@/lib/slots";
 
 const STATUS_STYLES: Record<string, string> = {
-  pending: "bg-amber-600/20 text-amber-300",
+  pending: "bg-red-600/20 text-red-300",
   confirmed: "bg-emerald-600/20 text-emerald-300",
   canceled: "bg-charcoal-700/40 text-charcoal-500",
-  completed: "bg-navy-600/20 text-navy-300",
+  completed: "bg-red-600/20 text-red-300",
 };
 
 export default function BookingsInbox({ initial }: { initial: BookingRow[] }) {
@@ -127,7 +127,7 @@ function Section({
                     <button
                       onClick={() => update(b.id, "completed")}
                       disabled={pending}
-                      className="rounded-md border border-navy-700/40 px-2.5 py-1 text-xs text-navy-300 hover:bg-navy-700/20"
+                      className="rounded-md border border-red-700/40 px-2.5 py-1 text-xs text-red-300 hover:bg-red-700/20"
                     >
                       Done
                     </button>

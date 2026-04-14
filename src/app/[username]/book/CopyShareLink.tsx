@@ -21,7 +21,7 @@ export function CopyShareLink({ username }: { username: string }) {
     <button
       type="button"
       onClick={copy}
-      className="shrink-0 rounded-md bg-amber-500 px-3 py-1 text-xs font-semibold text-charcoal-950 hover:bg-amber-400"
+      className="shrink-0 rounded-md bg-red-500 px-3 py-1 text-xs font-semibold text-charcoal-950 hover:bg-red-400"
     >
       {copied ? "복사됨!" : "링크 복사"}
     </button>

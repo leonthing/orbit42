@@ -271,13 +271,13 @@ export default async function FeedPage() {
           <h3 className="text-sm font-semibold text-charcoal-200">
             Orbiting ({following.length})
           </h3>
-          <Link href="/explore" className="text-xs text-amber-400 hover:text-amber-300">
+          <Link href="/explore" className="text-xs text-red-400 hover:text-red-300">
             Find more →
           </Link>
         </div>
         {following.length === 0 ? (
           <p className="mt-3 text-xs text-charcoal-500">
-            아직 팔로우한 사람이 없어요. <Link href="/explore" className="text-amber-400 hover:underline">Explore</Link>에서 찾아보세요.
+            아직 팔로우한 사람이 없어요. <Link href="/explore" className="text-red-400 hover:underline">Explore</Link>에서 찾아보세요.
           </p>
         ) : (
           <div className="mt-3 flex flex-wrap gap-2">
@@ -384,14 +384,14 @@ function DayCard({
     <article
       className={`overflow-hidden rounded-2xl border bg-charcoal-900/30 ${
         isToday
-          ? "border-amber-500/50 shadow-[0_0_0_1px_rgb(245_158_11_/_0.2)]"
+          ? "border-red-500/50 shadow-[0_0_0_1px_rgb(245_158_11_/_0.2)]"
           : "border-charcoal-800/60"
       }`}
     >
       <header
         className={`flex items-baseline justify-between border-b px-5 py-3 ${
           isToday
-            ? "border-amber-500/30 bg-amber-500/5"
+            ? "border-red-500/30 bg-red-500/5"
             : "border-charcoal-800/50"
         }`}
       >
@@ -408,10 +408,10 @@ function DayCard({
         <span
           className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
             isToday
-              ? "bg-amber-500 text-charcoal-950"
+              ? "bg-red-500 text-charcoal-950"
               : isPast
                 ? "bg-charcoal-800 text-charcoal-500"
-                : "bg-navy-600/25 text-navy-300"
+                : "bg-red-600/25 text-red-300"
           }`}
         >
           {relative}
@@ -441,7 +441,7 @@ function DayEntry({
       <span
         className={`absolute top-[18px] -ml-[11px] h-2 w-2 shrink-0 rounded-full ring-2 ring-[rgb(var(--bg-surface))] md:-ml-[15px] ${
           item.kind === "slot"
-            ? "bg-amber-400"
+            ? "bg-red-400"
             : item.kind === "event"
               ? "bg-emerald-400"
               : "bg-charcoal-500"
@@ -514,7 +514,7 @@ function EntryBody({
 
       {item.kind === "post" && (
         <Link href={`/${author.username}/blog/${item.slug}`} className="mt-3 block">
-          <p className="text-base font-semibold text-charcoal-100 hover:text-amber-300">
+          <p className="text-base font-semibold text-charcoal-100 hover:text-red-300">
             {item.title}
           </p>
           {item.excerpt && (
@@ -526,13 +526,13 @@ function EntryBody({
       {item.kind === "slot" && (
         <Link
           href={`/${author.username}/s/${item.slug}`}
-          className="mt-3 block rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 hover:border-amber-500/60"
+          className="mt-3 block rounded-lg border border-red-500/30 bg-red-500/5 p-3 hover:border-red-500/60"
         >
           <div className="flex items-center justify-between gap-2">
             <p className="truncate text-sm font-semibold text-charcoal-100">
               {item.title}
             </p>
-            <span className="shrink-0 rounded-md bg-amber-500/15 px-2 py-0.5 text-xs font-bold text-amber-300">
+            <span className="shrink-0 rounded-md bg-red-500/15 px-2 py-0.5 text-xs font-bold text-red-300">
               {item.price_cents === 0
                 ? "FREE"
                 : `₩${(item.price_cents / 100).toLocaleString("ko-KR")}`}
@@ -613,8 +613,8 @@ function KindBadge({ kind }: { kind: FeedItem["kind"] }) {
   const map: Record<FeedItem["kind"], { label: string; color: string }> = {
     event: { label: "일정", color: "bg-emerald-700/30 text-emerald-300" },
     feed_post: { label: "글", color: "bg-charcoal-700/40 text-charcoal-300" },
-    post: { label: "긴 글", color: "bg-navy-700/30 text-navy-300" },
-    slot: { label: "슬롯", color: "bg-amber-700/30 text-amber-300" },
+    post: { label: "긴 글", color: "bg-red-700/30 text-red-300" },
+    slot: { label: "슬롯", color: "bg-red-700/30 text-red-300" },
   };
   const m = map[kind];
   return (
@@ -707,7 +707,7 @@ function EmptyState({
       {cta && (
         <Link
           href={cta.href}
-          className="mt-4 inline-block rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-charcoal-950 hover:bg-amber-400"
+          className="mt-4 inline-block rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-charcoal-950 hover:bg-red-400"
         >
           {cta.label}
         </Link>

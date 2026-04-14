@@ -105,7 +105,7 @@ export default async function PublicProfile({
               </Link>
               {totalSlotWindows > 0 && (
                 <span>
-                  <strong className="text-amber-300">{totalSlotWindows}</strong>{" "}
+                  <strong className="text-red-300">{totalSlotWindows}</strong>{" "}
                   <span className="text-charcoal-500">예약가능</span>
                 </span>
               )}
@@ -117,7 +117,7 @@ export default async function PublicProfile({
             <>
               <Link
                 href={`/${params.username}/slots`}
-                className="rounded-lg bg-amber-500/90 px-4 py-2 text-sm font-semibold text-charcoal-950 hover:bg-amber-400"
+                className="rounded-lg bg-red-500/90 px-4 py-2 text-sm font-semibold text-charcoal-950 hover:bg-red-400"
               >
                 Sell my time
               </Link>
@@ -177,7 +177,7 @@ export default async function PublicProfile({
           {interests.map((tag) => (
             <span
               key={tag}
-              className="rounded-full bg-navy-600/15 px-3 py-1 text-xs font-medium text-navy-300"
+              className="rounded-full bg-red-600/15 px-3 py-1 text-xs font-medium text-red-300"
             >
               {tag}
             </span>
@@ -233,7 +233,7 @@ export default async function PublicProfile({
         {!isOwner && totalSlotWindows > 0 && (
           <Link
             href={`/${params.username}/book`}
-            className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-charcoal-950 hover:bg-amber-400"
+            className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-charcoal-950 hover:bg-red-400"
           >
             예약하기 ({totalSlotWindows})
           </Link>
@@ -271,14 +271,14 @@ export default async function PublicProfile({
             {slots.map((s) => (
               <div
                 key={s.id}
-                className="group rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5 transition-colors hover:border-amber-500/50"
+                className="group rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5 transition-colors hover:border-red-500/50"
               >
                 <Link href={`/${params.username}/s/${s.slug}`} className="block">
                   <div className="flex items-baseline justify-between gap-2">
-                    <h3 className="truncate text-sm font-semibold text-charcoal-100 group-hover:text-amber-200">
+                    <h3 className="truncate text-sm font-semibold text-charcoal-100 group-hover:text-red-200">
                       {s.title}
                     </h3>
-                    <span className="shrink-0 rounded-md bg-amber-500/15 px-2 py-0.5 text-xs font-bold text-amber-300">
+                    <span className="shrink-0 rounded-md bg-red-500/15 px-2 py-0.5 text-xs font-bold text-red-300">
                       {s.price_cents === 0
                         ? "FREE"
                         : `₩${(s.price_cents / 100).toLocaleString("ko-KR")}`}
@@ -422,7 +422,7 @@ function ValueStat({
       </p>
       <p
         className={`mt-1 text-lg font-bold ${
-          accent ? "text-amber-300" : "text-charcoal-100"
+          accent ? "text-red-300" : "text-charcoal-100"
         }`}
       >
         {value}
@@ -447,7 +447,7 @@ function ActionPill({
       href={href}
       className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
         highlight
-          ? "bg-amber-500/15 text-amber-300 hover:bg-amber-500/25"
+          ? "bg-red-500/15 text-red-300 hover:bg-red-500/25"
           : "bg-charcoal-800/40 text-charcoal-300 hover:bg-charcoal-800/70 hover:text-charcoal-100"
       }`}
     >

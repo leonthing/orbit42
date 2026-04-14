@@ -56,7 +56,7 @@ export function AvatarUploader({
               type="button"
               onClick={() => inputRef.current?.click()}
               disabled={pending}
-              className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-charcoal-950 hover:bg-amber-400 disabled:opacity-60"
+              className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-charcoal-950 hover:bg-red-400 disabled:opacity-60"
             >
               {pending ? "업로드 중…" : url ? "사진 변경" : "사진 올리기"}
             </button>

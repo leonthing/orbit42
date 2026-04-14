@@ -102,7 +102,7 @@ export default function BlogPostList({ initialPosts }: { initialPosts: BlogPost[
         <button
           onClick={handleCreate}
           disabled={isPending}
-          className="rounded-lg bg-navy-600 px-4 py-2 text-sm font-medium text-white hover:bg-navy-500 disabled:opacity-50"
+          className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-50"
         >
           + 새 글
         </button>
@@ -124,7 +124,7 @@ export default function BlogPostList({ initialPosts }: { initialPosts: BlogPost[
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="제목, 내용, 태그로 검색..."
-          className="w-full rounded-lg border border-charcoal-800 bg-charcoal-900/40 py-2.5 pl-10 pr-4 text-sm text-charcoal-200 placeholder:text-charcoal-600 focus:border-navy-500 focus:outline-none focus:ring-1 focus:ring-navy-500/50"
+          className="w-full rounded-lg border border-charcoal-800 bg-charcoal-900/40 py-2.5 pl-10 pr-4 text-sm text-charcoal-200 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500/50"
         />
       </div>
 
@@ -143,7 +143,7 @@ export default function BlogPostList({ initialPosts }: { initialPosts: BlogPost[
               onClick={() => setFilter(tab.value)}
               className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                 filter === tab.value
-                  ? "bg-navy-600/15 text-navy-400"
+                  ? "bg-red-600/15 text-red-400"
                   : "text-charcoal-500 hover:bg-charcoal-800/50 hover:text-charcoal-300"
               }`}
             >

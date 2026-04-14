@@ -50,7 +50,7 @@ export function ShareEventButton({
           setOpen(true);
         }}
         title="피드에 공유"
-        className="rounded p-0.5 text-charcoal-500 hover:bg-charcoal-700/50 hover:text-amber-300"
+        className="rounded p-0.5 text-charcoal-500 hover:bg-charcoal-700/50 hover:text-red-300"
       >
         <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z" />
@@ -85,7 +85,7 @@ export function ShareEventButton({
               onChange={(e) => setBody(e.target.value)}
               rows={3}
               placeholder={`한 마디 남기기 (비우면 "${defaultBody}"로 공유)`}
-              className="mt-3 w-full rounded-lg border border-charcoal-800/60 bg-charcoal-900/30 p-3 text-sm text-charcoal-100 placeholder:text-charcoal-500 focus:border-amber-500/50 focus:outline-none"
+              className="mt-3 w-full rounded-lg border border-charcoal-800/60 bg-charcoal-900/30 p-3 text-sm text-charcoal-100 placeholder:text-charcoal-500 focus:border-red-500/50 focus:outline-none"
             />
             <div className="mt-4 flex justify-end gap-2">
               <button
@@ -99,7 +99,7 @@ export function ShareEventButton({
                 type="button"
                 onClick={submit}
                 disabled={pending}
-                className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-charcoal-950 hover:bg-amber-400 disabled:opacity-60"
+                className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-charcoal-950 hover:bg-red-400 disabled:opacity-60"
               >
                 {pending ? "공유 중…" : "Share"}
               </button>

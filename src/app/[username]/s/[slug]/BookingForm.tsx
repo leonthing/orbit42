@@ -118,7 +118,7 @@ export default function BookingForm({
                     onClick={() => setSelectedKey(k)}
                     className={`rounded-md border px-3 py-2 text-sm transition-colors ${
                       active
-                        ? "border-navy-500 bg-navy-600/15 text-charcoal-100"
+                        ? "border-red-500 bg-red-600/15 text-charcoal-100"
                         : "border-charcoal-800/60 bg-charcoal-800/20 text-charcoal-300 hover:border-charcoal-700"
                     }`}
                   >
@@ -166,7 +166,7 @@ export default function BookingForm({
       <button
         type="submit"
         disabled={pending || !selectedKey}
-        className="w-full rounded-lg bg-navy-600 px-4 py-3 text-sm font-medium text-white hover:bg-navy-500 disabled:opacity-60"
+        className="w-full rounded-lg bg-red-600 px-4 py-3 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-60"
       >
         {isPaid
           ? `${(priceCents / 100).toLocaleString("ko-KR")}원 결제하고 예약`
@@ -178,7 +178,7 @@ export default function BookingForm({
       {!loggedIn && (
         <p className="text-center text-xs text-charcoal-500">
           이미 가입했나요?{" "}
-          <a href="/login" className="text-navy-400 hover:text-navy-300">
+          <a href="/login" className="text-red-400 hover:text-red-300">
             로그인하고 예약
           </a>
         </p>
@@ -226,7 +226,7 @@ function PaymentStep({
         </p>
       </div>
 
-      <div className="rounded-lg border border-amber-700/40 bg-amber-700/10 p-3 text-xs text-amber-200">
+      <div className="rounded-lg border border-red-700/40 bg-red-700/10 p-3 text-xs text-red-200">
         토스페이먼츠 연동은 곧 출시됩니다. 지금은 결제 없이 예약을 진행해주세요 —
         호스트가 별도로 결제 안내를 드립니다.
       </div>
@@ -244,7 +244,7 @@ function PaymentStep({
           type="checkbox"
           checked={acknowledged}
           onChange={(e) => setAcknowledged(e.target.checked)}
-          className="accent-navy-500"
+          className="accent-red-500"
         />
         결제 없이 예약 진행에 동의합니다.
       </label>
@@ -262,7 +262,7 @@ function PaymentStep({
           type="button"
           onClick={onPay}
           disabled={pending || !acknowledged}
-          className="flex-1 rounded-lg bg-navy-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-navy-500 disabled:opacity-50"
+          className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-50"
         >
           {pending ? "예약 중…" : "결제 없이 예약"}
         </button>

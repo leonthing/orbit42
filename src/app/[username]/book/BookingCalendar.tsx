@@ -199,8 +199,8 @@ export function BookingCalendar({
                         onClick={() => setPicked(o)}
                         className={`rounded-lg border px-3 py-2 text-left transition-colors ${
                           active
-                            ? "border-amber-500 bg-amber-500/20 text-charcoal-100"
-                            : "border-charcoal-800/60 bg-charcoal-800/30 text-charcoal-200 hover:border-amber-500/60 hover:bg-amber-500/10"
+                            ? "border-red-500 bg-red-500/20 text-charcoal-100"
+                            : "border-charcoal-800/60 bg-charcoal-800/30 text-charcoal-200 hover:border-red-500/60 hover:bg-red-500/10"
                         }`}
                       >
                         <p className="text-sm font-semibold tabular-nums">
@@ -304,9 +304,9 @@ function MonthCalendar({
               disabled={!hasOptions}
               className={`relative aspect-square text-xs font-medium transition-colors ${
                 isSelected
-                  ? "rounded-full bg-amber-500 text-charcoal-950"
+                  ? "rounded-full bg-red-500 text-charcoal-950"
                   : hasOptions
-                    ? "rounded-full text-charcoal-100 hover:bg-amber-500/15"
+                    ? "rounded-full text-charcoal-100 hover:bg-red-500/15"
                     : "text-charcoal-700"
               } ${!inMonth ? "opacity-40" : ""}`}
             >
@@ -314,12 +314,12 @@ function MonthCalendar({
               {hasOptions && !isSelected && (
                 <span
                   className={`absolute inset-x-0 bottom-1 mx-auto h-1 w-1 rounded-full ${
-                    isToday ? "bg-navy-400" : "bg-amber-400"
+                    isToday ? "bg-red-400" : "bg-red-400"
                   }`}
                 />
               )}
               {isToday && !isSelected && !hasOptions && (
-                <span className="absolute inset-0 m-auto h-1 w-1 rounded-full bg-navy-400" />
+                <span className="absolute inset-0 m-auto h-1 w-1 rounded-full bg-red-400" />
               )}
             </button>
           );
@@ -361,7 +361,7 @@ function Chip({
       onClick={onClick}
       className={`rounded-full px-3 py-1 text-xs transition-colors ${
         active
-          ? "bg-amber-500/25 text-amber-200"
+          ? "bg-red-500/25 text-red-200"
           : "bg-charcoal-800/50 text-charcoal-300 hover:bg-charcoal-800/80"
       }`}
     >
@@ -420,10 +420,10 @@ function ConfirmBook({
   return (
     <form
       onSubmit={submit}
-      className="space-y-4 rounded-2xl border border-amber-500/40 bg-amber-500/5 p-5"
+      className="space-y-4 rounded-2xl border border-red-500/40 bg-red-500/5 p-5"
     >
       <div>
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-300">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-red-300">
           선택된 시간
         </p>
         <p className="mt-1 text-base font-semibold text-charcoal-100">
@@ -483,7 +483,7 @@ function ConfirmBook({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-lg bg-amber-500 px-5 py-2 text-sm font-semibold text-charcoal-950 hover:bg-amber-400 disabled:opacity-60"
+          className="rounded-lg bg-red-500 px-5 py-2 text-sm font-semibold text-charcoal-950 hover:bg-red-400 disabled:opacity-60"
         >
           {pending ? "예약 중…" : "예약 확정"}
         </button>

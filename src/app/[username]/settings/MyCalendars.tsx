@@ -45,7 +45,7 @@ export function MyCalendars({
         <button
           type="button"
           onClick={() => setShowNew((v) => !v)}
-          className="rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-semibold text-charcoal-950 hover:bg-amber-400"
+          className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-charcoal-950 hover:bg-red-400"
         >
           {showNew ? "닫기" : "+ 새 캘린더"}
         </button>
@@ -129,7 +129,7 @@ function CalendarRow({ calendar }: { calendar: Calendar }) {
             <p className="truncate text-sm font-semibold text-charcoal-100">
               {calendar.name}
               {calendar.is_default && (
-                <span className="ml-2 rounded-full bg-navy-600/25 px-2 py-0.5 text-[10px] font-semibold text-navy-300">
+                <span className="ml-2 rounded-full bg-red-600/25 px-2 py-0.5 text-[10px] font-semibold text-red-300">
                   기본
                 </span>
               )}
@@ -155,7 +155,7 @@ function CalendarRow({ calendar }: { calendar: Calendar }) {
               disabled={pending}
               className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
                 calendar.visibility === v.value
-                  ? "bg-navy-600 text-white"
+                  ? "bg-red-600 text-white"
                   : "text-charcoal-400 hover:text-charcoal-200"
               }`}
             >
@@ -185,7 +185,7 @@ function CalendarRow({ calendar }: { calendar: Calendar }) {
             onClick={() => changePurpose(p.value)}
             className={`rounded-full px-2.5 py-0.5 text-[11px] transition-colors ${
               calendar.purpose === p.value
-                ? "bg-amber-500/25 text-amber-200"
+                ? "bg-red-500/25 text-red-200"
                 : "bg-charcoal-900/50 text-charcoal-400 hover:text-charcoal-200"
             }`}
           >
@@ -203,7 +203,7 @@ function CalendarRow({ calendar }: { calendar: Calendar }) {
             type="button"
             onClick={() => changeColor(c)}
             className={`h-5 w-5 rounded-full ${
-              color === c ? "ring-2 ring-amber-400 ring-offset-1 ring-offset-charcoal-900" : ""
+              color === c ? "ring-2 ring-red-400 ring-offset-1 ring-offset-charcoal-900" : ""
             }`}
             style={{ backgroundColor: c }}
           />
@@ -265,7 +265,7 @@ function NewCalendarForm({
             onClick={() => setPurpose(p.value)}
             className={`rounded-full px-3 py-1 text-xs transition-colors ${
               purpose === p.value
-                ? "bg-amber-500/25 text-amber-200"
+                ? "bg-red-500/25 text-red-200"
                 : "bg-charcoal-800/40 text-charcoal-400 hover:text-charcoal-200"
             }`}
           >
@@ -282,7 +282,7 @@ function NewCalendarForm({
             type="button"
             onClick={() => setColor(c)}
             className={`h-6 w-6 rounded-full ${
-              color === c ? "ring-2 ring-amber-400 ring-offset-1 ring-offset-charcoal-900" : ""
+              color === c ? "ring-2 ring-red-400 ring-offset-1 ring-offset-charcoal-900" : ""
             }`}
             style={{ backgroundColor: c }}
           />
@@ -297,7 +297,7 @@ function NewCalendarForm({
             onClick={() => setVisibility(v.value)}
             className={`rounded-md px-2.5 py-1 text-xs font-medium ${
               visibility === v.value
-                ? "bg-navy-600 text-white"
+                ? "bg-red-600 text-white"
                 : "text-charcoal-400 hover:text-charcoal-200"
             }`}
           >
@@ -316,7 +316,7 @@ function NewCalendarForm({
           checked={alsoGoogle}
           disabled={!googleConnected}
           onChange={(e) => setAlsoGoogle(e.target.checked)}
-          className="accent-amber-500"
+          className="accent-red-500"
         />
         Google 캘린더로도 생성 {!googleConnected && "(Google 연결 후 사용 가능)"}
       </label>
@@ -332,7 +332,7 @@ function NewCalendarForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-lg bg-amber-500 px-4 py-1.5 text-sm font-semibold text-charcoal-950 hover:bg-amber-400 disabled:opacity-60"
+          className="rounded-lg bg-red-500 px-4 py-1.5 text-sm font-semibold text-charcoal-950 hover:bg-red-400 disabled:opacity-60"
         >
           {pending ? "만드는 중…" : "생성"}
         </button>

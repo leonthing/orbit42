@@ -13,7 +13,7 @@ export function Avatar({
 }) {
   const letter = (name || "?").charAt(0).toUpperCase();
   const base =
-    "relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-navy-600/60 to-amber-500/40 font-bold text-charcoal-100";
+    "relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-red-600/60 to-red-500/40 font-bold text-charcoal-100";
   const style: React.CSSProperties = {
     width: size,
     height: size,

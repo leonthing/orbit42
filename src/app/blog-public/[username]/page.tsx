@@ -60,7 +60,7 @@ export default async function BlogHomePage({
                 href={`/${params.username}/${post.slug}`}
                 className="group block"
               >
-                <h2 className="text-xl font-semibold text-charcoal-100 group-hover:text-navy-400 transition-colors">
+                <h2 className="text-xl font-semibold text-charcoal-100 group-hover:text-red-400 transition-colors">
                   {post.title}
                 </h2>
                 {(post.excerpt || post.content) && (

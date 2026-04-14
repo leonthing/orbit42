@@ -55,7 +55,7 @@ export default async function SlotPage({
           <span
             className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
               isAuction
-                ? "bg-amber-500/20 text-amber-300"
+                ? "bg-red-500/20 text-red-300"
                 : "bg-charcoal-800/60 text-charcoal-400"
             }`}
           >

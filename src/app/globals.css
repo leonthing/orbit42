@@ -46,6 +46,8 @@
   body {
     background-color: rgb(var(--bg-base));
     @apply text-charcoal-200;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
   }
 
   /* Prevent auto-zoom on input focus (iOS) */

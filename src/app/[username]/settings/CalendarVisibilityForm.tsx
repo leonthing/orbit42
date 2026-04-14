@@ -129,7 +129,7 @@ export function CalendarVisibilityForm({
                       title={opt.hint}
                       className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
                         row.visibility === opt.value
-                          ? "bg-navy-600 text-white"
+                          ? "bg-red-600 text-white"
                           : "text-charcoal-400 hover:text-charcoal-200"
                       }`}
                     >
@@ -161,7 +161,7 @@ export function CalendarVisibilityForm({
                     onClick={() => changePurpose(id, p.value)}
                     className={`rounded-full px-2.5 py-0.5 text-[11px] transition-colors ${
                       row.purpose === p.value
-                        ? "bg-amber-500/25 text-amber-200"
+                        ? "bg-red-500/25 text-red-200"
                         : "bg-charcoal-900/50 text-charcoal-400 hover:text-charcoal-200"
                     }`}
                   >
@@ -194,7 +194,7 @@ export function CalendarVisibilityForm({
         <button
           type="button"
           onClick={() => setShowNew(true)}
-          className="w-full rounded-lg border border-dashed border-charcoal-800/60 px-4 py-2.5 text-sm text-charcoal-400 hover:border-amber-500/50 hover:text-amber-300"
+          className="w-full rounded-lg border border-dashed border-charcoal-800/60 px-4 py-2.5 text-sm text-charcoal-400 hover:border-red-500/50 hover:text-red-300"
         >
           + 새 캘린더 만들기 (업무/커플/돈 버는 용 등)
         </button>
@@ -249,7 +249,7 @@ function NewCalendarForm({ onDone }: { onDone: () => void }) {
               onClick={() => setPurpose(p.value)}
               className={`rounded-full px-3 py-1 text-xs transition-colors ${
                 purpose === p.value
-                  ? "bg-amber-500/25 text-amber-200"
+                  ? "bg-red-500/25 text-red-200"
                   : "bg-charcoal-800/40 text-charcoal-400 hover:text-charcoal-200"
               }`}
             >
@@ -268,7 +268,7 @@ function NewCalendarForm({ onDone }: { onDone: () => void }) {
               type="button"
               onClick={() => setColor(c)}
               className={`h-7 w-7 rounded-full ring-offset-2 ring-offset-charcoal-900 transition ${
-                color === c ? "ring-2 ring-amber-400" : ""
+                color === c ? "ring-2 ring-red-400" : ""
               }`}
               style={{ backgroundColor: c }}
             />
@@ -288,7 +288,7 @@ function NewCalendarForm({ onDone }: { onDone: () => void }) {
         <button
           type="submit"
           disabled={pending}
-          className="rounded-lg bg-amber-500 px-4 py-1.5 text-sm font-semibold text-charcoal-950 hover:bg-amber-400 disabled:opacity-60"
+          className="rounded-lg bg-red-500 px-4 py-1.5 text-sm font-semibold text-charcoal-950 hover:bg-red-400 disabled:opacity-60"
         >
           {pending ? "만드는 중…" : "생성"}
         </button>

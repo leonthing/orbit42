@@ -178,7 +178,7 @@ export default function SocialSharePanel({ title, content, slug, postId, usernam
                     href={p.authUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded-full bg-charcoal-700/50 px-2 py-0.5 text-[10px] text-navy-400 hover:bg-charcoal-700"
+                    className="rounded-full bg-charcoal-700/50 px-2 py-0.5 text-[10px] text-red-400 hover:bg-charcoal-700"
                   >
                     계정 연결 ↗
                   </a>
@@ -196,7 +196,7 @@ export default function SocialSharePanel({ title, content, slug, postId, usernam
               onChange={(e) => p.setText(e.target.value)}
               placeholder={generated ? "" : `${p.label}에 공유할 내용을 입력하거나 AI 생성을 사용하세요`}
               rows={3}
-              className="mb-2 w-full resize-none rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm leading-relaxed text-charcoal-200 placeholder:text-charcoal-600 focus:border-navy-500 focus:outline-none"
+              className="mb-2 w-full resize-none rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm leading-relaxed text-charcoal-200 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none"
             />
 
             <div className="flex items-center gap-2">

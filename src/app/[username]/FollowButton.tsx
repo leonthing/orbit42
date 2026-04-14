@@ -21,7 +21,7 @@ export function FollowButton({
     return (
       <a
         href="/login"
-        className="rounded-lg bg-navy-600 px-4 py-2 text-sm font-medium text-white hover:bg-navy-500"
+        className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500"
       >
         Sign in to orbit
       </a>
@@ -50,7 +50,7 @@ export function FollowButton({
       className={
         following
           ? "rounded-lg border border-charcoal-700 px-4 py-2 text-sm font-medium text-charcoal-200 hover:border-red-500/60 hover:text-red-400"
-          : "rounded-lg bg-navy-600 px-4 py-2 text-sm font-medium text-white hover:bg-navy-500 disabled:opacity-60"
+          : "rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-60"
       }
     >
       {following ? "Orbiting" : "Orbit"}

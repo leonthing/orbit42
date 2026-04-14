@@ -63,7 +63,7 @@ export function TopBar({ username, displayName }: { username: string; displayNam
           onClick={() => setShowMenu(!showMenu)}
           className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-charcoal-800/50"
         >
-          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-navy-600/20 text-xs font-bold text-navy-400">
+          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-red-600/20 text-xs font-bold text-red-400">
             {displayName[0].toUpperCase()}
           </div>
           <span className="text-sm text-charcoal-300">{displayName}</span>

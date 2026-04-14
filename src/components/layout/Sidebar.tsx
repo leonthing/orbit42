@@ -90,12 +90,12 @@ function NavLink({
       onClick={onClick}
       className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
         active
-          ? "bg-navy-600/15 text-navy-400"
+          ? "bg-red-600/15 text-red-400"
           : "text-charcoal-400 hover:bg-charcoal-800/50 hover:text-charcoal-200"
       }`}
       title={collapsed ? label : undefined}
     >
-      <span className={active ? "text-navy-400" : "text-charcoal-500"}>{icon}</span>
+      <span className={active ? "text-red-400" : "text-charcoal-500"}>{icon}</span>
       <span className={collapsed ? "hidden" : ""}>{label}</span>
     </Link>
   );
@@ -110,8 +110,8 @@ export function Sidebar({ username }: { username: string }) {
     <>
       {/* Logo */}
       <div className="flex h-12 items-center gap-2 border-b border-charcoal-800/40 px-4">
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-navy-600/20">
-          <span className="text-xs font-bold text-navy-400">O</span>
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-red-600/20">
+          <span className="text-xs font-bold text-red-400">O</span>
         </div>
         <span className={`text-sm font-semibold text-charcoal-200 ${collapsed ? "hidden" : "md:block"}`}>
           Orbit42

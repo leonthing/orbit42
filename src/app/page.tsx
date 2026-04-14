@@ -12,7 +12,7 @@ export default async function LandingPage() {
     <div className="min-h-screen bg-[rgb(var(--bg-base))]">
       <header className="flex items-center justify-between px-6 py-5 md:px-10">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-navy-600/40 to-amber-500/40">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-red-600/40 to-red-500/40">
             <span className="text-sm font-bold text-charcoal-100">O</span>
           </div>
           <span className="text-base font-semibold text-charcoal-100">Orbit42</span>
@@ -32,7 +32,7 @@ export default async function LandingPage() {
           </Link>
           <Link
             href="/signup"
-            className="rounded-lg bg-amber-500 px-3 py-1.5 text-sm font-semibold text-charcoal-950 hover:bg-amber-400"
+            className="rounded-lg bg-red-500 px-3 py-1.5 text-sm font-semibold text-charcoal-950 hover:bg-red-400"
           >
             Get started
           </Link>
@@ -42,13 +42,13 @@ export default async function LandingPage() {
       <main className="mx-auto max-w-6xl px-6 pb-24 pt-12 md:pt-20">
         <div className="grid items-center gap-10 md:grid-cols-2 md:gap-12">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-400">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-400">
               Time, shared and sold
             </p>
             <h1 className="mt-4 text-4xl font-bold tracking-tight text-charcoal-100 md:text-5xl lg:text-6xl">
               내 한 주가
               <br />
-              <span className="bg-gradient-to-r from-amber-300 to-amber-500 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-red-300 to-red-500 bg-clip-text text-transparent">
                 재고가 됩니다.
               </span>
             </h1>
@@ -60,7 +60,7 @@ export default async function LandingPage() {
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 href="/signup"
-                className="rounded-lg bg-amber-500 px-5 py-3 text-sm font-semibold text-charcoal-950 hover:bg-amber-400"
+                className="rounded-lg bg-red-500 px-5 py-3 text-sm font-semibold text-charcoal-950 hover:bg-red-400"
               >
                 Start your orbit
               </Link>
@@ -81,7 +81,7 @@ export default async function LandingPage() {
 
           <div className="relative">
             <DemoWeekCalendar />
-            <div className="pointer-events-none absolute -inset-4 -z-10 rounded-3xl bg-gradient-to-br from-amber-500/10 via-transparent to-navy-600/20 blur-3xl" />
+            <div className="pointer-events-none absolute -inset-4 -z-10 rounded-3xl bg-gradient-to-br from-red-500/10 via-transparent to-red-600/20 blur-3xl" />
           </div>
         </div>
       </main>
@@ -182,7 +182,7 @@ function DemoWeekCalendar() {
             일정 6
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-amber-400" />
+            <span className="h-2 w-2 rounded-full bg-red-400" />
             예약가능 5
           </span>
         </div>
@@ -192,7 +192,7 @@ function DemoWeekCalendar() {
         {DEMO_DAYS.map((day) => (
           <div
             key={day.date}
-            className={`flex flex-col ${day.isToday ? "bg-navy-600/5" : ""}`}
+            className={`flex flex-col ${day.isToday ? "bg-red-600/5" : ""}`}
           >
             <div className="border-b border-charcoal-800/40 px-2 pb-2 pt-3 text-center">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-charcoal-500">
@@ -201,7 +201,7 @@ function DemoWeekCalendar() {
               <p
                 className={`mt-1 text-base font-bold ${
                   day.isToday
-                    ? "inline-flex h-7 w-7 items-center justify-center rounded-full bg-navy-600 text-white"
+                    ? "inline-flex h-7 w-7 items-center justify-center rounded-full bg-red-600 text-white"
                     : "text-charcoal-100"
                 }`}
               >
@@ -227,17 +227,17 @@ function DemoWeekCalendar() {
                 ) : (
                   <div
                     key={i}
-                    className="rounded-md border border-amber-500/40 bg-amber-500/10 px-1.5 py-1"
+                    className="rounded-md border border-red-500/40 bg-red-500/10 px-1.5 py-1"
                   >
                     <div className="flex items-baseline justify-between gap-1">
-                      <p className="truncate text-[10px] font-semibold text-amber-200">
+                      <p className="truncate text-[10px] font-semibold text-red-200">
                         {item.title}
                       </p>
-                      <span className="shrink-0 text-[9px] font-bold text-amber-300">
+                      <span className="shrink-0 text-[9px] font-bold text-red-300">
                         {item.price}
                       </span>
                     </div>
-                    <p className="text-[9px] text-amber-300/80">{item.time}</p>
+                    <p className="text-[9px] text-red-300/80">{item.time}</p>
                   </div>
                 ),
               )}

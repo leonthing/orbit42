@@ -165,7 +165,7 @@ export function SettingsForm({
     setInterests((prev) => prev.filter((t) => t !== tag));
   }
 
-  const inputClass = "w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-4 py-2.5 text-sm text-charcoal-100 focus:border-navy-500 focus:outline-none focus:ring-1 focus:ring-navy-500/50";
+  const inputClass = "w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-4 py-2.5 text-sm text-charcoal-100 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500/50";
 
   return (
     <div className="max-w-xl space-y-8">
@@ -215,7 +215,7 @@ export function SettingsForm({
           <button
             type="submit"
             disabled={profileLoading || !hasChanges}
-            className="rounded-lg bg-navy-600 px-4 py-2 text-sm font-medium text-white hover:bg-navy-500 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {profileLoading ? "저장 중..." : "저장"}
           </button>
@@ -229,7 +229,7 @@ export function SettingsForm({
           <button
             type="button"
             onClick={addEducation}
-            className="text-xs font-medium text-navy-400 hover:text-navy-300"
+            className="text-xs font-medium text-red-400 hover:text-red-300"
           >
             + 추가
           </button>
@@ -329,13 +329,13 @@ export function SettingsForm({
               {interests.map((tag) => (
                 <span
                   key={tag}
-                  className="flex items-center gap-1 rounded-full bg-navy-600/15 px-3 py-1 text-xs font-medium text-navy-400"
+                  className="flex items-center gap-1 rounded-full bg-red-600/15 px-3 py-1 text-xs font-medium text-red-400"
                 >
                   {tag}
                   <button
                     type="button"
                     onClick={() => removeInterest(tag)}
-                    className="ml-0.5 text-navy-400/60 hover:text-red-400"
+                    className="ml-0.5 text-red-400/60 hover:text-red-400"
                   >
                     ×
                   </button>
@@ -366,7 +366,7 @@ export function SettingsForm({
                     setSocialLinks((prev) => ({ ...prev, [field.key]: e.target.value }))
                   }
                   placeholder={field.placeholder}
-                  className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-500 focus:outline-none focus:ring-1 focus:ring-navy-500/50"
+                  className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500/50"
                 />
               </div>
             </div>
@@ -406,7 +406,7 @@ export function SettingsForm({
           <button
             type="submit"
             disabled={pwLoading || !currentPw || !newPw || !confirmPw}
-            className="rounded-lg bg-navy-600 px-4 py-2 text-sm font-medium text-white hover:bg-navy-500 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {pwLoading ? "변경 중..." : "비밀번호 변경"}
           </button>
@@ -461,7 +461,7 @@ function ThemeSection() {
             onClick={() => setTheme(opt.value)}
             className={`flex flex-1 flex-col items-center gap-2 rounded-lg border px-4 py-4 transition-colors ${
               theme === opt.value
-                ? "border-navy-500 bg-navy-600/10 text-navy-400"
+                ? "border-red-500 bg-red-600/10 text-red-400"
                 : "border-charcoal-800/60 text-charcoal-500 hover:border-charcoal-700 hover:text-charcoal-300"
             }`}
           >

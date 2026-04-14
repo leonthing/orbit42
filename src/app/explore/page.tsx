@@ -176,7 +176,7 @@ export default async function ExplorePage() {
                   href={`/${s.host.username}/s/${s.slug}`}
                   className="mt-2 block"
                 >
-                  <p className="text-sm font-semibold text-charcoal-100 hover:text-navy-300">
+                  <p className="text-sm font-semibold text-charcoal-100 hover:text-red-300">
                     {s.title}
                   </p>
                   <p className="mt-1 text-xs text-charcoal-500">
@@ -239,19 +239,19 @@ function PersonCard({
   return (
     <Link
       href={`/${username}`}
-      className="group block rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5 transition-colors hover:border-navy-500/60"
+      className="group block rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5 transition-colors hover:border-red-500/60"
     >
       <div className="flex items-start gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-navy-600/20 text-base font-bold text-navy-400">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-red-600/20 text-base font-bold text-red-400">
           {(displayName || username).charAt(0).toUpperCase()}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <p className="truncate text-sm font-semibold text-charcoal-100 group-hover:text-navy-300">
+            <p className="truncate text-sm font-semibold text-charcoal-100 group-hover:text-red-300">
               {displayName || username}
             </p>
             {isFollowing && (
-              <span className="rounded-full bg-navy-600/20 px-1.5 py-0.5 text-[9px] font-semibold text-navy-300">
+              <span className="rounded-full bg-red-600/20 px-1.5 py-0.5 text-[9px] font-semibold text-red-300">
                 ORBITING
               </span>
             )}

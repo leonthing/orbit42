@@ -161,8 +161,8 @@ export function ComposeBox({
           )}
 
           {addToCalendar && (
-            <div className="mt-2 flex items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/5 px-3 py-2">
-              <span className="text-amber-400">📅</span>
+            <div className="mt-2 flex items-center gap-2 rounded-lg border border-red-500/40 bg-red-500/5 px-3 py-2">
+              <span className="text-red-400">📅</span>
               <input
                 type="datetime-local"
                 value={calendarStart}
@@ -224,14 +224,14 @@ export function ComposeBox({
 
             <div className="flex items-center gap-3">
               <span
-                className={`text-xs ${remaining < 50 ? "text-amber-400" : "text-charcoal-600"}`}
+                className={`text-xs ${remaining < 50 ? "text-red-400" : "text-charcoal-600"}`}
               >
                 {remaining}
               </span>
               <button
                 type="submit"
                 disabled={pending || (!body.trim() && files.length === 0)}
-                className="rounded-full bg-amber-500 px-5 py-2 text-sm font-semibold text-charcoal-950 hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-40"
+                className="rounded-full bg-red-500 px-5 py-2 text-sm font-semibold text-charcoal-950 hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {pending ? "올리는 중…" : "Post"}
               </button>
@@ -264,7 +264,7 @@ function ToolButton({
       title={label}
       className={`flex h-9 w-9 items-center justify-center rounded-full text-base transition-colors ${
         active
-          ? "bg-amber-500/20 text-amber-300"
+          ? "bg-red-500/20 text-red-300"
           : "text-charcoal-400 hover:bg-charcoal-800/60 hover:text-charcoal-200"
       } disabled:cursor-not-allowed disabled:opacity-40`}
     >

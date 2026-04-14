@@ -89,7 +89,7 @@ const TOOLBAR_ACTIONS: ToolbarAction[] = [
   },
 ];
 
-const PROSE_CLASSES = "prose prose-invert prose-sm max-w-none prose-headings:text-charcoal-100 prose-p:text-charcoal-300 prose-strong:text-charcoal-200 prose-a:text-navy-400 prose-code:text-emerald-400 prose-code:bg-charcoal-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-pre:bg-charcoal-800 prose-pre:border prose-pre:border-charcoal-700 prose-blockquote:border-navy-500 prose-blockquote:text-charcoal-400 prose-li:text-charcoal-300 prose-hr:border-charcoal-700 prose-th:text-charcoal-200 prose-td:text-charcoal-300 prose-img:rounded-lg";
+const PROSE_CLASSES = "prose prose-invert prose-sm max-w-none prose-headings:text-charcoal-100 prose-p:text-charcoal-300 prose-strong:text-charcoal-200 prose-a:text-red-400 prose-code:text-emerald-400 prose-code:bg-charcoal-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-pre:bg-charcoal-800 prose-pre:border prose-pre:border-charcoal-700 prose-blockquote:border-red-500 prose-blockquote:text-charcoal-400 prose-li:text-charcoal-300 prose-hr:border-charcoal-700 prose-th:text-charcoal-200 prose-td:text-charcoal-300 prose-img:rounded-lg";
 
 export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
   const router = useRouter();
@@ -302,7 +302,7 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
       onChange={(e) => setContent(e.target.value)}
       onKeyDown={handleTextareaKeyDown}
       placeholder="내용을 작성하세요... (Markdown 지원)"
-      className="flex-1 w-full resize-none rounded-xl border border-charcoal-700 bg-charcoal-800/50 p-5 text-sm leading-relaxed text-charcoal-100 placeholder:text-charcoal-700 focus:border-navy-500 focus:outline-none font-mono"
+      className="flex-1 w-full resize-none rounded-xl border border-charcoal-700 bg-charcoal-800/50 p-5 text-sm leading-relaxed text-charcoal-100 placeholder:text-charcoal-700 focus:border-red-500 focus:outline-none font-mono"
     />
   );
 
@@ -348,7 +348,7 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
           <button
             onClick={() => setShowSettings(!showSettings)}
             className={`rounded-lg p-1.5 transition-colors ${
-              showSettings ? "text-navy-400" : "text-charcoal-500 hover:text-charcoal-300"
+              showSettings ? "text-red-400" : "text-charcoal-500 hover:text-charcoal-300"
             }`}
             title="글 설정"
           >
@@ -381,7 +381,7 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
           <button
             onClick={handleSave}
             disabled={isPending || saved}
-            className="rounded-lg bg-navy-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-navy-500 disabled:opacity-50"
+            className="rounded-lg bg-red-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-50"
           >
             저장
           </button>
@@ -409,7 +409,7 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
                 type="text"
                 value={slug}
                 onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9가-힣ㄱ-ㅎㅏ-ㅣ-]/g, ""))}
-                className="flex-1 rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-1.5 text-sm text-charcoal-100 focus:border-navy-500 focus:outline-none"
+                className="flex-1 rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-1.5 text-sm text-charcoal-100 focus:border-red-500 focus:outline-none"
               />
             </div>
           </div>
@@ -420,7 +420,7 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
               onChange={(e) => setExcerpt(e.target.value)}
               placeholder="글의 요약을 입력하세요 (목록에 표시됩니다)"
               rows={2}
-              className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-500 focus:outline-none"
+              className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none"
             />
           </div>
           <div>
@@ -430,7 +430,7 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
               value={tagsInput}
               onChange={(e) => setTagsInput(e.target.value)}
               placeholder="개발, 일상, 생각"
-              className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-1.5 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-500 focus:outline-none"
+              className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-1.5 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none"
             />
           </div>
         </div>

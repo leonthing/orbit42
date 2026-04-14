@@ -62,7 +62,7 @@ export default async function BlogPage({
                     day: "numeric",
                   })}
               </p>
-              <h2 className="mt-1 text-lg font-semibold text-charcoal-100 group-hover:text-amber-300">
+              <h2 className="mt-1 text-lg font-semibold text-charcoal-100 group-hover:text-red-300">
                 {p.title || "(제목 없음)"}
               </h2>
               {p.excerpt && (

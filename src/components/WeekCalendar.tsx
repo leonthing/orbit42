@@ -74,7 +74,7 @@ export function WeekCalendar({
             일정 {totalEvents}
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-amber-400" />
+            <span className="h-2 w-2 rounded-full bg-red-400" />
             예약가능 {totalSlots}
           </span>
         </div>
@@ -121,12 +121,12 @@ function DayHeader({ day }: { day: WeekDay }) {
   return (
     <div
       className={`border-r border-charcoal-800/40 px-2 py-2 text-center last:border-r-0 ${
-        day.isToday ? "bg-navy-600/5" : ""
+        day.isToday ? "bg-red-600/5" : ""
       }`}
     >
       <p
         className={`text-[10px] font-semibold uppercase tracking-wider ${
-          day.isToday ? "text-navy-400" : isWeekend ? "text-charcoal-500" : "text-charcoal-500"
+          day.isToday ? "text-red-400" : isWeekend ? "text-charcoal-500" : "text-charcoal-500"
         }`}
       >
         {dow}
@@ -134,7 +134,7 @@ function DayHeader({ day }: { day: WeekDay }) {
       <p
         className={`mt-0.5 text-sm font-bold ${
           day.isToday
-            ? "inline-flex h-6 w-6 items-center justify-center rounded-full bg-navy-600 text-white"
+            ? "inline-flex h-6 w-6 items-center justify-center rounded-full bg-red-600 text-white"
             : isWeekend
               ? "text-charcoal-400"
               : "text-charcoal-100"
@@ -182,7 +182,7 @@ function DayColumn({
   return (
     <div
       className={`relative border-r border-charcoal-800/40 last:border-r-0 ${
-        isToday ? "bg-navy-600/5" : ""
+        isToday ? "bg-red-600/5" : ""
       }`}
     >
       {/* Hour grid lines */}
@@ -293,25 +293,25 @@ function ItemBlock({
   return (
     <Link
       href={`/${username}/s/${item.slot_slug}?t=${encodeURIComponent(item.start_at)}`}
-      className="group absolute overflow-hidden rounded-md border border-amber-500 bg-amber-100 px-1.5 py-1 transition-colors hover:bg-amber-200"
+      className="group absolute overflow-hidden rounded-md border border-red-500 bg-red-100 px-1.5 py-1 transition-colors hover:bg-red-200"
       style={style}
     >
       <div className="flex items-baseline justify-between gap-1">
-        <p className="truncate text-[11px] font-semibold leading-tight text-amber-900">
+        <p className="truncate text-[11px] font-semibold leading-tight text-red-900">
           {item.title}
         </p>
-        <span className="shrink-0 text-[10px] font-bold text-amber-900">
+        <span className="shrink-0 text-[10px] font-bold text-red-900">
           {priceLabel}
         </span>
       </div>
       {height >= 34 && (
-        <p className="truncate text-[10px] leading-tight text-amber-800">
+        <p className="truncate text-[10px] leading-tight text-red-800">
           {minToHM(item.startMin)}–{minToHM(item.endMin)}
           {multi && <span className="ml-1 font-semibold">· {item.option_count}자리</span>}
         </p>
       )}
       {height >= 56 && (
-        <p className="truncate text-[10px] leading-tight text-amber-800">
+        <p className="truncate text-[10px] leading-tight text-red-800">
           {item.duration_min}분
         </p>
       )}

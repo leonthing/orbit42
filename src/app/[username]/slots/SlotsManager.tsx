@@ -52,7 +52,7 @@ export default function SlotsManager({
         <button
           type="button"
           onClick={() => setShowNew((s) => !s)}
-          className="rounded-lg bg-navy-600 px-4 py-2 text-sm font-medium text-white hover:bg-navy-500"
+          className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500"
         >
           {showNew ? "닫기" : "+ New slot"}
         </button>
@@ -349,7 +349,7 @@ function NewSlotForm({ onSaved }: { onSaved: () => void }) {
         <button
           type="submit"
           disabled={pending}
-          className="rounded-lg bg-navy-600 px-4 py-2 text-sm font-medium text-white hover:bg-navy-500 disabled:opacity-60"
+          className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-60"
         >
           {pending ? "저장 중…" : "Create slot"}
         </button>
@@ -392,7 +392,7 @@ function PricingButton({
       onClick={onClick}
       className={`flex-1 rounded-lg border px-4 py-2 text-left text-sm font-medium ${
         active
-          ? "border-amber-500/50 bg-amber-500/10 text-amber-200"
+          ? "border-red-500/50 bg-red-500/10 text-red-200"
           : "border-charcoal-800/60 bg-charcoal-800/20 text-charcoal-300 hover:border-charcoal-700"
       }`}
     >
@@ -419,7 +419,7 @@ function ModeButton({
       onClick={onClick}
       className={`flex-1 rounded-lg border px-4 py-2 text-left text-sm font-medium ${
         active
-          ? "border-navy-500 bg-navy-600/15 text-charcoal-100"
+          ? "border-red-500 bg-red-600/15 text-charcoal-100"
           : "border-charcoal-800/60 bg-charcoal-800/20 text-charcoal-300 hover:border-charcoal-700"
       }`}
     >
@@ -548,7 +548,7 @@ function AutoConfig({
                   onClick={() => toggleDay(d.key)}
                   className={`flex h-7 w-9 shrink-0 items-center justify-center rounded text-xs font-bold ${
                     enabled
-                      ? "bg-navy-600 text-white"
+                      ? "bg-red-600 text-white"
                       : "bg-charcoal-700/50 text-charcoal-500"
                   }`}
                 >
@@ -716,7 +716,7 @@ function SlotCard({ row, username }: { row: Row; username: string }) {
           <div className="mt-2 flex items-center gap-2">
             <Link
               href={`/${username}/s/${row.slot.slug}`}
-              className="text-xs text-navy-400 hover:text-navy-300"
+              className="text-xs text-red-400 hover:text-red-300"
             >
               /{username}/s/{row.slot.slug} ↗
             </Link>
