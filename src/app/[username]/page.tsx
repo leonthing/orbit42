@@ -130,7 +130,7 @@ export default async function PublicProfile({
               </Link>
               {totalSlotWindows > 0 && (
                 <span>
-                  <strong className="text-red-300">{totalSlotWindows}</strong>{" "}
+                  <strong className="text-red-700 dark:text-red-300">{totalSlotWindows}</strong>{" "}
                   <span className="text-charcoal-500">예약가능</span>
                 </span>
               )}
@@ -141,13 +141,13 @@ export default async function PublicProfile({
           <div className="flex shrink-0 flex-wrap items-center gap-2">
             <Link
               href={`/${params.username}/slots`}
-              className="flex-1 whitespace-nowrap rounded-lg bg-red-500/90 px-4 py-2 text-center text-sm font-semibold text-charcoal-950 hover:bg-red-400 sm:flex-none"
+              className="flex-1 whitespace-nowrap rounded-lg bg-red-600 px-4 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:flex-none"
             >
               Sell my time
             </Link>
             <Link
               href={`/${params.username}/settings`}
-              className="flex-1 whitespace-nowrap rounded-lg border border-charcoal-700 px-4 py-2 text-center text-sm font-medium text-charcoal-200 hover:border-charcoal-600 hover:text-charcoal-100 sm:flex-none"
+              className="flex-1 whitespace-nowrap rounded-lg border border-charcoal-700 bg-charcoal-900/30 px-4 py-2 text-center text-sm font-medium text-charcoal-100 hover:border-charcoal-600 hover:bg-charcoal-900/60 sm:flex-none"
             >
               Edit
             </Link>
@@ -212,7 +212,7 @@ export default async function PublicProfile({
           {interests.map((tag) => (
             <span
               key={tag}
-              className="rounded-full bg-red-600/15 px-3 py-1 text-xs font-medium text-red-300"
+              className="rounded-full bg-red-500/15 px-3 py-1 text-xs font-medium text-red-800 ring-1 ring-red-500/30 dark:text-red-200 dark:ring-0"
             >
               {tag}
             </span>
@@ -489,7 +489,7 @@ function ValueStat({
       </p>
       <p
         className={`mt-1 text-lg font-bold ${
-          accent ? "text-red-300" : "text-charcoal-100"
+          accent ? "text-red-700 dark:text-red-300" : "text-charcoal-100"
         }`}
       >
         {value}

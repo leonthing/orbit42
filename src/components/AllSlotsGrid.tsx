@@ -39,10 +39,10 @@ export function AllSlotsGrid({
         const cardInner = (
           <>
             <div className="flex items-baseline justify-between gap-2">
-              <h3 className="truncate text-sm font-semibold text-charcoal-100 group-hover:text-red-200">
+              <h3 className="truncate text-sm font-semibold text-charcoal-100 group-hover:text-red-700 dark:group-hover:text-red-200">
                 {s.title}
               </h3>
-              <span className="shrink-0 rounded-md bg-red-500/15 px-2 py-0.5 text-xs font-bold text-red-300">
+              <span className="shrink-0 rounded-md bg-red-500/15 px-2 py-0.5 text-xs font-bold text-red-800 ring-1 ring-red-500/30 dark:text-red-300 dark:ring-0">
                 {priceLabel}
               </span>
             </div>
