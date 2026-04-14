@@ -6,6 +6,9 @@ import { CalendarVisibilityForm } from "./CalendarVisibilityForm";
 import { AvatarUploader } from "./AvatarUploader";
 import { getGoogleCalendars, isGoogleCalendarConnected } from "../calendar/actions";
 import { getCalendarSettings } from "@/lib/calendar-settings";
+import { listExtraGoogleAccounts } from "@/lib/google";
+import { getUserId } from "@/lib/db";
+import { GoogleAccountsSection } from "./GoogleAccountsSection";
 
 export const metadata: Metadata = { title: "Settings" };
 export const dynamic = "force-dynamic";
@@ -18,10 +21,12 @@ export default async function SettingsPage({
   const profile = await getProfile(params.username);
   if (!profile) notFound();
 
-  const [googleConnected, calendars, calendarSettings] = await Promise.all([
+  const userId = await getUserId();
+  const [googleConnected, calendars, calendarSettings, extras] = await Promise.all([
     isGoogleCalendarConnected().catch(() => false),
     getGoogleCalendars().catch(() => []),
     getCalendarSettings().catch(() => []),
+    userId ? listExtraGoogleAccounts(userId) : Promise.resolve([]),
   ]);
 
   return (
@@ -45,6 +50,16 @@ export default async function SettingsPage({
         education={profile.education || []}
         interests={profile.interests || []}
         createdAt={profile.created_at}
+      />
+
+      <GoogleAccountsSection
+        primaryConnected={googleConnected}
+        primaryEmail={null}
+        extras={extras.map((a) => ({
+          id: a.id,
+          email: a.email,
+          created_at: (a as unknown as { created_at?: string }).created_at ?? new Date().toISOString(),
+        }))}
       />
 
       <section className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30">

@@ -97,6 +97,108 @@ export async function getAuthenticatedPeopleApi(userId: string) {
   return google.people({ version: "v1", auth: client });
 }
 
+// ---------- Multi-account support ----------
+
+export type ExtraGoogleAccount = {
+  id: string;
+  user_id: string;
+  email: string | null;
+  access_token: string | null;
+  refresh_token: string;
+  token_expiry: string | null;
+};
+
+export async function listExtraGoogleAccounts(userId: string): Promise<ExtraGoogleAccount[]> {
+  const db = getAdminClient();
+  const { data } = await db
+    .from("google_accounts")
+    .select("id, user_id, email, access_token, refresh_token, token_expiry")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true });
+  return (data ?? []) as ExtraGoogleAccount[];
+}
+
+export async function saveExtraGoogleAccount(
+  userId: string,
+  tokens: { access_token?: string | null; refresh_token?: string | null; expiry_date?: number | null },
+  email: string | null,
+) {
+  if (!tokens.refresh_token) return null;
+  const db = getAdminClient();
+  const { data } = await db
+    .from("google_accounts")
+    .insert({
+      user_id: userId,
+      email,
+      access_token: tokens.access_token ?? null,
+      refresh_token: tokens.refresh_token,
+      token_expiry: tokens.expiry_date
+        ? new Date(tokens.expiry_date).toISOString()
+        : null,
+    })
+    .select("id")
+    .single();
+  return data?.id ?? null;
+}
+
+export async function deleteExtraGoogleAccount(accountId: string, userId: string) {
+  const db = getAdminClient();
+  await db.from("google_accounts").delete().eq("id", accountId).eq("user_id", userId);
+}
+
+async function clientForExtraAccount(account: ExtraGoogleAccount) {
+  const client = getOAuth2Client();
+  client.setCredentials({
+    access_token: account.access_token ?? undefined,
+    refresh_token: account.refresh_token,
+  });
+  if (account.token_expiry && new Date(account.token_expiry) < new Date()) {
+    try {
+      const { credentials } = await client.refreshAccessToken();
+      const db = getAdminClient();
+      await db
+        .from("google_accounts")
+        .update({
+          access_token: credentials.access_token ?? null,
+          token_expiry: credentials.expiry_date
+            ? new Date(credentials.expiry_date).toISOString()
+            : null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", account.id);
+      client.setCredentials(credentials);
+    } catch {
+      return null;
+    }
+  }
+  return client;
+}
+
+export async function getCalendarForExtraAccount(account: ExtraGoogleAccount) {
+  const client = await clientForExtraAccount(account);
+  if (!client) return null;
+  return google.calendar({ version: "v3", auth: client });
+}
+
+/** Fetch the logged-in email for a freshly issued token set. */
+export async function fetchGoogleEmail(tokens: {
+  access_token?: string | null;
+  refresh_token?: string | null;
+}): Promise<string | null> {
+  try {
+    const client = getOAuth2Client();
+    client.setCredentials({
+      access_token: tokens.access_token ?? undefined,
+      refresh_token: tokens.refresh_token ?? undefined,
+    });
+    const oauth2 = google.oauth2({ version: "v2", auth: client });
+    const res = await oauth2.userinfo.get();
+    return (res.data.email as string | null) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function getAuthenticatedGmail(userId: string) {
   const client = await getAuthenticatedClient(userId);
   if (!client) return null;

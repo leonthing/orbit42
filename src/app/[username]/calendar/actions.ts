@@ -2,7 +2,11 @@
 
 import { getAdminClient } from "@/lib/supabase";
 import { requireUserId } from "@/lib/db";
-import { getAuthenticatedCalendar } from "@/lib/google";
+import {
+  getAuthenticatedCalendar,
+  listExtraGoogleAccounts,
+  getCalendarForExtraAccount,
+} from "@/lib/google";
 
 export type Event = {
   id: string;
@@ -35,20 +39,51 @@ export type GoogleCalendarInfo = {
 
 export async function getGoogleCalendars(): Promise<GoogleCalendarInfo[]> {
   const userId = await requireUserId();
-  const calendar = await getAuthenticatedCalendar(userId);
-  if (!calendar) return [];
+  const seen = new Set<string>();
+  const all: GoogleCalendarInfo[] = [];
 
-  try {
-    const res = await calendar.calendarList.list();
-    return (res.data.items || []).map((item) => ({
-      id: item.id || "",
-      summary: item.summary || "",
-      backgroundColor: item.backgroundColor || "#4285f4",
-      primary: !!item.primary,
-    }));
-  } catch {
-    return [];
+  const primary = await getAuthenticatedCalendar(userId);
+  if (primary) {
+    try {
+      const res = await primary.calendarList.list();
+      for (const item of res.data.items ?? []) {
+        if (!item.id || seen.has(item.id)) continue;
+        seen.add(item.id);
+        all.push({
+          id: item.id,
+          summary: item.summary || "",
+          backgroundColor: item.backgroundColor || "#4285f4",
+          primary: !!item.primary,
+        });
+      }
+    } catch {
+      // ignore
+    }
   }
+
+  const extras = await listExtraGoogleAccounts(userId);
+  for (const acc of extras) {
+    const calendar = await getCalendarForExtraAccount(acc);
+    if (!calendar) continue;
+    try {
+      const res = await calendar.calendarList.list();
+      for (const item of res.data.items ?? []) {
+        if (!item.id || seen.has(item.id)) continue;
+        seen.add(item.id);
+        const emailTag = acc.email ? ` (${acc.email})` : " (추가 계정)";
+        all.push({
+          id: item.id,
+          summary: `${item.summary || ""}${emailTag}`,
+          backgroundColor: item.backgroundColor || "#4285f4",
+          primary: false,
+        });
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  return all;
 }
 
 export async function getEvents(
