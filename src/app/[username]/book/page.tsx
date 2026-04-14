@@ -2,14 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProfile, getSession } from "@/lib/auth";
-import {
-  listPublicSlotsByUsername,
-  getBookableOptions,
-  type TimeSlot,
-  type BookableOption,
-} from "@/lib/slots";
+import { listPublicSlotsByUsername, getBookableOptions } from "@/lib/slots";
 import { Avatar } from "@/components/Avatar";
-import BookingForm from "../s/[slug]/BookingForm";
+import { BookingCalendar, type BookSlot } from "./BookingCalendar";
 import { CopyShareLink } from "./CopyShareLink";
 
 export const dynamic = "force-dynamic";
@@ -40,36 +35,44 @@ export default async function BookingSharePage({
   const isOwner = session?.username === params.username;
 
   const allSlots = await listPublicSlotsByUsername(params.username);
-  // Share page is for fixed-price (manual or auto) bookable slots only;
-  // auction slots live on their own dedicated page.
-  const slots = allSlots.filter((s) => s.pricing_model === "fixed" && s.active);
-
-  const slotsWithOptions = await Promise.all(
-    slots.map(async (s) => ({
-      slot: s,
-      options: await getBookableOptions(s),
+  const fixed = allSlots.filter((s) => s.pricing_model === "fixed" && s.active);
+  const withOptions: BookSlot[] = await Promise.all(
+    fixed.map(async (s) => ({
+      id: s.id,
+      slug: s.slug,
+      title: s.title,
+      duration_min: s.duration_min,
+      price_cents: s.price_cents,
+      slot_type: s.slot_type,
+      location_detail: s.location_detail,
+      options: (await getBookableOptions(s)).map((o) => ({
+        availability_id: o.availability_id,
+        start_at: o.start_at,
+        end_at: o.end_at,
+      })),
     })),
   );
-  const bookable = slotsWithOptions.filter((s) => s.options.length > 0);
+
+  const hostName = profile.display_name || profile.username;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="mx-auto max-w-5xl space-y-6">
       <header className="rounded-2xl border border-charcoal-800/60 bg-charcoal-900/30 p-6">
         <div className="flex items-center gap-4">
           <Avatar
             url={(profile.avatar_url as string | null) ?? null}
-            name={profile.display_name || profile.username}
-            size={64}
+            name={hostName}
+            size={56}
           />
           <div className="min-w-0">
             <h1 className="text-xl font-bold text-charcoal-100 md:text-2xl">
-              {profile.display_name || profile.username}와 미팅 잡기
+              {hostName}와 미팅 잡기
             </h1>
             <p className="text-sm text-charcoal-500">@{profile.username}</p>
           </div>
         </div>
         {profile.bio && (
-          <p className="mt-4 text-sm leading-relaxed text-charcoal-300">
+          <p className="mt-3 text-sm leading-relaxed text-charcoal-300">
             {profile.bio}
           </p>
         )}
@@ -84,86 +87,17 @@ export default async function BookingSharePage({
         )}
       </header>
 
-      {bookable.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-charcoal-800/60 p-10 text-center">
-          <p className="text-sm font-semibold text-charcoal-200">
-            지금은 예약 가능한 시간이 없어요
-          </p>
-          <p className="mt-2 text-sm text-charcoal-500">
-            {isOwner
-              ? "Slots에서 시간을 열거나 Auto 모드를 설정해보세요."
-              : "조금 뒤에 다시 확인해주세요."}
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-5">
-          {bookable.map((row) => (
-            <SlotBookRow
-              key={row.slot.id}
-              slot={row.slot}
-              options={row.options}
-              loggedIn={!!session}
-              isOwner={isOwner}
-            />
-          ))}
-        </div>
-      )}
+      <BookingCalendar
+        slots={withOptions}
+        hostName={hostName}
+        loggedIn={!!session}
+      />
 
-      <p className="pt-4 text-center text-xs text-charcoal-600">
+      <p className="pt-2 text-center text-xs text-charcoal-600">
         <Link href={`/${params.username}`} className="hover:text-charcoal-400">
-          {profile.display_name || profile.username}의 프로필 보기 →
+          {hostName}의 프로필 보기 →
         </Link>
       </p>
     </div>
-  );
-}
-
-function SlotBookRow({
-  slot,
-  options,
-  loggedIn,
-  isOwner,
-}: {
-  slot: TimeSlot;
-  options: BookableOption[];
-  loggedIn: boolean;
-  isOwner: boolean;
-}) {
-  return (
-    <section className="rounded-2xl border border-charcoal-800/60 bg-charcoal-900/30 p-5">
-      <div className="flex items-baseline justify-between gap-4">
-        <div className="min-w-0">
-          <h2 className="text-base font-semibold text-charcoal-100">{slot.title}</h2>
-          <p className="mt-0.5 text-xs text-charcoal-500">
-            {slot.duration_min}분 · {slot.slot_type}
-            {slot.location_detail && ` · ${slot.location_detail}`}
-          </p>
-        </div>
-        <span className="shrink-0 rounded-md bg-amber-500/15 px-2 py-0.5 text-xs font-bold text-amber-300">
-          {slot.price_cents === 0
-            ? "FREE"
-            : `₩${(slot.price_cents / 100).toLocaleString("ko-KR")}`}
-        </span>
-      </div>
-      {slot.description && (
-        <p className="mt-2 text-sm text-charcoal-400">{slot.description}</p>
-      )}
-
-      {isOwner ? (
-        <p className="mt-4 text-xs text-charcoal-500">
-          본인은 예약할 수 없어요. 공유 링크를 외부에 보낼 때 이렇게 보입니다.
-        </p>
-      ) : (
-        <div className="mt-4 border-t border-charcoal-800/40 pt-4">
-          <BookingForm
-            slotId={slot.id}
-            options={options}
-            loggedIn={loggedIn}
-            priceCents={slot.price_cents}
-            slotTitle={slot.title}
-          />
-        </div>
-      )}
-    </section>
   );
 }
