@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getAdminClient } from "@/lib/supabase";
 import { getSession } from "@/lib/auth";
 import { getUserId, requireUserId } from "@/lib/db";
-import { getAuthenticatedCalendar } from "@/lib/google";
+import { getAuthenticatedCalendar, sendGmailFromUser } from "@/lib/google";
 import { computeAutoAvailability } from "@/lib/slot-availability";
 import type { WorkingHours, AutoSlotOption } from "@/lib/slot-availability";
 
@@ -426,6 +426,37 @@ export async function bookSlot(args: {
     console.error("Google Calendar booking insert failed:", err);
   }
 
+  // Best-effort: send a confirmation email to the guest from the host's Gmail.
+  const guestEmailFinal =
+    args.guest_email ?? (await getEmailForUser(guestId));
+  if (guestEmailFinal) {
+    const when = startAt.toLocaleString("ko-KR", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      weekday: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    void sendGmailFromUser(slot.host_id as string, {
+      to: guestEmailFinal,
+      subject: `[Orbit42] 예약 확인: ${slot.title}`,
+      body: [
+        `안녕하세요${args.guest_name ? ` ${args.guest_name}님` : ""},`,
+        ``,
+        `요청하신 시간으로 예약이 등록되었습니다.`,
+        ``,
+        `· 슬롯: ${slot.title}`,
+        `· 시간: ${when} (${slot.duration_min}분)`,
+        slot.location_detail ? `· 장소: ${slot.location_detail}` : null,
+        ``,
+        `이 메일은 Orbit42에서 자동으로 발송되었습니다.`,
+      ]
+        .filter(Boolean)
+        .join("\n"),
+    });
+  }
+
   revalidatePath("/", "layout");
   return { success: true };
 }
@@ -467,12 +498,41 @@ export async function updateBookingStatus(
 ) {
   const userId = await requireUserId();
   const db = getAdminClient();
+
+  const { data: booking } = await db
+    .from("bookings")
+    .select("guest_email, guest_name, scheduled_at, slot:time_slots!bookings_slot_id_fkey(title)")
+    .eq("id", id)
+    .eq("host_id", userId)
+    .single();
+
   const { error } = await db
     .from("bookings")
     .update({ status, updated_at: new Date().toISOString() })
     .eq("id", id)
     .eq("host_id", userId);
   if (error) return { error: "변경 실패" };
+
+  if (booking && booking.guest_email && status !== "completed") {
+    const slotTitle =
+      (booking.slot as unknown as { title: string } | null)?.title ?? "예약";
+    const when = new Date(booking.scheduled_at as string).toLocaleString("ko-KR", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    void sendGmailFromUser(userId, {
+      to: booking.guest_email as string,
+      subject: `[Orbit42] 예약 ${status === "confirmed" ? "확정" : "취소"}: ${slotTitle}`,
+      body:
+        status === "confirmed"
+          ? `${booking.guest_name ?? "안녕하세요"}님, ${when} 예약이 확정되었습니다.\n\nOrbit42`
+          : `${booking.guest_name ?? "안녕하세요"}님, ${when} 예약이 취소되었습니다. 죄송합니다.\n\nOrbit42`,
+    });
+  }
+
   revalidatePath("/", "layout");
   return { success: true };
 }
