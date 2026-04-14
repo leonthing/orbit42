@@ -83,3 +83,18 @@
 * {
   @apply transition-colors duration-150;
 }
+
+/* Readable markdown body (native, instead of prose-invert which pulls too-light colors) */
+.post-body p { @apply my-4; }
+.post-body h1 { @apply mt-8 mb-3 text-2xl font-bold text-charcoal-50; }
+.post-body h2 { @apply mt-7 mb-3 text-xl font-bold text-charcoal-50; }
+.post-body h3 { @apply mt-6 mb-2 text-lg font-semibold text-charcoal-50; }
+.post-body ul { @apply my-4 ml-6 list-disc space-y-1; }
+.post-body ol { @apply my-4 ml-6 list-decimal space-y-1; }
+.post-body a { @apply text-red-500 underline underline-offset-2 hover:text-red-400; }
+.post-body blockquote { @apply my-4 border-l-2 border-charcoal-800/60 pl-4 text-charcoal-300; }
+.post-body code { @apply rounded bg-charcoal-800/40 px-1.5 py-0.5 text-[13px]; }
+.post-body pre { @apply my-4 overflow-x-auto rounded-lg bg-charcoal-800/60 p-4 text-[13px]; }
+.post-body pre code { @apply bg-transparent p-0; }
+.post-body hr { @apply my-6 border-charcoal-800/60; }
+.post-body strong { @apply text-charcoal-50; }

@@ -40,10 +40,10 @@ export default async function PublicPostPage({
   ]);
 
   return (
-    <article className="mx-auto max-w-2xl space-y-6">
+    <article className="max-w-3xl space-y-6">
       <Link
         href={`/${author.username}`}
-        className="inline-flex items-center gap-1 text-xs text-charcoal-500 hover:text-charcoal-300"
+        className="inline-flex items-center gap-1 text-xs text-charcoal-400 hover:text-charcoal-100"
       >
         ← {author.display_name || author.username}
       </Link>
@@ -64,12 +64,12 @@ export default async function PublicPostPage({
             </>
           )}
         </p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-charcoal-100 md:text-4xl">
+        <h1 className="mt-2 text-3xl font-bold tracking-tight text-charcoal-50 md:text-4xl">
           {post.title}
         </h1>
       </header>
 
-      <div className="prose prose-invert prose-charcoal max-w-none">
+      <div className="post-body text-[15px] leading-relaxed text-charcoal-100">
         <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.content}</ReactMarkdown>
       </div>
 
