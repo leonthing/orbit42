@@ -47,9 +47,9 @@ export default function SlotsManager({
     <div className="space-y-8">
       <header className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-charcoal-100">Slots</h1>
+          <h1 className="text-2xl font-bold text-charcoal-100">Timeslots</h1>
           <p className="mt-1 text-sm text-charcoal-500">
-            팔거나 나눠줄 시간을 슬롯으로 만들어 공유하세요.
+            내 타임 슬롯을 공유하거나 판매하여 수익을 창출하세요.
           </p>
         </div>
         {!showNew && (
@@ -842,6 +842,7 @@ function SlotCard({
   const [pending, startTransition] = useTransition();
   const [newWindow, setNewWindow] = useState("");
   const [copied, setCopied] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   const publicUrl =
     typeof window !== "undefined"
@@ -955,6 +956,17 @@ function SlotCard({
           </button>
           <button
             type="button"
+            onClick={() => setEditing((v) => !v)}
+            className={`rounded-md border px-2.5 py-1.5 text-xs ${
+              editing
+                ? "border-red-500/60 bg-red-500/10 text-red-200"
+                : "border-charcoal-800 text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
+            }`}
+          >
+            {editing ? "닫기" : "수정"}
+          </button>
+          <button
+            type="button"
             onClick={toggleActive}
             disabled={pending}
             className="rounded-md border border-charcoal-800 px-2.5 py-1.5 text-xs text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
@@ -972,6 +984,20 @@ function SlotCard({
           </button>
         </div>
       </div>
+
+      {editing && (
+        <div className="border-t border-charcoal-800/40 bg-charcoal-950/40 px-5 py-5">
+          <EditSlotForm
+            slot={row.slot}
+            myCalendars={myCalendars}
+            onDone={() => {
+              setEditing(false);
+              router.refresh();
+            }}
+            onCancel={() => setEditing(false)}
+          />
+        </div>
+      )}
 
       {row.slot.mode === "manual" ? (
         <div className="border-t border-charcoal-800/40 bg-charcoal-950/30 px-5 py-4">
@@ -1041,5 +1067,188 @@ function SlotCard({
         </div>
       )}
     </div>
+  );
+}
+
+function EditSlotForm({
+  slot,
+  myCalendars,
+  onDone,
+  onCancel,
+}: {
+  slot: TimeSlot;
+  myCalendars: Calendar[];
+  onDone: () => void;
+  onCancel: () => void;
+}) {
+  const [pending, startTransition] = useTransition();
+  const [title, setTitle] = useState(slot.title);
+  const [description, setDescription] = useState(slot.description ?? "");
+  const [duration, setDuration] = useState(slot.duration_min);
+  const [price, setPrice] = useState(slot.price_cents / 100);
+  const [capacity, setCapacity] = useState(slot.capacity);
+  const [slotType, setSlotType] = useState<SlotType>(slot.slot_type);
+  const [locationDetail, setLocationDetail] = useState(slot.location_detail ?? "");
+  const [calendarId, setCalendarId] = useState<string>(slot.calendar_id ?? "");
+
+  const isAuction = slot.pricing_model === "auction";
+  const selectedCal = myCalendars.find((c) => c.id === calendarId);
+  const needsPublic = !isAuction && price > 0;
+  const violating = needsPublic && !!selectedCal && selectedCal.visibility !== "public";
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) return alert("제목을 입력하세요.");
+    if (violating) {
+      return alert("유료 슬롯은 공개 캘린더에만 만들 수 있어요.");
+    }
+    startTransition(async () => {
+      const res = await updateSlot(slot.id, {
+        title: title.trim(),
+        description: description.trim() || null,
+        duration_min: duration,
+        price_cents: isAuction ? 0 : Math.round(price) * 100,
+        capacity,
+        slot_type: slotType,
+        location_detail: locationDetail.trim() || null,
+        calendar_id: calendarId || null,
+      });
+      if (res && "error" in res && res.error) return alert(res.error);
+      onDone();
+    });
+  };
+
+  return (
+    <form onSubmit={submit} className="space-y-5">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-charcoal-100">슬롯 수정</h3>
+        <p className="text-[11px] text-charcoal-500">
+          모드({slot.mode}) / 가격 유형({slot.pricing_model})은 고정이에요.
+        </p>
+      </div>
+
+      {myCalendars.length > 0 && (
+        <div className="space-y-2">
+          <label className="block text-xs font-medium text-charcoal-400">
+            캘린더
+          </label>
+          <div className="flex items-center gap-2">
+            <span
+              className="h-3 w-3 shrink-0 rounded-full"
+              style={{ backgroundColor: selectedCal?.color ?? "#6366f1" }}
+            />
+            <select
+              value={calendarId}
+              onChange={(e) => setCalendarId(e.target.value)}
+              className={INPUT}
+            >
+              {myCalendars.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                  {c.is_default ? " (기본)" : ""} ·{" "}
+                  {c.visibility === "public"
+                    ? "공개"
+                    : c.visibility === "followers"
+                      ? "팔로워"
+                      : "비공개"}
+                </option>
+              ))}
+            </select>
+          </div>
+          {violating && (
+            <p className="rounded-lg border border-amber-600/40 bg-amber-600/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-200">
+              유료 슬롯은 <strong>공개</strong> 캘린더에만 올릴 수 있어요.
+            </p>
+          )}
+        </div>
+      )}
+
+      <Field label="제목">
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className={INPUT}
+          required
+        />
+      </Field>
+      <Field label="설명">
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={3}
+          className={INPUT}
+        />
+      </Field>
+      <div className="grid gap-3 md:grid-cols-3">
+        <Field label="소요 시간 (분)">
+          <input
+            type="number"
+            min={5}
+            step={5}
+            value={duration}
+            onChange={(e) => setDuration(Number(e.target.value))}
+            className={INPUT}
+          />
+        </Field>
+        <Field label="정원">
+          <input
+            type="number"
+            min={1}
+            value={capacity}
+            onChange={(e) => setCapacity(Number(e.target.value))}
+            className={INPUT}
+          />
+        </Field>
+        <Field label="형식">
+          <select
+            value={slotType}
+            onChange={(e) => setSlotType(e.target.value as SlotType)}
+            className={INPUT}
+          >
+            <option value="1on1">1:1</option>
+            <option value="companion">동행</option>
+            <option value="group">그룹</option>
+          </select>
+        </Field>
+      </div>
+      {!isAuction && (
+        <Field label="가격 (KRW) — 0이면 Free">
+          <input
+            type="number"
+            min={0}
+            step={1000}
+            value={price}
+            onChange={(e) => setPrice(Number(e.target.value))}
+            className={INPUT}
+          />
+        </Field>
+      )}
+      <Field label="장소 (선택)">
+        <input
+          type="text"
+          value={locationDetail}
+          onChange={(e) => setLocationDetail(e.target.value)}
+          className={INPUT}
+        />
+      </Field>
+
+      <div className="flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-lg border border-charcoal-700 px-4 py-2 text-sm text-charcoal-300 hover:border-charcoal-600 hover:text-charcoal-100"
+        >
+          취소
+        </button>
+        <button
+          type="submit"
+          disabled={pending || violating}
+          className="rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-50"
+        >
+          {pending ? "저장 중…" : "저장"}
+        </button>
+      </div>
+    </form>
   );
 }

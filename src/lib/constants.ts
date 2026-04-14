@@ -6,7 +6,7 @@ export const SITE = {
 
 export const NAV_ITEMS = [
   { href: "/calendar", label: "Calendar", icon: "calendar" },
-  { href: "/slots", label: "Slots", icon: "clock" },
+  { href: "/slots", label: "Timeslots", icon: "clock" },
   { href: "/bookings", label: "Bookings", icon: "ticket" },
   { href: "/blog", label: "Posts", icon: "blog" },
 ] as const;

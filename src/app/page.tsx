@@ -74,7 +74,7 @@ export default async function LandingPage() {
 
             <div className="mt-10 grid gap-3 sm:grid-cols-3">
               <Pill label="Calendar" hint="공개 · 팔로워 · 비공개" />
-              <Pill label="Slots" hint="무료 · 유료 · 경매" />
+              <Pill label="Timeslots" hint="무료 · 유료 · 경매" />
               <Pill label="Orbits" hint="팔로우 · 피드" />
             </div>
           </div>

@@ -3,7 +3,7 @@ import { listMySlots, getUpcomingAvailabilities } from "@/lib/slots";
 import { listMyCalendars } from "@/lib/calendars";
 import SlotsManager from "./SlotsManager";
 
-export const metadata: Metadata = { title: "Slots" };
+export const metadata: Metadata = { title: "Timeslots" };
 export const dynamic = "force-dynamic";
 
 export default async function SlotsPage({ params }: { params: { username: string } }) {
