@@ -27,12 +27,13 @@ export function getAuthUrl(state?: string) {
   });
 }
 
-/** OAuth URL for the landing-page "Continue with Google" flow. */
+/**
+ * OAuth URL for the landing-page "Continue with Google" flow.
+ * Reuses the primary /api/google/callback redirect URI (already
+ * registered in Google Cloud) so no console changes are needed.
+ */
 export function getSignInUrl(state?: string) {
   const client = getOAuth2Client();
-  const redirectUri =
-    process.env.GOOGLE_SIGNIN_REDIRECT_URI ||
-    `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/google/callback`;
   return client.generateAuthUrl({
     access_type: "online",
     scope: [
@@ -40,19 +41,8 @@ export function getSignInUrl(state?: string) {
       "https://www.googleapis.com/auth/userinfo.profile",
     ],
     prompt: "select_account",
-    redirect_uri: redirectUri,
     state,
   });
-}
-
-/** Sign-in specific OAuth exchange against a dedicated redirect URI. */
-export async function exchangeSignInCode(code: string) {
-  const client = getOAuth2Client();
-  const redirectUri =
-    process.env.GOOGLE_SIGNIN_REDIRECT_URI ||
-    `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/google/callback`;
-  const { tokens } = await client.getToken({ code, redirect_uri: redirectUri });
-  return tokens;
 }
 
 /** Fetch { email, name } for the sign-in flow. */
