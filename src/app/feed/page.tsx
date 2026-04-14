@@ -11,6 +11,7 @@ import { listFeedPostsByAuthors } from "@/lib/feed-posts";
 import { isGoogleCalendarConnected } from "@/app/[username]/calendar/actions";
 import { ReactionStrip } from "@/components/ReactionStrip";
 import { ComposeBox } from "@/components/ComposeBox";
+import { DeleteFeedPostButton } from "@/components/DeleteFeedPostButton";
 import { PublicChrome } from "@/components/layout/PublicChrome";
 
 export const metadata: Metadata = { title: "Feed" };
@@ -245,6 +246,7 @@ export default async function FeedPage() {
       ) : (
         <Timeline
           groups={groups}
+          viewerUsername={session.username}
           reactions={{
             event: eventReactions,
             slot: slotReactions,
@@ -299,6 +301,7 @@ function FeedHeader() {
 function Timeline({
   groups,
   reactions,
+  viewerUsername,
 }: {
   groups: { label: string; items: FeedItem[] }[];
   reactions: {
@@ -307,6 +310,7 @@ function Timeline({
     post: Map<string, import("@/lib/reactions-types").ReactionSummary[]>;
     feed_post: Map<string, import("@/lib/reactions-types").ReactionSummary[]>;
   };
+  viewerUsername: string;
 }) {
   return (
     <div className="relative">
@@ -322,6 +326,7 @@ function Timeline({
                 <li key={`${item.kind}-${item.id}`}>
                   <TimelineEntry
                     item={item}
+                    viewerUsername={viewerUsername}
                     reactions={
                       item.kind === "event"
                         ? reactions.event.get(item.id) ?? []
@@ -358,9 +363,11 @@ function DayDivider({ label }: { label: string }) {
 function TimelineEntry({
   item,
   reactions,
+  viewerUsername,
 }: {
   item: FeedItem;
   reactions: import("@/lib/reactions-types").ReactionSummary[];
+  viewerUsername: string;
 }) {
   const author = item.author;
   const timeStr = formatTimeShort(item.timestamp);
@@ -380,7 +387,7 @@ function TimelineEntry({
 
       {/* Card */}
       <div className="min-w-0 flex-1 pl-5">
-        <EntryBody item={item} reactions={reactions} />
+        <EntryBody item={item} reactions={reactions} viewerUsername={viewerUsername} />
       </div>
     </div>
   );
@@ -389,10 +396,13 @@ function TimelineEntry({
 function EntryBody({
   item,
   reactions,
+  viewerUsername,
 }: {
   item: FeedItem;
   reactions: import("@/lib/reactions-types").ReactionSummary[];
+  viewerUsername: string;
 }) {
+  const isMine = item.author.username === viewerUsername;
   const author = item.author;
   return (
     <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-4">
@@ -406,6 +416,11 @@ function EntryBody({
         <span className="text-charcoal-600">@{author.username}</span>
         <span className="text-charcoal-700">·</span>
         <KindBadge kind={item.kind} />
+        {isMine && item.kind === "feed_post" && (
+          <div className="ml-auto">
+            <DeleteFeedPostButton id={item.id} />
+          </div>
+        )}
       </div>
 
       {item.kind === "event" && (
