@@ -19,6 +19,9 @@ export async function toggleReaction(
   if (!REACTION_EMOJIS.includes(emoji as (typeof REACTION_EMOJIS)[number])) {
     return { error: "지원하지 않는 이모지입니다." };
   }
+  if (!["event", "post", "slot", "feed_post"].includes(target_type)) {
+    return { error: "지원하지 않는 대상입니다." };
+  }
 
   const db = getAdminClient();
   const { data: existing } = await db

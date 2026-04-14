@@ -1,4 +1,4 @@
-export type ReactionTarget = "event" | "post" | "slot";
+export type ReactionTarget = "event" | "post" | "slot" | "feed_post";
 
 export const REACTION_EMOJIS = ["❤️", "🔥", "👀", "✋", "👏"] as const;
 

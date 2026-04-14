@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/auth";
+import { getSession, getProfile } from "@/lib/auth";
 import { getAdminClient } from "@/lib/supabase";
 import { listFollowing } from "@/lib/follows";
 import { getPublicEvents } from "@/lib/public-calendar";
 import { getReactionsForMany } from "@/lib/reactions";
+import { listFeedPostsByAuthors } from "@/lib/feed-posts";
 import { ReactionStrip } from "@/components/ReactionStrip";
+import { ComposeBox } from "@/components/ComposeBox";
 import { PublicChrome } from "@/components/layout/PublicChrome";
 
 export const metadata: Metadata = { title: "Feed" };
@@ -18,7 +21,7 @@ type FeedItem =
   | {
       kind: "event";
       id: string;
-      timestamp: string; // start_at
+      timestamp: string;
       author: Author;
       title: string;
       end_at: string;
@@ -28,7 +31,7 @@ type FeedItem =
   | {
       kind: "post";
       id: string;
-      timestamp: string; // published_at
+      timestamp: string;
       author: Author;
       title: string;
       slug: string;
@@ -37,52 +40,66 @@ type FeedItem =
   | {
       kind: "slot";
       id: string;
-      timestamp: string; // created_at
+      timestamp: string;
       author: Author;
       title: string;
       slug: string;
       duration_min: number;
       price_cents: number;
       slot_type: string;
+    }
+  | {
+      kind: "feed_post";
+      id: string;
+      timestamp: string;
+      author: Author;
+      body: string;
+      image_urls: string[];
+      location_label: string | null;
     };
 
 export default async function FeedPage() {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const following = await listFollowing(session.username);
+  const [following, viewerProfile] = await Promise.all([
+    listFollowing(session.username),
+    getProfile(session.username),
+  ]);
 
-  if (following.length === 0) {
-    return (
-      <PublicChrome viewerUsername={session.username}>
-        <FeedHeader />
-        <EmptyState
-          title="아직 궤도가 비어있어요"
-          body="관심 있는 사람을 팔로우(Orbit)하면 그들의 글, 일정, 슬롯이 여기에 흘러들어옵니다."
-          cta={{ href: "/explore", label: "사람 찾아보기" }}
-        />
-      </PublicChrome>
-    );
+  const db = getAdminClient();
+  const { data: viewerRow } = await db
+    .from("users")
+    .select("id")
+    .eq("username", session.username)
+    .single();
+  const viewerId = viewerRow?.id as string | undefined;
+
+  const authorMap = new Map<string, Author>();
+  if (viewerId && viewerProfile) {
+    authorMap.set(viewerId, {
+      username: viewerProfile.username,
+      display_name: viewerProfile.display_name,
+    });
+  }
+  for (const u of following) {
+    authorMap.set(u.id, { username: u.username, display_name: u.display_name });
   }
 
-  const followingMap = new Map(following.map((u) => [u.id, u]));
-  const followingIds = following.map((u) => u.id);
+  // viewer + following IDs (so my own posts also appear)
+  const authorIds = Array.from(authorMap.keys());
 
   // Time windows
   const now = new Date();
   const eventsHorizon = new Date(now.getTime() + 14 * 24 * 60 * 60_000);
   const recentSince = new Date(now.getTime() - 14 * 24 * 60 * 60_000);
 
-  // Pull posts + slots in parallel
-  const db = getAdminClient();
-  const [postsRes, slotsRes] = await Promise.all([
+  const [postsRes, slotsRes, feedPostsRes, eventLists] = await Promise.all([
     db
       .from("blog_posts")
-      .select(
-        "id, slug, title, excerpt, published_at, user_id",
-      )
+      .select("id, slug, title, excerpt, published_at, user_id")
       .eq("published", true)
-      .in("user_id", followingIds)
+      .in("user_id", authorIds)
       .gte("published_at", recentSince.toISOString())
       .order("published_at", { ascending: false })
       .limit(40),
@@ -90,28 +107,30 @@ export default async function FeedPage() {
       .from("time_slots")
       .select("id, slug, title, duration_min, price_cents, slot_type, created_at, host_id")
       .eq("active", true)
-      .in("host_id", followingIds)
+      .in("host_id", authorIds)
       .gte("created_at", recentSince.toISOString())
       .order("created_at", { ascending: false })
       .limit(40),
+    listFeedPostsByAuthors(authorIds, 60),
+    Promise.all(
+      [...following].slice(0, 25).map(async (u) => {
+        try {
+          const evs = await getPublicEvents(u.username, now, eventsHorizon);
+          return evs.map((e) => ({
+            ...e,
+            author: { username: u.username, display_name: u.display_name },
+          }));
+        } catch {
+          return [];
+        }
+      }),
+    ),
   ]);
-
-  // Pull events for each followed user (capped to recent activity)
-  const eventLists = await Promise.all(
-    following.slice(0, 25).map(async (u) => {
-      try {
-        const evs = await getPublicEvents(u.username, now, eventsHorizon);
-        return evs.map((e) => ({ ...e, author: u }));
-      } catch {
-        return [];
-      }
-    }),
-  );
 
   const items: FeedItem[] = [];
 
   for (const p of postsRes.data ?? []) {
-    const author = followingMap.get(p.user_id as string);
+    const author = authorMap.get(p.user_id as string);
     if (!author || !p.published_at) continue;
     items.push({
       kind: "post",
@@ -123,9 +142,8 @@ export default async function FeedPage() {
       excerpt: (p.excerpt as string | null) ?? null,
     });
   }
-
   for (const s of slotsRes.data ?? []) {
-    const author = followingMap.get(s.host_id as string);
+    const author = authorMap.get(s.host_id as string);
     if (!author) continue;
     items.push({
       kind: "slot",
@@ -139,7 +157,19 @@ export default async function FeedPage() {
       slot_type: s.slot_type as string,
     });
   }
-
+  for (const fp of feedPostsRes) {
+    const author = authorMap.get(fp.user_id);
+    if (!author) continue;
+    items.push({
+      kind: "feed_post",
+      id: fp.id,
+      timestamp: fp.created_at,
+      author,
+      body: fp.body,
+      image_urls: fp.image_urls ?? [],
+      location_label: fp.location_label,
+    });
+  }
   for (const list of eventLists) {
     for (const e of list) {
       items.push({
@@ -155,8 +185,7 @@ export default async function FeedPage() {
     }
   }
 
-  // Sort: events ascending by start_at, posts/slots descending by timestamp.
-  // Mixed: most "interesting now" first — upcoming events first if soon, then recent activity.
+  // Sort: upcoming events first by start time, then everything else by recency.
   items.sort((a, b) => {
     const ta = new Date(a.timestamp).getTime();
     const tb = new Date(b.timestamp).getTime();
@@ -165,30 +194,48 @@ export default async function FeedPage() {
     const bFuture = b.kind === "event" && tb >= nowMs;
     if (aFuture && !bFuture) return -1;
     if (!aFuture && bFuture) return 1;
-    if (aFuture && bFuture) return ta - tb; // soonest event first
-    return tb - ta; // recent activity first
+    if (aFuture && bFuture) return ta - tb;
+    return tb - ta;
   });
 
   // Bulk fetch reactions
   const eventIds = items.filter((i) => i.kind === "event").map((i) => i.id);
   const slotIds = items.filter((i) => i.kind === "slot").map((i) => i.id);
   const postIds = items.filter((i) => i.kind === "post").map((i) => i.id);
-  const [eventReactions, slotReactions, postReactions] = await Promise.all([
-    getReactionsForMany("event", eventIds),
-    getReactionsForMany("slot", slotIds),
-    getReactionsForMany("post", postIds),
-  ]);
+  const feedPostIds = items.filter((i) => i.kind === "feed_post").map((i) => i.id);
+  const [eventReactions, slotReactions, postReactions, feedPostReactions] =
+    await Promise.all([
+      getReactionsForMany("event", eventIds),
+      getReactionsForMany("slot", slotIds),
+      getReactionsForMany("post", postIds),
+      getReactionsForMany("feed_post", feedPostIds),
+    ]);
 
   const groups = groupItems(items, now);
 
   return (
     <PublicChrome viewerUsername={session.username}>
       <FeedHeader />
-      {items.length === 0 ? (
+
+      {viewerProfile && (
+        <div className="mb-6">
+          <ComposeBox
+            viewerUsername={viewerProfile.username}
+            viewerName={viewerProfile.display_name || viewerProfile.username}
+          />
+        </div>
+      )}
+
+      {following.length === 0 && items.length === 0 ? (
         <EmptyState
-          title="새로운 활동이 없어요"
-          body="팔로우 중인 사람들이 글을 올리거나 일정을 공유하면 여기에 보입니다."
-          cta={{ href: "/explore", label: "더 찾아보기" }}
+          title="아직 궤도가 비어있어요"
+          body="관심 있는 사람을 팔로우(Orbit)하면 그들의 일정과 글이 여기에 흘러들어옵니다."
+          cta={{ href: "/explore", label: "사람 찾아보기" }}
+        />
+      ) : items.length === 0 ? (
+        <EmptyState
+          title="첫 글을 올려보세요"
+          body="위 입력창에서 지금 무엇을 하고 있는지 한 마디 남겨보세요."
         />
       ) : (
         <div className="space-y-8">
@@ -207,7 +254,9 @@ export default async function FeedPage() {
                           ? eventReactions.get(item.id) ?? []
                           : item.kind === "slot"
                             ? slotReactions.get(item.id) ?? []
-                            : postReactions.get(item.id) ?? []
+                            : item.kind === "post"
+                              ? postReactions.get(item.id) ?? []
+                              : feedPostReactions.get(item.id) ?? []
                       }
                       loggedIn
                     />
@@ -224,21 +273,27 @@ export default async function FeedPage() {
           <h3 className="text-sm font-semibold text-charcoal-200">
             Orbiting ({following.length})
           </h3>
-          <Link href="/explore" className="text-xs text-navy-400 hover:text-navy-300">
+          <Link href="/explore" className="text-xs text-amber-400 hover:text-amber-300">
             Find more →
           </Link>
         </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {following.map((u) => (
-            <Link
-              key={u.id}
-              href={`/${u.username}`}
-              className="rounded-full border border-charcoal-800/60 bg-charcoal-800/30 px-3 py-1 text-xs text-charcoal-300 hover:border-charcoal-600 hover:text-charcoal-100"
-            >
-              {u.display_name || u.username}
-            </Link>
-          ))}
-        </div>
+        {following.length === 0 ? (
+          <p className="mt-3 text-xs text-charcoal-500">
+            아직 팔로우한 사람이 없어요. <Link href="/explore" className="text-amber-400 hover:underline">Explore</Link>에서 찾아보세요.
+          </p>
+        ) : (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {following.map((u) => (
+              <Link
+                key={u.id}
+                href={`/${u.username}`}
+                className="rounded-full border border-charcoal-800/60 bg-charcoal-800/30 px-3 py-1 text-xs text-charcoal-300 hover:border-charcoal-600 hover:text-charcoal-100"
+              >
+                {u.display_name || u.username}
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
     </PublicChrome>
   );
@@ -277,31 +332,27 @@ function FeedCard({
         <span className="text-charcoal-600">@{author.username}</span>
         <span className="text-charcoal-700">·</span>
         <KindBadge kind={item.kind} />
+        <span className="ml-auto text-charcoal-600">{relativeTime(item.timestamp)}</span>
       </div>
 
       {item.kind === "event" && (
-        <div className="mt-3">
-          <div className="flex items-start gap-3">
-            <span
-              className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full"
-              style={{ backgroundColor: item.calendar_color }}
-            />
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-charcoal-100">{item.title}</p>
-              <p className="mt-0.5 text-xs text-charcoal-500">
-                {formatEventTime(item.timestamp, item.end_at, item.all_day)}
-              </p>
-            </div>
+        <div className="mt-3 flex items-start gap-3">
+          <span
+            className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full"
+            style={{ backgroundColor: item.calendar_color }}
+          />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-charcoal-100">{item.title}</p>
+            <p className="mt-0.5 text-xs text-charcoal-500">
+              {formatEventTime(item.timestamp, item.end_at, item.all_day)}
+            </p>
           </div>
         </div>
       )}
 
       {item.kind === "post" && (
-        <Link
-          href={`/${author.username}/blog/${item.slug}`}
-          className="mt-3 block"
-        >
-          <p className="text-base font-semibold text-charcoal-100 hover:text-navy-300">
+        <Link href={`/${author.username}/blog/${item.slug}`} className="mt-3 block">
+          <p className="text-base font-semibold text-charcoal-100 hover:text-amber-300">
             {item.title}
           </p>
           {item.excerpt && (
@@ -313,16 +364,16 @@ function FeedCard({
       {item.kind === "slot" && (
         <Link
           href={`/${author.username}/s/${item.slug}`}
-          className="mt-3 block rounded-lg border border-charcoal-800/60 bg-charcoal-800/30 p-3 hover:border-navy-500/60"
+          className="mt-3 block rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 hover:border-amber-500/60"
         >
           <div className="flex items-center justify-between gap-2">
             <p className="truncate text-sm font-semibold text-charcoal-100">
               {item.title}
             </p>
-            <span className="shrink-0 text-xs font-medium text-charcoal-400">
+            <span className="shrink-0 rounded-md bg-amber-500/15 px-2 py-0.5 text-xs font-bold text-amber-300">
               {item.price_cents === 0
-                ? "Free"
-                : `${(item.price_cents / 100).toLocaleString("ko-KR")}원`}
+                ? "FREE"
+                : `₩${(item.price_cents / 100).toLocaleString("ko-KR")}`}
             </span>
           </div>
           <p className="mt-1 text-xs text-charcoal-500">
@@ -331,9 +382,49 @@ function FeedCard({
         </Link>
       )}
 
+      {item.kind === "feed_post" && (
+        <div className="mt-3 space-y-3">
+          {item.body && (
+            <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-charcoal-100">
+              {item.body}
+            </p>
+          )}
+          {item.image_urls.length > 0 && (
+            <div
+              className={`grid gap-2 ${
+                item.image_urls.length === 1
+                  ? "grid-cols-1"
+                  : item.image_urls.length === 2
+                    ? "grid-cols-2"
+                    : "grid-cols-2"
+              }`}
+            >
+              {item.image_urls.map((src, i) => (
+                <div
+                  key={i}
+                  className="relative aspect-video overflow-hidden rounded-xl border border-charcoal-800/60 bg-charcoal-800/30"
+                >
+                  <Image
+                    src={src}
+                    alt=""
+                    fill
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                    className="object-cover"
+                    unoptimized
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+          {item.location_label && (
+            <p className="text-xs text-charcoal-500">📍 {item.location_label}</p>
+          )}
+        </div>
+      )}
+
       <div className="mt-3">
         <ReactionStrip
-          target_type={item.kind}
+          target_type={item.kind === "feed_post" ? "feed_post" : item.kind}
           target_id={item.id}
           initial={reactions}
           loggedIn={loggedIn}
@@ -347,7 +438,8 @@ function FeedCard({
 function KindBadge({ kind }: { kind: FeedItem["kind"] }) {
   const map: Record<FeedItem["kind"], { label: string; color: string }> = {
     event: { label: "일정", color: "bg-emerald-700/30 text-emerald-300" },
-    post: { label: "글", color: "bg-navy-700/30 text-navy-300" },
+    feed_post: { label: "글", color: "bg-charcoal-700/40 text-charcoal-300" },
+    post: { label: "긴 글", color: "bg-navy-700/30 text-navy-300" },
     slot: { label: "슬롯", color: "bg-amber-700/30 text-amber-300" },
   };
   const m = map[kind];
@@ -381,6 +473,18 @@ function formatEventTime(start: string, end: string, allDay: boolean) {
   })}`;
 }
 
+function relativeTime(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return "방금";
+  if (mins < 60) return `${mins}분 전`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}시간 전`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}일 전`;
+  return new Date(iso).toLocaleDateString("ko-KR", { month: "short", day: "numeric" });
+}
+
 function groupItems(items: FeedItem[], now: Date) {
   const startOfToday = new Date(now);
   startOfToday.setHours(0, 0, 0, 0);
@@ -391,7 +495,7 @@ function groupItems(items: FeedItem[], now: Date) {
     { label: "Today", items: [] },
     { label: "Tomorrow", items: [] },
     { label: "This week", items: [] },
-    { label: "Later & recent", items: [] },
+    { label: "Latest", items: [] },
   ];
 
   for (const item of items) {
@@ -404,7 +508,6 @@ function groupItems(items: FeedItem[], now: Date) {
       else if (ts < startOfWeekEnd) groups[2].items.push(item);
       else groups[3].items.push(item);
     } else {
-      // Posts, slots, and past events (rare): treat as recent activity
       groups[3].items.push(item);
     }
   }
@@ -428,7 +531,7 @@ function EmptyState({
       {cta && (
         <Link
           href={cta.href}
-          className="mt-4 inline-block rounded-lg bg-navy-600 px-4 py-2 text-sm font-medium text-white hover:bg-navy-500"
+          className="mt-4 inline-block rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-charcoal-950 hover:bg-amber-400"
         >
           {cta.label}
         </Link>
