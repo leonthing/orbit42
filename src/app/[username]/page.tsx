@@ -31,14 +31,20 @@ export async function generateMetadata({
 
 export default async function PublicProfile({
   params,
+  searchParams,
 }: {
   params: { username: string };
+  searchParams: { w?: string };
 }) {
   const profile = await getProfile(params.username);
   if (!profile) notFound();
 
-  const weekStart = startOfWeek(new Date());
+  const weekStart = parseWeekParam(searchParams.w) ?? startOfWeek(new Date());
   const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60_000);
+  const prevWeek = new Date(weekStart.getTime() - 7 * 24 * 60 * 60_000);
+  const nextWeek = new Date(weekStart.getTime() + 7 * 24 * 60 * 60_000);
+  const isThisWeek =
+    weekStart.getTime() === startOfWeek(new Date()).getTime();
 
   const [session, stats, viewerFollowing, slots, weekDays, value] = await Promise.all([
     getSession(),
@@ -200,6 +206,40 @@ export default async function PublicProfile({
         </div>
       )}
 
+      {/* Week navigation + visitor "Book a time" CTA */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-1">
+          <Link
+            href={`/${params.username}?w=${formatWeekParam(prevWeek)}`}
+            className="rounded-md border border-charcoal-700 px-3 py-1.5 text-xs text-charcoal-300 hover:border-charcoal-600"
+          >
+            ‹
+          </Link>
+          {!isThisWeek && (
+            <Link
+              href={`/${params.username}`}
+              className="rounded-md border border-charcoal-700 px-3 py-1.5 text-xs text-charcoal-300 hover:border-charcoal-600"
+            >
+              이번 주
+            </Link>
+          )}
+          <Link
+            href={`/${params.username}?w=${formatWeekParam(nextWeek)}`}
+            className="rounded-md border border-charcoal-700 px-3 py-1.5 text-xs text-charcoal-300 hover:border-charcoal-600"
+          >
+            ›
+          </Link>
+        </div>
+        {!isOwner && totalSlotWindows > 0 && (
+          <Link
+            href={`/${params.username}/book`}
+            className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-charcoal-950 hover:bg-amber-400"
+          >
+            예약하기 ({totalSlotWindows})
+          </Link>
+        )}
+      </div>
+
       {/* HERO: week calendar with events + bookable slots */}
       <WeekCalendar
         username={params.username}
@@ -207,8 +247,8 @@ export default async function PublicProfile({
         viewerIsOwner={isOwner}
         emptyMessage={
           isOwner
-            ? "이번 주가 비어있어요. Quick add에서 슬롯을 열거나 캘린더를 공개해보세요."
-            : "이번 주에 공개된 일정이나 예약 가능한 시간이 없어요."
+            ? "이 주가 비어있어요. Quick add에서 슬롯을 열거나 캘린더를 공개해보세요."
+            : "이 주에 공개된 일정이나 예약 가능한 시간이 없어요."
         }
       />
 
@@ -346,6 +386,24 @@ export default async function PublicProfile({
       )}
     </div>
   );
+}
+
+function parseWeekParam(p: string | undefined): Date | null {
+  if (!p || !/^\d{4}-\d{2}-\d{2}$/.test(p)) return null;
+  const [y, m, d] = p.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  if (Number.isNaN(date.getTime())) return null;
+  date.setHours(0, 0, 0, 0);
+  const dow = (date.getDay() + 6) % 7;
+  date.setDate(date.getDate() - dow);
+  return date;
+}
+
+function formatWeekParam(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 function ValueStat({
