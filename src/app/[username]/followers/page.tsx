@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProfile } from "@/lib/auth";
 import { listFollowers } from "@/lib/follows";
+import { Avatar } from "@/components/Avatar";
 
 export const dynamic = "force-dynamic";
 
@@ -53,7 +54,7 @@ function PeopleList({
   displayName: string;
   title: string;
   hint: string;
-  people: { id: string; username: string; display_name: string | null }[];
+  people: { id: string; username: string; display_name: string | null; avatar_url?: string | null }[];
   emptyBody: string;
 }) {
   return (
@@ -83,9 +84,7 @@ function PeopleList({
                 href={`/${p.username}`}
                 className="flex items-center gap-3 rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-4 hover:border-navy-500/60"
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-navy-600/40 to-amber-500/30 text-sm font-bold text-charcoal-100">
-                  {(p.display_name || p.username).charAt(0).toUpperCase()}
-                </div>
+                <Avatar url={p.avatar_url ?? null} name={p.display_name || p.username} size={40} />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-charcoal-100">
                     {p.display_name || p.username}

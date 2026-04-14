@@ -4,14 +4,17 @@ import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createFeedPost } from "@/lib/feed-posts";
+import { Avatar } from "@/components/Avatar";
 
 export function ComposeBox({
   viewerName,
   viewerUsername,
+  viewerAvatarUrl,
   googleConnected,
 }: {
   viewerName: string;
   viewerUsername: string;
+  viewerAvatarUrl?: string | null;
   googleConnected?: boolean;
 }) {
   const router = useRouter();
@@ -26,7 +29,6 @@ export function ComposeBox({
   const [calendarStart, setCalendarStart] = useState("");
   const [pending, startTransition] = useTransition();
 
-  const initial = (viewerName || viewerUsername).charAt(0).toUpperCase();
   const remaining = 1000 - body.length;
 
   const submit = (e: React.FormEvent) => {
@@ -85,9 +87,11 @@ export function ComposeBox({
       className="rounded-2xl border border-charcoal-800/60 bg-charcoal-900/30 p-4"
     >
       <div className="flex gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-navy-600/40 to-amber-500/30 text-sm font-bold text-charcoal-100">
-          {initial}
-        </div>
+        <Avatar
+          url={viewerAvatarUrl ?? null}
+          name={viewerName || viewerUsername}
+          size={40}
+        />
         <div className="min-w-0 flex-1">
           <textarea
             value={body}

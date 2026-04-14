@@ -10,6 +10,7 @@ import { ReactionStrip } from "@/components/ReactionStrip";
 import { getProfileWeek, startOfWeek } from "@/lib/profile-week";
 import { WeekCalendar } from "@/components/WeekCalendar";
 import { getValueStats } from "@/lib/value-stats";
+import { Avatar } from "@/components/Avatar";
 import { FollowButton } from "./FollowButton";
 
 export const dynamic = "force-dynamic";
@@ -71,9 +72,11 @@ export default async function PublicProfile({
       {/* Identity row — compact */}
       <header className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-4">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-navy-600/40 to-amber-500/30 text-2xl font-bold text-charcoal-100">
-            {(profile.display_name || profile.username).charAt(0).toUpperCase()}
-          </div>
+          <Avatar
+            url={(profile.avatar_url as string | null) ?? null}
+            name={profile.display_name || profile.username}
+            size={72}
+          />
           <div className="min-w-0">
             <h1 className="text-2xl font-bold text-charcoal-100 md:text-[28px]">
               {profile.display_name || profile.username}

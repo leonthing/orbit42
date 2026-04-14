@@ -91,10 +91,60 @@ export async function getProfile(username: string) {
   const db = getAdminClient();
   const { data } = await db
     .from("users")
-    .select("username, display_name, birth_date, bio, social_links, education, interests, created_at")
+    .select(
+      "username, display_name, birth_date, bio, avatar_url, social_links, education, interests, created_at",
+    )
     .eq("username", username)
     .single();
   return data;
+}
+
+export async function uploadAvatar(formData: FormData) {
+  const session = await getSession();
+  if (!session) return { error: "로그인이 필요합니다." };
+
+  const file = formData.get("avatar") as File | null;
+  if (!file || file.size === 0) return { error: "사진을 선택해주세요." };
+  if (!file.type.startsWith("image/"))
+    return { error: "이미지 파일만 가능합니다." };
+  if (file.size > 3 * 1024 * 1024) return { error: "3MB 이하 사진만 가능해요." };
+
+  const db = getAdminClient();
+  const { data: user } = await db
+    .from("users")
+    .select("id")
+    .eq("username", session.username)
+    .single();
+  if (!user) return { error: "사용자를 찾을 수 없습니다." };
+
+  const ext = (file.name.split(".").pop() || "jpg").toLowerCase().slice(0, 5);
+  const key = `${user.id}/${Date.now()}.${ext}`;
+  const buf = Buffer.from(await file.arrayBuffer());
+
+  const { error: upErr } = await db.storage
+    .from("avatars")
+    .upload(key, buf, { contentType: file.type, upsert: false });
+  if (upErr) return { error: "업로드에 실패했습니다." };
+
+  const { data: pub } = db.storage.from("avatars").getPublicUrl(key);
+  if (!pub?.publicUrl) return { error: "업로드 URL을 가져오지 못했습니다." };
+
+  await db
+    .from("users")
+    .update({ avatar_url: pub.publicUrl, updated_at: new Date().toISOString() })
+    .eq("id", user.id);
+  return { success: true, url: pub.publicUrl };
+}
+
+export async function clearAvatar() {
+  const session = await getSession();
+  if (!session) return { error: "로그인이 필요합니다." };
+  const db = getAdminClient();
+  await db
+    .from("users")
+    .update({ avatar_url: null, updated_at: new Date().toISOString() })
+    .eq("username", session.username);
+  return { success: true };
 }
 
 export type SocialLinks = {

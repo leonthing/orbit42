@@ -12,12 +12,13 @@ import { isGoogleCalendarConnected } from "@/app/[username]/calendar/actions";
 import { ReactionStrip } from "@/components/ReactionStrip";
 import { ComposeBox } from "@/components/ComposeBox";
 import { DeleteFeedPostButton } from "@/components/DeleteFeedPostButton";
+import { Avatar } from "@/components/Avatar";
 import { PublicChrome } from "@/components/layout/PublicChrome";
 
 export const metadata: Metadata = { title: "Feed" };
 export const dynamic = "force-dynamic";
 
-type Author = { username: string; display_name: string | null };
+type Author = { username: string; display_name: string | null; avatar_url: string | null };
 
 type FeedItem =
   | {
@@ -84,10 +85,15 @@ export default async function FeedPage() {
     authorMap.set(viewerId, {
       username: viewerProfile.username,
       display_name: viewerProfile.display_name,
+      avatar_url: (viewerProfile.avatar_url as string | null) ?? null,
     });
   }
   for (const u of following) {
-    authorMap.set(u.id, { username: u.username, display_name: u.display_name });
+    authorMap.set(u.id, {
+      username: u.username,
+      display_name: u.display_name,
+      avatar_url: u.avatar_url,
+    });
   }
 
   // viewer + following IDs (so my own posts also appear)
@@ -122,7 +128,11 @@ export default async function FeedPage() {
           const evs = await getPublicEvents(u.username, now, eventsHorizon);
           return evs.map((e) => ({
             ...e,
-            author: { username: u.username, display_name: u.display_name },
+            author: {
+              username: u.username,
+              display_name: u.display_name,
+              avatar_url: u.avatar_url,
+            },
           }));
         } catch {
           return [];
@@ -227,6 +237,7 @@ export default async function FeedPage() {
           <ComposeBox
             viewerUsername={viewerProfile.username}
             viewerName={viewerProfile.display_name || viewerProfile.username}
+            viewerAvatarUrl={(viewerProfile.avatar_url as string | null) ?? null}
             googleConnected={googleConnected}
           />
         </div>
@@ -459,10 +470,13 @@ function EntryBody({
       <div className="flex items-center gap-2 text-xs">
         <Link
           href={`/${author.username}`}
-          className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-navy-600/60 to-amber-500/40 text-[10px] font-bold text-charcoal-100"
           title={`${author.display_name || author.username} (@${author.username})`}
         >
-          {(author.display_name || author.username).charAt(0).toUpperCase()}
+          <Avatar
+            url={author.avatar_url}
+            name={author.display_name || author.username}
+            size={24}
+          />
         </Link>
         <Link
           href={`/${author.username}`}

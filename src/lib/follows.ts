@@ -100,32 +100,39 @@ export async function unfollow(targetUsername: string) {
   return { success: true };
 }
 
+type PersonRow = {
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+};
+
 export async function listFollowing(username: string) {
   const db = getAdminClient();
   const userId = await getUserIdByUsername(username);
-  if (!userId) return [] as { username: string; display_name: string | null; id: string }[];
+  if (!userId) return [] as PersonRow[];
 
   const { data } = await db
     .from("follows")
-    .select("following:users!follows_following_id_fkey(id, username, display_name)")
+    .select(
+      "following:users!follows_following_id_fkey(id, username, display_name, avatar_url)",
+    )
     .eq("follower_id", userId);
 
-  return (
-    data?.map((row) => row.following as unknown as { id: string; username: string; display_name: string | null }) ?? []
-  );
+  return data?.map((row) => row.following as unknown as PersonRow) ?? [];
 }
 
 export async function listFollowers(username: string) {
   const db = getAdminClient();
   const userId = await getUserIdByUsername(username);
-  if (!userId) return [] as { username: string; display_name: string | null; id: string }[];
+  if (!userId) return [] as PersonRow[];
 
   const { data } = await db
     .from("follows")
-    .select("follower:users!follows_follower_id_fkey(id, username, display_name)")
+    .select(
+      "follower:users!follows_follower_id_fkey(id, username, display_name, avatar_url)",
+    )
     .eq("following_id", userId);
 
-  return (
-    data?.map((row) => row.follower as unknown as { id: string; username: string; display_name: string | null }) ?? []
-  );
+  return data?.map((row) => row.follower as unknown as PersonRow) ?? [];
 }
