@@ -81,16 +81,17 @@ export default async function PublicProfile({
   return (
     <div className="space-y-8">
       {/* Identity row — compact */}
-      <header className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-4">
+      <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between md:gap-6">
+        <div className="flex min-w-0 items-start gap-3 sm:items-center sm:gap-4">
           <Avatar
             url={(profile.avatar_url as string | null) ?? null}
             name={profile.display_name || profile.username}
-            size={72}
+            size={56}
+            className="sm:!h-[72px] sm:!w-[72px]"
           />
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-              <h1 className="text-2xl font-bold text-charcoal-100 md:text-[28px]">
+              <h1 className="min-w-0 break-words text-xl font-bold leading-tight text-charcoal-100 sm:text-2xl md:text-[28px]">
                 {profile.display_name || profile.username}
               </h1>
               {!isOwner && (
@@ -101,8 +102,10 @@ export default async function PublicProfile({
                 />
               )}
             </div>
-            <p className="text-sm text-charcoal-500">@{profile.username}</p>
-            <div className="mt-2 flex gap-4 text-xs text-charcoal-400">
+            <p className="truncate text-sm text-charcoal-500">
+              @{profile.username}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-charcoal-400">
               <Link
                 href={`/${params.username}/followers`}
                 className="hover:text-charcoal-200"
@@ -127,16 +130,16 @@ export default async function PublicProfile({
           </div>
         </div>
         {isOwner && (
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
             <Link
               href={`/${params.username}/slots`}
-              className="rounded-lg bg-red-500/90 px-4 py-2 text-sm font-semibold text-charcoal-950 hover:bg-red-400"
+              className="flex-1 whitespace-nowrap rounded-lg bg-red-500/90 px-4 py-2 text-center text-sm font-semibold text-charcoal-950 hover:bg-red-400 sm:flex-none"
             >
               Sell my time
             </Link>
             <Link
               href={`/${params.username}/settings`}
-              className="rounded-lg border border-charcoal-700 px-4 py-2 text-sm font-medium text-charcoal-200 hover:border-charcoal-600 hover:text-charcoal-100"
+              className="flex-1 whitespace-nowrap rounded-lg border border-charcoal-700 px-4 py-2 text-center text-sm font-medium text-charcoal-200 hover:border-charcoal-600 hover:text-charcoal-100 sm:flex-none"
             >
               Edit
             </Link>
@@ -192,15 +195,17 @@ export default async function PublicProfile({
       )}
 
       {isOwner && (
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-3">
-          <span className="px-2 text-[10px] font-semibold uppercase tracking-wider text-charcoal-500">
-            Quick add
-          </span>
-          <ActionPill href="/feed" label="Share status" />
-          <ActionPill href={`/${params.username}/slots`} label="Open slot" highlight />
-          <ActionPill href={`/${params.username}/calendar`} label="Add event" />
-          <ActionPill href={`/${params.username}/book`} label="Share booking link" />
-          <ActionPill href={`/${params.username}/settings`} label="Visibility" />
+        <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-3">
+          <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 [&::-webkit-scrollbar]:hidden">
+            <span className="shrink-0 px-2 text-[10px] font-semibold uppercase tracking-wider text-charcoal-500">
+              Quick add
+            </span>
+            <ActionPill href="/feed" label="Share status" />
+            <ActionPill href={`/${params.username}/slots`} label="Open slot" highlight />
+            <ActionPill href={`/${params.username}/calendar`} label="Add event" />
+            <ActionPill href={`/${params.username}/book`} label="Share booking link" />
+            <ActionPill href={`/${params.username}/settings`} label="Visibility" />
+          </div>
         </div>
       )}
 
@@ -439,10 +444,10 @@ function ActionPill({
   return (
     <Link
       href={href}
-      className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+      className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
         highlight
-          ? "bg-red-500/15 text-red-300 hover:bg-red-500/25"
-          : "bg-charcoal-800/40 text-charcoal-300 hover:bg-charcoal-800/70 hover:text-charcoal-100"
+          ? "bg-red-500/15 text-red-700 hover:bg-red-500/25 dark:text-red-300"
+          : "bg-charcoal-800/40 text-charcoal-700 hover:bg-charcoal-800/70 hover:text-charcoal-100 dark:text-charcoal-300"
       }`}
     >
       {label}

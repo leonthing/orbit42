@@ -890,7 +890,7 @@ function SlotCard({
 
   return (
     <div className="overflow-hidden rounded-xl border border-charcoal-800/60 bg-charcoal-900/30">
-      <div className="flex items-start justify-between gap-4 px-5 py-4">
+      <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="truncate text-base font-semibold text-charcoal-100">
@@ -939,7 +939,7 @@ function SlotCard({
             </p>
           )}
         </div>
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex flex-wrap items-center gap-1 sm:shrink-0">
           <Link
             href={`/${username}/s/${row.slot.slug}`}
             className="rounded-md border border-charcoal-800 px-2.5 py-1.5 text-xs text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
