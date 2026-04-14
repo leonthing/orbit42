@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSlotBySlug, getBookableOptions, getUpcomingAvailabilities } from "@/lib/slots";
 import { listBids } from "@/lib/auctions";
+import { listMenusForSlot } from "@/lib/menus";
 import { getSession } from "@/lib/auth";
 import BookingForm from "./BookingForm";
 import AuctionPanel from "./AuctionPanel";
@@ -105,7 +106,10 @@ async function BookingSection({
   session: { username: string } | null;
   isOwner: boolean;
 }) {
-  const options = await getBookableOptions(slot);
+  const [options, menus] = await Promise.all([
+    getBookableOptions(slot),
+    listMenusForSlot(slot.id),
+  ]);
   return (
     <section className="rounded-2xl border border-charcoal-800/60 bg-charcoal-900/30 p-6">
       <h2 className="text-sm font-semibold text-charcoal-200">예약 가능한 시간</h2>
@@ -130,6 +134,13 @@ async function BookingSection({
             loggedIn={!!session}
             priceCents={slot.price_cents}
             slotTitle={slot.title}
+            menus={menus.map((m) => ({
+              id: m.id,
+              name: m.name,
+              category: m.category,
+              description: m.description,
+              price_cents: m.price_cents,
+            }))}
           />
         </div>
       )}

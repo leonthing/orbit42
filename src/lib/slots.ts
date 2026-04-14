@@ -281,7 +281,7 @@ export async function createSlot(input: SlotInput) {
   }
 
   revalidatePath("/", "layout");
-  return { success: true, slug: slot.slug as string };
+  return { success: true, slug: slot.slug as string, id: slot.id as string };
 }
 
 export async function updateSlot(id: string, patch: Partial<SlotInput>) {
@@ -373,6 +373,8 @@ export async function bookSlot(args: {
   message?: string;
   guest_name?: string;
   guest_email?: string;
+  /** Selected add-on menu ids (must belong to the slot). */
+  selected_menu_ids?: string[];
 }) {
   const session = await getSession();
   const guestId = await getUserId();
@@ -433,6 +435,19 @@ export async function bookSlot(args: {
 
   const endAt = new Date(startAt.getTime() + (slot.duration_min as number) * 60_000);
 
+  // Sanitize selected menu ids to those actually attached to this slot.
+  let validMenuIds: string[] = [];
+  if (args.selected_menu_ids && args.selected_menu_ids.length > 0) {
+    const { data: slotMenuRows } = await db
+      .from("slot_menus")
+      .select("menu_id")
+      .eq("slot_id", slot.id);
+    const attached = new Set(
+      ((slotMenuRows ?? []) as { menu_id: string }[]).map((r) => r.menu_id),
+    );
+    validMenuIds = args.selected_menu_ids.filter((m) => attached.has(m));
+  }
+
   // Create the booking row first so we never lose it on a Google API failure.
   const { data: booking, error: bookErr } = await db
     .from("bookings")
@@ -446,6 +461,7 @@ export async function bookSlot(args: {
       message: args.message ?? null,
       scheduled_at: startAt.toISOString(),
       scheduled_end_at: endAt.toISOString(),
+      selected_menu_ids: validMenuIds,
     })
     .select("id")
     .single();

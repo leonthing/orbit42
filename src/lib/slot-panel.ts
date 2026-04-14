@@ -3,6 +3,8 @@
 import { getSlotBySlug, getBookableOptions } from "@/lib/slots";
 import type { BookableOption, TimeSlot } from "@/lib/slots";
 import { getSession } from "@/lib/auth";
+import { listMenusForSlot } from "@/lib/menus";
+import type { Menu } from "@/lib/menus";
 
 export type SlotPanelData = {
   slot: Pick<
@@ -22,6 +24,7 @@ export type SlotPanelData = {
   >;
   host: { username: string; display_name: string | null };
   options: BookableOption[];
+  menus: Menu[];
   isAuction: boolean;
   isOwner: boolean;
   loggedIn: boolean;
@@ -36,7 +39,10 @@ export async function getSlotPanelData(
   const { slot, host } = data;
   const session = await getSession();
   const isAuction = slot.pricing_model === "auction";
-  const options = isAuction ? [] : await getBookableOptions(slot);
+  const [options, menus] = await Promise.all([
+    isAuction ? Promise.resolve([]) : getBookableOptions(slot),
+    listMenusForSlot(slot.id),
+  ]);
   return {
     slot: {
       id: slot.id,
@@ -54,6 +60,7 @@ export async function getSlotPanelData(
     },
     host,
     options,
+    menus,
     isAuction,
     isOwner: session?.username === username,
     loggedIn: !!session,

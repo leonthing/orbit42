@@ -19,8 +19,10 @@ import type {
 } from "@/lib/slots";
 import type { WorkingHours } from "@/lib/slot-availability";
 import type { Calendar } from "@/lib/calendars-types";
+import type { Menu } from "@/lib/menus";
+import { setSlotMenus } from "@/lib/menus";
 
-type Row = { slot: TimeSlot; availabilities: Availability[] };
+type Row = { slot: TimeSlot; availabilities: Availability[]; menuIds: string[] };
 const DAYS = [
   { key: "mon", label: "월" },
   { key: "tue", label: "화" },
@@ -35,10 +37,12 @@ export default function SlotsManager({
   username,
   initial,
   myCalendars,
+  myMenus,
 }: {
   username: string;
   initial: Row[];
   myCalendars: Calendar[];
+  myMenus: Menu[];
 }) {
   const router = useRouter();
   const [showNew, setShowNew] = useState(initial.length === 0);
@@ -67,6 +71,7 @@ export default function SlotsManager({
         <NewSlotForm
           username={username}
           myCalendars={myCalendars}
+          myMenus={myMenus}
           onCancel={() => setShowNew(false)}
           onSaved={() => {
             setShowNew(false);
@@ -106,6 +111,7 @@ export default function SlotsManager({
                   row={row}
                   username={username}
                   myCalendars={myCalendars}
+                  myMenus={myMenus}
                 />
               ))}
             </div>
@@ -123,16 +129,19 @@ function NewSlotForm({
   onSaved,
   onCancel,
   myCalendars,
+  myMenus,
   username,
 }: {
   onSaved: () => void;
   onCancel: () => void;
   myCalendars: Calendar[];
+  myMenus: Menu[];
   username: string;
 }) {
   const defaultCalendarId =
     myCalendars.find((c) => c.is_default)?.id ?? myCalendars[0]?.id ?? "";
   const [calendarId, setCalendarId] = useState<string>(defaultCalendarId);
+  const [selectedMenus, setSelectedMenus] = useState<string[]>([]);
   const [pending, startTransition] = useTransition();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -209,6 +218,9 @@ function NewSlotForm({
               }),
       });
       if (res.error) return alert(res.error);
+      if (res.id && selectedMenus.length > 0) {
+        await setSlotMenus(res.id, selectedMenus);
+      }
       onSaved();
     });
   };
@@ -295,6 +307,19 @@ function NewSlotForm({
               </Section>
             );
           })()}
+
+        {/* 메뉴 선택 */}
+        <Section
+          title="메뉴 / 스킬"
+          hint="예약 시 게스트가 고를 수 있는 메뉴를 붙여요. Menus 페이지에서 먼저 메뉴를 만들어두세요."
+        >
+          <MenuPicker
+            menus={myMenus}
+            selected={selectedMenus}
+            onChange={setSelectedMenus}
+            username={username}
+          />
+        </Section>
 
         {/* 기본 정보 */}
         <Section title="기본 정보" hint="슬롯의 제목·설명과 형식을 정해요.">
@@ -832,12 +857,17 @@ function SlotCard({
   row,
   username,
   myCalendars,
+  myMenus,
 }: {
   row: Row;
   username: string;
   myCalendars: Calendar[];
+  myMenus: Menu[];
 }) {
   const cal = myCalendars.find((c) => c.id === row.slot.calendar_id);
+  const attachedMenus = row.menuIds
+    .map((id) => myMenus.find((m) => m.id === id))
+    .filter((m): m is Menu => !!m);
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [newWindow, setNewWindow] = useState("");
@@ -938,6 +968,23 @@ function SlotCard({
               {row.slot.description}
             </p>
           )}
+          {attachedMenus.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {attachedMenus.map((m) => (
+                <span
+                  key={m.id}
+                  className="inline-flex items-center gap-1 rounded-md bg-charcoal-800/40 px-2 py-0.5 text-[10px] text-charcoal-700 dark:text-charcoal-200"
+                >
+                  {m.name}
+                  <span className="text-charcoal-500">
+                    {m.price_cents === 0
+                      ? "· Free"
+                      : `· ₩${(m.price_cents / 100).toLocaleString("ko-KR")}`}
+                  </span>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-1 sm:shrink-0">
           <Link
@@ -990,6 +1037,9 @@ function SlotCard({
           <EditSlotForm
             slot={row.slot}
             myCalendars={myCalendars}
+            myMenus={myMenus}
+            initialMenuIds={row.menuIds}
+            username={username}
             onDone={() => {
               setEditing(false);
               router.refresh();
@@ -1073,11 +1123,17 @@ function SlotCard({
 function EditSlotForm({
   slot,
   myCalendars,
+  myMenus,
+  initialMenuIds,
+  username,
   onDone,
   onCancel,
 }: {
   slot: TimeSlot;
   myCalendars: Calendar[];
+  myMenus: Menu[];
+  initialMenuIds: string[];
+  username: string;
   onDone: () => void;
   onCancel: () => void;
 }) {
@@ -1090,6 +1146,7 @@ function EditSlotForm({
   const [slotType, setSlotType] = useState<SlotType>(slot.slot_type);
   const [locationDetail, setLocationDetail] = useState(slot.location_detail ?? "");
   const [calendarId, setCalendarId] = useState<string>(slot.calendar_id ?? "");
+  const [selectedMenus, setSelectedMenus] = useState<string[]>(initialMenuIds);
 
   const isAuction = slot.pricing_model === "auction";
   const selectedCal = myCalendars.find((c) => c.id === calendarId);
@@ -1114,6 +1171,7 @@ function EditSlotForm({
         calendar_id: calendarId || null,
       });
       if (res && "error" in res && res.error) return alert(res.error);
+      await setSlotMenus(slot.id, selectedMenus);
       onDone();
     });
   };
@@ -1233,6 +1291,16 @@ function EditSlotForm({
         />
       </Field>
 
+      <div>
+        <p className="mb-2 text-xs font-medium text-charcoal-400">메뉴 / 스킬</p>
+        <MenuPicker
+          menus={myMenus}
+          selected={selectedMenus}
+          onChange={setSelectedMenus}
+          username={username}
+        />
+      </div>
+
       <div className="flex justify-end gap-2">
         <button
           type="button"
@@ -1252,3 +1320,88 @@ function EditSlotForm({
     </form>
   );
 }
+
+function MenuPicker({
+  menus,
+  selected,
+  onChange,
+  username,
+}: {
+  menus: Menu[];
+  selected: string[];
+  onChange: (ids: string[]) => void;
+  username: string;
+}) {
+  if (menus.length === 0) {
+    return (
+      <p className="rounded-lg border border-dashed border-charcoal-800/60 bg-charcoal-900/20 px-3 py-4 text-center text-xs text-charcoal-500">
+        등록된 메뉴가 없어요.{' '}
+        <a
+          href={`/${username}/menus`}
+          className="font-semibold text-red-500 hover:underline"
+        >
+          Menus 페이지
+        </a>
+        에서 먼저 만들어주세요.
+      </p>
+    );
+  }
+  const toggle = (id: string) => {
+    onChange(
+      selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id],
+    );
+  };
+  const grouped = new Map<string, Menu[]>();
+  for (const m of menus) {
+    const key = m.category?.trim() || '기타';
+    const list = grouped.get(key) ?? [];
+    list.push(m);
+    grouped.set(key, list);
+  }
+  return (
+    <div className="space-y-3">
+      {Array.from(grouped.entries()).map(([cat, items]) => (
+        <div key={cat}>
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-charcoal-500">
+            {cat}
+          </p>
+          <div className="grid gap-1.5 sm:grid-cols-2">
+            {items.map((m) => {
+              const active = selected.includes(m.id);
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => toggle(m.id)}
+                  className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left transition-colors ${
+                    active
+                      ? 'border-red-500 bg-red-500/10'
+                      : 'border-charcoal-800/60 bg-charcoal-800/10 hover:border-charcoal-700'
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <span
+                      aria-hidden
+                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+                        active ? 'border-red-500 bg-red-500' : 'border-charcoal-600'
+                      }`}
+                    >
+                      {active && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+                    </span>
+                    <span className="truncate text-sm text-charcoal-100">{m.name}</span>
+                  </span>
+                  <span className="shrink-0 text-xs font-semibold text-charcoal-400">
+                    {m.price_cents === 0
+                      ? 'Free'
+                      : `₩${(m.price_cents / 100).toLocaleString('ko-KR')}`}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
