@@ -7,6 +7,7 @@ import { getFollowStats, isFollowing } from "@/lib/follows";
 import { listPublicSlotsByUsername } from "@/lib/slots";
 import { getReactionsForMany } from "@/lib/reactions";
 import { ReactionStrip } from "@/components/ReactionStrip";
+import { getPublicEvents } from "@/lib/public-calendar";
 import { FollowButton } from "./FollowButton";
 
 export const dynamic = "force-dynamic";
@@ -33,11 +34,15 @@ export default async function PublicProfile({
   const profile = await getProfile(params.username);
   if (!profile) notFound();
 
-  const [session, stats, viewerFollowing, slots] = await Promise.all([
+  const now = new Date();
+  const weekHorizon = new Date(now.getTime() + 7 * 24 * 60 * 60_000);
+
+  const [session, stats, viewerFollowing, slots, weekEvents] = await Promise.all([
     getSession(),
     getFollowStats(params.username),
     isFollowing(params.username),
     listPublicSlotsByUsername(params.username),
+    getPublicEvents(params.username, now, weekHorizon).catch(() => []),
   ]);
   const slotReactions = await getReactionsForMany(
     "slot",
@@ -113,6 +118,53 @@ export default async function PublicProfile({
           </div>
         )}
       </section>
+
+      {weekEvents.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-lg font-semibold text-charcoal-100">This week</h2>
+            <Link
+              href={`/${params.username}/c`}
+              className="text-xs text-navy-400 hover:text-navy-300"
+            >
+              See full calendar →
+            </Link>
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            {weekEvents.slice(0, 12).map((e) => (
+              <div
+                key={e.id}
+                className="flex w-44 shrink-0 flex-col rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-3"
+              >
+                <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider text-charcoal-500">
+                  <span
+                    className="h-2 w-2 rounded-full"
+                    style={{ backgroundColor: e.calendar_color }}
+                  />
+                  <span>
+                    {new Date(e.start_at).toLocaleDateString("ko-KR", {
+                      month: "short",
+                      day: "numeric",
+                      weekday: "short",
+                    })}
+                  </span>
+                </div>
+                <p className="mt-1 line-clamp-2 text-sm font-semibold text-charcoal-100">
+                  {e.title}
+                </p>
+                <p className="mt-auto pt-2 text-xs text-charcoal-500">
+                  {e.all_day
+                    ? "하루 종일"
+                    : new Date(e.start_at).toLocaleTimeString("ko-KR", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {slots.length > 0 && (
         <section className="space-y-3">

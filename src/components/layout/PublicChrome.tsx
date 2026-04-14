@@ -18,6 +18,12 @@ export function PublicChrome({
         </Link>
 
         <div className="flex items-center gap-2">
+          <Link
+            href="/explore"
+            className="rounded-lg px-3 py-1.5 text-sm text-charcoal-300 hover:text-charcoal-100"
+          >
+            Explore
+          </Link>
           {viewerUsername ? (
             <>
               <Link
