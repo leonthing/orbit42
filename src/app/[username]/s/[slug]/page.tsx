@@ -87,16 +87,17 @@ export default async function SlotPage({
           </p>
         ) : (
           <div className="mt-4">
-            <BookingForm slotId={slot.id} options={options} loggedIn={!!session} />
+            <BookingForm
+              slotId={slot.id}
+              options={options}
+              loggedIn={!!session}
+              priceCents={slot.price_cents}
+              slotTitle={slot.title}
+            />
           </div>
         )}
       </section>
 
-      {slot.price_cents > 0 && (
-        <p className="text-center text-xs text-charcoal-600">
-          결제는 곧 추가됩니다. 지금은 호스트가 직접 결제 안내를 드려요.
-        </p>
-      )}
     </div>
   );
 }

@@ -5,24 +5,30 @@ import { useRouter } from "next/navigation";
 import { bookSlot } from "@/lib/slots";
 import type { BookableOption } from "@/lib/slots";
 
+type Stage = "form" | "payment" | "done";
+
 export default function BookingForm({
   slotId,
   options,
   loggedIn,
+  priceCents,
+  slotTitle,
 }: {
   slotId: string;
   options: BookableOption[];
   loggedIn: boolean;
+  priceCents: number;
+  slotTitle: string;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [stage, setStage] = useState<Stage>("form");
   const [selectedKey, setSelectedKey] = useState<string>(() =>
     options[0] ? keyOf(options[0]) : "",
   );
   const [message, setMessage] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [done, setDone] = useState(false);
 
   const grouped = useMemo(() => {
     const by: Record<string, BookableOption[]> = {};
@@ -38,35 +44,65 @@ export default function BookingForm({
     return by;
   }, [options]);
 
-  const submit = (e: React.FormEvent) => {
+  const selectedOpt = options.find((o) => keyOf(o) === selectedKey) ?? null;
+  const isPaid = priceCents > 0;
+
+  const proceed = (e: React.FormEvent) => {
     e.preventDefault();
-    const opt = options.find((o) => keyOf(o) === selectedKey);
-    if (!opt) return;
+    if (!selectedOpt) return;
+    if (!loggedIn && (!name.trim() || !email.trim())) {
+      alert("이름과 이메일을 입력하세요.");
+      return;
+    }
+    setStage(isPaid ? "payment" : "form");
+    if (isPaid) {
+      setStage("payment");
+    } else {
+      doBook();
+    }
+  };
+
+  const doBook = () => {
+    if (!selectedOpt) return;
     startTransition(async () => {
       const res = await bookSlot({
         slotId,
-        availabilityId: opt.availability_id ?? undefined,
-        startAt: opt.availability_id ? undefined : opt.start_at,
+        availabilityId: selectedOpt.availability_id ?? undefined,
+        startAt: selectedOpt.availability_id ? undefined : selectedOpt.start_at,
         message: message.trim() || undefined,
         guest_name: loggedIn ? undefined : name.trim() || undefined,
         guest_email: loggedIn ? undefined : email.trim() || undefined,
       });
       if (res.error) return alert(res.error);
-      setDone(true);
+      setStage("done");
       router.refresh();
     });
   };
 
-  if (done) {
+  if (stage === "done") {
     return (
       <div className="rounded-lg border border-emerald-700/40 bg-emerald-700/10 p-4 text-sm text-emerald-300">
-        예약 요청이 전송되었습니다. 호스트의 캘린더에 이벤트가 추가되었을 거예요.
+        예약이 완료되었습니다. 호스트의 캘린더에 이벤트가 추가되었고,
+        등록하신 이메일로 확인 메일이 발송됩니다.
       </div>
     );
   }
 
+  if (stage === "payment" && selectedOpt) {
+    return (
+      <PaymentStep
+        priceCents={priceCents}
+        slotTitle={slotTitle}
+        when={selectedOpt.start_at}
+        pending={pending}
+        onCancel={() => setStage("form")}
+        onPay={doBook}
+      />
+    );
+  }
+
   return (
-    <form onSubmit={submit} className="space-y-4">
+    <form onSubmit={proceed} className="space-y-4">
       <div className="space-y-4">
         {Object.entries(grouped).map(([day, opts]) => (
           <div key={day}>
@@ -132,7 +168,11 @@ export default function BookingForm({
         disabled={pending || !selectedKey}
         className="w-full rounded-lg bg-navy-600 px-4 py-3 text-sm font-medium text-white hover:bg-navy-500 disabled:opacity-60"
       >
-        {pending ? "예약 중…" : "Book this slot"}
+        {isPaid
+          ? `${(priceCents / 100).toLocaleString("ko-KR")}원 결제하고 예약`
+          : pending
+            ? "예약 중…"
+            : "Book this slot"}
       </button>
 
       {!loggedIn && (
@@ -144,6 +184,90 @@ export default function BookingForm({
         </p>
       )}
     </form>
+  );
+}
+
+function PaymentStep({
+  priceCents,
+  slotTitle,
+  when,
+  pending,
+  onCancel,
+  onPay,
+}: {
+  priceCents: number;
+  slotTitle: string;
+  when: string;
+  pending: boolean;
+  onCancel: () => void;
+  onPay: () => void;
+}) {
+  const [acknowledged, setAcknowledged] = useState(false);
+  return (
+    <div className="space-y-4 rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 p-5">
+      <div>
+        <p className="text-xs font-medium uppercase tracking-wider text-charcoal-500">
+          결제
+        </p>
+        <p className="mt-2 text-sm text-charcoal-200">{slotTitle}</p>
+        <p className="mt-1 text-xs text-charcoal-500">
+          {new Date(when).toLocaleString("ko-KR", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+            weekday: "short",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </p>
+        <p className="mt-4 text-3xl font-bold text-charcoal-100">
+          {(priceCents / 100).toLocaleString("ko-KR")}
+          <span className="ml-1 text-base font-medium text-charcoal-500">원</span>
+        </p>
+      </div>
+
+      <div className="rounded-lg border border-amber-700/40 bg-amber-700/10 p-3 text-xs text-amber-200">
+        토스페이먼츠 연동은 곧 출시됩니다. 지금은 결제 없이 예약을 진행해주세요 —
+        호스트가 별도로 결제 안내를 드립니다.
+      </div>
+
+      <button
+        type="button"
+        disabled
+        className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/40 px-4 py-3 text-sm font-medium text-charcoal-500"
+      >
+        Pay with Toss (준비 중)
+      </button>
+
+      <label className="flex items-center gap-2 text-xs text-charcoal-400">
+        <input
+          type="checkbox"
+          checked={acknowledged}
+          onChange={(e) => setAcknowledged(e.target.checked)}
+          className="accent-navy-500"
+        />
+        결제 없이 예약 진행에 동의합니다.
+      </label>
+
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={pending}
+          className="flex-1 rounded-lg border border-charcoal-700 px-4 py-2.5 text-sm text-charcoal-300 hover:border-charcoal-600"
+        >
+          뒤로
+        </button>
+        <button
+          type="button"
+          onClick={onPay}
+          disabled={pending || !acknowledged}
+          className="flex-1 rounded-lg bg-navy-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-navy-500 disabled:opacity-50"
+        >
+          {pending ? "예약 중…" : "결제 없이 예약"}
+        </button>
+      </div>
+    </div>
   );
 }
 
