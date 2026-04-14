@@ -1,6 +1,8 @@
 import { getAdminClient } from "@/lib/supabase";
 import { getAuthenticatedCalendar } from "@/lib/google";
 import { getSession } from "@/lib/auth";
+import { listVisibleCalendars } from "@/lib/calendars";
+import { listNativeEventsInCalendars } from "@/lib/native-events";
 
 export type PublicEvent = {
   id: string;
@@ -124,8 +126,32 @@ export async function getPublicEvents(
     }),
   );
 
-  return all
+  const googleEvents = all
     .flat()
     .filter((e) => e.start_at)
     .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime());
+
+  // Native calendar events — visible when the calendar's visibility matches.
+  const visibleCalendars = await listVisibleCalendars(hostUsername);
+  const nativeCalendarIds = visibleCalendars
+    .filter((c) => c.source === "native")
+    .map((c) => c.id);
+  const nativeRows = await listNativeEventsInCalendars(
+    nativeCalendarIds,
+    rangeStart,
+    rangeEnd,
+  );
+  const nativeEvents: PublicEvent[] = nativeRows.map((e) => ({
+    id: `native:${e.id}`,
+    title: e.title,
+    start_at: e.start_at,
+    end_at: e.end_at ?? e.start_at,
+    all_day: e.all_day,
+    calendar_color: e.calendar_color,
+    calendar_label: e.calendar_label,
+  }));
+
+  return [...googleEvents, ...nativeEvents].sort(
+    (a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime(),
+  );
 }

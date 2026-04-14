@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import { getProfile } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import { SettingsForm } from "./SettingsForm";
-import { CalendarVisibilityForm } from "./CalendarVisibilityForm";
 import { AvatarUploader } from "./AvatarUploader";
-import { getGoogleCalendars, isGoogleCalendarConnected } from "../calendar/actions";
-import { getCalendarSettings } from "@/lib/calendar-settings";
+import { isGoogleCalendarConnected } from "../calendar/actions";
+import { listMyCalendars } from "@/lib/calendars";
 import { listExtraGoogleAccounts } from "@/lib/google";
 import { getUserId } from "@/lib/db";
 import { GoogleAccountsSection } from "./GoogleAccountsSection";
+import { MyCalendars } from "./MyCalendars";
 
 export const metadata: Metadata = { title: "Settings" };
 export const dynamic = "force-dynamic";
@@ -22,10 +22,9 @@ export default async function SettingsPage({
   if (!profile) notFound();
 
   const userId = await getUserId();
-  const [googleConnected, calendars, calendarSettings, extras] = await Promise.all([
+  const [googleConnected, myCalendars, extras] = await Promise.all([
     isGoogleCalendarConnected().catch(() => false),
-    getGoogleCalendars().catch(() => []),
-    getCalendarSettings().catch(() => []),
+    listMyCalendars().catch(() => []),
     userId ? listExtraGoogleAccounts(userId) : Promise.resolve([]),
   ]);
 
@@ -62,28 +61,7 @@ export default async function SettingsPage({
         }))}
       />
 
-      <section className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30">
-        <div className="border-b border-charcoal-800/40 px-5 py-3">
-          <h2 className="text-sm font-semibold text-charcoal-200">
-            Calendar visibility
-          </h2>
-          <p className="mt-1 text-xs text-charcoal-500">
-            각 캘린더의 공개 범위를 정하세요. 기본값은 비공개입니다.
-          </p>
-        </div>
-        <div className="p-5">
-          {googleConnected ? (
-            <CalendarVisibilityForm
-              calendars={calendars}
-              initialSettings={calendarSettings}
-            />
-          ) : (
-            <p className="text-sm text-charcoal-500">
-              Calendar 페이지에서 먼저 Google Calendar를 연결해주세요.
-            </p>
-          )}
-        </div>
-      </section>
+      <MyCalendars initial={myCalendars} googleConnected={googleConnected} />
     </div>
   );
 }

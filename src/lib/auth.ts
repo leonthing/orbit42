@@ -58,6 +58,24 @@ export async function signup(username: string, password: string, displayName?: s
     return { error: "회원가입에 실패했습니다." };
   }
 
+  // Give the new user a default native calendar.
+  const { data: freshUser } = await db
+    .from("users")
+    .select("id")
+    .eq("username", username)
+    .single();
+  if (freshUser) {
+    await db.from("calendars").insert({
+      user_id: freshUser.id,
+      name: "내 캘린더",
+      purpose: "personal",
+      color: "#6366f1",
+      visibility: "private",
+      source: "native",
+      is_default: true,
+    });
+  }
+
   // Auto login
   cookies().set(COOKIE_NAME, JSON.stringify({ username }), {
     httpOnly: true,
