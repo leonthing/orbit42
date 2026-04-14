@@ -122,41 +122,39 @@ function CalendarRow({ calendar }: { calendar: Calendar }) {
 
   return (
     <li className="space-y-3 px-5 py-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-3">
           <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: color }} />
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-charcoal-100">
-              {calendar.name}
+            <p className="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-charcoal-100">
+              <span className="truncate">{calendar.name}</span>
               {calendar.is_default && (
-                <span className="ml-2 rounded-full bg-red-600/25 px-2 py-0.5 text-[10px] font-semibold text-red-300">
+                <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-semibold text-red-700 ring-1 ring-red-500/30 dark:text-red-200 dark:ring-0">
                   기본
                 </span>
               )}
               {calendar.source === "google" && (
-                <span className="ml-1 rounded-full bg-charcoal-800/60 px-2 py-0.5 text-[10px] text-charcoal-400">
+                <span className="rounded-full bg-charcoal-800/60 px-2 py-0.5 text-[10px] text-charcoal-700 dark:text-charcoal-300">
                   Google
                 </span>
               )}
             </p>
             {purposeMeta && (
-              <p className="text-xs text-charcoal-500">
-                {purposeMeta.label}
-              </p>
+              <p className="text-xs text-charcoal-500">{purposeMeta.label}</p>
             )}
           </div>
         </div>
-        <div className="flex items-center gap-1 rounded-lg bg-charcoal-900/60 p-1">
+        <div className="flex shrink-0 items-center gap-1 overflow-x-auto rounded-lg bg-charcoal-900/60 p-1 sm:overflow-visible">
           {VISIBILITY.map((v) => (
             <button
               key={v.value}
               type="button"
               onClick={() => changeVisibility(v.value)}
               disabled={pending}
-              className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+              className={`shrink-0 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
                 calendar.visibility === v.value
                   ? "bg-red-600 text-white"
-                  : "text-charcoal-400 hover:text-charcoal-200"
+                  : "text-charcoal-500 hover:text-charcoal-900 dark:text-charcoal-400 dark:hover:text-charcoal-200"
               }`}
             >
               {v.label}
@@ -194,7 +192,7 @@ function CalendarRow({ calendar }: { calendar: Calendar }) {
         ))}
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <span className="text-[10px] uppercase tracking-wider text-charcoal-500">색상</span>
         {CALENDAR_COLORS.map((c) => (
           <button
@@ -273,7 +271,7 @@ function NewCalendarForm({
         ))}
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <span className="text-[10px] uppercase tracking-wider text-charcoal-500">색상</span>
         {CALENDAR_COLORS.map((c) => (
           <button
