@@ -93,6 +93,30 @@ export async function deleteFeedPost(id: string) {
   return { success: true };
 }
 
+/** Quick-share an existing calendar event as a feed post. */
+export async function shareEventToFeed(args: {
+  event_id: string; // "{calendar_id}::{gcal_event_id}"
+  body: string;
+  location?: string | null;
+}) {
+  const userId = await requireUserId();
+  const db = getAdminClient();
+  const { error } = await db.from("feed_posts").insert({
+    user_id: userId,
+    body: args.body.slice(0, MAX_BODY),
+    image_urls: [],
+    location_label: args.location ?? null,
+    attached_event_id: args.event_id,
+  });
+  if (error) {
+    console.error("shareEventToFeed", error);
+    return { error: "공유에 실패했습니다." };
+  }
+  revalidatePath("/feed");
+  revalidatePath("/", "layout");
+  return { success: true };
+}
+
 /** Posts authored by the given user ids, recent first. */
 export async function listFeedPostsByAuthors(
   authorIds: string[],

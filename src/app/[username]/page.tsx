@@ -158,6 +158,7 @@ export default async function PublicProfile({
       <WeekCalendar
         username={params.username}
         days={weekDays}
+        viewerIsOwner={isOwner}
         emptyMessage={
           isOwner
             ? "이번 주가 비어있어요. Quick add에서 슬롯을 열거나 캘린더를 공개해보세요."

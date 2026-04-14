@@ -1,14 +1,17 @@
 import Link from "next/link";
 import type { WeekDay, WeekItem } from "@/lib/profile-week";
+import { ShareEventButton } from "@/components/ShareEventButton";
 
 export function WeekCalendar({
   username,
   days,
   emptyMessage,
+  viewerIsOwner,
 }: {
   username: string;
   days: WeekDay[];
   emptyMessage?: string;
+  viewerIsOwner?: boolean;
 }) {
   const totalSlots = days.reduce(
     (n, d) => n + d.items.filter((i) => i.kind === "slot").length,
@@ -46,7 +49,12 @@ export function WeekCalendar({
 
       <div className="grid min-h-[18rem] grid-cols-7 divide-x divide-charcoal-800/40">
         {days.map((day) => (
-          <DayColumn key={day.date.toISOString()} day={day} username={username} />
+          <DayColumn
+            key={day.date.toISOString()}
+            day={day}
+            username={username}
+            viewerIsOwner={viewerIsOwner}
+          />
         ))}
       </div>
 
@@ -59,7 +67,15 @@ export function WeekCalendar({
   );
 }
 
-function DayColumn({ day, username }: { day: WeekDay; username: string }) {
+function DayColumn({
+  day,
+  username,
+  viewerIsOwner,
+}: {
+  day: WeekDay;
+  username: string;
+  viewerIsOwner?: boolean;
+}) {
   const dow = day.date.toLocaleDateString("ko-KR", { weekday: "short" });
   const dateNum = day.date.getDate();
   const isWeekend = day.date.getDay() === 0 || day.date.getDay() === 6;
@@ -96,7 +112,12 @@ function DayColumn({ day, username }: { day: WeekDay; username: string }) {
           <div className="mt-2 text-center text-[10px] text-charcoal-700">·</div>
         )}
         {day.items.slice(0, 6).map((item) => (
-          <ItemBlock key={item.id} item={item} username={username} />
+          <ItemBlock
+            key={item.id}
+            item={item}
+            username={username}
+            viewerIsOwner={viewerIsOwner}
+          />
         ))}
         {day.items.length > 6 && (
           <p className="text-center text-[10px] text-charcoal-500">
@@ -108,11 +129,19 @@ function DayColumn({ day, username }: { day: WeekDay; username: string }) {
   );
 }
 
-function ItemBlock({ item, username }: { item: WeekItem; username: string }) {
+function ItemBlock({
+  item,
+  username,
+  viewerIsOwner,
+}: {
+  item: WeekItem;
+  username: string;
+  viewerIsOwner?: boolean;
+}) {
   if (item.kind === "event") {
     return (
       <div
-        className="rounded-md border-l-2 bg-charcoal-800/40 px-1.5 py-1"
+        className="group relative rounded-md border-l-2 bg-charcoal-800/40 px-1.5 py-1"
         style={{ borderColor: item.color }}
       >
         <p className="truncate text-[10px] font-medium text-charcoal-200">
@@ -125,6 +154,15 @@ function ItemBlock({ item, username }: { item: WeekItem; username: string }) {
               minute: "2-digit",
             })}
           </p>
+        )}
+        {viewerIsOwner && (
+          <div className="absolute right-0.5 top-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+            <ShareEventButton
+              eventId={item.id}
+              eventTitle={item.title}
+              eventStart={item.start_at}
+            />
+          </div>
         )}
       </div>
     );

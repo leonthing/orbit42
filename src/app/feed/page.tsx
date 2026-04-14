@@ -56,6 +56,7 @@ type FeedItem =
       body: string;
       image_urls: string[];
       location_label: string | null;
+      attached_event_id: string | null;
     };
 
 export default async function FeedPage() {
@@ -168,6 +169,7 @@ export default async function FeedPage() {
       body: fp.body,
       image_urls: fp.image_urls ?? [],
       location_label: fp.location_label,
+      attached_event_id: fp.attached_event_id,
     });
   }
   for (const list of eventLists) {
@@ -384,6 +386,11 @@ function FeedCard({
 
       {item.kind === "feed_post" && (
         <div className="mt-3 space-y-3">
+          {item.attached_event_id && (
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-700/20 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-300">
+              📅 일정 공유
+            </div>
+          )}
           {item.body && (
             <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-charcoal-100">
               {item.body}
