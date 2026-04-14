@@ -36,6 +36,7 @@ export default async function SlotPage({
   const session = await getSession();
   const isOwner = session?.username === params.username;
   const isAuction = slot.pricing_model === "auction";
+  const attachedMenus = await listMenusForSlot(slot.id);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -79,6 +80,28 @@ export default async function SlotPage({
           <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-charcoal-300">
             {slot.description}
           </p>
+        )}
+        {attachedMenus.length > 0 && (
+          <div className="mt-4 space-y-1.5 border-t border-charcoal-800/40 pt-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-charcoal-500">
+              포함되는 서비스
+            </p>
+            <ul className="space-y-1">
+              {attachedMenus.map((m) => (
+                <li
+                  key={m.id}
+                  className="flex items-center justify-between gap-3 text-sm"
+                >
+                  <span className="text-charcoal-200">{m.name}</span>
+                  <span className="shrink-0 text-xs font-semibold text-charcoal-400">
+                    {m.price_cents === 0
+                      ? "Free"
+                      : `+ ₩${(m.price_cents / 100).toLocaleString("ko-KR")}`}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </header>
 

@@ -213,6 +213,28 @@ function SlotPanelBody({
             {slot.description}
           </p>
         )}
+        {menus.length > 0 && (
+          <div className="mt-4 space-y-1.5 border-t border-charcoal-800/40 pt-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-charcoal-500">
+              포함되는 서비스
+            </p>
+            <ul className="space-y-1">
+              {menus.map((m) => (
+                <li
+                  key={m.id}
+                  className="flex items-center justify-between gap-3 text-sm"
+                >
+                  <span className="text-charcoal-200">{m.name}</span>
+                  <span className="shrink-0 text-xs font-semibold text-charcoal-400">
+                    {m.price_cents === 0
+                      ? "Free"
+                      : `+ ₩${(m.price_cents / 100).toLocaleString("ko-KR")}`}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
 
       {isAuction ? (
