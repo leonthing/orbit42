@@ -46,7 +46,7 @@ export default async function LandingPage() {
               Time, shared and sold
             </p>
             <h1 className="mt-3 text-3xl font-bold leading-[1.15] tracking-tight text-charcoal-100 sm:text-4xl md:text-5xl lg:text-6xl">
-              시간은 가장 큰
+              시간은 가장 중요한
               <br />
               <span className="bg-gradient-to-r from-red-600 to-red-400 bg-clip-text text-transparent">
                 자산입니다.
