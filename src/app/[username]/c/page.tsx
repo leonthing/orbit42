@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getProfile } from "@/lib/auth";
+import { getProfile, getSession } from "@/lib/auth";
 import { getPublicEvents } from "@/lib/public-calendar";
+import { getReactionsForMany } from "@/lib/reactions";
+import { ReactionStrip } from "@/components/ReactionStrip";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +34,14 @@ export default async function PublicCalendarPage({
   const monthStart = new Date(year, month, 1);
   const monthEnd = new Date(year, month + 1, 1);
 
-  const events = await getPublicEvents(params.username, monthStart, monthEnd);
+  const [events, session] = await Promise.all([
+    getPublicEvents(params.username, monthStart, monthEnd),
+    getSession(),
+  ]);
+  const reactions = await getReactionsForMany(
+    "event",
+    events.map((e) => e.id),
+  );
 
   const prev = monthShift(year, month, -1);
   const next = monthShift(year, month, 1);
@@ -83,13 +92,21 @@ export default async function PublicCalendarPage({
           </p>
         </div>
       ) : (
-        <Agenda events={events} />
+        <Agenda events={events} reactions={reactions} loggedIn={!!session} />
       )}
     </div>
   );
 }
 
-function Agenda({ events }: { events: Awaited<ReturnType<typeof getPublicEvents>> }) {
+function Agenda({
+  events,
+  reactions,
+  loggedIn,
+}: {
+  events: Awaited<ReturnType<typeof getPublicEvents>>;
+  reactions: Map<string, import("@/lib/reactions-types").ReactionSummary[]>;
+  loggedIn: boolean;
+}) {
   // Group by date string
   const groups: Record<string, typeof events> = {};
   for (const e of events) {
@@ -135,6 +152,15 @@ function Agenda({ events }: { events: Awaited<ReturnType<typeof getPublicEvents>
                         })}`}
                     <span className="ml-2 text-charcoal-600">· {e.calendar_label}</span>
                   </p>
+                  <div className="mt-2">
+                    <ReactionStrip
+                      target_type={"event" as const}
+                      target_id={e.id}
+                      initial={reactions.get(e.id) ?? []}
+                      loggedIn={loggedIn}
+                      size="sm"
+                    />
+                  </div>
                 </div>
               </li>
             ))}

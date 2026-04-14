@@ -22,7 +22,7 @@ export default function SignupPage() {
       setError(result.error);
       setLoading(false);
     } else {
-      router.push(`/${result.username}/dashboard`);
+      router.push(`/${result.username}/calendar`);
     }
   };
 

@@ -5,6 +5,8 @@ import { getProfile, getSession } from "@/lib/auth";
 import type { SocialLinks, Education } from "@/lib/auth";
 import { getFollowStats, isFollowing } from "@/lib/follows";
 import { listPublicSlotsByUsername } from "@/lib/slots";
+import { getReactionsForMany } from "@/lib/reactions";
+import { ReactionStrip } from "@/components/ReactionStrip";
 import { FollowButton } from "./FollowButton";
 
 export const dynamic = "force-dynamic";
@@ -37,6 +39,10 @@ export default async function PublicProfile({
     isFollowing(params.username),
     listPublicSlotsByUsername(params.username),
   ]);
+  const slotReactions = await getReactionsForMany(
+    "slot",
+    slots.map((s) => s.id),
+  );
 
   const isOwner = session?.username === params.username;
   const socialLinks = (profile.social_links || {}) as SocialLinks;
@@ -116,31 +122,41 @@ export default async function PublicProfile({
           </div>
           <div className="grid gap-3 md:grid-cols-2">
             {slots.map((s) => (
-              <Link
+              <div
                 key={s.id}
-                href={`/${params.username}/s/${s.slug}`}
                 className="group rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5 transition-colors hover:border-navy-500/60"
               >
-                <div className="flex items-baseline justify-between gap-2">
-                  <h3 className="truncate text-sm font-semibold text-charcoal-100 group-hover:text-navy-300">
-                    {s.title}
-                  </h3>
-                  <span className="shrink-0 text-xs font-medium text-charcoal-400">
-                    {s.price_cents === 0
-                      ? "Free"
-                      : `${(s.price_cents / 100).toLocaleString("ko-KR")}원`}
-                  </span>
-                </div>
-                <p className="mt-1 text-xs text-charcoal-500">
-                  {s.duration_min}분 · {s.slot_type}
-                  {s.location_detail && ` · ${s.location_detail}`}
-                </p>
-                {s.description && (
-                  <p className="mt-2 line-clamp-2 text-xs text-charcoal-400">
-                    {s.description}
+                <Link href={`/${params.username}/s/${s.slug}`} className="block">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <h3 className="truncate text-sm font-semibold text-charcoal-100 group-hover:text-navy-300">
+                      {s.title}
+                    </h3>
+                    <span className="shrink-0 text-xs font-medium text-charcoal-400">
+                      {s.price_cents === 0
+                        ? "Free"
+                        : `${(s.price_cents / 100).toLocaleString("ko-KR")}원`}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-charcoal-500">
+                    {s.duration_min}분 · {s.slot_type}
+                    {s.location_detail && ` · ${s.location_detail}`}
                   </p>
-                )}
-              </Link>
+                  {s.description && (
+                    <p className="mt-2 line-clamp-2 text-xs text-charcoal-400">
+                      {s.description}
+                    </p>
+                  )}
+                </Link>
+                <div className="mt-3">
+                  <ReactionStrip
+                    target_type="slot"
+                    target_id={s.id}
+                    initial={slotReactions.get(s.id) ?? []}
+                    loggedIn={!!session}
+                    size="sm"
+                  />
+                </div>
+              </div>
             ))}
           </div>
         </section>
