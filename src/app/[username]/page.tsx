@@ -147,12 +147,13 @@ export default async function PublicProfile({
       )}
 
       <div className="grid gap-6 md:grid-cols-3">
-        <SectionCard title="Calendar">
+        <SectionCard
+          title="Calendar"
+          cta="View calendar →"
+          href={`/${params.username}/c`}
+        >
           <p className="text-sm text-charcoal-400">
             공개된 일정을 캘린더 뷰에서 볼 수 있어요.
-          </p>
-          <p className="mt-2 text-xs text-charcoal-600">
-            (공개 캘린더 뷰는 곧 추가됩니다.)
           </p>
         </SectionCard>
 
