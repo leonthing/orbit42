@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getAdminClient } from "@/lib/supabase";
 import { requireUserId } from "@/lib/db";
 import { randomUUID } from "node:crypto";
+import { getAuthenticatedCalendar } from "@/lib/google";
 
 export type FeedPost = {
   id: string;
@@ -63,20 +64,77 @@ export async function createFeedPost(formData: FormData) {
     if (pub?.publicUrl) imageUrls.push(pub.publicUrl);
   }
 
-  const { error } = await db.from("feed_posts").insert({
-    user_id: userId,
-    body,
-    image_urls: imageUrls,
-    location_label: location || null,
-    attached_slot_id: attachedSlotId || null,
-  });
-  if (error) {
+  const addToCalendar = String(formData.get("add_to_calendar") ?? "") === "1";
+  const calendarStartStr = String(formData.get("calendar_start") ?? "").trim();
+  const calendarStart = calendarStartStr ? new Date(calendarStartStr) : new Date();
+
+  const { data: inserted, error } = await db
+    .from("feed_posts")
+    .insert({
+      user_id: userId,
+      body,
+      image_urls: imageUrls,
+      location_label: location || null,
+      attached_slot_id: attachedSlotId || null,
+    })
+    .select("id")
+    .single();
+  if (error || !inserted) {
     console.error("feed_posts insert", error);
     return { error: "게시에 실패했습니다." };
   }
 
+  // Optional: create a Google Calendar event to keep the feed post pinned
+  // to a moment on the host's calendar.
+  if (addToCalendar) {
+    try {
+      const calendar = await getAuthenticatedCalendar(userId);
+      if (!calendar) {
+        return {
+          success: true,
+          warn:
+            "게시는 완료됐지만 캘린더에 저장하지 못했어요. Google Calendar를 먼저 연결해주세요.",
+        };
+      }
+      const end = new Date(calendarStart.getTime() + 30 * 60_000);
+      const firstLine = (body.split("\n")[0] || "").trim();
+      const title = `📝 ${firstLine ? firstLine.slice(0, 80) : "포스트"}`;
+      const descriptionParts: string[] = [];
+      if (body) descriptionParts.push(body);
+      if (imageUrls.length > 0) {
+        descriptionParts.push("", ...imageUrls);
+      }
+      descriptionParts.push("", "— via orbit42");
+
+      const ev = await calendar.events.insert({
+        calendarId: "primary",
+        requestBody: {
+          summary: title,
+          description: descriptionParts.join("\n"),
+          location: location || undefined,
+          start: { dateTime: calendarStart.toISOString(), timeZone: "Asia/Seoul" },
+          end: { dateTime: end.toISOString(), timeZone: "Asia/Seoul" },
+        },
+      });
+      if (ev.data.id) {
+        await db
+          .from("feed_posts")
+          .update({ attached_event_id: `primary::${ev.data.id}` })
+          .eq("id", inserted.id);
+      }
+    } catch (err) {
+      console.error("feed_post gcal insert failed", err);
+      // Don't fail the whole post — surface a soft warning.
+      return {
+        success: true,
+        warn: "게시는 완료됐지만 캘린더 저장에 실패했어요.",
+      };
+    }
+  }
+
   revalidatePath("/feed");
   revalidatePath("/explore");
+  revalidatePath("/", "layout");
   return { success: true };
 }
 

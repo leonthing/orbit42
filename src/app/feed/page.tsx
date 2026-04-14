@@ -8,6 +8,7 @@ import { listFollowing } from "@/lib/follows";
 import { getPublicEvents } from "@/lib/public-calendar";
 import { getReactionsForMany } from "@/lib/reactions";
 import { listFeedPostsByAuthors } from "@/lib/feed-posts";
+import { isGoogleCalendarConnected } from "@/app/[username]/calendar/actions";
 import { ReactionStrip } from "@/components/ReactionStrip";
 import { ComposeBox } from "@/components/ComposeBox";
 import { PublicChrome } from "@/components/layout/PublicChrome";
@@ -63,9 +64,10 @@ export default async function FeedPage() {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const [following, viewerProfile] = await Promise.all([
+  const [following, viewerProfile, googleConnected] = await Promise.all([
     listFollowing(session.username),
     getProfile(session.username),
+    isGoogleCalendarConnected().catch(() => false),
   ]);
 
   const db = getAdminClient();
@@ -224,6 +226,7 @@ export default async function FeedPage() {
           <ComposeBox
             viewerUsername={viewerProfile.username}
             viewerName={viewerProfile.display_name || viewerProfile.username}
+            googleConnected={googleConnected}
           />
         </div>
       )}

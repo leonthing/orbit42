@@ -8,9 +8,11 @@ import { createFeedPost } from "@/lib/feed-posts";
 export function ComposeBox({
   viewerName,
   viewerUsername,
+  googleConnected,
 }: {
   viewerName: string;
   viewerUsername: string;
+  googleConnected?: boolean;
 }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -20,6 +22,8 @@ export function ComposeBox({
   const [previews, setPreviews] = useState<string[]>([]);
   const [showLocation, setShowLocation] = useState(false);
   const [location, setLocation] = useState("");
+  const [addToCalendar, setAddToCalendar] = useState(false);
+  const [calendarStart, setCalendarStart] = useState("");
   const [pending, startTransition] = useTransition();
 
   const initial = (viewerName || viewerUsername).charAt(0).toUpperCase();
@@ -31,16 +35,27 @@ export function ComposeBox({
     const fd = new FormData();
     fd.set("body", body);
     if (location) fd.set("location", location);
+    if (addToCalendar) {
+      fd.set("add_to_calendar", "1");
+      if (calendarStart) fd.set("calendar_start", new Date(calendarStart).toISOString());
+    }
     for (const f of files) fd.append("images", f);
     startTransition(async () => {
-      const res = await createFeedPost(fd);
+      const res = (await createFeedPost(fd)) as {
+        error?: string;
+        success?: boolean;
+        warn?: string;
+      };
       if (res.error) return alert(res.error);
+      if (res.warn) alert(res.warn);
       setBody("");
       setFiles([]);
       previews.forEach((u) => URL.revokeObjectURL(u));
       setPreviews([]);
       setLocation("");
       setShowLocation(false);
+      setAddToCalendar(false);
+      setCalendarStart("");
       formRef.current?.reset();
       router.refresh();
     });
@@ -141,6 +156,31 @@ export function ComposeBox({
             </div>
           )}
 
+          {addToCalendar && (
+            <div className="mt-2 flex items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/5 px-3 py-2">
+              <span className="text-amber-400">📅</span>
+              <input
+                type="datetime-local"
+                value={calendarStart}
+                onChange={(e) => setCalendarStart(e.target.value)}
+                className="flex-1 border-0 bg-transparent text-sm text-charcoal-100 placeholder:text-charcoal-500 focus:outline-none focus:ring-0"
+              />
+              <span className="text-[10px] text-charcoal-500">
+                비워두면 지금 시각 · 30분 일정
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setAddToCalendar(false);
+                  setCalendarStart("");
+                }}
+                className="text-xs text-charcoal-500 hover:text-charcoal-300"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
           <div className="mt-3 flex items-center justify-between border-t border-charcoal-800/40 pt-3">
             <div className="flex items-center gap-1">
               <ToolButton
@@ -154,6 +194,19 @@ export function ComposeBox({
                 label="위치"
                 icon="📍"
                 active={showLocation}
+              />
+              <ToolButton
+                onClick={() => {
+                  if (!googleConnected) {
+                    alert("Google Calendar를 먼저 연결해주세요.");
+                    return;
+                  }
+                  setAddToCalendar((s) => !s);
+                }}
+                label="캘린더에 추가"
+                icon="📅"
+                active={addToCalendar}
+                disabled={!googleConnected}
               />
               <input
                 ref={fileRef}
