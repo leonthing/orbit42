@@ -13,7 +13,6 @@ import { ReactionStrip } from "@/components/ReactionStrip";
 import { ComposeBox } from "@/components/ComposeBox";
 import { DeleteFeedPostButton } from "@/components/DeleteFeedPostButton";
 import { Avatar } from "@/components/Avatar";
-import { PublicChrome } from "@/components/layout/PublicChrome";
 
 export const metadata: Metadata = { title: "Feed" };
 export const dynamic = "force-dynamic";
@@ -229,7 +228,7 @@ export default async function FeedPage() {
   const dayGroups = groupByDay(items, now);
 
   return (
-    <PublicChrome viewerUsername={session.username}>
+    <>
       <FeedHeader />
 
       {viewerProfile && (
@@ -294,7 +293,7 @@ export default async function FeedPage() {
           </div>
         )}
       </section>
-    </PublicChrome>
+    </>
   );
 }
 

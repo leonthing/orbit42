@@ -5,7 +5,6 @@ import { getAdminClient } from "@/lib/supabase";
 import { listFollowing } from "@/lib/follows";
 import { getReactionsForMany } from "@/lib/reactions";
 import { ReactionStrip } from "@/components/ReactionStrip";
-import { PublicChrome } from "@/components/layout/PublicChrome";
 
 export const metadata: Metadata = { title: "Explore" };
 export const dynamic = "force-dynamic";
@@ -124,7 +123,7 @@ export default async function ExplorePage() {
   );
 
   return (
-    <PublicChrome viewerUsername={session?.username ?? null}>
+    <>
       <header className="mb-8">
         <h1 className="text-2xl font-bold text-charcoal-100">Explore</h1>
         <p className="mt-1 text-sm text-charcoal-500">
@@ -203,7 +202,7 @@ export default async function ExplorePage() {
           </div>
         )}
       </section>
-    </PublicChrome>
+    </>
   );
 }
 
