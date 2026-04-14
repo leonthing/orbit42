@@ -18,26 +18,12 @@ export default async function LandingPage() {
           </div>
           <span className="text-base font-semibold text-charcoal-100">Orbit42</span>
         </Link>
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          <Link
-            href="/explore"
-            className="hidden rounded-lg px-2.5 py-1.5 text-sm text-charcoal-300 hover:text-charcoal-100 sm:inline-flex"
-          >
-            Explore
-          </Link>
-          <Link
-            href="/login"
-            className="rounded-lg px-2.5 py-1.5 text-sm text-charcoal-300 hover:text-charcoal-100"
-          >
-            Sign in
-          </Link>
-          <Link
-            href="/signup"
-            className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-500"
-          >
-            Get started
-          </Link>
-        </div>
+        <Link
+          href="/explore"
+          className="rounded-lg px-2.5 py-1.5 text-sm text-charcoal-300 hover:text-charcoal-100"
+        >
+          Explore
+        </Link>
       </header>
 
       <main className="mx-auto max-w-6xl px-4 pb-16 pt-8 sm:px-6 md:px-10 md:pt-16 lg:pt-20">

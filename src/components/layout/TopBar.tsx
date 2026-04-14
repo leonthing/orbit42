@@ -38,7 +38,7 @@ export function TopBar({ username, displayName }: { username: string; displayNam
 
   const handleLogout = async () => {
     await logout();
-    router.push("/login");
+    router.push("/");
   };
 
   return (
