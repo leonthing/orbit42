@@ -69,9 +69,18 @@ export default async function PublicProfile({
             size={72}
           />
           <div className="min-w-0">
-            <h1 className="text-2xl font-bold text-charcoal-100 md:text-[28px]">
-              {profile.display_name || profile.username}
-            </h1>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <h1 className="text-2xl font-bold text-charcoal-100 md:text-[28px]">
+                {profile.display_name || profile.username}
+              </h1>
+              {!isOwner && (
+                <FollowButton
+                  targetUsername={params.username}
+                  initiallyFollowing={viewerFollowing}
+                  loggedIn={!!session}
+                />
+              )}
+            </div>
             <p className="text-sm text-charcoal-500">@{profile.username}</p>
             <div className="mt-2 flex gap-4 text-xs text-charcoal-400">
               <Link
@@ -97,30 +106,22 @@ export default async function PublicProfile({
             </div>
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {isOwner ? (
-            <>
-              <Link
-                href={`/${params.username}/slots`}
-                className="rounded-lg bg-red-500/90 px-4 py-2 text-sm font-semibold text-charcoal-950 hover:bg-red-400"
-              >
-                Sell my time
-              </Link>
-              <Link
-                href={`/${params.username}/settings`}
-                className="rounded-lg border border-charcoal-700 px-4 py-2 text-sm font-medium text-charcoal-200 hover:border-charcoal-600 hover:text-charcoal-100"
-              >
-                Edit
-              </Link>
-            </>
-          ) : (
-            <FollowButton
-              targetUsername={params.username}
-              initiallyFollowing={viewerFollowing}
-              loggedIn={!!session}
-            />
-          )}
-        </div>
+        {isOwner && (
+          <div className="flex shrink-0 items-center gap-2">
+            <Link
+              href={`/${params.username}/slots`}
+              className="rounded-lg bg-red-500/90 px-4 py-2 text-sm font-semibold text-charcoal-950 hover:bg-red-400"
+            >
+              Sell my time
+            </Link>
+            <Link
+              href={`/${params.username}/settings`}
+              className="rounded-lg border border-charcoal-700 px-4 py-2 text-sm font-medium text-charcoal-200 hover:border-charcoal-600 hover:text-charcoal-100"
+            >
+              Edit
+            </Link>
+          </div>
+        )}
       </header>
 
       {profile.bio && (
