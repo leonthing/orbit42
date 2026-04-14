@@ -1,17 +1,35 @@
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopBar } from "@/components/layout/TopBar";
 import { MobileMenuProvider } from "@/components/layout/MobileMenuContext";
-import { getProfile } from "@/lib/auth";
+import { PublicChrome } from "@/components/layout/PublicChrome";
+import { getProfile, getSession } from "@/lib/auth";
+import { notFound } from "next/navigation";
 
-export default async function AppLayout({
+export default async function UsernameLayout({
   children,
   params,
 }: {
   children: React.ReactNode;
   params: { username: string };
 }) {
-  const profile = await getProfile(params.username);
-  const displayName = profile?.display_name || params.username;
+  const [profile, session] = await Promise.all([
+    getProfile(params.username),
+    getSession(),
+  ]);
+
+  if (!profile) notFound();
+
+  const isOwner = session?.username === params.username;
+
+  if (!isOwner) {
+    return (
+      <PublicChrome viewerUsername={session?.username ?? null}>
+        {children}
+      </PublicChrome>
+    );
+  }
+
+  const displayName = profile.display_name || params.username;
 
   return (
     <MobileMenuProvider>

@@ -77,7 +77,7 @@ export function TopBar({ username, displayName }: { username: string; displayNam
             <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
             <div className="absolute right-0 z-50 mt-1 w-44 rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] p-1.5 shadow-2xl">
               <Link
-                href={`/${username}/profile`}
+                href={`/${username}`}
                 onClick={() => setShowMenu(false)}
                 className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-charcoal-300 hover:bg-charcoal-800/50"
               >
