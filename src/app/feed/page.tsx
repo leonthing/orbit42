@@ -407,10 +407,10 @@ function DayCard({
           {relative}
         </span>
       </header>
-      <div className="relative px-5 py-4">
-        {/* left rail */}
-        <div className="pointer-events-none absolute bottom-4 left-[72px] top-4 w-px bg-charcoal-800/50" />
-        <ul className="space-y-3">{children}</ul>
+      <div className="relative px-3 py-3 md:px-4">
+        {/* left rail — thin dashed line running through all entries */}
+        <div className="pointer-events-none absolute bottom-3 left-[10px] top-3 w-px bg-charcoal-800/60 md:left-[14px]" />
+        <ul className="space-y-2.5">{children}</ul>
       </div>
     </article>
   );
@@ -425,28 +425,19 @@ function DayEntry({
   reactions: import("@/lib/reactions-types").ReactionSummary[];
   viewerUsername: string;
 }) {
-  const author = item.author;
-  const timeStr = formatTimeShort(item.timestamp);
   return (
-    <li className="relative flex items-start gap-4">
-      {/* Time column (tabular) */}
-      <div className="w-12 shrink-0 pt-3 text-right">
-        <span className="text-[11px] font-semibold tabular-nums text-charcoal-500">
-          {timeStr}
-        </span>
-      </div>
-      {/* Avatar sits on the rail */}
-      <Link
-        href={`/${author.username}`}
-        className="relative z-10 flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-navy-600/60 to-amber-500/40 text-xs font-bold text-charcoal-100 shadow-[0_0_0_2px_rgb(var(--bg-surface))] mt-2"
-        title={`${author.display_name || author.username} (@${author.username})`}
-      >
-        {(author.display_name || author.username).charAt(0).toUpperCase()}
-      </Link>
-      {/* Entry body */}
-      <div className="min-w-0 flex-1">
-        <EntryBody item={item} reactions={reactions} viewerUsername={viewerUsername} />
-      </div>
+    <li className="relative pl-5 md:pl-7">
+      {/* Tick on the rail */}
+      <span
+        className={`absolute top-[18px] -ml-[11px] h-2 w-2 shrink-0 rounded-full ring-2 ring-[rgb(var(--bg-surface))] md:-ml-[15px] ${
+          item.kind === "slot"
+            ? "bg-amber-400"
+            : item.kind === "event"
+              ? "bg-emerald-400"
+              : "bg-charcoal-500"
+        }`}
+      />
+      <EntryBody item={item} reactions={reactions} viewerUsername={viewerUsername} />
     </li>
   );
 }
@@ -462,17 +453,29 @@ function EntryBody({
 }) {
   const isMine = item.author.username === viewerUsername;
   const author = item.author;
+  const timeStr = formatTimeShort(item.timestamp);
   return (
-    <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-4">
-      <div className="flex items-center gap-2 text-xs text-charcoal-500">
+    <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-3 md:p-4">
+      <div className="flex items-center gap-2 text-xs">
         <Link
           href={`/${author.username}`}
-          className="font-medium text-charcoal-200 hover:text-charcoal-100"
+          className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-navy-600/60 to-amber-500/40 text-[10px] font-bold text-charcoal-100"
+          title={`${author.display_name || author.username} (@${author.username})`}
+        >
+          {(author.display_name || author.username).charAt(0).toUpperCase()}
+        </Link>
+        <Link
+          href={`/${author.username}`}
+          className="truncate font-semibold text-charcoal-200 hover:text-charcoal-100"
         >
           {author.display_name || author.username}
         </Link>
-        <span className="text-charcoal-600">@{author.username}</span>
-        <span className="text-charcoal-700">·</span>
+        <span className="hidden truncate text-charcoal-600 sm:inline">
+          @{author.username}
+        </span>
+        <span className="font-medium tabular-nums text-charcoal-500">
+          · {timeStr}
+        </span>
         <KindBadge kind={item.kind} />
         {isMine && item.kind === "feed_post" && (
           <div className="ml-auto">
