@@ -302,8 +302,8 @@ function ItemBlock({
   const auctionLabel = auctionEnded
     ? "경매 종료"
     : item.auction_ends_at
-      ? `경매 · ${relativeTimeTo(item.auction_ends_at)}`
-      : "경매";
+      ? `경매중 · ${relativeTimeTo(item.auction_ends_at)}`
+      : "경매중";
   const className = isAuction
     ? "group absolute overflow-hidden rounded-md border border-amber-500 bg-amber-100 px-1.5 py-1 text-left transition-colors hover:bg-amber-200"
     : "group absolute overflow-hidden rounded-md border border-red-500 bg-red-100 px-1.5 py-1 text-left transition-colors hover:bg-red-200";

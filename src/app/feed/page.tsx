@@ -775,7 +775,7 @@ function FeedSlotCard({
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
           <span className="inline-flex items-center rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-800 ring-1 ring-amber-500/40 dark:text-amber-200 dark:ring-0">
-            {auctionEnded ? "경매 종료" : "경매"}
+            {auctionEnded ? "경매 종료" : "경매중"}
           </span>
           <p className="truncate text-sm font-semibold text-charcoal-100">
             {item.title}

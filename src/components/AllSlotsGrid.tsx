@@ -37,15 +37,25 @@ export function AllSlotsGrid({
     <div className="grid gap-3 md:grid-cols-2">
       {slots.map((s) => {
         const isAuction = s.pricing_model === "auction";
+        const auctionEnded =
+          isAuction &&
+          !!s.auction_ends_at &&
+          new Date(s.auction_ends_at).getTime() <= Date.now();
         const topBid = s.current_high_bid_cents ?? s.reserve_price_cents ?? 0;
         const priceLabel = isAuction
           ? `₩${(topBid / 100).toLocaleString("ko-KR")}`
           : s.price_cents === 0
             ? "FREE"
             : `₩${(s.price_cents / 100).toLocaleString("ko-KR")}`;
+        const auctionStatus = auctionEnded ? "경매 종료" : "경매중";
         const badgeClass = isAuction
-          ? "shrink-0 rounded-md bg-amber-500/15 px-2 py-0.5 text-xs font-bold text-amber-800 ring-1 ring-amber-500/40 dark:text-amber-200 dark:ring-0"
+          ? auctionEnded
+            ? "shrink-0 rounded-md bg-charcoal-800/40 px-2 py-0.5 text-xs font-bold text-charcoal-500 ring-1 ring-charcoal-300 dark:ring-0"
+            : "shrink-0 rounded-md bg-amber-500/15 px-2 py-0.5 text-xs font-bold text-amber-800 ring-1 ring-amber-500/40 dark:text-amber-200 dark:ring-0"
           : "shrink-0 rounded-md bg-red-500/15 px-2 py-0.5 text-xs font-bold text-red-800 ring-1 ring-red-500/30 dark:text-red-300 dark:ring-0";
+        const pillClass = auctionEnded
+          ? "bg-charcoal-800/40 text-charcoal-500 ring-1 ring-charcoal-300 dark:ring-0"
+          : "bg-amber-500/15 text-amber-800 ring-1 ring-amber-500/40 dark:text-amber-200 dark:ring-0";
         const cardInner = (
           <>
             <div className="flex items-baseline justify-between gap-2">
@@ -56,8 +66,10 @@ export function AllSlotsGrid({
             </div>
             <p className="mt-1 text-xs text-charcoal-500">
               {isAuction && (
-                <span className="mr-1 inline-flex items-center rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-800 ring-1 ring-amber-500/40 dark:text-amber-200 dark:ring-0">
-                  경매
+                <span
+                  className={`mr-1 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${pillClass}`}
+                >
+                  {auctionStatus}
                 </span>
               )}
               {s.duration_min}분 · {s.slot_type}
