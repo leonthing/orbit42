@@ -53,7 +53,7 @@ export default async function LandingPage() {
               </span>
             </h1>
             <p className="mt-5 max-w-md text-sm leading-relaxed text-charcoal-400 sm:text-base">
-              캘린더로 일상을 공유하고, 비어 있는 시간을 슬롯으로 열어
+              캘린더로 일상을 공유하고, 비어있는 시간을 슬롯으로
               판매하여 수익을 창출하세요.
             </p>
 
