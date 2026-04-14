@@ -262,14 +262,14 @@ function ItemBlock({
   if (item.kind === "event") {
     return (
       <div
-        className="group absolute overflow-hidden rounded-md border-l-[3px] bg-charcoal-800/70 px-1.5 py-1 shadow-sm"
+        className="group absolute overflow-hidden rounded-md border-l-[3px] bg-charcoal-800 px-1.5 py-1 shadow-sm"
         style={{ ...style, borderColor: item.color }}
       >
-        <p className="truncate text-[11px] font-semibold leading-tight text-charcoal-100">
+        <p className="truncate text-[11px] font-semibold leading-tight text-charcoal-50">
           {item.title}
         </p>
         {!item.allDay && height >= 32 && (
-          <p className="truncate text-[10px] leading-tight text-charcoal-400">
+          <p className="truncate text-[10px] leading-tight text-charcoal-300">
             {minToHM(item.startMin)}
           </p>
         )}
@@ -286,19 +286,26 @@ function ItemBlock({
     );
   }
 
-  // slot
+  // slot — merged bookable window
+  const multi = item.option_count > 1;
   return (
     <Link
       href={`/${username}/s/${item.slot_slug}?t=${encodeURIComponent(item.start_at)}`}
-      className="group absolute overflow-hidden rounded-md border border-amber-500/50 bg-amber-500/20 px-1.5 py-1 transition-colors hover:border-amber-400 hover:bg-amber-500/35"
+      className="group absolute overflow-hidden rounded-md border border-amber-500 bg-amber-100 px-1.5 py-1 transition-colors hover:bg-amber-200"
       style={style}
     >
-      <p className="truncate text-[11px] font-semibold leading-tight text-amber-100">
+      <p className="truncate text-[11px] font-semibold leading-tight text-amber-900">
         {item.title}
       </p>
-      {height >= 32 && (
-        <p className="truncate text-[10px] leading-tight text-amber-200/90">
-          {minToHM(item.startMin)} ·{" "}
+      {height >= 28 && (
+        <p className="truncate text-[10px] leading-tight text-amber-800">
+          {minToHM(item.startMin)}–{minToHM(item.endMin)}
+          {multi && <span className="ml-1 font-semibold">· {item.option_count}자리</span>}
+        </p>
+      )}
+      {height >= 52 && (
+        <p className="truncate text-[10px] leading-tight text-amber-800">
+          {item.duration_min}분 ·{" "}
           {item.price_cents === 0
             ? "FREE"
             : `₩${(item.price_cents / 100).toLocaleString("ko-KR")}`}

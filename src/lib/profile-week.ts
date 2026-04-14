@@ -16,11 +16,13 @@ export type WeekItem =
       id: string;
       slot_id: string;
       slot_slug: string;
-      start_at: string;
-      end_at: string;
+      start_at: string; // window start
+      end_at: string; // window end (covers all merged options)
       title: string;
       price_cents: number;
-      duration_min: number;
+      duration_min: number; // of a single booking
+      /** Number of distinct bookable options inside this visual window. */
+      option_count: number;
     };
 
 export type WeekDay = {
@@ -43,25 +45,55 @@ export async function getProfileWeek(
     listPublicSlotsByUsername(username),
   ]);
 
-  // Materialize bookable options for slots, capped to this week.
+  // Materialize bookable options per slot, then merge consecutive options
+  // into visual windows so the calendar stays readable when Auto-mode slots
+  // generate many back-to-back 30-min options.
   const slotItems: WeekItem[] = [];
   await Promise.all(
     slots.map(async (s) => {
       try {
-        const opts = await getBookableOptions(s);
-        for (const o of opts) {
-          const t = new Date(o.start_at);
-          if (t < weekStart || t >= weekEnd) continue;
+        const optsRaw = await getBookableOptions(s);
+        const opts = optsRaw
+          .filter((o) => {
+            const t = new Date(o.start_at);
+            return t >= weekStart && t < weekEnd;
+          })
+          .sort(
+            (a, b) =>
+              new Date(a.start_at).getTime() - new Date(b.start_at).getTime(),
+          );
+
+        let i = 0;
+        while (i < opts.length) {
+          const windowStart = opts[i].start_at;
+          let windowEnd = opts[i].end_at;
+          let count = 1;
+          const startDay = dayKey(new Date(windowStart));
+          i++;
+          while (i < opts.length) {
+            const prevEnd = new Date(windowEnd).getTime();
+            const nextStart = new Date(opts[i].start_at).getTime();
+            const sameDay = dayKey(new Date(opts[i].start_at)) === startDay;
+            // Merge if back-to-back and still on the same day.
+            if (sameDay && nextStart === prevEnd) {
+              windowEnd = opts[i].end_at;
+              count++;
+              i++;
+            } else {
+              break;
+            }
+          }
           slotItems.push({
             kind: "slot",
-            id: `${s.id}::${o.start_at}`,
+            id: `${s.id}::${windowStart}`,
             slot_id: s.id,
             slot_slug: s.slug,
-            start_at: o.start_at,
-            end_at: o.end_at,
+            start_at: windowStart,
+            end_at: windowEnd,
             title: s.title,
             price_cents: s.price_cents,
             duration_min: s.duration_min,
+            option_count: count,
           });
         }
       } catch {
