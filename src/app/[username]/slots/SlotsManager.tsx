@@ -10,7 +10,13 @@ import {
   removeAvailability,
   updateSlot,
 } from "@/lib/slots";
-import type { TimeSlot, Availability, SlotType, SlotMode } from "@/lib/slots";
+import type {
+  TimeSlot,
+  Availability,
+  SlotType,
+  SlotMode,
+  PricingModel,
+} from "@/lib/slots";
 import type { WorkingHours } from "@/lib/slot-availability";
 
 type Row = { slot: TimeSlot; availabilities: Availability[] };
@@ -89,6 +95,11 @@ function NewSlotForm({ onSaved }: { onSaved: () => void }) {
   const [slotType, setSlotType] = useState<SlotType>("1on1");
   const [locationDetail, setLocationDetail] = useState("");
   const [mode, setMode] = useState<SlotMode>("manual");
+  const [pricingModel, setPricingModel] = useState<PricingModel>("fixed");
+
+  // Auction
+  const [reservePrice, setReservePrice] = useState(10000);
+  const [auctionEndsAt, setAuctionEndsAt] = useState("");
 
   // Manual
   const [windows, setWindows] = useState<string[]>([]);
@@ -110,29 +121,44 @@ function NewSlotForm({ onSaved }: { onSaved: () => void }) {
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return alert("제목을 입력하세요.");
+    if (pricingModel === "auction") {
+      if (windows.length === 0) return alert("경매는 시간 한 개를 지정해야 해요.");
+      if (!auctionEndsAt) return alert("경매 종료 시간을 정해주세요.");
+      const ends = new Date(auctionEndsAt);
+      const slotTime = new Date(windows[0]);
+      if (ends >= slotTime)
+        return alert("경매 종료 시간은 슬롯 시간보다 앞이어야 합니다.");
+    }
     startTransition(async () => {
       const res = await createSlot({
         title: title.trim(),
         description: description.trim() || null,
         duration_min: duration,
-        price_cents: Math.round(price) * 100,
+        price_cents: pricingModel === "auction" ? 0 : Math.round(price) * 100,
         capacity,
         slot_type: slotType,
         location_detail: locationDetail.trim() || null,
-        mode,
-        ...(mode === "manual"
+        mode: pricingModel === "auction" ? "manual" : mode,
+        pricing_model: pricingModel,
+        ...(pricingModel === "auction"
           ? {
-              availability_starts: windows
-                .filter(Boolean)
-                .map((w) => new Date(w).toISOString()),
+              reserve_price_cents: Math.round(reservePrice) * 100,
+              auction_ends_at: new Date(auctionEndsAt).toISOString(),
+              availability_starts: [new Date(windows[0]).toISOString()],
             }
-          : {
-              working_hours: workingHours,
-              slot_interval_min: slotInterval,
-              min_notice_hours: minNotice,
-              max_advance_days: maxAdvance,
-              buffer_min: buffer,
-            }),
+          : mode === "manual"
+            ? {
+                availability_starts: windows
+                  .filter(Boolean)
+                  .map((w) => new Date(w).toISOString()),
+              }
+            : {
+                working_hours: workingHours,
+                slot_interval_min: slotInterval,
+                min_notice_hours: minNotice,
+                max_advance_days: maxAdvance,
+                buffer_min: buffer,
+              }),
       });
       if (res.error) return alert(res.error);
       onSaved();
@@ -218,26 +244,86 @@ function NewSlotForm({ onSaved }: { onSaved: () => void }) {
       </div>
 
       <div>
-        <p className="mb-2 text-xs font-medium text-charcoal-400">
-          시간 선택 방식
-        </p>
+        <p className="mb-2 text-xs font-medium text-charcoal-400">가격 모델</p>
         <div className="flex gap-2">
-          <ModeButton current={mode} value="manual" onClick={() => setMode("manual")}>
-            Manual
+          <PricingButton
+            current={pricingModel}
+            value="fixed"
+            onClick={() => setPricingModel("fixed")}
+          >
+            Fixed price
             <span className="block text-[10px] font-normal text-charcoal-500">
-              내가 직접 시간을 추가
+              정해진 가격으로 예약
             </span>
-          </ModeButton>
-          <ModeButton current={mode} value="auto" onClick={() => setMode("auto")}>
-            Auto (Google)
+          </PricingButton>
+          <PricingButton
+            current={pricingModel}
+            value="auction"
+            onClick={() => setPricingModel("auction")}
+          >
+            Auction
             <span className="block text-[10px] font-normal text-charcoal-500">
-              빈 시간 자동 계산
+              경매로 최고가 낙찰
             </span>
-          </ModeButton>
+          </PricingButton>
         </div>
       </div>
 
-      {mode === "manual" ? (
+      {pricingModel === "fixed" && (
+        <div>
+          <p className="mb-2 text-xs font-medium text-charcoal-400">시간 선택 방식</p>
+          <div className="flex gap-2">
+            <ModeButton current={mode} value="manual" onClick={() => setMode("manual")}>
+              Manual
+              <span className="block text-[10px] font-normal text-charcoal-500">
+                내가 직접 시간을 추가
+              </span>
+            </ModeButton>
+            <ModeButton current={mode} value="auto" onClick={() => setMode("auto")}>
+              Auto (Google)
+              <span className="block text-[10px] font-normal text-charcoal-500">
+                빈 시간 자동 계산
+              </span>
+            </ModeButton>
+          </div>
+        </div>
+      )}
+
+      {pricingModel === "auction" && (
+        <div className="grid gap-4 md:grid-cols-2">
+          <Field label="시작가 (KRW)">
+            <input
+              type="number"
+              min={0}
+              step={1000}
+              value={reservePrice}
+              onChange={(e) => setReservePrice(Number(e.target.value))}
+              className="input"
+            />
+          </Field>
+          <Field label="경매 종료 시간">
+            <input
+              type="datetime-local"
+              value={auctionEndsAt}
+              onChange={(e) => setAuctionEndsAt(e.target.value)}
+              className="input"
+              required
+            />
+          </Field>
+        </div>
+      )}
+
+      {pricingModel === "auction" ? (
+        <ManualWindows
+          windows={windows}
+          setWindows={(w) => {
+            const next = typeof w === "function" ? w(windows) : w;
+            setWindows(next.slice(-1)); // auction: only one time
+          }}
+          newWindow={newWindow}
+          setNewWindow={setNewWindow}
+        />
+      ) : mode === "manual" ? (
         <ManualWindows
           windows={windows}
           setWindows={setWindows}
@@ -285,6 +371,33 @@ function NewSlotForm({ onSaved }: { onSaved: () => void }) {
         }
       `}</style>
     </form>
+  );
+}
+
+function PricingButton({
+  current,
+  value,
+  onClick,
+  children,
+}: {
+  current: PricingModel;
+  value: PricingModel;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  const active = current === value;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex-1 rounded-lg border px-4 py-2 text-left text-sm font-medium ${
+        active
+          ? "border-amber-500/50 bg-amber-500/10 text-amber-200"
+          : "border-charcoal-800/60 bg-charcoal-800/20 text-charcoal-300 hover:border-charcoal-700"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 

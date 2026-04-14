@@ -12,6 +12,8 @@ export type SlotType = "1on1" | "companion" | "group";
 export type LocationType = "online" | "in_person" | "phone";
 export type SlotMode = "manual" | "auto";
 
+export type PricingModel = "fixed" | "auction";
+
 export type TimeSlot = {
   id: string;
   host_id: string;
@@ -32,6 +34,11 @@ export type TimeSlot = {
   min_notice_hours: number;
   max_advance_days: number;
   buffer_min: number;
+  pricing_model: PricingModel;
+  reserve_price_cents: number | null;
+  auction_ends_at: string | null;
+  current_high_bid_cents: number | null;
+  current_high_bidder_id: string | null;
   created_at: string;
 };
 
@@ -61,6 +68,9 @@ export type SlotInput = {
   buffer_min?: number;
   /** ISO datetime strings for initial availability windows (manual mode only) */
   availability_starts?: string[];
+  pricing_model?: PricingModel;
+  reserve_price_cents?: number | null;
+  auction_ends_at?: string | null;
 };
 
 function slugify(title: string) {
@@ -204,6 +214,9 @@ export async function createSlot(input: SlotInput) {
       min_notice_hours: input.min_notice_hours ?? 4,
       max_advance_days: input.max_advance_days ?? 30,
       buffer_min: input.buffer_min ?? 0,
+      pricing_model: input.pricing_model ?? "fixed",
+      reserve_price_cents: input.reserve_price_cents ?? null,
+      auction_ends_at: input.auction_ends_at ?? null,
     })
     .select()
     .single();
@@ -325,11 +338,14 @@ export async function bookSlot(args: {
   const { data: slot } = await db
     .from("time_slots")
     .select(
-      "id, host_id, duration_min, active, mode, title, location_detail, working_hours, slot_interval_min, min_notice_hours, max_advance_days, buffer_min, capacity",
+      "id, host_id, duration_min, active, mode, pricing_model, title, location_detail, working_hours, slot_interval_min, min_notice_hours, max_advance_days, buffer_min, capacity",
     )
     .eq("id", args.slotId)
     .single();
   if (!slot || !slot.active) return { error: "예약할 수 없는 슬롯입니다." };
+  if (slot.pricing_model === "auction") {
+    return { error: "경매 슬롯은 입찰을 통해 거래됩니다." };
+  }
 
   let startAt: Date;
   let availabilityId: string | null = null;
