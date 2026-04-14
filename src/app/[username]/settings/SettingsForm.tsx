@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { updateProfile, changePassword } from "@/lib/auth";
-import type { SocialLinks, Education } from "@/lib/auth";
+import type { SocialLinks, Education, Experience } from "@/lib/auth";
 import { useTheme } from "@/components/ThemeProvider";
 
 const SOCIAL_FIELDS: { key: keyof SocialLinks; label: string; placeholder: string; icon: React.ReactNode }[] = [
@@ -59,6 +59,14 @@ const SOCIAL_FIELDS: { key: keyof SocialLinks; label: string; placeholder: strin
 ];
 
 const EMPTY_EDU: Education = { school: "", degree: "", field: "", startYear: "", endYear: "" };
+const EMPTY_EXP: Experience = {
+  company: "",
+  role: "",
+  description: "",
+  startYear: "",
+  endYear: "",
+  current: false,
+};
 
 export function SettingsForm({
   username,
@@ -67,6 +75,7 @@ export function SettingsForm({
   bio: initialBio,
   socialLinks: initialSocialLinks,
   education: initialEducation,
+  experience: initialExperience,
   interests: initialInterests,
   createdAt,
 }: {
@@ -76,6 +85,7 @@ export function SettingsForm({
   bio: string;
   socialLinks: SocialLinks;
   education: Education[];
+  experience: Experience[];
   interests: string[];
   createdAt: string;
 }) {
@@ -84,6 +94,7 @@ export function SettingsForm({
   const [bio, setBio] = useState(initialBio);
   const [socialLinks, setSocialLinks] = useState<SocialLinks>(initialSocialLinks);
   const [education, setEducation] = useState<Education[]>(initialEducation);
+  const [experience, setExperience] = useState<Experience[]>(initialExperience);
   const [interests, setInterests] = useState<string[]>(initialInterests);
   const [interestInput, setInterestInput] = useState("");
   const [profileMsg, setProfileMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -101,6 +112,7 @@ export function SettingsForm({
     bio !== initialBio ||
     JSON.stringify(socialLinks) !== JSON.stringify(initialSocialLinks) ||
     JSON.stringify(education) !== JSON.stringify(initialEducation) ||
+    JSON.stringify(experience) !== JSON.stringify(initialExperience) ||
     JSON.stringify(interests) !== JSON.stringify(initialInterests);
 
   const handleProfileSave = async (e: React.FormEvent) => {
@@ -108,9 +120,11 @@ export function SettingsForm({
     setProfileLoading(true);
     setProfileMsg(null);
     const cleanedEdu = education.filter((e) => e.school.trim());
+    const cleanedExp = experience.filter((e) => e.company.trim());
     const result = await updateProfile(username, displayName, birthDate || null, socialLinks, {
       bio: bio || null,
       education: cleanedEdu,
+      experience: cleanedExp,
       interests,
     });
     if (result.error) {
@@ -151,6 +165,24 @@ export function SettingsForm({
 
   function removeEducation(index: number) {
     setEducation((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function addExperience() {
+    setExperience((prev) => [...prev, { ...EMPTY_EXP }]);
+  }
+
+  function updateExperience(
+    index: number,
+    field: keyof Experience,
+    value: string | boolean,
+  ) {
+    setExperience((prev) =>
+      prev.map((e, i) => (i === index ? { ...e, [field]: value } : e)),
+    );
+  }
+
+  function removeExperience(index: number) {
+    setExperience((prev) => prev.filter((_, i) => i !== index));
   }
 
   function addInterest() {
@@ -289,6 +321,94 @@ export function SettingsForm({
                     className={inputClass}
                   />
                 </div>
+              </div>
+            ))
+          )}
+          <p className="text-xs text-charcoal-600">변경 후 상단의 저장 버튼을 눌러주세요</p>
+        </div>
+      </section>
+
+      {/* Experience Section */}
+      <section className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/40">
+        <div className="flex items-center justify-between border-b border-charcoal-800/40 px-5 py-3">
+          <h2 className="text-sm font-semibold text-charcoal-200">경력</h2>
+          <button
+            type="button"
+            onClick={addExperience}
+            className="text-xs font-medium text-red-400 hover:text-red-300"
+          >
+            + 추가
+          </button>
+        </div>
+        <div className="space-y-4 p-5">
+          {experience.length === 0 ? (
+            <p className="text-sm text-charcoal-600">등록된 경력이 없습니다</p>
+          ) : (
+            experience.map((exp, i) => (
+              <div
+                key={i}
+                className="space-y-2 rounded-lg border border-charcoal-800/40 bg-charcoal-800/20 p-4"
+              >
+                <div className="flex items-start justify-between">
+                  <span className="text-xs font-medium text-charcoal-500">경력 {i + 1}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeExperience(i)}
+                    className="text-xs text-charcoal-600 hover:text-red-400"
+                  >
+                    삭제
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={exp.company}
+                  onChange={(e) => updateExperience(i, "company", e.target.value)}
+                  placeholder="회사/조직 *"
+                  className={inputClass}
+                />
+                <input
+                  type="text"
+                  value={exp.role || ""}
+                  onChange={(e) => updateExperience(i, "role", e.target.value)}
+                  placeholder="직무 (예: 프로덕트 매니저)"
+                  className={inputClass}
+                />
+                <textarea
+                  value={exp.description || ""}
+                  onChange={(e) => updateExperience(i, "description", e.target.value)}
+                  placeholder="주요 성과나 업무 (선택)"
+                  rows={2}
+                  className={`${inputClass} resize-none`}
+                />
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <input
+                    type="text"
+                    value={exp.startYear || ""}
+                    onChange={(e) => updateExperience(i, "startYear", e.target.value)}
+                    placeholder="시작 (예: 2020)"
+                    className={inputClass}
+                  />
+                  <input
+                    type="text"
+                    value={exp.endYear || ""}
+                    onChange={(e) => updateExperience(i, "endYear", e.target.value)}
+                    placeholder="종료 (예: 2023)"
+                    disabled={!!exp.current}
+                    className={`${inputClass} disabled:opacity-40`}
+                  />
+                </div>
+                <label className="flex items-center gap-2 text-xs text-charcoal-400">
+                  <input
+                    type="checkbox"
+                    checked={!!exp.current}
+                    onChange={(e) => {
+                      updateExperience(i, "current", e.target.checked);
+                      if (e.target.checked) updateExperience(i, "endYear", "");
+                    }}
+                    className="h-3.5 w-3.5 accent-red-500"
+                  />
+                  현재 재직 중
+                </label>
               </div>
             ))
           )}

@@ -110,7 +110,7 @@ export async function getProfile(username: string) {
   const { data } = await db
     .from("users")
     .select(
-      "username, display_name, birth_date, bio, avatar_url, social_links, education, interests, created_at",
+      "username, display_name, birth_date, bio, avatar_url, social_links, education, experience, interests, created_at",
     )
     .eq("username", username)
     .single();
@@ -181,12 +181,26 @@ export type Education = {
   endYear?: string;
 };
 
+export type Experience = {
+  company: string;
+  role?: string;
+  description?: string;
+  startYear?: string;
+  endYear?: string;
+  current?: boolean;
+};
+
 export async function updateProfile(
   username: string,
   displayName: string,
   birthDate?: string | null,
   socialLinks?: SocialLinks,
-  extra?: { bio?: string | null; education?: Education[]; interests?: string[] },
+  extra?: {
+    bio?: string | null;
+    education?: Education[];
+    experience?: Experience[];
+    interests?: string[];
+  },
 ) {
   const session = await getSession();
   if (!session || session.username !== username) {
@@ -207,6 +221,7 @@ export async function updateProfile(
   if (extra) {
     if (extra.bio !== undefined) updateData.bio = extra.bio || null;
     if (extra.education !== undefined) updateData.education = extra.education;
+    if (extra.experience !== undefined) updateData.experience = extra.experience;
     if (extra.interests !== undefined) updateData.interests = extra.interests;
   }
 

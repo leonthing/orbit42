@@ -47,6 +47,7 @@ export default async function SettingsPage({
         bio={profile.bio || ""}
         socialLinks={profile.social_links || {}}
         education={profile.education || []}
+        experience={profile.experience || []}
         interests={profile.interests || []}
         createdAt={profile.created_at}
       />
