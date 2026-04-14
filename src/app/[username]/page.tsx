@@ -9,6 +9,7 @@ import { getReactionsForMany } from "@/lib/reactions";
 import { ReactionStrip } from "@/components/ReactionStrip";
 import { getProfileWeek, startOfWeek } from "@/lib/profile-week";
 import { WeekCalendar } from "@/components/WeekCalendar";
+import { getValueStats } from "@/lib/value-stats";
 import { FollowButton } from "./FollowButton";
 
 export const dynamic = "force-dynamic";
@@ -38,12 +39,13 @@ export default async function PublicProfile({
   const weekStart = startOfWeek(new Date());
   const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60_000);
 
-  const [session, stats, viewerFollowing, slots, weekDays] = await Promise.all([
+  const [session, stats, viewerFollowing, slots, weekDays, value] = await Promise.all([
     getSession(),
     getFollowStats(params.username),
     isFollowing(params.username),
     listPublicSlotsByUsername(params.username),
     getProfileWeek(params.username, weekStart, weekEnd),
+    getValueStats(params.username),
   ]);
   const slotReactions = await getReactionsForMany(
     "slot",
@@ -123,6 +125,36 @@ export default async function PublicProfile({
 
       {profile.bio && (
         <p className="max-w-2xl text-sm leading-relaxed text-charcoal-300">{profile.bio}</p>
+      )}
+
+      {(value.total_bookings > 0 || value.total_revenue_cents > 0) && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <ValueStat
+            label="누적 거래"
+            value={`${value.total_bookings + (value.highest_bid_cents ? 1 : 0)}`}
+          />
+          <ValueStat
+            label="누적 가치"
+            value={`₩${(value.total_revenue_cents / 100).toLocaleString("ko-KR")}`}
+            accent
+          />
+          <ValueStat
+            label="평균 단가"
+            value={
+              value.average_price_cents > 0
+                ? `₩${(value.average_price_cents / 100).toLocaleString("ko-KR")}`
+                : "—"
+            }
+          />
+          <ValueStat
+            label="최고 낙찰"
+            value={
+              value.highest_bid_cents
+                ? `₩${(value.highest_bid_cents / 100).toLocaleString("ko-KR")}`
+                : "—"
+            }
+          />
+        </div>
       )}
 
       {interests.length > 0 && (
@@ -298,6 +330,31 @@ export default async function PublicProfile({
             ))}
         </section>
       )}
+    </div>
+  );
+}
+
+function ValueStat({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: string;
+  accent?: boolean;
+}) {
+  return (
+    <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-charcoal-500">
+        {label}
+      </p>
+      <p
+        className={`mt-1 text-lg font-bold ${
+          accent ? "text-amber-300" : "text-charcoal-100"
+        }`}
+      >
+        {value}
+      </p>
     </div>
   );
 }
