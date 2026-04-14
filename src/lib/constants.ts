@@ -1,16 +1,13 @@
 export const SITE = {
   title: "Orbit42",
-  description: "Life Integration Platform",
+  description: "Orbit around someone's time — share your calendar, sell your time.",
   url: process.env.NEXT_PUBLIC_SITE_URL || "https://orbit42.org",
 } as const;
 
 export const NAV_ITEMS = [
-  { href: "/dashboard", label: "Dashboard", icon: "home" },
-  { href: "/business", label: "Business", icon: "briefcase" },
   { href: "/calendar", label: "Calendar", icon: "calendar" },
-  { href: "/finance", label: "Finance", icon: "banknotes" },
-  { href: "/network", label: "Network", icon: "users" },
-  { href: "/notes", label: "Notes", icon: "pencil" },
-  { href: "/blog", label: "Blog", icon: "blog" },
-  { href: "/map", label: "Map", icon: "map" },
+  { href: "/slots", label: "Slots", icon: "clock" },
+  { href: "/bookings", label: "Bookings", icon: "ticket" },
+  { href: "/blog", label: "Posts", icon: "blog" },
+  { href: "/network", label: "Orbits", icon: "users" },
 ] as const;

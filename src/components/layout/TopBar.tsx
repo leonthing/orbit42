@@ -8,15 +8,13 @@ import { useState } from "react";
 import { useMobileMenu } from "./MobileMenuContext";
 
 const PAGE_TITLES: Record<string, string> = {
-  dashboard: "Dashboard",
-  business: "Business",
   calendar: "Calendar",
-  finance: "Finance",
-  network: "Network",
-  notes: "Notes",
+  slots: "Slots",
+  bookings: "Bookings",
+  blog: "Posts",
+  network: "Orbits",
   settings: "Settings",
   profile: "Profile",
-  map: "Map",
 };
 
 export function TopBar({ username, displayName }: { username: string; displayName: string }) {
@@ -26,7 +24,7 @@ export function TopBar({ username, displayName }: { username: string; displayNam
   const { toggle } = useMobileMenu();
 
   // Extract current page from path: /leo/calendar → calendar
-  const segment = pathname.split("/")[2] || "dashboard";
+  const segment = pathname.split("/")[2] || "calendar";
   const title = PAGE_TITLES[segment] || segment;
 
   const today = new Date();

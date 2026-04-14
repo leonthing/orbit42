@@ -24,7 +24,6 @@ export const metadata: Metadata = {
     template: `%s | ${SITE.title}`,
   },
   description: SITE.description,
-  robots: { index: false, follow: false },
 };
 
 export default function RootLayout({

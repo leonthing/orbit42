@@ -5,35 +5,91 @@ import { redirect } from "next/navigation";
 export default async function LandingPage() {
   const session = await getSession();
   if (session) {
-    redirect(`/${session.username}/dashboard`);
+    redirect(`/${session.username}/calendar`);
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[rgb(var(--bg-base))]">
-      <div className="text-center">
-        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-navy-600/20">
-          <svg className="h-8 w-8 text-navy-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418" />
-          </svg>
+    <div className="min-h-screen bg-[rgb(var(--bg-base))]">
+      <header className="flex items-center justify-between px-6 py-5 md:px-10">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-navy-600/20">
+            <span className="text-sm font-bold text-navy-400">O</span>
+          </div>
+          <span className="text-base font-semibold text-charcoal-100">Orbit42</span>
         </div>
-        <h1 className="text-3xl font-bold text-charcoal-100">Orbit42</h1>
-        <p className="mt-2 text-charcoal-500">Life Integration Platform</p>
-
-        <div className="mt-10 flex gap-3">
+        <div className="flex items-center gap-2">
           <Link
             href="/login"
-            className="rounded-lg bg-navy-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-navy-500"
+            className="rounded-lg px-4 py-2 text-sm text-charcoal-300 hover:text-charcoal-100"
           >
-            Sign In
+            Sign in
           </Link>
           <Link
             href="/signup"
-            className="rounded-lg border border-charcoal-700 px-6 py-2.5 text-sm font-medium text-charcoal-300 hover:border-charcoal-600 hover:text-charcoal-100"
+            className="rounded-lg bg-navy-600 px-4 py-2 text-sm font-medium text-white hover:bg-navy-500"
           >
-            Sign Up
+            Get started
           </Link>
         </div>
-      </div>
+      </header>
+
+      <main className="mx-auto max-w-3xl px-6 pb-24 pt-20 text-center md:pt-32">
+        <p className="text-xs font-medium uppercase tracking-[0.2em] text-navy-400">
+          Time, shared
+        </p>
+        <h1 className="mt-5 text-4xl font-bold tracking-tight text-charcoal-100 md:text-6xl">
+          Orbit around
+          <br />
+          <span className="text-navy-400">someone&apos;s time.</span>
+        </h1>
+        <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-charcoal-400 md:text-lg">
+          캘린더로 일상을 공유하고, 관심 있는 사람의 궤도를 따라가세요.
+          비어 있는 시간은 만남이 되고, 글이 되고, 새로운 연결이 됩니다.
+        </p>
+
+        <div className="mt-10 flex justify-center gap-3">
+          <Link
+            href="/signup"
+            className="rounded-lg bg-navy-600 px-6 py-3 text-sm font-medium text-white hover:bg-navy-500"
+          >
+            Start your orbit
+          </Link>
+          <Link
+            href="/login"
+            className="rounded-lg border border-charcoal-700 px-6 py-3 text-sm font-medium text-charcoal-300 hover:border-charcoal-600 hover:text-charcoal-100"
+          >
+            Sign in
+          </Link>
+        </div>
+
+        <div className="mx-auto mt-24 grid max-w-2xl gap-6 text-left md:grid-cols-3">
+          <Feature
+            title="Calendar"
+            body="캘린더 단위, 이벤트 단위로 공개 범위를 정해 일상을 공유."
+          />
+          <Feature
+            title="Slots"
+            body="비어 있는 시간을 무료/유료 슬롯으로 열고 예약을 받기."
+          />
+          <Feature
+            title="Orbits"
+            body="관심 있는 사람을 팔로우하고 그들의 일정·글을 받아보기."
+          />
+        </div>
+      </main>
+
+      <footer className="border-t border-charcoal-800/40 px-6 py-6 text-center text-xs text-charcoal-600">
+        © {new Date().getFullYear()} Orbit42
+      </footer>
+    </div>
+  );
+}
+
+function Feature({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="rounded-xl border border-charcoal-800/40 bg-[rgb(var(--bg-surface))] p-5">
+      <h3 className="text-sm font-semibold text-charcoal-100">{title}</h3>
+      <p className="mt-2 text-xs leading-relaxed text-charcoal-400">{body}</p>
     </div>
   );
 }
