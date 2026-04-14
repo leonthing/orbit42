@@ -216,7 +216,7 @@ export default async function FeedPage() {
       getReactionsForMany("feed_post", feedPostIds),
     ]);
 
-  const groups = groupItems(items, now);
+  const dayGroups = groupByDay(items, now);
 
   return (
     <PublicChrome viewerUsername={session.username}>
@@ -244,8 +244,8 @@ export default async function FeedPage() {
           body="위 입력창에서 지금 무엇을 하고 있는지 한 마디 남겨보세요."
         />
       ) : (
-        <Timeline
-          groups={groups}
+        <DailyCalendar
+          days={dayGroups}
           viewerUsername={session.username}
           reactions={{
             event: eventReactions,
@@ -298,12 +298,19 @@ function FeedHeader() {
   );
 }
 
-function Timeline({
-  groups,
+type DayGroup = {
+  key: string;
+  date: Date;
+  dayOffset: number; // 0 = today, 1 = tomorrow, -1 = yesterday
+  items: FeedItem[];
+};
+
+function DailyCalendar({
+  days,
   reactions,
   viewerUsername,
 }: {
-  groups: { label: string; items: FeedItem[] }[];
+  days: DayGroup[];
   reactions: {
     event: Map<string, import("@/lib/reactions-types").ReactionSummary[]>;
     slot: Map<string, import("@/lib/reactions-types").ReactionSummary[]>;
@@ -313,54 +320,103 @@ function Timeline({
   viewerUsername: string;
 }) {
   return (
-    <div className="relative">
-      {/* Vertical rail */}
-      <div className="pointer-events-none absolute left-[58px] top-2 bottom-2 w-px bg-charcoal-800/60" />
-
-      <div className="space-y-10">
-        {groups.map((g) => (
-          <section key={g.label}>
-            <DayDivider label={g.label} />
-            <ul className="space-y-4">
-              {g.items.map((item) => (
-                <li key={`${item.kind}-${item.id}`}>
-                  <TimelineEntry
-                    item={item}
-                    viewerUsername={viewerUsername}
-                    reactions={
-                      item.kind === "event"
-                        ? reactions.event.get(item.id) ?? []
-                        : item.kind === "slot"
-                          ? reactions.slot.get(item.id) ?? []
-                          : item.kind === "post"
-                            ? reactions.post.get(item.id) ?? []
-                            : reactions.feed_post.get(item.id) ?? []
-                    }
-                  />
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))}
-      </div>
+    <div className="space-y-6">
+      {days.map((day) => (
+        <DayCard key={day.key} day={day}>
+          {day.items.map((item) => (
+            <DayEntry
+              key={`${item.kind}-${item.id}`}
+              item={item}
+              viewerUsername={viewerUsername}
+              reactions={
+                item.kind === "event"
+                  ? reactions.event.get(item.id) ?? []
+                  : item.kind === "slot"
+                    ? reactions.slot.get(item.id) ?? []
+                    : item.kind === "post"
+                      ? reactions.post.get(item.id) ?? []
+                      : reactions.feed_post.get(item.id) ?? []
+              }
+            />
+          ))}
+        </DayCard>
+      ))}
     </div>
   );
 }
 
-function DayDivider({ label }: { label: string }) {
+function DayCard({
+  day,
+  children,
+}: {
+  day: DayGroup;
+  children: React.ReactNode;
+}) {
+  const monthDay = day.date.toLocaleDateString("ko-KR", {
+    month: "long",
+    day: "numeric",
+  });
+  const weekday = day.date.toLocaleDateString("ko-KR", { weekday: "long" });
+  const isToday = day.dayOffset === 0;
+  const isPast = day.dayOffset < 0;
+  const relative =
+    day.dayOffset === 0
+      ? "오늘"
+      : day.dayOffset === 1
+        ? "내일"
+        : day.dayOffset === -1
+          ? "어제"
+          : day.dayOffset > 0
+            ? `+${day.dayOffset}일`
+            : `${day.dayOffset}일`;
+
   return (
-    <div className="relative my-6 flex items-center gap-4">
-      <div className="w-[58px] text-right">
-        <span className="inline-block rounded-full bg-amber-500/20 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-300">
-          {label}
+    <article
+      className={`overflow-hidden rounded-2xl border bg-charcoal-900/30 ${
+        isToday
+          ? "border-amber-500/50 shadow-[0_0_0_1px_rgb(245_158_11_/_0.2)]"
+          : "border-charcoal-800/60"
+      }`}
+    >
+      <header
+        className={`flex items-baseline justify-between border-b px-5 py-3 ${
+          isToday
+            ? "border-amber-500/30 bg-amber-500/5"
+            : "border-charcoal-800/50"
+        }`}
+      >
+        <div className="flex items-baseline gap-3">
+          <span
+            className={`text-lg font-bold ${
+              isPast ? "text-charcoal-400" : "text-charcoal-100"
+            }`}
+          >
+            {monthDay}
+          </span>
+          <span className="text-xs text-charcoal-500">{weekday}</span>
+        </div>
+        <span
+          className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+            isToday
+              ? "bg-amber-500 text-charcoal-950"
+              : isPast
+                ? "bg-charcoal-800 text-charcoal-500"
+                : "bg-navy-600/25 text-navy-300"
+          }`}
+        >
+          {relative}
         </span>
+      </header>
+      <div className="relative px-5 py-4">
+        {/* left rail */}
+        <div className="pointer-events-none absolute bottom-4 left-[72px] top-4 w-px bg-charcoal-800/50" />
+        <ul className="space-y-3">{children}</ul>
       </div>
-      <div className="flex-1 border-t border-dashed border-charcoal-800/60" />
-    </div>
+    </article>
   );
 }
 
-function TimelineEntry({
+function DayEntry({
   item,
   reactions,
   viewerUsername,
@@ -372,24 +428,26 @@ function TimelineEntry({
   const author = item.author;
   const timeStr = formatTimeShort(item.timestamp);
   return (
-    <div className="relative flex gap-4">
-      {/* Time + avatar on the rail */}
-      <div className="relative flex w-[58px] shrink-0 flex-col items-end pt-1">
-        <span className="text-[11px] tabular-nums text-charcoal-500">{timeStr}</span>
-        <Link
-          href={`/${author.username}`}
-          className="absolute -right-[22px] top-0 z-10 flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-navy-600/60 to-amber-500/40 text-sm font-bold text-charcoal-100 shadow-[0_0_0_3px_rgb(var(--bg-base))]"
-          title={`${author.display_name || author.username} (@${author.username})`}
-        >
-          {(author.display_name || author.username).charAt(0).toUpperCase()}
-        </Link>
+    <li className="relative flex items-start gap-4">
+      {/* Time column (tabular) */}
+      <div className="w-12 shrink-0 pt-3 text-right">
+        <span className="text-[11px] font-semibold tabular-nums text-charcoal-500">
+          {timeStr}
+        </span>
       </div>
-
-      {/* Card */}
-      <div className="min-w-0 flex-1 pl-5">
+      {/* Avatar sits on the rail */}
+      <Link
+        href={`/${author.username}`}
+        className="relative z-10 flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-navy-600/60 to-amber-500/40 text-xs font-bold text-charcoal-100 shadow-[0_0_0_2px_rgb(var(--bg-surface))] mt-2"
+        title={`${author.display_name || author.username} (@${author.username})`}
+      >
+        {(author.display_name || author.username).charAt(0).toUpperCase()}
+      </Link>
+      {/* Entry body */}
+      <div className="min-w-0 flex-1">
         <EntryBody item={item} reactions={reactions} viewerUsername={viewerUsername} />
       </div>
-    </div>
+    </li>
   );
 }
 
@@ -573,34 +631,48 @@ function formatEventTime(start: string, end: string, allDay: boolean) {
   })}`;
 }
 
-function groupItems(items: FeedItem[], now: Date) {
+function dayKeyOf(d: Date) {
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+function groupByDay(items: FeedItem[], now: Date): DayGroup[] {
   const startOfToday = new Date(now);
   startOfToday.setHours(0, 0, 0, 0);
-  const startOfTomorrow = new Date(startOfToday.getTime() + 24 * 60 * 60_000);
-  const startOfWeekEnd = new Date(startOfToday.getTime() + 7 * 24 * 60 * 60_000);
+  const todayKey = dayKeyOf(startOfToday);
 
-  const groups: { label: string; items: FeedItem[] }[] = [
-    { label: "Today", items: [] },
-    { label: "Tomorrow", items: [] },
-    { label: "This week", items: [] },
-    { label: "Latest", items: [] },
-  ];
-
+  const map = new Map<string, DayGroup>();
   for (const item of items) {
     const ts = new Date(item.timestamp);
-    const isUpcomingEvent = item.kind === "event" && ts >= now;
-    if (isUpcomingEvent) {
-      if (ts < startOfTomorrow) groups[0].items.push(item);
-      else if (ts < new Date(startOfTomorrow.getTime() + 24 * 60 * 60_000))
-        groups[1].items.push(item);
-      else if (ts < startOfWeekEnd) groups[2].items.push(item);
-      else groups[3].items.push(item);
-    } else {
-      groups[3].items.push(item);
+    const dayStart = new Date(ts);
+    dayStart.setHours(0, 0, 0, 0);
+    const key = dayKeyOf(dayStart);
+    if (!map.has(key)) {
+      const offset = Math.round(
+        (dayStart.getTime() - startOfToday.getTime()) / (24 * 60 * 60_000),
+      );
+      map.set(key, { key, date: dayStart, dayOffset: offset, items: [] });
     }
+    map.get(key)!.items.push(item);
   }
 
-  return groups.filter((g) => g.items.length > 0);
+  // Sort each day's items chronologically within the day.
+  for (const g of Array.from(map.values())) {
+    g.items.sort(
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+    );
+  }
+
+  // Order days: today first, then future ascending, then past descending.
+  return Array.from(map.values()).sort((a, b) => {
+    if (a.key === todayKey) return -1;
+    if (b.key === todayKey) return 1;
+    const af = a.dayOffset > 0;
+    const bf = b.dayOffset > 0;
+    if (af && !bf) return -1;
+    if (!af && bf) return 1;
+    if (af && bf) return a.dayOffset - b.dayOffset;
+    return b.dayOffset - a.dayOffset;
+  });
 }
 
 function EmptyState({
