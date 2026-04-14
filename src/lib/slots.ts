@@ -4,9 +4,13 @@ import { revalidatePath } from "next/cache";
 import { getAdminClient } from "@/lib/supabase";
 import { getSession } from "@/lib/auth";
 import { getUserId, requireUserId } from "@/lib/db";
+import { getAuthenticatedCalendar } from "@/lib/google";
+import { computeAutoAvailability } from "@/lib/slot-availability";
+import type { WorkingHours, AutoSlotOption } from "@/lib/slot-availability";
 
 export type SlotType = "1on1" | "companion" | "group";
 export type LocationType = "online" | "in_person" | "phone";
+export type SlotMode = "manual" | "auto";
 
 export type TimeSlot = {
   id: string;
@@ -22,6 +26,12 @@ export type TimeSlot = {
   location_type: LocationType | null;
   location_detail: string | null;
   active: boolean;
+  mode: SlotMode;
+  working_hours: WorkingHours;
+  slot_interval_min: number;
+  min_notice_hours: number;
+  max_advance_days: number;
+  buffer_min: number;
   created_at: string;
 };
 
@@ -43,7 +53,13 @@ export type SlotInput = {
   location_type?: LocationType | null;
   location_detail?: string | null;
   active?: boolean;
-  /** ISO datetime strings for initial availability windows */
+  mode?: SlotMode;
+  working_hours?: WorkingHours;
+  slot_interval_min?: number;
+  min_notice_hours?: number;
+  max_advance_days?: number;
+  buffer_min?: number;
+  /** ISO datetime strings for initial availability windows (manual mode only) */
   availability_starts?: string[];
 };
 
@@ -112,6 +128,45 @@ export async function getSlotBySlug(
   };
 }
 
+export type BookableOption = {
+  /** For manual slots: availability row id. For auto: null. */
+  availability_id: string | null;
+  start_at: string;
+  end_at: string;
+  remaining: number;
+};
+
+export async function getBookableOptions(slot: TimeSlot): Promise<BookableOption[]> {
+  if (slot.mode === "auto") {
+    const opts = await computeAutoAvailability(slot.host_id, {
+      duration_min: slot.duration_min,
+      slot_interval_min: slot.slot_interval_min,
+      working_hours: slot.working_hours ?? {},
+      min_notice_hours: slot.min_notice_hours,
+      max_advance_days: slot.max_advance_days,
+      buffer_min: slot.buffer_min,
+    });
+    return opts.map((o: AutoSlotOption) => ({
+      availability_id: null,
+      start_at: o.start_at,
+      end_at: o.end_at,
+      remaining: 1,
+    }));
+  }
+
+  const avails = await getUpcomingAvailabilities(slot.id);
+  return avails
+    .filter((a) => a.booked_count < a.capacity)
+    .map((a) => ({
+      availability_id: a.id,
+      start_at: a.start_at,
+      end_at: new Date(
+        new Date(a.start_at).getTime() + slot.duration_min * 60_000,
+      ).toISOString(),
+      remaining: a.capacity - a.booked_count,
+    }));
+}
+
 export async function getUpcomingAvailabilities(slotId: string): Promise<Availability[]> {
   const db = getAdminClient();
   const nowIso = new Date().toISOString();
@@ -143,6 +198,12 @@ export async function createSlot(input: SlotInput) {
       location_type: input.location_type ?? null,
       location_detail: input.location_detail ?? null,
       active: input.active ?? true,
+      mode: input.mode ?? "manual",
+      working_hours: input.working_hours ?? {},
+      slot_interval_min: input.slot_interval_min ?? 30,
+      min_notice_hours: input.min_notice_hours ?? 4,
+      max_advance_days: input.max_advance_days ?? 30,
+      buffer_min: input.buffer_min ?? 0,
     })
     .select()
     .single();
@@ -177,6 +238,12 @@ export async function updateSlot(id: string, patch: Partial<SlotInput>) {
       location_type: patch.location_type,
       location_detail: patch.location_detail,
       active: patch.active,
+      mode: patch.mode,
+      working_hours: patch.working_hours,
+      slot_interval_min: patch.slot_interval_min,
+      min_notice_hours: patch.min_notice_hours,
+      max_advance_days: patch.max_advance_days,
+      buffer_min: patch.buffer_min,
       updated_at: new Date().toISOString(),
     })
     .eq("id", id)
@@ -237,7 +304,11 @@ export async function removeAvailability(availabilityId: string) {
 }
 
 export async function bookSlot(args: {
-  availabilityId: string;
+  slotId: string;
+  /** Manual mode */
+  availabilityId?: string;
+  /** Auto mode: ISO start time */
+  startAt?: string;
   message?: string;
   guest_name?: string;
   guest_email?: string;
@@ -251,46 +322,118 @@ export async function bookSlot(args: {
 
   const db = getAdminClient();
 
-  const { data: avail } = await db
-    .from("slot_availabilities")
-    .select("id, slot_id, start_at, capacity, booked_count")
-    .eq("id", args.availabilityId)
-    .single();
-  if (!avail) return { error: "시간을 찾을 수 없습니다." };
-  if ((avail.booked_count as number) >= (avail.capacity as number)) {
-    return { error: "이미 마감된 시간입니다." };
-  }
-
   const { data: slot } = await db
     .from("time_slots")
-    .select("id, host_id, duration_min, active")
-    .eq("id", avail.slot_id)
+    .select(
+      "id, host_id, duration_min, active, mode, title, location_detail, working_hours, slot_interval_min, min_notice_hours, max_advance_days, buffer_min, capacity",
+    )
+    .eq("id", args.slotId)
     .single();
   if (!slot || !slot.active) return { error: "예약할 수 없는 슬롯입니다." };
 
-  const startAt = new Date(avail.start_at as string);
+  let startAt: Date;
+  let availabilityId: string | null = null;
+
+  if (slot.mode === "auto") {
+    if (!args.startAt) return { error: "시간을 선택해주세요." };
+    startAt = new Date(args.startAt);
+
+    // Re-validate against current free/busy and working hours.
+    const options = await computeAutoAvailability(slot.host_id as string, {
+      duration_min: slot.duration_min as number,
+      slot_interval_min: slot.slot_interval_min as number,
+      working_hours: (slot.working_hours ?? {}) as WorkingHours,
+      min_notice_hours: slot.min_notice_hours as number,
+      max_advance_days: slot.max_advance_days as number,
+      buffer_min: slot.buffer_min as number,
+    });
+    const ok = options.some(
+      (o) => new Date(o.start_at).getTime() === startAt.getTime(),
+    );
+    if (!ok) return { error: "이미 지나갔거나 잡을 수 없는 시간입니다." };
+  } else {
+    if (!args.availabilityId) return { error: "시간을 선택해주세요." };
+    const { data: avail } = await db
+      .from("slot_availabilities")
+      .select("id, slot_id, start_at, capacity, booked_count")
+      .eq("id", args.availabilityId)
+      .single();
+    if (!avail) return { error: "시간을 찾을 수 없습니다." };
+    if ((avail.booked_count as number) >= (avail.capacity as number)) {
+      return { error: "이미 마감된 시간입니다." };
+    }
+    if (avail.slot_id !== slot.id) return { error: "잘못된 요청입니다." };
+    startAt = new Date(avail.start_at as string);
+    availabilityId = avail.id as string;
+  }
+
   const endAt = new Date(startAt.getTime() + (slot.duration_min as number) * 60_000);
 
-  const { error: bookErr } = await db.from("bookings").insert({
-    slot_id: slot.id,
-    availability_id: avail.id,
-    host_id: slot.host_id,
-    guest_id: guestId,
-    guest_name: args.guest_name ?? null,
-    guest_email: args.guest_email ?? null,
-    message: args.message ?? null,
-    scheduled_at: startAt.toISOString(),
-    scheduled_end_at: endAt.toISOString(),
-  });
-  if (bookErr) return { error: "예약에 실패했습니다." };
+  // Create the booking row first so we never lose it on a Google API failure.
+  const { data: booking, error: bookErr } = await db
+    .from("bookings")
+    .insert({
+      slot_id: slot.id,
+      availability_id: availabilityId,
+      host_id: slot.host_id,
+      guest_id: guestId,
+      guest_name: args.guest_name ?? null,
+      guest_email: args.guest_email ?? null,
+      message: args.message ?? null,
+      scheduled_at: startAt.toISOString(),
+      scheduled_end_at: endAt.toISOString(),
+    })
+    .select("id")
+    .single();
+  if (bookErr || !booking) return { error: "예약에 실패했습니다." };
 
-  await db
-    .from("slot_availabilities")
-    .update({ booked_count: (avail.booked_count as number) + 1 })
-    .eq("id", avail.id);
+  if (availabilityId) {
+    await db
+      .from("slot_availabilities")
+      .update({ booked_count: ((slot.capacity as number) ?? 1) })
+      .eq("id", availabilityId);
+  }
+
+  // Best-effort: create a Google Calendar event on the host's primary calendar.
+  try {
+    const calendar = await getAuthenticatedCalendar(slot.host_id as string);
+    if (calendar) {
+      const guestEmail =
+        args.guest_email ?? (await getEmailForUser(guestId));
+      const guestLabel = args.guest_name ?? (guestId ? "Guest" : "Guest");
+      const ev = await calendar.events.insert({
+        calendarId: "primary",
+        sendUpdates: guestEmail ? "all" : "none",
+        requestBody: {
+          summary: `[Orbit42] ${slot.title} — ${guestLabel}`,
+          description:
+            (args.message ? `${args.message}\n\n` : "") +
+            `Booked via orbit42 · slot: ${slot.title}`,
+          start: { dateTime: startAt.toISOString(), timeZone: "Asia/Seoul" },
+          end: { dateTime: endAt.toISOString(), timeZone: "Asia/Seoul" },
+          location: (slot.location_detail as string | null) ?? undefined,
+          attendees: guestEmail ? [{ email: guestEmail, displayName: guestLabel }] : undefined,
+        },
+      });
+      if (ev.data.id) {
+        await db
+          .from("bookings")
+          .update({ google_event_id: ev.data.id })
+          .eq("id", booking.id);
+      }
+    }
+  } catch (err) {
+    console.error("Google Calendar booking insert failed:", err);
+  }
 
   revalidatePath("/", "layout");
   return { success: true };
+}
+
+async function getEmailForUser(userId: string | null): Promise<string | null> {
+  if (!userId) return null;
+  // We don't store emails for users yet; placeholder for future expansion.
+  return null;
 }
 
 export type BookingRow = {

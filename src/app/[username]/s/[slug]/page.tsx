@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getSlotBySlug, getUpcomingAvailabilities } from "@/lib/slots";
+import { getSlotBySlug, getBookableOptions } from "@/lib/slots";
 import { getSession } from "@/lib/auth";
 import BookingForm from "./BookingForm";
 
@@ -29,13 +29,12 @@ export default async function SlotPage({
   if (!data) notFound();
   const { slot, host } = data;
 
-  const [availabilities, session] = await Promise.all([
-    getUpcomingAvailabilities(slot.id),
+  const [options, session] = await Promise.all([
+    getBookableOptions(slot),
     getSession(),
   ]);
 
   const isOwner = session?.username === params.username;
-  const open = availabilities.filter((a) => a.booked_count < a.capacity);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -54,6 +53,9 @@ export default async function SlotPage({
               OFF
             </span>
           )}
+          <span className="ml-auto rounded-full bg-charcoal-800/60 px-2 py-0.5 text-[10px] font-medium uppercase text-charcoal-400">
+            {slot.mode}
+          </span>
         </div>
         <p className="mt-2 text-sm text-charcoal-400">
           {slot.duration_min}분 ·{" "}
@@ -75,7 +77,7 @@ export default async function SlotPage({
         <h2 className="text-sm font-semibold text-charcoal-200">예약 가능한 시간</h2>
         {!slot.active ? (
           <p className="mt-3 text-sm text-charcoal-500">현재 예약을 받지 않는 슬롯이에요.</p>
-        ) : open.length === 0 ? (
+        ) : options.length === 0 ? (
           <p className="mt-3 text-sm text-charcoal-500">
             예약 가능한 시간이 없어요. 잠시 후 다시 확인해주세요.
           </p>
@@ -85,15 +87,7 @@ export default async function SlotPage({
           </p>
         ) : (
           <div className="mt-4">
-            <BookingForm
-              availabilities={open.map((a) => ({
-                id: a.id,
-                start_at: a.start_at,
-                remaining: a.capacity - a.booked_count,
-              }))}
-              priceCents={slot.price_cents}
-              loggedIn={!!session}
-            />
+            <BookingForm slotId={slot.id} options={options} loggedIn={!!session} />
           </div>
         )}
       </section>
