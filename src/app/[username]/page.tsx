@@ -138,13 +138,29 @@ export default async function PublicProfile({
         </div>
       )}
 
+      {isOwner && (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-3">
+          <span className="px-2 text-[10px] font-semibold uppercase tracking-wider text-charcoal-500">
+            Quick add
+          </span>
+          <ActionPill href="/feed" label="Share status" icon="💬" />
+          <ActionPill href={`/${params.username}/slots`} label="Open slot" icon="🪙" highlight />
+          <ActionPill href={`/${params.username}/calendar`} label="Add event" icon="🗓️" />
+          <ActionPill
+            href={`/${params.username}/settings`}
+            label="Visibility"
+            icon="🔓"
+          />
+        </div>
+      )}
+
       {/* HERO: week calendar with events + bookable slots */}
       <WeekCalendar
         username={params.username}
         days={weekDays}
         emptyMessage={
           isOwner
-            ? "이번 주가 비어있어요. Sell my time에서 슬롯을 열거나 캘린더를 공개해보세요."
+            ? "이번 주가 비어있어요. Quick add에서 슬롯을 열거나 캘린더를 공개해보세요."
             : "이번 주에 공개된 일정이나 예약 가능한 시간이 없어요."
         }
       />
@@ -282,5 +298,31 @@ export default async function PublicProfile({
         </section>
       )}
     </div>
+  );
+}
+
+function ActionPill({
+  href,
+  label,
+  icon,
+  highlight,
+}: {
+  href: string;
+  label: string;
+  icon: string;
+  highlight?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+        highlight
+          ? "bg-amber-500/15 text-amber-300 hover:bg-amber-500/25"
+          : "bg-charcoal-800/40 text-charcoal-300 hover:bg-charcoal-800/70 hover:text-charcoal-100"
+      }`}
+    >
+      <span>{icon}</span>
+      {label}
+    </Link>
   );
 }
