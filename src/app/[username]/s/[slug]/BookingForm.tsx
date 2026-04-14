@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useTransition, useMemo } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { bookSlot } from "@/lib/slots";
 import type { BookableOption } from "@/lib/slots";
+import { SlotDatePicker } from "@/components/SlotDatePicker";
 
 type Stage = "form" | "payment" | "done";
 
@@ -29,20 +30,6 @@ export default function BookingForm({
   const [message, setMessage] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-
-  const grouped = useMemo(() => {
-    const by: Record<string, BookableOption[]> = {};
-    for (const o of options) {
-      const dayKey = new Date(o.start_at).toLocaleDateString("ko-KR", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        weekday: "short",
-      });
-      (by[dayKey] ||= []).push(o);
-    }
-    return by;
-  }, [options]);
 
   const selectedOpt = options.find((o) => keyOf(o) === selectedKey) ?? null;
   const isPaid = priceCents > 0;
@@ -102,37 +89,13 @@ export default function BookingForm({
   }
 
   return (
-    <form onSubmit={proceed} className="space-y-4">
-      <div className="space-y-4">
-        {Object.entries(grouped).map(([day, opts]) => (
-          <div key={day}>
-            <p className="mb-1 text-xs font-medium text-charcoal-500">{day}</p>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {opts.map((o) => {
-                const k = keyOf(o);
-                const active = selectedKey === k;
-                return (
-                  <button
-                    key={k}
-                    type="button"
-                    onClick={() => setSelectedKey(k)}
-                    className={`rounded-md border px-3 py-2 text-sm transition-colors ${
-                      active
-                        ? "border-red-500 bg-red-600/15 text-charcoal-100"
-                        : "border-charcoal-800/60 bg-charcoal-800/20 text-charcoal-300 hover:border-charcoal-700"
-                    }`}
-                  >
-                    {new Date(o.start_at).toLocaleTimeString("ko-KR", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
+    <form onSubmit={proceed} className="space-y-5">
+      <SlotDatePicker
+        options={options}
+        selectedKey={selectedKey}
+        onSelect={setSelectedKey}
+        keyOf={keyOf}
+      />
 
       {!loggedIn && (
         <div className="grid gap-2 md:grid-cols-2">

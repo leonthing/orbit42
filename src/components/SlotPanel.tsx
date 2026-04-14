@@ -12,6 +12,7 @@ import {
 } from "react";
 import { getSlotPanelData, type SlotPanelData } from "@/lib/slot-panel";
 import BookingForm from "@/app/[username]/s/[slug]/BookingForm";
+import { SlotDatePreview } from "@/components/SlotDatePicker";
 
 type OpenArgs = { slug: string; startAt?: string };
 
@@ -240,7 +241,7 @@ function SlotPanelBody({
               <p className="text-xs text-charcoal-500">
                 본인은 예약할 수 없지만, 게스트에게 노출되는 시간을 미리 확인할 수 있어요.
               </p>
-              <OwnerOptionList options={options} />
+              <SlotDatePreview options={options} />
             </div>
           ) : (
             <div className="mt-4">
@@ -259,53 +260,6 @@ function SlotPanelBody({
           )}
         </section>
       )}
-    </div>
-  );
-}
-
-function OwnerOptionList({
-  options,
-}: {
-  options: SlotPanelData["options"];
-}) {
-  const byDay = new Map<string, SlotPanelData["options"]>();
-  for (const o of options) {
-    const d = new Date(o.start_at);
-    const key = d.toLocaleDateString("ko-KR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      weekday: "short",
-    });
-    const list = byDay.get(key) ?? [];
-    list.push(o);
-    byDay.set(key, list);
-  }
-  return (
-    <div className="space-y-3">
-      {Array.from(byDay.entries()).map(([day, opts]) => (
-        <div key={day}>
-          <p className="mb-1.5 text-[11px] font-medium text-charcoal-500">{day}</p>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {opts.map((o) => (
-              <div
-                key={o.availability_id ?? o.start_at}
-                className="rounded-md border border-charcoal-800/60 bg-charcoal-800/20 px-2.5 py-1.5 text-xs tabular-nums text-charcoal-300"
-              >
-                {new Date(o.start_at).toLocaleTimeString("ko-KR", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-                {o.remaining > 1 && (
-                  <span className="ml-1 text-[10px] text-charcoal-500">
-                    ×{o.remaining}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
     </div>
   );
 }
