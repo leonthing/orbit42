@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getProfile, getSession } from "@/lib/auth";
 import type { SocialLinks, Education } from "@/lib/auth";
 import { getFollowStats, isFollowing } from "@/lib/follows";
+import { listPublicSlotsByUsername } from "@/lib/slots";
 import { FollowButton } from "./FollowButton";
 
 export const dynamic = "force-dynamic";
@@ -30,10 +31,11 @@ export default async function PublicProfile({
   const profile = await getProfile(params.username);
   if (!profile) notFound();
 
-  const [session, stats, viewerFollowing] = await Promise.all([
+  const [session, stats, viewerFollowing, slots] = await Promise.all([
     getSession(),
     getFollowStats(params.username),
     isFollowing(params.username),
+    listPublicSlotsByUsername(params.username),
   ]);
 
   const isOwner = session?.username === params.username;
@@ -106,6 +108,44 @@ export default async function PublicProfile({
         )}
       </section>
 
+      {slots.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-lg font-semibold text-charcoal-100">Slots</h2>
+            <span className="text-xs text-charcoal-500">{slots.length}개의 시간</span>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            {slots.map((s) => (
+              <Link
+                key={s.id}
+                href={`/${params.username}/s/${s.slug}`}
+                className="group rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5 transition-colors hover:border-navy-500/60"
+              >
+                <div className="flex items-baseline justify-between gap-2">
+                  <h3 className="truncate text-sm font-semibold text-charcoal-100 group-hover:text-navy-300">
+                    {s.title}
+                  </h3>
+                  <span className="shrink-0 text-xs font-medium text-charcoal-400">
+                    {s.price_cents === 0
+                      ? "Free"
+                      : `${(s.price_cents / 100).toLocaleString("ko-KR")}원`}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-charcoal-500">
+                  {s.duration_min}분 · {s.slot_type}
+                  {s.location_detail && ` · ${s.location_detail}`}
+                </p>
+                {s.description && (
+                  <p className="mt-2 line-clamp-2 text-xs text-charcoal-400">
+                    {s.description}
+                  </p>
+                )}
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
       <div className="grid gap-6 md:grid-cols-3">
         <SectionCard title="Calendar">
           <p className="text-sm text-charcoal-400">
@@ -118,10 +158,9 @@ export default async function PublicProfile({
 
         <SectionCard title="Slots">
           <p className="text-sm text-charcoal-400">
-            예약 가능한 시간을 둘러보고 미팅을 잡아보세요.
-          </p>
-          <p className="mt-2 text-xs text-charcoal-600">
-            (슬롯은 곧 추가됩니다.)
+            {slots.length > 0
+              ? `예약 가능한 시간 ${slots.length}개`
+              : "아직 열린 시간이 없어요."}
           </p>
         </SectionCard>
 

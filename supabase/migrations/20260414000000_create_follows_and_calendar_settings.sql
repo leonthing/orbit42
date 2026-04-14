@@ -1,5 +1,5 @@
 -- Follows: directional follow graph between users (a.k.a. "Orbits")
-CREATE TABLE follows (
+CREATE TABLE IF NOT EXISTS follows (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   follower_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   following_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -8,12 +8,11 @@ CREATE TABLE follows (
   CHECK (follower_id <> following_id)
 );
 
-CREATE INDEX follows_follower_idx ON follows (follower_id);
-CREATE INDEX follows_following_idx ON follows (following_id);
+CREATE INDEX IF NOT EXISTS follows_follower_idx ON follows (follower_id);
+CREATE INDEX IF NOT EXISTS follows_following_idx ON follows (following_id);
 
 -- Per-Google-calendar visibility settings owned by each user.
--- visibility: 'private' (default), 'followers', 'public'
-CREATE TABLE user_calendar_settings (
+CREATE TABLE IF NOT EXISTS user_calendar_settings (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   google_calendar_id text NOT NULL,
@@ -25,4 +24,4 @@ CREATE TABLE user_calendar_settings (
   UNIQUE (user_id, google_calendar_id)
 );
 
-CREATE INDEX user_calendar_settings_user_idx ON user_calendar_settings (user_id);
+CREATE INDEX IF NOT EXISTS user_calendar_settings_user_idx ON user_calendar_settings (user_id);
