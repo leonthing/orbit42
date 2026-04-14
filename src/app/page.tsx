@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { AuthCard } from "@/components/AuthCard";
 
 export default async function LandingPage() {
   const session = await getSession();
@@ -57,22 +58,7 @@ export default async function LandingPage() {
               판매하여 수익을 창출하세요.
             </p>
 
-            <div className="mt-7 flex flex-col gap-2 sm:flex-row sm:gap-3">
-              <Link
-                href="/signup"
-                className="rounded-lg bg-red-600 px-5 py-3 text-center text-sm font-semibold text-white shadow-sm hover:bg-red-500"
-              >
-                Start your orbit
-              </Link>
-              <Link
-                href="/explore"
-                className="rounded-lg border border-charcoal-700 bg-charcoal-900/30 px-5 py-3 text-center text-sm font-medium text-charcoal-200 hover:border-charcoal-600 hover:bg-charcoal-900/60"
-              >
-                Explore people
-              </Link>
-            </div>
-
-            <div className="mt-8 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+            <div className="mt-7 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
               <Pill label="Calendar" hint="공개 · 팔로워 · 비공개" />
               <Pill label="Timeslots" hint="무료 · 유료 · 경매" />
               <Pill label="Orbits" hint="팔로우 · 피드" />
@@ -80,12 +66,22 @@ export default async function LandingPage() {
           </div>
 
           <div className="relative min-w-0">
-            <DemoCalendar />
+            <AuthCard initialMode="signup" />
             <div className="pointer-events-none absolute -inset-4 -z-10 rounded-3xl bg-gradient-to-br from-red-500/10 via-transparent to-red-600/20 blur-3xl" />
           </div>
         </section>
 
-        <section className="mt-20 grid gap-4 sm:grid-cols-3 md:mt-28">
+        <section className="mt-16 md:mt-24">
+          <div className="mb-5 flex items-baseline justify-between">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-charcoal-500">
+              이런 모습이에요
+            </h2>
+            <span className="text-xs text-charcoal-600">예시</span>
+          </div>
+          <DemoCalendar />
+        </section>
+
+        <section className="mt-16 grid gap-4 sm:grid-cols-3 md:mt-24">
           <ValueCard
             title="캘린더로 존재감"
             body="비어 있는 시간을 공개하면 내가 어디에 있는지, 누구에게 시간을 쓰는지가 드러나요."
@@ -131,7 +127,7 @@ type DemoItem =
   | { kind: "slot"; title: string; time: string; price: string; auction?: boolean };
 
 const DEMO_ITEMS: DemoItem[] = [
-  { kind: "event", title: "팀 스탠드업", time: "10:00", color: "#60a5fa" },
+  { kind: "event", title: "팀 스탠드업", time: "월 10:00", color: "#60a5fa" },
   { kind: "slot", title: "프로덕트 멘토링", time: "화 14:00", price: "₩50,000" },
   { kind: "slot", title: "1:1 커피챗", time: "금 11:00", price: "FREE" },
   {
