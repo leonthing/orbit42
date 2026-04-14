@@ -177,7 +177,7 @@ export default async function PublicProfile({
         <p className="max-w-2xl text-sm leading-relaxed text-charcoal-300">{profile.bio}</p>
       )}
 
-      {(value.total_bookings > 0 || value.total_revenue_cents > 0) && (
+      {isOwner && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <ValueStat
             label="누적 거래"
