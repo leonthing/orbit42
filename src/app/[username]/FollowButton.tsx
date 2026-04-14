@@ -8,22 +8,26 @@ export function FollowButton({
   targetUsername,
   initiallyFollowing,
   loggedIn,
+  compact = false,
 }: {
   targetUsername: string;
   initiallyFollowing: boolean;
   loggedIn: boolean;
+  compact?: boolean;
 }) {
   const router = useRouter();
   const [following, setFollowing] = useState(initiallyFollowing);
   const [pending, startTransition] = useTransition();
 
+  const sizeClass = compact ? "px-2.5 py-1 text-xs" : "px-4 py-2 text-sm";
+
   if (!loggedIn) {
     return (
       <a
         href="/login"
-        className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500"
+        className={`shrink-0 rounded-md bg-red-600 font-semibold text-white hover:bg-red-500 ${sizeClass}`}
       >
-        Sign in to orbit
+        {compact ? "Orbit" : "Sign in to orbit"}
       </a>
     );
   }
@@ -47,11 +51,11 @@ export function FollowButton({
       type="button"
       onClick={handle}
       disabled={pending}
-      className={
+      className={`shrink-0 rounded-md font-semibold ${sizeClass} ${
         following
-          ? "rounded-lg border border-charcoal-700 px-4 py-2 text-sm font-medium text-charcoal-200 hover:border-red-500/60 hover:text-red-400"
-          : "rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-60"
-      }
+          ? "border border-charcoal-700 text-charcoal-700 hover:border-red-500/60 hover:text-red-500 dark:text-charcoal-200 dark:hover:text-red-400"
+          : "bg-red-600 text-white hover:bg-red-500 disabled:opacity-60"
+      }`}
     >
       {following ? "Orbiting" : "Orbit"}
     </button>

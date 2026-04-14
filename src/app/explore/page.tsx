@@ -6,6 +6,7 @@ import { listFollowing } from "@/lib/follows";
 import { getReactionsForMany } from "@/lib/reactions";
 import { ReactionStrip } from "@/components/ReactionStrip";
 import { Avatar } from "@/components/Avatar";
+import { FollowButton } from "@/app/[username]/FollowButton";
 
 export const metadata: Metadata = { title: "Explore" };
 export const dynamic = "force-dynamic";
@@ -161,6 +162,7 @@ export default async function ExplorePage() {
                 avatarUrl={p.avatar_url}
                 badge={p.activity}
                 isFollowing={followingUsernames.has(p.username)}
+                loggedIn={!!session}
               />
             ))}
           </div>
@@ -246,6 +248,7 @@ function PersonCard({
   avatarUrl,
   badge,
   isFollowing,
+  loggedIn,
 }: {
   username: string;
   displayName: string | null;
@@ -253,34 +256,37 @@ function PersonCard({
   avatarUrl: string | null;
   badge: string;
   isFollowing: boolean;
+  loggedIn: boolean;
 }) {
   return (
-    <Link
-      href={`/${username}`}
-      className="group block rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5 transition-colors hover:border-red-500/60"
-    >
+    <div className="group rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5 transition-colors hover:border-red-500/60">
       <div className="flex items-start gap-3">
-        <Avatar url={avatarUrl} name={displayName || username} size={44} />
+        <Link href={`/${username}`} className="shrink-0" aria-label={username}>
+          <Avatar url={avatarUrl} name={displayName || username} size={44} />
+        </Link>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <p className="truncate text-sm font-semibold text-charcoal-100 group-hover:text-red-300">
-              {displayName || username}
-            </p>
-            {isFollowing && (
-              <span className="rounded-full bg-red-600/20 px-1.5 py-0.5 text-[9px] font-semibold text-red-300">
-                ORBITING
-              </span>
-            )}
+          <div className="flex items-start justify-between gap-2">
+            <Link href={`/${username}`} className="min-w-0">
+              <p className="truncate text-sm font-semibold text-charcoal-100 group-hover:text-red-700 dark:group-hover:text-red-300">
+                {displayName || username}
+              </p>
+              <p className="truncate text-xs text-charcoal-500">@{username}</p>
+            </Link>
+            <FollowButton
+              targetUsername={username}
+              initiallyFollowing={isFollowing}
+              loggedIn={loggedIn}
+              compact
+            />
           </div>
-          <p className="text-xs text-charcoal-500">@{username}</p>
           {bio && (
             <p className="mt-2 line-clamp-2 text-xs text-charcoal-400">{bio}</p>
           )}
-          <span className="mt-2 inline-block rounded-full bg-charcoal-800/60 px-2 py-0.5 text-[10px] font-semibold text-charcoal-400">
+          <span className="mt-2 inline-block rounded-full bg-charcoal-800/60 px-2 py-0.5 text-[10px] font-semibold text-charcoal-700 dark:text-charcoal-300">
             {badge}
           </span>
         </div>
       </div>
-    </Link>
+    </div>
   );
 }
