@@ -243,34 +243,15 @@ export default async function FeedPage() {
           body="위 입력창에서 지금 무엇을 하고 있는지 한 마디 남겨보세요."
         />
       ) : (
-        <div className="space-y-8">
-          {groups.map((g) => (
-            <section key={g.label}>
-              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-charcoal-500">
-                {g.label}
-              </h2>
-              <ul className="space-y-3">
-                {g.items.map((item) => (
-                  <li key={`${item.kind}-${item.id}`}>
-                    <FeedCard
-                      item={item}
-                      reactions={
-                        item.kind === "event"
-                          ? eventReactions.get(item.id) ?? []
-                          : item.kind === "slot"
-                            ? slotReactions.get(item.id) ?? []
-                            : item.kind === "post"
-                              ? postReactions.get(item.id) ?? []
-                              : feedPostReactions.get(item.id) ?? []
-                      }
-                      loggedIn
-                    />
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
-        </div>
+        <Timeline
+          groups={groups}
+          reactions={{
+            event: eventReactions,
+            slot: slotReactions,
+            post: postReactions,
+            feed_post: feedPostReactions,
+          }}
+        />
       )}
 
       <section className="mt-10 rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5">
@@ -315,29 +296,116 @@ function FeedHeader() {
   );
 }
 
-function FeedCard({
+function Timeline({
+  groups,
+  reactions,
+}: {
+  groups: { label: string; items: FeedItem[] }[];
+  reactions: {
+    event: Map<string, import("@/lib/reactions-types").ReactionSummary[]>;
+    slot: Map<string, import("@/lib/reactions-types").ReactionSummary[]>;
+    post: Map<string, import("@/lib/reactions-types").ReactionSummary[]>;
+    feed_post: Map<string, import("@/lib/reactions-types").ReactionSummary[]>;
+  };
+}) {
+  return (
+    <div className="relative">
+      {/* Vertical rail */}
+      <div className="pointer-events-none absolute left-[58px] top-2 bottom-2 w-px bg-charcoal-800/60" />
+
+      <div className="space-y-10">
+        {groups.map((g) => (
+          <section key={g.label}>
+            <DayDivider label={g.label} />
+            <ul className="space-y-4">
+              {g.items.map((item) => (
+                <li key={`${item.kind}-${item.id}`}>
+                  <TimelineEntry
+                    item={item}
+                    reactions={
+                      item.kind === "event"
+                        ? reactions.event.get(item.id) ?? []
+                        : item.kind === "slot"
+                          ? reactions.slot.get(item.id) ?? []
+                          : item.kind === "post"
+                            ? reactions.post.get(item.id) ?? []
+                            : reactions.feed_post.get(item.id) ?? []
+                    }
+                  />
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DayDivider({ label }: { label: string }) {
+  return (
+    <div className="relative my-6 flex items-center gap-4">
+      <div className="w-[58px] text-right">
+        <span className="inline-block rounded-full bg-amber-500/20 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-300">
+          {label}
+        </span>
+      </div>
+      <div className="flex-1 border-t border-dashed border-charcoal-800/60" />
+    </div>
+  );
+}
+
+function TimelineEntry({
   item,
   reactions,
-  loggedIn,
 }: {
   item: FeedItem;
   reactions: import("@/lib/reactions-types").ReactionSummary[];
-  loggedIn: boolean;
+}) {
+  const author = item.author;
+  const timeStr = formatTimeShort(item.timestamp);
+  return (
+    <div className="relative flex gap-4">
+      {/* Time + avatar on the rail */}
+      <div className="relative flex w-[58px] shrink-0 flex-col items-end pt-1">
+        <span className="text-[11px] tabular-nums text-charcoal-500">{timeStr}</span>
+        <Link
+          href={`/${author.username}`}
+          className="absolute -right-[22px] top-0 z-10 flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-navy-600/60 to-amber-500/40 text-sm font-bold text-charcoal-100 shadow-[0_0_0_3px_rgb(var(--bg-base))]"
+          title={`${author.display_name || author.username} (@${author.username})`}
+        >
+          {(author.display_name || author.username).charAt(0).toUpperCase()}
+        </Link>
+      </div>
+
+      {/* Card */}
+      <div className="min-w-0 flex-1 pl-5">
+        <EntryBody item={item} reactions={reactions} />
+      </div>
+    </div>
+  );
+}
+
+function EntryBody({
+  item,
+  reactions,
+}: {
+  item: FeedItem;
+  reactions: import("@/lib/reactions-types").ReactionSummary[];
 }) {
   const author = item.author;
   return (
-    <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5">
+    <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-4">
       <div className="flex items-center gap-2 text-xs text-charcoal-500">
         <Link
           href={`/${author.username}`}
-          className="font-medium text-charcoal-300 hover:text-charcoal-100"
+          className="font-medium text-charcoal-200 hover:text-charcoal-100"
         >
           {author.display_name || author.username}
         </Link>
         <span className="text-charcoal-600">@{author.username}</span>
         <span className="text-charcoal-700">·</span>
         <KindBadge kind={item.kind} />
-        <span className="ml-auto text-charcoal-600">{relativeTime(item.timestamp)}</span>
       </div>
 
       {item.kind === "event" && (
@@ -437,12 +505,19 @@ function FeedCard({
           target_type={item.kind === "feed_post" ? "feed_post" : item.kind}
           target_id={item.id}
           initial={reactions}
-          loggedIn={loggedIn}
+          loggedIn
           size="sm"
         />
       </div>
     </div>
   );
+}
+
+function formatTimeShort(iso: string) {
+  return new Date(iso).toLocaleTimeString("ko-KR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function KindBadge({ kind }: { kind: FeedItem["kind"] }) {
@@ -481,18 +556,6 @@ function formatEventTime(start: string, end: string, allDay: boolean) {
     hour: "2-digit",
     minute: "2-digit",
   })}`;
-}
-
-function relativeTime(iso: string) {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return "방금";
-  if (mins < 60) return `${mins}분 전`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}시간 전`;
-  const days = Math.floor(hrs / 24);
-  if (days < 7) return `${days}일 전`;
-  return new Date(iso).toLocaleDateString("ko-KR", { month: "short", day: "numeric" });
 }
 
 function groupItems(items: FeedItem[], now: Date) {
