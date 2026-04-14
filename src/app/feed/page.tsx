@@ -351,9 +351,6 @@ function FeedHeader() {
   return (
     <header className="mb-6">
       <h1 className="text-2xl font-bold text-charcoal-100">Feed</h1>
-      <p className="mt-1 text-sm text-charcoal-500">
-        궤도 위 사람들의 일정, 글, 슬롯
-      </p>
     </header>
   );
 }
