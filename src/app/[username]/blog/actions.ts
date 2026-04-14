@@ -45,6 +45,50 @@ export async function getBlogPosts() {
   return (data ?? []) as BlogPost[];
 }
 
+export async function getPublicPostsByUsername(username: string) {
+  const db = getAdminClient();
+  const { data: user } = await db
+    .from("users")
+    .select("id")
+    .eq("username", username)
+    .single();
+  if (!user) return [] as BlogPost[];
+
+  const { data } = await db
+    .from("blog_posts")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("published", true)
+    .order("published_at", { ascending: false });
+  return (data ?? []) as BlogPost[];
+}
+
+export async function getPublicPostBySlug(username: string, slug: string) {
+  const db = getAdminClient();
+  const { data: user } = await db
+    .from("users")
+    .select("id, username, display_name")
+    .eq("username", username)
+    .single();
+  if (!user) return null;
+
+  const { data: post } = await db
+    .from("blog_posts")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("slug", slug)
+    .eq("published", true)
+    .maybeSingle();
+  if (!post) return null;
+  return {
+    post: post as BlogPost,
+    author: {
+      username: user.username as string,
+      display_name: user.display_name as string | null,
+    },
+  };
+}
+
 export async function getBlogPost(id: string) {
   const userId = await requireUserId();
   const db = getAdminClient();

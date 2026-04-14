@@ -34,7 +34,7 @@ export default function RootLayout({
   return (
     <html
       lang="ko"
-      className={`${pretendard.variable} ${inter.variable} dark`}
+      className={`${pretendard.variable} ${inter.variable}`}
       suppressHydrationWarning
     >
       <body className="font-sans antialiased">
