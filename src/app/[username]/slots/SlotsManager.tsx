@@ -308,10 +308,10 @@ function NewSlotForm({
             );
           })()}
 
-        {/* 메뉴 선택 */}
+        {/* 서비스 선택 */}
         <Section
-          title="메뉴 / 스킬"
-          hint="예약 시 게스트가 고를 수 있는 메뉴를 붙여요. Menus 페이지에서 먼저 메뉴를 만들어두세요."
+          title="서비스"
+          hint="예약 시 게스트가 고를 수 있는 서비스를 붙여요. Services 페이지에서 먼저 만들어두세요."
         >
           <MenuPicker
             menus={myMenus}
@@ -1335,12 +1335,12 @@ function MenuPicker({
   if (menus.length === 0) {
     return (
       <p className="rounded-lg border border-dashed border-charcoal-800/60 bg-charcoal-900/20 px-3 py-4 text-center text-xs text-charcoal-500">
-        등록된 메뉴가 없어요.{' '}
+        등록된 서비스가 없어요.{' '}
         <a
-          href={`/${username}/menus`}
+          href={`/${username}/services`}
           className="font-semibold text-red-500 hover:underline"
         >
-          Menus 페이지
+          Services 페이지
         </a>
         에서 먼저 만들어주세요.
       </p>

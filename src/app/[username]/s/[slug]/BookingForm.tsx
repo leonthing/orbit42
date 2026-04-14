@@ -293,7 +293,7 @@ function BookingMenuPicker({
   }
   return (
     <div className="space-y-3 rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 p-4">
-      <p className="text-xs font-semibold text-charcoal-100">메뉴 선택</p>
+      <p className="text-xs font-semibold text-charcoal-100">서비스 선택</p>
       {Array.from(grouped.entries()).map(([cat, items]) => (
         <div key={cat}>
           <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-charcoal-500">

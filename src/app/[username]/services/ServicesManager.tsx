@@ -8,7 +8,7 @@ import { createMenu, updateMenu, deleteMenu } from "@/lib/menus";
 const INPUT =
   "w-full rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500/60 focus:outline-none focus:ring-1 focus:ring-red-500/40";
 
-export default function MenusManager({ initial }: { initial: Menu[] }) {
+export default function ServicesManager({ initial }: { initial: Menu[] }) {
   const router = useRouter();
   const [showNew, setShowNew] = useState(initial.length === 0);
 
@@ -27,7 +27,7 @@ export default function MenusManager({ initial }: { initial: Menu[] }) {
     <div className="space-y-8">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-charcoal-100">Menus</h1>
+          <h1 className="text-2xl font-bold text-charcoal-100">Services</h1>
           <p className="mt-1 text-sm text-charcoal-500">
             슬롯에 연결할 수 있는 항목을 관리하세요. 예약할 때 게스트가 선택해요.
           </p>
@@ -38,7 +38,7 @@ export default function MenusManager({ initial }: { initial: Menu[] }) {
             onClick={() => setShowNew(true)}
             className="shrink-0 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
           >
-            새 메뉴 추가
+            새 서비스 추가
           </button>
         )}
       </header>
@@ -66,7 +66,7 @@ export default function MenusManager({ initial }: { initial: Menu[] }) {
             onClick={() => setShowNew(true)}
             className="mt-5 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
           >
-            첫 메뉴 추가하기
+            첫 서비스 추가하기
           </button>
         </div>
       ) : (
@@ -207,7 +207,7 @@ function MenuRow({ menu, onChanged }: { menu: Menu; onChanged: () => void }) {
     });
 
   const remove = () => {
-    if (!confirm("이 메뉴를 삭제할까요?")) return;
+    if (!confirm("이 서비스를 삭제할까요?")) return;
     startTransition(async () => {
       await deleteMenu(menu.id);
       onChanged();

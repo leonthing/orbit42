@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { listMyMenus } from "@/lib/menus";
-import MenusManager from "./MenusManager";
+import ServicesManager from "./ServicesManager";
 
-export const metadata: Metadata = { title: "Menus" };
+export const metadata: Metadata = { title: "Services" };
 export const dynamic = "force-dynamic";
 
 export default async function MenusPage({
@@ -17,5 +17,5 @@ export default async function MenusPage({
     redirect(`/${params.username}`);
   }
   const menus = await listMyMenus();
-  return <MenusManager initial={menus} />;
+  return <ServicesManager initial={menus} />;
 }

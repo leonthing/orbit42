@@ -10,7 +10,7 @@ import { useMobileMenu } from "./MobileMenuContext";
 const PAGE_TITLES: Record<string, string> = {
   calendar: "Calendar",
   slots: "Timeslots",
-  menus: "Menus",
+  services: "Services",
   bookings: "Bookings",
   blog: "Posts",
   network: "Orbits",
