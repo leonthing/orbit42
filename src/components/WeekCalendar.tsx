@@ -1,14 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
 import type { WeekDay, WeekItem } from "@/lib/profile-week";
 import { ShareEventButton } from "@/components/ShareEventButton";
 
-// Half-hour row height (px). 48 rows × 24px = 1152px total — scrollable.
-const ROW_HEIGHT = 24;
-const ROWS = 48; // 24h × 2
-const GRID_HEIGHT = ROWS * ROW_HEIGHT;
+// Visible window: 06:00 – 24:00 (18h, 36 × 30-min rows). Items before 06:00
+// are pinned to 06:00 so nothing disappears but the grid fits without scroll.
+const START_HOUR = 6;
+const END_HOUR = 24;
+const ROW_HEIGHT = 16; // px per 30 min
+const ROWS = (END_HOUR - START_HOUR) * 2; // 36
+const GRID_HEIGHT = ROWS * ROW_HEIGHT; // 576
+const START_MIN = START_HOUR * 60;
+const END_MIN = END_HOUR * 60;
 
 type PositionedItem = WeekItem & {
   /** Minutes from midnight (clamped to [0, 1440]). */
@@ -48,18 +53,6 @@ export function WeekCalendar({
     [days],
   );
 
-  const scrollRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    // Scroll to first item's hour if any, else 8:00.
-    const firstMin = positionedByDay
-      .flatMap((d) => d)
-      .filter((i) => !i.allDay)
-      .map((i) => i.startMin)
-      .sort((a, b) => a - b)[0];
-    const target = firstMin !== undefined ? Math.max(firstMin - 60, 0) : 8 * 60;
-    const y = (target / 30) * ROW_HEIGHT;
-    scrollRef.current?.scrollTo({ top: y });
-  }, [positionedByDay]);
 
   return (
     <div className="overflow-hidden rounded-2xl border border-charcoal-800/60 bg-charcoal-900/40">
@@ -94,27 +87,21 @@ export function WeekCalendar({
         ))}
       </div>
 
-      {/* Scrollable time grid */}
+      {/* Time grid — fits in view without scrolling */}
       <div
-        ref={scrollRef}
-        className="relative max-h-[560px] overflow-y-auto"
+        className="grid grid-cols-[44px_repeat(7,minmax(0,1fr))]"
+        style={{ height: GRID_HEIGHT }}
       >
-        <div
-          className="grid grid-cols-[48px_repeat(7,minmax(0,1fr))]"
-          style={{ height: GRID_HEIGHT }}
-        >
-          {/* Time axis */}
-          <TimeAxis />
-          {positionedByDay.map((items, idx) => (
-            <DayColumn
-              key={days[idx].date.toISOString()}
-              items={items}
-              isToday={days[idx].isToday}
-              username={username}
-              viewerIsOwner={viewerIsOwner}
-            />
-          ))}
-        </div>
+        <TimeAxis />
+        {positionedByDay.map((items, idx) => (
+          <DayColumn
+            key={days[idx].date.toISOString()}
+            items={items}
+            isToday={days[idx].isToday}
+            username={username}
+            viewerIsOwner={viewerIsOwner}
+          />
+        ))}
       </div>
 
       {totalSlots === 0 && totalEvents === 0 && emptyMessage && (
@@ -159,17 +146,24 @@ function DayHeader({ day }: { day: WeekDay }) {
 }
 
 function TimeAxis() {
+  const hoursShown = END_HOUR - START_HOUR;
   return (
-    <div className="relative border-r border-charcoal-800/40" style={{ height: GRID_HEIGHT }}>
-      {Array.from({ length: 24 }).map((_, h) => (
-        <div
-          key={h}
-          className="absolute right-1 -translate-y-1/2 text-[10px] tabular-nums text-charcoal-500"
-          style={{ top: h * 2 * ROW_HEIGHT }}
-        >
-          {h === 0 ? "" : String(h).padStart(2, "0")}
-        </div>
-      ))}
+    <div
+      className="relative border-r border-charcoal-800/40"
+      style={{ height: GRID_HEIGHT }}
+    >
+      {Array.from({ length: hoursShown + 1 }).map((_, i) => {
+        const h = START_HOUR + i;
+        return (
+          <div
+            key={h}
+            className="absolute right-1.5 -translate-y-1/2 text-[11px] font-medium tabular-nums text-charcoal-400"
+            style={{ top: i * 2 * ROW_HEIGHT }}
+          >
+            {h === START_HOUR ? "" : `${String(h).padStart(2, "0")}:00`}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -192,18 +186,18 @@ function DayColumn({
       }`}
     >
       {/* Hour grid lines */}
-      {Array.from({ length: 24 }).map((_, h) => (
+      {Array.from({ length: END_HOUR - START_HOUR }).map((_, i) => (
         <div
-          key={`h${h}`}
-          className="pointer-events-none absolute inset-x-0 border-t border-charcoal-800/40"
-          style={{ top: h * 2 * ROW_HEIGHT }}
+          key={`h${i}`}
+          className="pointer-events-none absolute inset-x-0 border-t border-charcoal-800/50"
+          style={{ top: i * 2 * ROW_HEIGHT }}
         />
       ))}
-      {Array.from({ length: 24 }).map((_, h) => (
+      {Array.from({ length: END_HOUR - START_HOUR }).map((_, i) => (
         <div
-          key={`hh${h}`}
-          className="pointer-events-none absolute inset-x-0 border-t border-dashed border-charcoal-800/20"
-          style={{ top: h * 2 * ROW_HEIGHT + ROW_HEIGHT }}
+          key={`hh${i}`}
+          className="pointer-events-none absolute inset-x-0 border-t border-dashed border-charcoal-800/25"
+          style={{ top: i * 2 * ROW_HEIGHT + ROW_HEIGHT }}
         />
       ))}
 
@@ -226,7 +220,8 @@ function DayColumn({
 function NowLine() {
   const now = new Date();
   const min = now.getHours() * 60 + now.getMinutes();
-  const top = (min / 30) * ROW_HEIGHT;
+  if (min < START_MIN || min > END_MIN) return null;
+  const top = ((min - START_MIN) / 30) * ROW_HEIGHT;
   return (
     <div
       className="pointer-events-none absolute inset-x-0 z-20 border-t-2 border-red-400/80"
@@ -246,8 +241,14 @@ function ItemBlock({
   username: string;
   viewerIsOwner?: boolean;
 }) {
-  const top = (item.startMin / 30) * ROW_HEIGHT;
-  const height = Math.max(((item.endMin - item.startMin) / 30) * ROW_HEIGHT, 20);
+  // Clamp to visible window and translate into grid coordinates.
+  const visibleStart = Math.max(item.startMin, START_MIN);
+  const visibleEnd = Math.min(item.endMin, END_MIN);
+  const top = ((visibleStart - START_MIN) / 30) * ROW_HEIGHT;
+  const height = Math.max(
+    ((visibleEnd - visibleStart) / 30) * ROW_HEIGHT,
+    18,
+  );
   const widthPct = 100 / item.columnCount;
   const leftPct = item.column * widthPct;
 
@@ -261,14 +262,14 @@ function ItemBlock({
   if (item.kind === "event") {
     return (
       <div
-        className="group absolute overflow-hidden rounded-md border-l-2 bg-charcoal-800/60 px-1.5 py-0.5 shadow-sm"
+        className="group absolute overflow-hidden rounded-md border-l-[3px] bg-charcoal-800/70 px-1.5 py-1 shadow-sm"
         style={{ ...style, borderColor: item.color }}
       >
-        <p className="truncate text-[10px] font-semibold text-charcoal-100">
+        <p className="truncate text-[11px] font-semibold leading-tight text-charcoal-100">
           {item.title}
         </p>
-        {!item.allDay && (
-          <p className="truncate text-[9px] text-charcoal-400">
+        {!item.allDay && height >= 32 && (
+          <p className="truncate text-[10px] leading-tight text-charcoal-400">
             {minToHM(item.startMin)}
           </p>
         )}
@@ -289,18 +290,20 @@ function ItemBlock({
   return (
     <Link
       href={`/${username}/s/${item.slot_slug}?t=${encodeURIComponent(item.start_at)}`}
-      className="group absolute overflow-hidden rounded-md border border-amber-500/50 bg-amber-500/15 px-1.5 py-0.5 transition-colors hover:border-amber-400 hover:bg-amber-500/30"
+      className="group absolute overflow-hidden rounded-md border border-amber-500/50 bg-amber-500/20 px-1.5 py-1 transition-colors hover:border-amber-400 hover:bg-amber-500/35"
       style={style}
     >
-      <p className="truncate text-[10px] font-semibold text-amber-100">
+      <p className="truncate text-[11px] font-semibold leading-tight text-amber-100">
         {item.title}
       </p>
-      <p className="truncate text-[9px] text-amber-200/80">
-        {minToHM(item.startMin)} · {item.duration_min}분 ·{" "}
-        {item.price_cents === 0
-          ? "FREE"
-          : `₩${(item.price_cents / 100).toLocaleString("ko-KR")}`}
-      </p>
+      {height >= 32 && (
+        <p className="truncate text-[10px] leading-tight text-amber-200/90">
+          {minToHM(item.startMin)} ·{" "}
+          {item.price_cents === 0
+            ? "FREE"
+            : `₩${(item.price_cents / 100).toLocaleString("ko-KR")}`}
+        </p>
+      )}
     </Link>
   );
 }
