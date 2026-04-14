@@ -89,7 +89,7 @@ function NewSlotForm({ onSaved }: { onSaved: () => void }) {
   const [pending, startTransition] = useTransition();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [duration, setDuration] = useState(30);
+  const [duration, setDuration] = useState(60);
   const [price, setPrice] = useState(0);
   const [capacity, setCapacity] = useState(1);
   const [slotType, setSlotType] = useState<SlotType>("1on1");
@@ -113,7 +113,7 @@ function NewSlotForm({ onSaved }: { onSaved: () => void }) {
     thu: [{ start: "10:00", end: "18:00" }],
     fri: [{ start: "10:00", end: "18:00" }],
   });
-  const [slotInterval, setSlotInterval] = useState(30);
+  const [slotInterval, setSlotInterval] = useState(60);
   const [minNotice, setMinNotice] = useState(4);
   const [maxAdvance, setMaxAdvance] = useState(30);
   const [buffer, setBuffer] = useState(0);
