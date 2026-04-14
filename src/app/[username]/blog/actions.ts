@@ -72,11 +72,17 @@ export async function getPublicPostBySlug(username: string, slug: string) {
     .single();
   if (!user) return null;
 
+  let decoded = slug;
+  try {
+    decoded = decodeURIComponent(slug);
+  } catch {
+    // keep as-is
+  }
   const { data: post } = await db
     .from("blog_posts")
     .select("*")
     .eq("user_id", user.id)
-    .eq("slug", slug)
+    .eq("slug", decoded)
     .eq("published", true)
     .maybeSingle();
   if (!post) return null;

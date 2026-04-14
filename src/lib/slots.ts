@@ -73,6 +73,14 @@ export type SlotInput = {
   auction_ends_at?: string | null;
 };
 
+function safeDecode(s: string) {
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return s;
+  }
+}
+
 function slugify(title: string) {
   const base = title
     .toLowerCase()
@@ -124,11 +132,12 @@ export async function getSlotBySlug(
     .single();
   if (!user) return null;
 
+  const decoded = safeDecode(slug);
   const { data: slot } = await db
     .from("time_slots")
     .select("*")
     .eq("host_id", user.id)
-    .eq("slug", slug)
+    .eq("slug", decoded)
     .maybeSingle();
   if (!slot) return null;
 
