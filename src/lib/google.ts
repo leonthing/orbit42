@@ -27,6 +27,54 @@ export function getAuthUrl(state?: string) {
   });
 }
 
+/** OAuth URL for the landing-page "Continue with Google" flow. */
+export function getSignInUrl(state?: string) {
+  const client = getOAuth2Client();
+  const redirectUri =
+    process.env.GOOGLE_SIGNIN_REDIRECT_URI ||
+    `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/google/callback`;
+  return client.generateAuthUrl({
+    access_type: "online",
+    scope: [
+      "https://www.googleapis.com/auth/userinfo.email",
+      "https://www.googleapis.com/auth/userinfo.profile",
+    ],
+    prompt: "select_account",
+    redirect_uri: redirectUri,
+    state,
+  });
+}
+
+/** Sign-in specific OAuth exchange against a dedicated redirect URI. */
+export async function exchangeSignInCode(code: string) {
+  const client = getOAuth2Client();
+  const redirectUri =
+    process.env.GOOGLE_SIGNIN_REDIRECT_URI ||
+    `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/google/callback`;
+  const { tokens } = await client.getToken({ code, redirect_uri: redirectUri });
+  return tokens;
+}
+
+/** Fetch { email, name } for the sign-in flow. */
+export async function fetchGoogleProfile(tokens: {
+  access_token?: string | null;
+}): Promise<{ email: string | null; name: string | null }> {
+  try {
+    const client = getOAuth2Client();
+    client.setCredentials({
+      access_token: tokens.access_token ?? undefined,
+    });
+    const oauth2 = google.oauth2({ version: "v2", auth: client });
+    const res = await oauth2.userinfo.get();
+    return {
+      email: (res.data.email as string | null) ?? null,
+      name: (res.data.name as string | null) ?? null,
+    };
+  } catch {
+    return { email: null, name: null };
+  }
+}
+
 export async function exchangeCode(code: string) {
   const client = getOAuth2Client();
   const { tokens } = await client.getToken(code);

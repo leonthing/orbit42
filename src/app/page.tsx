@@ -41,8 +41,8 @@ export default async function LandingPage() {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 pb-16 pt-8 sm:px-6 md:px-10 md:pt-16 lg:pt-20">
-        <section className="grid items-center gap-10 md:grid-cols-2 md:gap-12">
-          <div className="min-w-0">
+        <section className="flex flex-col gap-8 md:grid md:grid-cols-2 md:items-start md:gap-12">
+          <div className="order-1 min-w-0 md:col-start-1 md:row-start-1">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-red-700 dark:text-red-400">
               Time, shared and sold
             </p>
@@ -57,17 +57,17 @@ export default async function LandingPage() {
               캘린더로 일상을 공유하고, 비어있는 시간을 슬롯으로
               판매하여 수익을 창출하세요.
             </p>
-
-            <div className="mt-7 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
-              <Pill label="Calendar" hint="공개 · 팔로워 · 비공개" />
-              <Pill label="Timeslots" hint="무료 · 유료 · 경매" />
-              <Pill label="Orbits" hint="팔로우 · 피드" />
-            </div>
           </div>
 
-          <div className="relative min-w-0">
+          <div className="relative order-2 min-w-0 md:col-start-2 md:row-span-2 md:row-start-1">
             <AuthCard initialMode="signup" />
             <div className="pointer-events-none absolute -inset-4 -z-10 rounded-3xl bg-gradient-to-br from-red-500/10 via-transparent to-red-600/20 blur-3xl" />
+          </div>
+
+          <div className="order-3 grid grid-cols-1 gap-2.5 sm:grid-cols-3 md:col-start-1 md:row-start-2 md:mt-2">
+            <Pill label="Calendar" hint="공개 · 팔로워 · 비공개" />
+            <Pill label="Timeslots" hint="무료 · 유료 · 경매" />
+            <Pill label="Orbits" hint="팔로우 · 피드" />
           </div>
         </section>
 

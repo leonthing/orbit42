@@ -86,6 +86,95 @@ export async function signup(username: string, password: string, displayName?: s
   return { success: true, username };
 }
 
+/**
+ * Sign in or sign up via Google. Finds an existing user by email or
+ * creates a fresh one with a generated username and a random password.
+ * Returns the resolved username so the caller can redirect to /feed.
+ */
+export async function loginOrSignupWithGoogle(
+  email: string,
+  displayName: string | null,
+): Promise<{ username: string } | { error: string }> {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) return { error: "이메일을 가져올 수 없어요." };
+
+  const db = getAdminClient();
+
+  // 1. Existing user with this email?
+  const { data: existing } = await db
+    .from("users")
+    .select("username")
+    .eq("email", normalized)
+    .maybeSingle();
+
+  if (existing?.username) {
+    cookies().set(COOKIE_NAME, JSON.stringify({ username: existing.username }), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 7,
+    });
+    return { username: existing.username as string };
+  }
+
+  // 2. Fresh signup — generate a unique username from email.
+  const base = normalized
+    .split("@")[0]
+    .replace(/[^a-z0-9_-]/g, "")
+    .slice(0, 20) || "user";
+  let username = base;
+  for (let i = 0; i < 8; i++) {
+    const { data: taken } = await db
+      .from("users")
+      .select("id")
+      .eq("username", username)
+      .maybeSingle();
+    if (!taken) break;
+    username = `${base}${Math.floor(Math.random() * 9000 + 1000)}`;
+  }
+
+  const randomPassword = `g_${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+  const { error: createErr } = await db.rpc("create_user", {
+    p_username: username,
+    p_password: randomPassword,
+    p_display_name: displayName || username,
+  });
+  if (createErr) {
+    console.error("google signup create_user", createErr);
+    return { error: "회원가입에 실패했어요." };
+  }
+
+  // Attach email + default native calendar.
+  const { data: fresh } = await db
+    .from("users")
+    .select("id")
+    .eq("username", username)
+    .single();
+  if (fresh) {
+    await db
+      .from("users")
+      .update({ email: normalized })
+      .eq("id", fresh.id);
+    await db.from("calendars").insert({
+      user_id: fresh.id,
+      name: "내 캘린더",
+      purpose: "personal",
+      color: "#6366f1",
+      visibility: "private",
+      source: "native",
+      is_default: true,
+    });
+  }
+
+  cookies().set(COOKIE_NAME, JSON.stringify({ username }), {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 60 * 60 * 24 * 7,
+  });
+  return { username };
+}
+
 export async function logout() {
   cookies().delete(COOKIE_NAME);
   return { success: true };
