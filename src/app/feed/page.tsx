@@ -547,8 +547,8 @@ function EntryBody({
       {item.kind === "feed_post" && (
         <div className="mt-3 space-y-3">
           {item.attached_event_id && (
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-700/20 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-300">
-              📅 일정 공유
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-700/20 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-300">
+              일정 공유
             </div>
           )}
           {item.body && (
@@ -584,7 +584,12 @@ function EntryBody({
             </div>
           )}
           {item.location_label && (
-            <p className="text-xs text-charcoal-500">📍 {item.location_label}</p>
+            <p className="text-xs text-charcoal-500">
+              <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider">
+                위치
+              </span>
+              {item.location_label}
+            </p>
           )}
         </div>
       )}

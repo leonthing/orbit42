@@ -165,7 +165,6 @@ export function CalendarVisibilityForm({
                         : "bg-charcoal-900/50 text-charcoal-400 hover:text-charcoal-200"
                     }`}
                   >
-                    <span className="mr-1">{p.emoji}</span>
                     {p.label}
                   </button>
                 ))}
@@ -174,7 +173,7 @@ export function CalendarVisibilityForm({
                 )}
                 {purposeMeta && !savingId && (
                   <span className="ml-auto text-[10px] text-charcoal-600">
-                    {purposeMeta.emoji} {purposeMeta.label}
+                    {purposeMeta.label}
                   </span>
                 )}
               </div>
@@ -253,7 +252,7 @@ function NewCalendarForm({ onDone }: { onDone: () => void }) {
                   : "bg-charcoal-800/40 text-charcoal-400 hover:text-charcoal-200"
               }`}
             >
-              {p.emoji} {p.label}
+              {p.label}
             </button>
           ))}
         </div>

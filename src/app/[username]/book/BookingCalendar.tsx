@@ -410,7 +410,7 @@ function ConfirmBook({
   if (done) {
     return (
       <div className="rounded-2xl border border-emerald-700/40 bg-emerald-700/10 p-5 text-sm text-emerald-300">
-        🎉 예약이 완료되었습니다. {hostName}의 캘린더에 이벤트가 추가되었고
+        예약이 완료되었습니다. {hostName}의 캘린더에 이벤트가 추가되었고
         확인 메일이 발송됩니다.
       </div>
     );

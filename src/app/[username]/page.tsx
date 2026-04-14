@@ -190,19 +190,11 @@ export default async function PublicProfile({
           <span className="px-2 text-[10px] font-semibold uppercase tracking-wider text-charcoal-500">
             Quick add
           </span>
-          <ActionPill href="/feed" label="Share status" icon="💬" />
-          <ActionPill href={`/${params.username}/slots`} label="Open slot" icon="🪙" highlight />
-          <ActionPill href={`/${params.username}/calendar`} label="Add event" icon="🗓️" />
-          <ActionPill
-            href={`/${params.username}/book`}
-            label="Share booking link"
-            icon="🔗"
-          />
-          <ActionPill
-            href={`/${params.username}/settings`}
-            label="Visibility"
-            icon="🔓"
-          />
+          <ActionPill href="/feed" label="Share status" />
+          <ActionPill href={`/${params.username}/slots`} label="Open slot" highlight />
+          <ActionPill href={`/${params.username}/calendar`} label="Add event" />
+          <ActionPill href={`/${params.username}/book`} label="Share booking link" />
+          <ActionPill href={`/${params.username}/settings`} label="Visibility" />
         </div>
       )}
 
@@ -434,24 +426,21 @@ function ValueStat({
 function ActionPill({
   href,
   label,
-  icon,
   highlight,
 }: {
   href: string;
   label: string;
-  icon: string;
   highlight?: boolean;
 }) {
   return (
     <Link
       href={href}
-      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+      className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
         highlight
           ? "bg-red-500/15 text-red-300 hover:bg-red-500/25"
           : "bg-charcoal-800/40 text-charcoal-300 hover:bg-charcoal-800/70 hover:text-charcoal-100"
       }`}
     >
-      <span>{icon}</span>
       {label}
     </Link>
   );

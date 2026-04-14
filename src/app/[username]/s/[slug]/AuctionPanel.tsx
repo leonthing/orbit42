@@ -130,7 +130,7 @@ export default function AuctionPanel({
         )}
         {ended && bids[0] && (
           <p className="mt-5 rounded-lg border border-emerald-700/40 bg-emerald-700/10 p-3 text-sm text-emerald-300">
-            🏆 낙찰: <strong>{bids[0].bidder_display_name || bids[0].bidder_username}</strong>{" "}
+            낙찰: <strong>{bids[0].bidder_display_name || bids[0].bidder_username}</strong>{" "}
             · ₩{(bids[0].amount_cents / 100).toLocaleString("ko-KR")}
           </p>
         )}

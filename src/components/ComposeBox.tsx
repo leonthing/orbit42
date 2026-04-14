@@ -139,7 +139,9 @@ export function ComposeBox({
 
           {showLocation && (
             <div className="mt-2 flex items-center gap-2 rounded-lg border border-charcoal-800/60 bg-charcoal-800/30 px-3 py-2">
-              <span className="text-charcoal-500">📍</span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-charcoal-500">
+                위치
+              </span>
               <input
                 type="text"
                 value={location}
@@ -162,7 +164,9 @@ export function ComposeBox({
 
           {addToCalendar && (
             <div className="mt-2 flex items-center gap-2 rounded-lg border border-red-500/40 bg-red-500/5 px-3 py-2">
-              <span className="text-red-400">📅</span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-red-400">
+                캘린더
+              </span>
               <input
                 type="datetime-local"
                 value={calendarStart}
@@ -190,13 +194,22 @@ export function ComposeBox({
               <ToolButton
                 onClick={() => fileRef.current?.click()}
                 label="사진"
-                icon="🖼️"
+                icon={
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                  </svg>
+                }
                 disabled={files.length >= 4}
               />
               <ToolButton
                 onClick={() => setShowLocation((s) => !s)}
                 label="위치"
-                icon="📍"
+                icon={
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
+                  </svg>
+                }
                 active={showLocation}
               />
               <ToolButton
@@ -208,7 +221,11 @@ export function ComposeBox({
                   setAddToCalendar((s) => !s);
                 }}
                 label="캘린더에 추가"
-                icon="📅"
+                icon={
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+                  </svg>
+                }
                 active={addToCalendar}
                 disabled={!googleConnected}
               />
@@ -252,7 +269,7 @@ function ToolButton({
 }: {
   onClick: () => void;
   label: string;
-  icon: string;
+  icon: React.ReactNode;
   active?: boolean;
   disabled?: boolean;
 }) {

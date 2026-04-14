@@ -141,7 +141,7 @@ function CalendarRow({ calendar }: { calendar: Calendar }) {
             </p>
             {purposeMeta && (
               <p className="text-xs text-charcoal-500">
-                {purposeMeta.emoji} {purposeMeta.label}
+                {purposeMeta.label}
               </p>
             )}
           </div>
@@ -189,7 +189,6 @@ function CalendarRow({ calendar }: { calendar: Calendar }) {
                 : "bg-charcoal-900/50 text-charcoal-400 hover:text-charcoal-200"
             }`}
           >
-            <span className="mr-1">{p.emoji}</span>
             {p.label}
           </button>
         ))}
@@ -269,7 +268,7 @@ function NewCalendarForm({
                 : "bg-charcoal-800/40 text-charcoal-400 hover:text-charcoal-200"
             }`}
           >
-            {p.emoji} {p.label}
+            {p.label}
           </button>
         ))}
       </div>

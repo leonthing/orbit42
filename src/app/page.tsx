@@ -73,9 +73,9 @@ export default async function LandingPage() {
             </div>
 
             <div className="mt-10 grid gap-3 sm:grid-cols-3">
-              <Pill emoji="🗓️" label="Calendar" hint="공개/팔로워/비공개" />
-              <Pill emoji="💸" label="Slots" hint="무료/유료 시간 판매" />
-              <Pill emoji="🪐" label="Orbits" hint="팔로우 + 피드" />
+              <Pill label="Calendar" hint="공개 · 팔로워 · 비공개" />
+              <Pill label="Slots" hint="무료 · 유료 · 경매" />
+              <Pill label="Orbits" hint="팔로우 · 피드" />
             </div>
           </div>
 
@@ -93,13 +93,10 @@ export default async function LandingPage() {
   );
 }
 
-function Pill({ emoji, label, hint }: { emoji: string; label: string; hint: string }) {
+function Pill({ label, hint }: { label: string; hint: string }) {
   return (
     <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 px-4 py-3">
-      <div className="flex items-center gap-2">
-        <span className="text-lg">{emoji}</span>
-        <span className="text-sm font-semibold text-charcoal-100">{label}</span>
-      </div>
+      <span className="text-sm font-semibold text-charcoal-100">{label}</span>
       <p className="mt-1 text-[11px] text-charcoal-500">{hint}</p>
     </div>
   );

@@ -98,7 +98,7 @@ export async function createFeedPost(formData: FormData) {
       }
       const end = new Date(calendarStart.getTime() + 30 * 60_000);
       const firstLine = (body.split("\n")[0] || "").trim();
-      const title = `📝 ${firstLine ? firstLine.slice(0, 80) : "포스트"}`;
+      const title = firstLine ? firstLine.slice(0, 80) : "포스트";
       const descriptionParts: string[] = [];
       if (body) descriptionParts.push(body);
       if (imageUrls.length > 0) {

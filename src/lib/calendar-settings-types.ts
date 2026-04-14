@@ -16,13 +16,13 @@ export type CalendarSetting = {
   color_override: string | null;
 };
 
-export const PURPOSE_OPTIONS: { value: CalendarPurpose; label: string; emoji: string }[] = [
-  { value: "personal", label: "개인", emoji: "🫶" },
-  { value: "work", label: "업무", emoji: "💼" },
-  { value: "couple", label: "커플", emoji: "💗" },
-  { value: "income", label: "돈 버는 용", emoji: "💰" },
-  { value: "hobby", label: "취미", emoji: "🎨" },
-  { value: "other", label: "기타", emoji: "📂" },
+export const PURPOSE_OPTIONS: { value: CalendarPurpose; label: string }[] = [
+  { value: "personal", label: "개인" },
+  { value: "work", label: "업무" },
+  { value: "couple", label: "커플" },
+  { value: "income", label: "수익" },
+  { value: "hobby", label: "취미" },
+  { value: "other", label: "기타" },
 ];
 
 export const CALENDAR_COLORS = [
