@@ -23,9 +23,7 @@ export function AppShell({
         <div className="flex flex-1 flex-col overflow-hidden">
           <TopBar username={viewerUsername} displayName={viewerDisplayName} />
           <main className="flex-1 overflow-y-auto">
-            <div className="mx-auto max-w-5xl px-4 py-4 md:px-6 md:py-5">
-              {children}
-            </div>
+            <div className="w-full px-4 py-4 md:px-6 md:py-5">{children}</div>
           </main>
         </div>
       </div>
