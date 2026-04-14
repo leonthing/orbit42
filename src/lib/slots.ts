@@ -39,6 +39,7 @@ export type TimeSlot = {
   auction_ends_at: string | null;
   current_high_bid_cents: number | null;
   current_high_bidder_id: string | null;
+  calendar_id: string | null;
   created_at: string;
 };
 
@@ -71,6 +72,7 @@ export type SlotInput = {
   pricing_model?: PricingModel;
   reserve_price_cents?: number | null;
   auction_ends_at?: string | null;
+  calendar_id?: string | null;
 };
 
 function safeDecode(s: string) {
@@ -202,6 +204,42 @@ export async function createSlot(input: SlotInput) {
   const userId = await requireUserId();
   const db = getAdminClient();
 
+  // Validate or resolve target calendar.
+  let calendarId = input.calendar_id ?? null;
+  let calendarVisibility: string | null = null;
+  if (calendarId) {
+    const { data: cal } = await db
+      .from("calendars")
+      .select("user_id, visibility")
+      .eq("id", calendarId)
+      .single();
+    if (!cal || cal.user_id !== userId) {
+      return { error: "선택한 캘린더에 권한이 없어요." };
+    }
+    calendarVisibility = cal.visibility as string;
+  } else {
+    const { data: def } = await db
+      .from("calendars")
+      .select("id, visibility")
+      .eq("user_id", userId)
+      .eq("is_default", true)
+      .maybeSingle();
+    calendarId = def?.id ?? null;
+    calendarVisibility = (def?.visibility as string) ?? null;
+  }
+
+  // Sellable slots (fixed price) need a publicly-visible calendar so the
+  // public booking page is discoverable. Auction slots bypass this since
+  // they live on the auction landing page.
+  const pricing = input.pricing_model ?? "fixed";
+  const priceGt0 = (input.price_cents ?? 0) > 0;
+  if (pricing === "fixed" && priceGt0 && calendarVisibility !== "public") {
+    return {
+      error:
+        "유료 슬롯은 공개(public) 캘린더에만 만들 수 있어요. 캘린더 공개 설정을 바꾸거나 다른 캘린더를 선택해주세요.",
+    };
+  }
+
   const slug = slugify(input.title);
   const { data: slot, error } = await db
     .from("time_slots")
@@ -226,6 +264,7 @@ export async function createSlot(input: SlotInput) {
       pricing_model: input.pricing_model ?? "fixed",
       reserve_price_cents: input.reserve_price_cents ?? null,
       auction_ends_at: input.auction_ends_at ?? null,
+      calendar_id: calendarId,
     })
     .select()
     .single();
@@ -347,7 +386,7 @@ export async function bookSlot(args: {
   const { data: slot } = await db
     .from("time_slots")
     .select(
-      "id, host_id, duration_min, active, mode, pricing_model, title, location_detail, working_hours, slot_interval_min, min_notice_hours, max_advance_days, buffer_min, capacity",
+      "id, host_id, duration_min, active, mode, pricing_model, title, location_detail, working_hours, slot_interval_min, min_notice_hours, max_advance_days, buffer_min, capacity, calendar_id",
     )
     .eq("id", args.slotId)
     .single();
@@ -419,36 +458,72 @@ export async function bookSlot(args: {
       .eq("id", availabilityId);
   }
 
-  // Best-effort: create a Google Calendar event on the host's primary calendar.
+  // Best-effort: mirror to the slot's calendar.
+  // - Google-backed calendar → create a Google event on that calendar.
+  // - Native calendar → insert a native event row.
   try {
-    const calendar = await getAuthenticatedCalendar(slot.host_id as string);
-    if (calendar) {
-      const guestEmail =
-        args.guest_email ?? (await getEmailForUser(guestId));
-      const guestLabel = args.guest_name ?? (guestId ? "Guest" : "Guest");
-      const ev = await calendar.events.insert({
-        calendarId: "primary",
-        sendUpdates: guestEmail ? "all" : "none",
-        requestBody: {
-          summary: `[Orbit42] ${slot.title} — ${guestLabel}`,
-          description:
-            (args.message ? `${args.message}\n\n` : "") +
-            `Booked via orbit42 · slot: ${slot.title}`,
-          start: { dateTime: startAt.toISOString(), timeZone: "Asia/Seoul" },
-          end: { dateTime: endAt.toISOString(), timeZone: "Asia/Seoul" },
-          location: (slot.location_detail as string | null) ?? undefined,
-          attendees: guestEmail ? [{ email: guestEmail, displayName: guestLabel }] : undefined,
-        },
-      });
-      if (ev.data.id) {
-        await db
-          .from("bookings")
-          .update({ google_event_id: ev.data.id })
-          .eq("id", booking.id);
+    const slotCalendarId = (slot.calendar_id as string | null) ?? null;
+    let targetGoogleCalId: string | null = null;
+    let nativeCalendarId: string | null = null;
+    if (slotCalendarId) {
+      const { data: cal } = await db
+        .from("calendars")
+        .select("source, google_calendar_id")
+        .eq("id", slotCalendarId)
+        .single();
+      if (cal?.source === "google" && cal.google_calendar_id) {
+        targetGoogleCalId = cal.google_calendar_id as string;
+      } else if (cal?.source === "native") {
+        nativeCalendarId = slotCalendarId;
       }
+    } else {
+      // Fall back to primary Google calendar for legacy slots
+      targetGoogleCalId = "primary";
+    }
+
+    const guestEmail =
+      args.guest_email ?? (await getEmailForUser(guestId));
+    const guestLabel = args.guest_name ?? (guestId ? "Guest" : "Guest");
+
+    if (targetGoogleCalId) {
+      const calendar = await getAuthenticatedCalendar(slot.host_id as string);
+      if (calendar) {
+        const ev = await calendar.events.insert({
+          calendarId: targetGoogleCalId,
+          sendUpdates: guestEmail ? "all" : "none",
+          requestBody: {
+            summary: `[Orbit42] ${slot.title} — ${guestLabel}`,
+            description:
+              (args.message ? `${args.message}\n\n` : "") +
+              `Booked via orbit42 · slot: ${slot.title}`,
+            start: { dateTime: startAt.toISOString(), timeZone: "Asia/Seoul" },
+            end: { dateTime: endAt.toISOString(), timeZone: "Asia/Seoul" },
+            location: (slot.location_detail as string | null) ?? undefined,
+            attendees: guestEmail ? [{ email: guestEmail, displayName: guestLabel }] : undefined,
+          },
+        });
+        if (ev.data.id) {
+          await db
+            .from("bookings")
+            .update({ google_event_id: ev.data.id })
+            .eq("id", booking.id);
+        }
+      }
+    } else if (nativeCalendarId) {
+      await db.from("events").insert({
+        user_id: slot.host_id,
+        calendar_id: nativeCalendarId,
+        title: `[Orbit42] ${slot.title} — ${guestLabel}`,
+        description:
+          (args.message ? `${args.message}\n\n` : "") +
+          `Booked via orbit42 · slot: ${slot.title}`,
+        start_at: startAt.toISOString(),
+        end_at: endAt.toISOString(),
+        all_day: false,
+      });
     }
   } catch (err) {
-    console.error("Google Calendar booking insert failed:", err);
+    console.error("Calendar mirror for booking failed:", err);
   }
 
   // Best-effort: send a confirmation email to the guest from the host's Gmail.

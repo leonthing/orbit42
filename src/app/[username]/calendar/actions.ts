@@ -16,6 +16,7 @@ export type Event = {
   end_at: string;
   all_day: boolean;
   business_id: string | null;
+  calendar_id: string | null;
   source: "local" | "google";
   created_at: string;
   updated_at: string;
@@ -28,6 +29,7 @@ export type EventInput = {
   end_at: string;
   all_day: boolean;
   business_id?: string | null;
+  calendar_id?: string | null;
 };
 
 export type GoogleCalendarInfo = {
@@ -48,6 +50,7 @@ export async function getGoogleCalendars(): Promise<GoogleCalendarInfo[]> {
       const res = await primary.calendarList.list();
       for (const item of res.data.items ?? []) {
         if (!item.id || seen.has(item.id)) continue;
+        if (item.accessRole !== "owner") continue;
         seen.add(item.id);
         all.push({
           id: item.id,
@@ -69,6 +72,7 @@ export async function getGoogleCalendars(): Promise<GoogleCalendarInfo[]> {
       const res = await calendar.calendarList.list();
       for (const item of res.data.items ?? []) {
         if (!item.id || seen.has(item.id)) continue;
+        if (item.accessRole !== "owner") continue;
         seen.add(item.id);
         const emailTag = acc.email ? ` (${acc.email})` : " (추가 계정)";
         all.push({
@@ -86,6 +90,11 @@ export async function getGoogleCalendars(): Promise<GoogleCalendarInfo[]> {
   return all;
 }
 
+/**
+ * @param calendarIds Optional list of `calendars.id` (native UUIDs, unified).
+ *   When provided, filters BOTH local events (by calendar_id) AND Google
+ *   events (by resolving each native calendar's `google_calendar_id`).
+ */
 export async function getEvents(
   year: number,
   month: number,
@@ -97,26 +106,60 @@ export async function getEvents(
   const startOfMonth = new Date(year, month, 1).toISOString();
   const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59, 999).toISOString();
 
-  // Local events
-  const { data: localData } = await db
+  // Resolve the user's calendars so we can translate the filter.
+  const { data: allCalsData } = await db
+    .from("calendars")
+    .select("id, source, google_calendar_id")
+    .eq("user_id", userId);
+  const allCals = (allCalsData ?? []) as Array<{
+    id: string;
+    source: "native" | "google";
+    google_calendar_id: string | null;
+  }>;
+
+  const filterProvided = !!(calendarIds && calendarIds.length > 0);
+  const filterSet = new Set(calendarIds ?? []);
+  const selectedCals = filterProvided
+    ? allCals.filter((c) => filterSet.has(c.id))
+    : allCals;
+  const googleCalIdsToFetch = selectedCals
+    .filter((c) => c.source === "google" && c.google_calendar_id)
+    .map((c) => c.google_calendar_id as string);
+
+  // Local events (optionally filtered by calendar_id).
+  let localQuery = db
     .from("events")
     .select("*")
     .eq("user_id", userId)
     .gte("start_at", startOfMonth)
     .lte("start_at", endOfMonth)
     .order("start_at", { ascending: true });
-
+  if (filterProvided) {
+    const nativeIds = selectedCals
+      .filter((c) => c.source === "native")
+      .map((c) => c.id);
+    if (nativeIds.length === 0) {
+      localQuery = localQuery.eq("id", "__none__"); // force empty
+    } else {
+      localQuery = localQuery.in("calendar_id", nativeIds);
+    }
+  }
+  const { data: localData } = await localQuery;
   const localEvents: Event[] = (localData ?? []).map((e: Record<string, unknown>) => ({
     ...e,
     source: "local" as const,
   })) as Event[];
 
-  // Google Calendar events
+  // Google Calendar events — only for the selected google-backed calendars.
   let googleEvents: Event[] = [];
   try {
     const calendar = await getAuthenticatedCalendar(userId);
     if (calendar) {
-      const ids = calendarIds && calendarIds.length > 0 ? calendarIds : ["primary"];
+      const ids = filterProvided
+        ? googleCalIdsToFetch
+        : googleCalIdsToFetch.length > 0
+          ? googleCalIdsToFetch
+          : ["primary"];
 
       const allItems = await Promise.all(
         ids.map(async (calId) => {
@@ -143,6 +186,7 @@ export async function getEvents(
         start_at: item.start?.dateTime || item.start?.date || "",
         end_at: item.end?.dateTime || item.end?.date || "",
         all_day: !!item.start?.date,
+        calendar_id: null,
         business_id: null,
         source: "google" as const,
         created_at: item.created || "",
@@ -204,10 +248,35 @@ export async function createEvent(input: EventInput): Promise<Event> {
   const userId = await requireUserId();
   const db = getAdminClient();
 
+  // Resolve target calendar: explicit → default → null
+  let calendarId = input.calendar_id ?? null;
+  let targetCal: { source: "native" | "google"; google_calendar_id: string | null } | null = null;
+  if (calendarId) {
+    const { data: cal } = await db
+      .from("calendars")
+      .select("id, user_id, source, google_calendar_id")
+      .eq("id", calendarId)
+      .single();
+    if (!cal || cal.user_id !== userId) throw new Error("선택한 캘린더에 권한이 없어요.");
+    targetCal = { source: cal.source, google_calendar_id: cal.google_calendar_id };
+  } else {
+    const { data: def } = await db
+      .from("calendars")
+      .select("id, source, google_calendar_id")
+      .eq("user_id", userId)
+      .eq("is_default", true)
+      .maybeSingle();
+    if (def) {
+      calendarId = def.id;
+      targetCal = { source: def.source, google_calendar_id: def.google_calendar_id };
+    }
+  }
+
   const { data, error } = await db
     .from("events")
     .insert({
       user_id: userId,
+      calendar_id: calendarId,
       title: input.title,
       description: input.description ?? null,
       start_at: input.start_at,
@@ -220,25 +289,30 @@ export async function createEvent(input: EventInput): Promise<Event> {
 
   if (error) throw new Error(error.message);
 
-  // Also create on Google Calendar if connected
-  try {
-    const calendar = await getAuthenticatedCalendar(userId);
-    if (calendar) {
-      const event: Record<string, unknown> = {
-        summary: input.title,
-        description: input.description || undefined,
-      };
-      if (input.all_day) {
-        event.start = { date: input.start_at.split("T")[0] };
-        event.end = { date: input.end_at.split("T")[0] };
-      } else {
-        event.start = { dateTime: input.start_at, timeZone: "Asia/Seoul" };
-        event.end = { dateTime: input.end_at, timeZone: "Asia/Seoul" };
+  // Sync to Google only when the target calendar is google-backed.
+  if (targetCal?.source === "google" && targetCal.google_calendar_id) {
+    try {
+      const calendar = await getAuthenticatedCalendar(userId);
+      if (calendar) {
+        const event: Record<string, unknown> = {
+          summary: input.title,
+          description: input.description || undefined,
+        };
+        if (input.all_day) {
+          event.start = { date: input.start_at.split("T")[0] };
+          event.end = { date: input.end_at.split("T")[0] };
+        } else {
+          event.start = { dateTime: input.start_at, timeZone: "Asia/Seoul" };
+          event.end = { dateTime: input.end_at, timeZone: "Asia/Seoul" };
+        }
+        await calendar.events.insert({
+          calendarId: targetCal.google_calendar_id,
+          requestBody: event,
+        });
       }
-      await calendar.events.insert({ calendarId: "primary", requestBody: event });
+    } catch {
+      // Silently skip Google Calendar sync errors
     }
-  } catch {
-    // Silently skip Google Calendar sync errors
   }
 
   return { ...data, source: "local" } as Event;
@@ -267,4 +341,15 @@ export async function deleteEvent(id: string): Promise<void> {
     .eq("id", id)
     .eq("user_id", userId);
   if (error) throw new Error(error.message);
+}
+
+export async function fetchWeekDays(
+  username: string,
+  weekStartIso: string,
+  calendarIds?: string[],
+) {
+  const { getProfileWeek } = await import("@/lib/profile-week");
+  const weekStart = new Date(weekStartIso);
+  const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60_000);
+  return getProfileWeek(username, weekStart, weekEnd, calendarIds);
 }

@@ -155,10 +155,8 @@ export function Sidebar({ username }: { username: string }) {
 
         {NAV_ITEMS.map((item) => {
           const href = `/${username}${item.href}`;
-          const isProfileLink = item.href === "";
-          const isActive = isProfileLink
-            ? pathname === href
-            : pathname === href || pathname.startsWith(href + "/");
+          const isActive =
+            pathname === href || pathname.startsWith(href + "/");
           return (
             <NavLink
               key={item.label}

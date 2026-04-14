@@ -49,6 +49,11 @@ type FeedItem =
       duration_min: number;
       price_cents: number;
       slot_type: string;
+      pricing_model: "fixed" | "auction";
+      reserve_price_cents: number | null;
+      auction_ends_at: string | null;
+      current_high_bid_cents: number | null;
+      bid_count: number;
     }
   | {
       kind: "feed_post";
@@ -114,7 +119,9 @@ export default async function FeedPage() {
       .limit(40),
     db
       .from("time_slots")
-      .select("id, slug, title, duration_min, price_cents, slot_type, created_at, host_id")
+      .select(
+        "id, slug, title, duration_min, price_cents, slot_type, created_at, host_id, pricing_model, reserve_price_cents, auction_ends_at, current_high_bid_cents",
+      )
       .eq("active", true)
       .in("host_id", authorIds)
       .gte("created_at", recentSince.toISOString())
@@ -122,21 +129,41 @@ export default async function FeedPage() {
       .limit(40),
     listFeedPostsByAuthors(authorIds, 60),
     Promise.all(
-      [...following].slice(0, 25).map(async (u) => {
-        try {
-          const evs = await getPublicEvents(u.username, now, eventsHorizon);
-          return evs.map((e) => ({
-            ...e,
-            author: {
-              username: u.username,
-              display_name: u.display_name,
-              avatar_url: u.avatar_url,
-            },
-          }));
-        } catch {
-          return [];
-        }
-      }),
+      [
+        // include viewer so own public-calendar events appear on feed
+        ...(viewerProfile
+          ? [
+              {
+                username: viewerProfile.username,
+                display_name: viewerProfile.display_name,
+                avatar_url: (viewerProfile.avatar_url as string | null) ?? null,
+              },
+            ]
+          : []),
+        ...following,
+      ]
+        .slice(0, 26)
+        .map(async (u) => {
+          try {
+            const evs = await getPublicEvents(
+              u.username,
+              now,
+              eventsHorizon,
+              undefined,
+              true, // forPublicFeed — only public-visibility calendars
+            );
+            return evs.map((e) => ({
+              ...e,
+              author: {
+                username: u.username,
+                display_name: u.display_name,
+                avatar_url: u.avatar_url,
+              },
+            }));
+          } catch {
+            return [];
+          }
+        }),
     ),
   ]);
 
@@ -155,7 +182,24 @@ export default async function FeedPage() {
       excerpt: (p.excerpt as string | null) ?? null,
     });
   }
-  for (const s of slotsRes.data ?? []) {
+  const slotRows = slotsRes.data ?? [];
+  const auctionSlotIds = slotRows
+    .filter((s) => s.pricing_model === "auction")
+    .map((s) => s.id as string);
+  const bidCountsBySlot = new Map<string, number>();
+  if (auctionSlotIds.length > 0) {
+    const { data: bidRows } = await db
+      .from("bids")
+      .select("slot_id")
+      .in("slot_id", auctionSlotIds);
+    for (const row of (bidRows ?? []) as { slot_id: string }[]) {
+      bidCountsBySlot.set(
+        row.slot_id,
+        (bidCountsBySlot.get(row.slot_id) ?? 0) + 1,
+      );
+    }
+  }
+  for (const s of slotRows) {
     const author = authorMap.get(s.host_id as string);
     if (!author) continue;
     items.push({
@@ -168,6 +212,12 @@ export default async function FeedPage() {
       duration_min: s.duration_min as number,
       price_cents: s.price_cents as number,
       slot_type: s.slot_type as string,
+      pricing_model: (s.pricing_model as "fixed" | "auction") ?? "fixed",
+      reserve_price_cents: (s.reserve_price_cents as number | null) ?? null,
+      auction_ends_at: (s.auction_ends_at as string | null) ?? null,
+      current_high_bid_cents:
+        (s.current_high_bid_cents as number | null) ?? null,
+      bid_count: bidCountsBySlot.get(s.id as string) ?? 0,
     });
   }
   for (const fp of feedPostsRes) {
@@ -408,18 +458,16 @@ function DayCard({
         <span
           className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
             isToday
-              ? "bg-red-500 text-charcoal-950"
+              ? "bg-red-600 text-white"
               : isPast
-                ? "bg-charcoal-800 text-charcoal-500"
-                : "bg-red-600/25 text-red-300"
+                ? "bg-charcoal-800 text-charcoal-400"
+                : "bg-red-500/15 text-red-200 ring-1 ring-red-500/30"
           }`}
         >
           {relative}
         </span>
       </header>
-      <div className="relative px-3 py-3 md:px-4">
-        {/* left rail — thin dashed line running through all entries */}
-        <div className="pointer-events-none absolute bottom-3 left-[10px] top-3 w-px bg-charcoal-800/60 md:left-[14px]" />
+      <div className="px-3 py-3 md:px-4">
         <ul className="space-y-2.5">{children}</ul>
       </div>
     </article>
@@ -436,17 +484,7 @@ function DayEntry({
   viewerUsername: string;
 }) {
   return (
-    <li className="relative pl-5 md:pl-7">
-      {/* Tick on the rail */}
-      <span
-        className={`absolute top-[18px] -ml-[11px] h-2 w-2 shrink-0 rounded-full ring-2 ring-[rgb(var(--bg-surface))] md:-ml-[15px] ${
-          item.kind === "slot"
-            ? "bg-red-400"
-            : item.kind === "event"
-              ? "bg-emerald-400"
-              : "bg-charcoal-500"
-        }`}
-      />
+    <li>
       <EntryBody item={item} reactions={reactions} viewerUsername={viewerUsername} />
     </li>
   );
@@ -523,26 +561,7 @@ function EntryBody({
         </Link>
       )}
 
-      {item.kind === "slot" && (
-        <Link
-          href={`/${author.username}/s/${item.slug}`}
-          className="mt-3 block rounded-lg border border-red-500/30 bg-red-500/5 p-3 hover:border-red-500/60"
-        >
-          <div className="flex items-center justify-between gap-2">
-            <p className="truncate text-sm font-semibold text-charcoal-100">
-              {item.title}
-            </p>
-            <span className="shrink-0 rounded-md bg-red-500/15 px-2 py-0.5 text-xs font-bold text-red-300">
-              {item.price_cents === 0
-                ? "FREE"
-                : `₩${(item.price_cents / 100).toLocaleString("ko-KR")}`}
-            </span>
-          </div>
-          <p className="mt-1 text-xs text-charcoal-500">
-            {item.duration_min}분 · {item.slot_type}
-          </p>
-        </Link>
-      )}
+      {item.kind === "slot" && <FeedSlotCard item={item} username={author.username} />}
 
       {item.kind === "feed_post" && (
         <div className="mt-3 space-y-3">
@@ -616,10 +635,10 @@ function formatTimeShort(iso: string) {
 
 function KindBadge({ kind }: { kind: FeedItem["kind"] }) {
   const map: Record<FeedItem["kind"], { label: string; color: string }> = {
-    event: { label: "일정", color: "bg-emerald-700/30 text-emerald-300" },
-    feed_post: { label: "글", color: "bg-charcoal-700/40 text-charcoal-300" },
-    post: { label: "긴 글", color: "bg-red-700/30 text-red-300" },
-    slot: { label: "슬롯", color: "bg-red-700/30 text-red-300" },
+    event: { label: "일정", color: "bg-emerald-500/15 text-emerald-200 ring-1 ring-emerald-500/30" },
+    feed_post: { label: "글", color: "bg-charcoal-800/60 text-charcoal-200 ring-1 ring-charcoal-700" },
+    post: { label: "긴 글", color: "bg-red-500/15 text-red-200 ring-1 ring-red-500/30" },
+    slot: { label: "슬롯", color: "bg-red-500/15 text-red-200 ring-1 ring-red-500/30" },
   };
   const m = map[kind];
   return (
@@ -694,6 +713,104 @@ function groupByDay(items: FeedItem[], now: Date): DayGroup[] {
     if (af && bf) return a.dayOffset - b.dayOffset;
     return b.dayOffset - a.dayOffset;
   });
+}
+
+function FeedSlotCard({
+  item,
+  username,
+}: {
+  item: Extract<FeedItem, { kind: "slot" }>;
+  username: string;
+}) {
+  const isAuction = item.pricing_model === "auction";
+  const auctionEnded =
+    isAuction &&
+    !!item.auction_ends_at &&
+    new Date(item.auction_ends_at).getTime() <= Date.now();
+  if (!isAuction) {
+    return (
+      <Link
+        href={`/${username}/s/${item.slug}`}
+        className="mt-3 block rounded-lg border border-red-500/30 bg-red-500/5 p-3 hover:border-red-500/60"
+      >
+        <div className="flex items-center justify-between gap-2">
+          <p className="truncate text-sm font-semibold text-charcoal-100">
+            {item.title}
+          </p>
+          <span className="shrink-0 rounded-md bg-red-500/15 px-2 py-0.5 text-xs font-bold text-red-300">
+            {item.price_cents === 0
+              ? "FREE"
+              : `₩${(item.price_cents / 100).toLocaleString("ko-KR")}`}
+          </span>
+        </div>
+        <p className="mt-1 text-xs text-charcoal-500">
+          {item.duration_min}분 · {item.slot_type}
+        </p>
+      </Link>
+    );
+  }
+  const topBid = item.current_high_bid_cents ?? item.reserve_price_cents ?? 0;
+  const priceLabel = `₩${(topBid / 100).toLocaleString("ko-KR")}`;
+  const remaining = item.auction_ends_at
+    ? relativeTimeToLabel(item.auction_ends_at)
+    : null;
+  return (
+    <Link
+      href={`/${username}/s/${item.slug}`}
+      className="mt-3 block rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 hover:border-amber-500/70"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="inline-flex items-center rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-300">
+            {auctionEnded ? "경매 종료" : "경매"}
+          </span>
+          <p className="truncate text-sm font-semibold text-charcoal-100">
+            {item.title}
+          </p>
+        </div>
+        <span className="shrink-0 rounded-md bg-amber-500/20 px-2 py-0.5 text-xs font-bold text-amber-200">
+          {priceLabel}
+        </span>
+      </div>
+      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-charcoal-500">
+        <span>
+          {item.duration_min}분 · {item.slot_type}
+        </span>
+        <span className="text-charcoal-400">
+          <span className="font-semibold text-charcoal-200">입찰 {item.bid_count}</span>
+          {item.bid_count > 0 && (
+            <span className="ml-1 text-charcoal-500">
+              {item.current_high_bid_cents ? "· 현재가" : ""}
+            </span>
+          )}
+        </span>
+        {remaining && (
+          <span
+            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+              auctionEnded
+                ? "bg-charcoal-700/40 text-charcoal-500"
+                : "bg-amber-500/20 text-amber-300"
+            }`}
+          >
+            {remaining}
+          </span>
+        )}
+      </div>
+    </Link>
+  );
+}
+
+function relativeTimeToLabel(iso: string): string {
+  const now = Date.now();
+  const target = new Date(iso).getTime();
+  const diff = target - now;
+  if (diff <= 0) return "종료";
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 60) return `${mins}분 남음`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 48) return `${hours}시간 남음`;
+  const days = Math.floor(hours / 24);
+  return `${days}일 남음`;
 }
 
 function EmptyState({

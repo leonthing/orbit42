@@ -23,6 +23,11 @@ export type WeekItem =
       duration_min: number; // of a single booking
       /** Number of distinct bookable options inside this visual window. */
       option_count: number;
+      pricing_model: "fixed" | "auction";
+      reserve_price_cents: number | null;
+      auction_ends_at: string | null;
+      current_high_bid_cents: number | null;
+      bid_count: number;
     };
 
 export type WeekDay = {
@@ -39,11 +44,29 @@ export async function getProfileWeek(
   username: string,
   weekStart: Date,
   weekEnd: Date,
+  calendarIds?: string[],
 ): Promise<WeekDay[]> {
   const [events, slots] = await Promise.all([
-    getPublicEvents(username, weekStart, weekEnd).catch(() => []),
+    getPublicEvents(username, weekStart, weekEnd, calendarIds).catch(() => []),
     listPublicSlotsByUsername(username),
   ]);
+
+  // Fetch bid counts for any auction slots in one go.
+  const auctionIds = slots
+    .filter((s) => s.pricing_model === "auction")
+    .map((s) => s.id);
+  const bidCountMap = new Map<string, number>();
+  if (auctionIds.length > 0) {
+    const { getAdminClient } = await import("@/lib/supabase");
+    const db = getAdminClient();
+    const { data: bidRows } = await db
+      .from("bids")
+      .select("slot_id")
+      .in("slot_id", auctionIds);
+    for (const row of (bidRows ?? []) as { slot_id: string }[]) {
+      bidCountMap.set(row.slot_id, (bidCountMap.get(row.slot_id) ?? 0) + 1);
+    }
+  }
 
   // Materialize bookable options per slot, then merge consecutive options
   // into visual windows so the calendar stays readable when Auto-mode slots
@@ -94,6 +117,11 @@ export async function getProfileWeek(
             price_cents: s.price_cents,
             duration_min: s.duration_min,
             option_count: count,
+            pricing_model: s.pricing_model,
+            reserve_price_cents: s.reserve_price_cents,
+            auction_ends_at: s.auction_ends_at,
+            current_high_bid_cents: s.current_high_bid_cents,
+            bid_count: bidCountMap.get(s.id) ?? 0,
           });
         }
       } catch {

@@ -6,9 +6,8 @@ import type { SocialLinks, Education } from "@/lib/auth";
 import { getFollowStats, isFollowing } from "@/lib/follows";
 import { listPublicSlotsByUsername } from "@/lib/slots";
 import { getReactionsForMany } from "@/lib/reactions";
-import { ReactionStrip } from "@/components/ReactionStrip";
-import { getProfileWeek, startOfWeek } from "@/lib/profile-week";
-import { WeekCalendar } from "@/components/WeekCalendar";
+import { SlotPanelProvider } from "@/components/SlotPanel";
+import { AllSlotsGrid } from "@/components/AllSlotsGrid";
 import { getValueStats } from "@/lib/value-stats";
 import { Avatar } from "@/components/Avatar";
 import { FollowButton } from "./FollowButton";
@@ -31,27 +30,17 @@ export async function generateMetadata({
 
 export default async function PublicProfile({
   params,
-  searchParams,
 }: {
   params: { username: string };
-  searchParams: { w?: string };
 }) {
   const profile = await getProfile(params.username);
   if (!profile) notFound();
 
-  const weekStart = parseWeekParam(searchParams.w) ?? startOfWeek(new Date());
-  const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60_000);
-  const prevWeek = new Date(weekStart.getTime() - 7 * 24 * 60 * 60_000);
-  const nextWeek = new Date(weekStart.getTime() + 7 * 24 * 60 * 60_000);
-  const isThisWeek =
-    weekStart.getTime() === startOfWeek(new Date()).getTime();
-
-  const [session, stats, viewerFollowing, slots, weekDays, value] = await Promise.all([
+  const [session, stats, viewerFollowing, slots, value] = await Promise.all([
     getSession(),
     getFollowStats(params.username),
     isFollowing(params.username),
     listPublicSlotsByUsername(params.username),
-    getProfileWeek(params.username, weekStart, weekEnd),
     getValueStats(params.username),
   ]);
   const slotReactions = await getReactionsForMany(
@@ -67,11 +56,7 @@ export default async function PublicProfile({
     return yearB - yearA;
   });
   const interests = (profile.interests || []) as string[];
-
-  const totalSlotWindows = weekDays.reduce(
-    (n, d) => n + d.items.filter((i) => i.kind === "slot").length,
-    0,
-  );
+  const totalSlotWindows = slots.length;
 
   return (
     <div className="space-y-8">
@@ -198,107 +183,41 @@ export default async function PublicProfile({
         </div>
       )}
 
-      {/* Week navigation + visitor "Book a time" CTA */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-1">
+      {!isOwner && totalSlotWindows > 0 && (
+        <div className="flex justify-end">
           <Link
-            href={`/${params.username}?w=${formatWeekParam(prevWeek)}`}
-            className="rounded-md border border-charcoal-700 px-3 py-1.5 text-xs text-charcoal-300 hover:border-charcoal-600"
-          >
-            ‹
-          </Link>
-          {!isThisWeek && (
-            <Link
-              href={`/${params.username}`}
-              className="rounded-md border border-charcoal-700 px-3 py-1.5 text-xs text-charcoal-300 hover:border-charcoal-600"
-            >
-              이번 주
-            </Link>
-          )}
-          <Link
-            href={`/${params.username}?w=${formatWeekParam(nextWeek)}`}
-            className="rounded-md border border-charcoal-700 px-3 py-1.5 text-xs text-charcoal-300 hover:border-charcoal-600"
-          >
-            ›
-          </Link>
-        </div>
-        {!isOwner && totalSlotWindows > 0 && (
-          <Link
-            href={`/${params.username}/book`}
+            href={`/${params.username}/calendar`}
             className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-charcoal-950 hover:bg-red-400"
           >
             예약하기 ({totalSlotWindows})
           </Link>
-        )}
-      </div>
-
-      {/* HERO: week calendar with events + bookable slots */}
-      <WeekCalendar
-        username={params.username}
-        days={weekDays}
-        viewerIsOwner={isOwner}
-        emptyMessage={
-          isOwner
-            ? "이 주가 비어있어요. Quick add에서 슬롯을 열거나 캘린더를 공개해보세요."
-            : "이 주에 공개된 일정이나 예약 가능한 시간이 없어요."
-        }
-      />
-
-      <div className="flex items-center justify-end">
-        <Link
-          href={`/${params.username}/c`}
-          className="text-xs font-medium text-charcoal-400 hover:text-charcoal-100"
-        >
-          See full calendar →
-        </Link>
-      </div>
+        </div>
+      )}
 
       {slots.length > 0 && (
-        <section className="space-y-3">
-          <div className="flex items-baseline justify-between">
-            <h2 className="text-lg font-semibold text-charcoal-100">All slots</h2>
-            <span className="text-xs text-charcoal-500">{slots.length}개</span>
-          </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            {slots.map((s) => (
-              <div
-                key={s.id}
-                className="group rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5 transition-colors hover:border-red-500/50"
-              >
-                <Link href={`/${params.username}/s/${s.slug}`} className="block">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <h3 className="truncate text-sm font-semibold text-charcoal-100 group-hover:text-red-200">
-                      {s.title}
-                    </h3>
-                    <span className="shrink-0 rounded-md bg-red-500/15 px-2 py-0.5 text-xs font-bold text-red-300">
-                      {s.price_cents === 0
-                        ? "FREE"
-                        : `₩${(s.price_cents / 100).toLocaleString("ko-KR")}`}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs text-charcoal-500">
-                    {s.duration_min}분 · {s.slot_type}
-                    {s.location_detail && ` · ${s.location_detail}`}
-                  </p>
-                  {s.description && (
-                    <p className="mt-2 line-clamp-2 text-xs text-charcoal-400">
-                      {s.description}
-                    </p>
-                  )}
-                </Link>
-                <div className="mt-3">
-                  <ReactionStrip
-                    target_type="slot"
-                    target_id={s.id}
-                    initial={slotReactions.get(s.id) ?? []}
-                    loggedIn={!!session}
-                    size="sm"
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+        <SlotPanelProvider username={params.username}>
+          <section className="space-y-3">
+            <div className="flex items-baseline justify-between">
+              <h2 className="text-lg font-semibold text-charcoal-100">All slots</h2>
+              <span className="text-xs text-charcoal-500">{slots.length}개</span>
+            </div>
+            <AllSlotsGrid
+              username={params.username}
+              slots={slots.map((s) => ({
+                id: s.id,
+                slug: s.slug,
+                title: s.title,
+                price_cents: s.price_cents,
+                duration_min: s.duration_min,
+                slot_type: s.slot_type,
+                location_detail: s.location_detail,
+                description: s.description,
+              }))}
+              reactionsBySlot={Array.from(slotReactions.entries())}
+              loggedIn={!!session}
+            />
+          </section>
+        </SlotPanelProvider>
       )}
 
       <div className="grid gap-3 md:grid-cols-2">
@@ -378,24 +297,6 @@ export default async function PublicProfile({
       )}
     </div>
   );
-}
-
-function parseWeekParam(p: string | undefined): Date | null {
-  if (!p || !/^\d{4}-\d{2}-\d{2}$/.test(p)) return null;
-  const [y, m, d] = p.split("-").map(Number);
-  const date = new Date(y, m - 1, d);
-  if (Number.isNaN(date.getTime())) return null;
-  date.setHours(0, 0, 0, 0);
-  const dow = (date.getDay() + 6) % 7;
-  date.setDate(date.getDate() - dow);
-  return date;
-}
-
-function formatWeekParam(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
 }
 
 function ValueStat({

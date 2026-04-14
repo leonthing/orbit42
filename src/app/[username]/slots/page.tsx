@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
 import { listMySlots, getUpcomingAvailabilities } from "@/lib/slots";
+import { listMyCalendars } from "@/lib/calendars";
 import SlotsManager from "./SlotsManager";
 
 export const metadata: Metadata = { title: "Slots" };
 export const dynamic = "force-dynamic";
 
 export default async function SlotsPage({ params }: { params: { username: string } }) {
-  const slots = await listMySlots();
+  const [slots, myCalendars] = await Promise.all([
+    listMySlots(),
+    listMyCalendars().catch(() => []),
+  ]);
   const withAvail = await Promise.all(
     slots.map(async (s) => ({
       slot: s,
@@ -14,5 +18,11 @@ export default async function SlotsPage({ params }: { params: { username: string
     })),
   );
 
-  return <SlotsManager username={params.username} initial={withAvail} />;
+  return (
+    <SlotsManager
+      username={params.username}
+      initial={withAvail}
+      myCalendars={myCalendars}
+    />
+  );
 }

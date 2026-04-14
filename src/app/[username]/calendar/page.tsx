@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
-import { getEvents, isGoogleCalendarConnected, getGoogleCalendars } from "./actions";
-import type { GoogleCalendarInfo } from "./actions";
-import { getProfile } from "@/lib/auth";
+import { getEvents, isGoogleCalendarConnected } from "./actions";
+import { getProfile, getSession } from "@/lib/auth";
 import { getLifeMemories } from "./life-actions";
 import type { LifeMemory } from "./life-actions";
+import { getProfileWeek, startOfWeek } from "@/lib/profile-week";
+import { listMyCalendars } from "@/lib/calendars";
 import CalendarView from "./CalendarView";
+import { SlotPanelProvider } from "@/components/SlotPanel";
 
 export const metadata: Metadata = { title: "Calendar" };
 export const dynamic = "force-dynamic";
@@ -17,27 +19,51 @@ export default async function CalendarPage({
   const today = new Date();
   const year = today.getFullYear();
   const month = today.getMonth();
+  const weekStart = startOfWeek(new Date());
+  const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60_000);
 
-  const [events, googleConnected, googleCalendars, profile, lifeMemories] =
+  const [googleConnected, profile, lifeMemories, session, myCalendars] =
     await Promise.all([
-      getEvents(year, month).catch(() => []),
       isGoogleCalendarConnected().catch(() => false),
-      getGoogleCalendars().catch(() => [] as GoogleCalendarInfo[]),
       getProfile(params.username).catch(() => null),
       getLifeMemories().catch(() => [] as LifeMemory[]),
+      getSession().catch(() => null),
+      listMyCalendars().catch(() => []),
     ]);
 
+  // Default selection: user's default native calendar.
+  const defaultCal =
+    myCalendars.find((c) => c.is_default) ?? myCalendars[0] ?? null;
+  const defaultSelection = defaultCal ? [defaultCal.id] : [];
+
+  const [events, weekDays] = await Promise.all([
+    getEvents(year, month, defaultSelection).catch(() => []),
+    getProfileWeek(
+      params.username,
+      weekStart,
+      weekEnd,
+      defaultSelection.length > 0 ? defaultSelection : undefined,
+    ).catch(() => []),
+  ]);
+
   const birthDate = profile?.birth_date || null;
+  const isOwner = session?.username === params.username;
 
   return (
-    <CalendarView
-      initialEvents={events}
-      initialYear={year}
-      initialMonth={month}
-      googleConnected={googleConnected}
-      googleCalendars={googleCalendars}
-      birthDate={birthDate}
-      initialMemories={lifeMemories}
-    />
+    <SlotPanelProvider username={params.username}>
+      <CalendarView
+        username={params.username}
+        initialEvents={events}
+        initialYear={year}
+        initialMonth={month}
+        googleConnected={googleConnected}
+        birthDate={birthDate}
+        initialMemories={lifeMemories}
+        initialWeekDays={weekDays}
+        initialSelectedCalendars={defaultSelection}
+        myCalendars={isOwner ? myCalendars : []}
+        viewerIsOwner={isOwner}
+      />
+    </SlotPanelProvider>
   );
 }

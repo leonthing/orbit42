@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import type { WeekDay, WeekItem } from "@/lib/profile-week";
 import { ShareEventButton } from "@/components/ShareEventButton";
+import { useSlotPanel } from "@/components/SlotPanel";
 
 // Visible window: 06:00 – 24:00 (18 one-hour rows). Items before 06:00
 // clamp to 06:00 so nothing disappears but the grid fits without scroll.
@@ -242,6 +243,7 @@ function ItemBlock({
   username: string;
   viewerIsOwner?: boolean;
 }) {
+  const panel = useSlotPanel();
   // Clamp to visible window and translate into grid coordinates.
   const visibleStart = Math.max(item.startMin, START_MIN);
   const visibleEnd = Math.min(item.endMin, END_MIN);
@@ -286,35 +288,77 @@ function ItemBlock({
 
   // slot — merged bookable window
   const multi = item.option_count > 1;
-  const priceLabel =
-    item.price_cents === 0
+  const isAuction = item.pricing_model === "auction";
+  const auctionEnded =
+    isAuction &&
+    !!item.auction_ends_at &&
+    new Date(item.auction_ends_at).getTime() <= Date.now();
+  const topBid = item.current_high_bid_cents ?? item.reserve_price_cents ?? 0;
+  const priceLabel = isAuction
+    ? `₩${(topBid / 100).toLocaleString("ko-KR")}`
+    : item.price_cents === 0
       ? "FREE"
       : `₩${(item.price_cents / 100).toLocaleString("ko-KR")}`;
-  return (
-    <Link
-      href={`/${username}/s/${item.slot_slug}?t=${encodeURIComponent(item.start_at)}`}
-      className="group absolute overflow-hidden rounded-md border border-red-500 bg-red-100 px-1.5 py-1 transition-colors hover:bg-red-200"
-      style={style}
-    >
+  const auctionLabel = auctionEnded
+    ? "경매 종료"
+    : item.auction_ends_at
+      ? `경매 · ${relativeTimeTo(item.auction_ends_at)}`
+      : "경매";
+  const className = isAuction
+    ? "group absolute overflow-hidden rounded-md border border-amber-500 bg-amber-100 px-1.5 py-1 text-left transition-colors hover:bg-amber-200"
+    : "group absolute overflow-hidden rounded-md border border-red-500 bg-red-100 px-1.5 py-1 text-left transition-colors hover:bg-red-200";
+  const textMain = isAuction ? "text-amber-900" : "text-red-900";
+  const textSub = isAuction ? "text-amber-800" : "text-red-800";
+  const inner = (
+    <>
       <div className="flex items-baseline justify-between gap-1">
-        <p className="truncate text-[11px] font-semibold leading-tight text-red-900">
+        <p className={`truncate text-[11px] font-semibold leading-tight ${textMain}`}>
           {item.title}
         </p>
-        <span className="shrink-0 text-[10px] font-bold text-red-900">
+        <span className={`shrink-0 text-[10px] font-bold ${textMain}`}>
           {priceLabel}
         </span>
       </div>
-      {height >= 34 && (
-        <p className="truncate text-[10px] leading-tight text-red-800">
+      {isAuction && height >= 34 && (
+        <p className={`truncate text-[10px] leading-tight ${textSub}`}>
+          <span className="font-semibold">{auctionLabel}</span>
+          {item.bid_count > 0 && <span className="ml-1">· 입찰 {item.bid_count}</span>}
+        </p>
+      )}
+      {!isAuction && height >= 34 && (
+        <p className={`truncate text-[10px] leading-tight ${textSub}`}>
           {minToHM(item.startMin)}–{minToHM(item.endMin)}
           {multi && <span className="ml-1 font-semibold">· {item.option_count}자리</span>}
         </p>
       )}
       {height >= 56 && (
-        <p className="truncate text-[10px] leading-tight text-red-800">
+        <p className={`truncate text-[10px] leading-tight ${textSub}`}>
           {item.duration_min}분
         </p>
       )}
+    </>
+  );
+  if (panel) {
+    return (
+      <button
+        type="button"
+        onClick={() =>
+          panel.open({ slug: item.slot_slug, startAt: item.start_at })
+        }
+        className={className}
+        style={style}
+      >
+        {inner}
+      </button>
+    );
+  }
+  return (
+    <Link
+      href={`/${username}/s/${item.slot_slug}?t=${encodeURIComponent(item.start_at)}`}
+      className={className}
+      style={style}
+    >
+      {inner}
     </Link>
   );
 }
@@ -323,6 +367,19 @@ function minToHM(m: number) {
   const h = Math.floor(m / 60) % 24;
   const mm = m % 60;
   return `${String(h).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+}
+
+function relativeTimeTo(iso: string): string {
+  const now = Date.now();
+  const target = new Date(iso).getTime();
+  const diff = target - now;
+  if (diff <= 0) return "종료";
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 60) return `${mins}분 남음`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 48) return `${hours}시간 남음`;
+  const days = Math.floor(hours / 24);
+  return `${days}일 남음`;
 }
 
 // ---------- Layout helpers ----------

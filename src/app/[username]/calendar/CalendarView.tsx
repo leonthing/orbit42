@@ -4,14 +4,17 @@ import { useState, useTransition, useCallback, useMemo } from "react";
 import {
   type Event,
   type EventInput,
-  type GoogleCalendarInfo,
   getEvents,
   createEvent,
   updateEvent,
   deleteEvent,
+  fetchWeekDays,
 } from "./actions";
 import LifeCalendarViewExternal from "./LifeCalendarView";
 import type { LifeMemory } from "./life-actions";
+import { WeekCalendar } from "@/components/WeekCalendar";
+import type { WeekDay } from "@/lib/profile-week";
+import type { Calendar } from "@/lib/calendars-types";
 
 // ─── Helpers ────────────────────────────────────────────────
 
@@ -84,35 +87,45 @@ type FormData = {
   startTime: string;
   endTime: string;
   allDay: boolean;
+  calendarId: string;
 };
 
-const emptyForm = (date?: string): FormData => ({
+const emptyForm = (date?: string, calendarId?: string): FormData => ({
   title: "",
   description: "",
   date: date ?? "",
   startTime: "09:00",
   endTime: "10:00",
   allDay: false,
+  calendarId: calendarId ?? "",
 });
 
 // ─── Component ──────────────────────────────────────────────
 
 export default function CalendarView({
+  username,
   initialEvents,
   initialYear,
   initialMonth,
   googleConnected = false,
-  googleCalendars = [],
   birthDate = null,
   initialMemories = [],
+  initialWeekDays,
+  initialSelectedCalendars,
+  myCalendars = [],
+  viewerIsOwner = false,
 }: {
+  username: string;
   initialEvents: Event[];
   initialYear: number;
   initialMonth: number;
   googleConnected?: boolean;
-  googleCalendars?: GoogleCalendarInfo[];
   birthDate?: string | null;
   initialMemories?: LifeMemory[];
+  initialWeekDays: WeekDay[];
+  initialSelectedCalendars?: string[];
+  myCalendars?: Calendar[];
+  viewerIsOwner?: boolean;
 }) {
   const [year, setYear] = useState(initialYear);
   const [month, setMonth] = useState(initialMonth);
@@ -120,19 +133,56 @@ export default function CalendarView({
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
-  const [form, setForm] = useState<FormData>(emptyForm());
+  const defaultCalendarId = useMemo(
+    () => myCalendars.find((c) => c.is_default)?.id ?? myCalendars[0]?.id ?? "",
+    [myCalendars],
+  );
+  const [form, setForm] = useState<FormData>(() =>
+    emptyForm(undefined, defaultCalendarId),
+  );
   const [isPending, startTransition] = useTransition();
   const [selectedCalendars, setSelectedCalendars] = useState<string[]>(() => {
-    const primary = googleCalendars.find((c) => c.primary);
-    return primary ? [primary.id] : ["primary"];
+    if (initialSelectedCalendars && initialSelectedCalendars.length > 0) {
+      return initialSelectedCalendars;
+    }
+    if (myCalendars.length > 0) {
+      const def = myCalendars.find((c) => c.is_default) ?? myCalendars[0];
+      return [def.id];
+    }
+    return [];
   });
   const [showCalendarPicker, setShowCalendarPicker] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>("month");
+  const [viewMode, setViewMode] = useState<ViewMode>("week");
   const [quarter, setQuarter] = useState(getQuarterForMonth(initialMonth));
+  const [weekDays, setWeekDays] = useState<WeekDay[]>(initialWeekDays);
+
+  const refetchWeekDays = useCallback(
+    (anchor: Date, cals?: string[]) => {
+      // Monday of the week containing the anchor date
+      const a = new Date(anchor);
+      a.setHours(0, 0, 0, 0);
+      const dow = (a.getDay() + 6) % 7;
+      a.setDate(a.getDate() - dow);
+      startTransition(async () => {
+        const days = await fetchWeekDays(
+          username,
+          a.toISOString(),
+          cals ?? selectedCalendars,
+        );
+        const revived = days.map((d) => ({
+          ...d,
+          date: new Date(d.date),
+        }));
+        setWeekDays(revived);
+      });
+    },
+    [username, selectedCalendars],
+  );
 
   const today = useMemo(() => new Date(), []);
   const isCurrentMonth = year === today.getFullYear() && month === today.getMonth();
   const days = getCalendarDays(year, month);
+
 
   // ── Fetch events for a given month ──
 
@@ -202,8 +252,9 @@ export default function CalendarView({
       setMonth(newMonth);
       setSelectedDay(newDay);
       fetchEvents(newYear, newMonth);
+      refetchWeekDays(current);
     },
-    [year, month, selectedDay, today, fetchEvents],
+    [year, month, selectedDay, today, fetchEvents, refetchWeekDays],
   );
 
   const navigateQuarter = useCallback(
@@ -274,11 +325,12 @@ export default function CalendarView({
       } else if (mode === "week") {
         if (!selectedDay) setSelectedDay(today.getDate());
         fetchEvents(year, month);
+        refetchWeekDays(new Date(year, month, selectedDay ?? today.getDate()));
       } else {
         fetchEvents(year, month);
       }
     },
-    [year, month, today, selectedDay, fetchEvents, fetchMultiMonthEvents],
+    [year, month, today, selectedDay, fetchEvents, fetchMultiMonthEvents, refetchWeekDays],
   );
 
   // ── Helpers ──
@@ -305,23 +357,7 @@ export default function CalendarView({
       ? toLocalDateStr(y, m, day)
       : toLocalDateStr(y, m, selectedDay ?? today.getDate());
     setEditingEvent(null);
-    setForm(emptyForm(dateStr));
-    setShowForm(true);
-  };
-
-  const openCreateFormAtTime = (day: number, hour: number, forYear?: number, forMonth?: number) => {
-    const y = forYear ?? year;
-    const m = forMonth ?? month;
-    const dateStr = toLocalDateStr(y, m, day);
-    setEditingEvent(null);
-    setForm({
-      title: "",
-      description: "",
-      date: dateStr,
-      startTime: `${String(hour).padStart(2, "0")}:00`,
-      endTime: `${String(Math.min(hour + 1, 23)).padStart(2, "0")}:00`,
-      allDay: false,
-    });
+    setForm(emptyForm(dateStr, defaultCalendarId));
     setShowForm(true);
   };
 
@@ -340,6 +376,7 @@ export default function CalendarView({
         ? "10:00"
         : `${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}`,
       allDay: event.all_day,
+      calendarId: event.calendar_id ?? defaultCalendarId,
     });
     setShowForm(true);
   };
@@ -366,6 +403,7 @@ export default function CalendarView({
       start_at: new Date(startAt).toISOString(),
       end_at: new Date(endAt).toISOString(),
       all_day: form.allDay,
+      calendar_id: form.calendarId || null,
     };
 
     startTransition(async () => {
@@ -397,6 +435,10 @@ export default function CalendarView({
       const data = await getEvents(year, month, next);
       setEvents(data);
     });
+    refetchWeekDays(
+      new Date(year, month, selectedDay ?? today.getDate()),
+      next,
+    );
   };
 
   // ── Navigation label ──
@@ -439,14 +481,25 @@ export default function CalendarView({
           <p className="mt-1 text-sm text-charcoal-500">일정 및 시간 관리</p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
-          {googleConnected ? (
+          {myCalendars.length > 0 ? (
             <div className="relative">
               <button
                 onClick={() => setShowCalendarPicker(!showCalendarPicker)}
-                className="flex items-center gap-1.5 rounded-lg bg-emerald-500/10 px-3 py-2 text-xs font-medium text-emerald-400 hover:bg-emerald-500/15"
+                className="flex items-center gap-1.5 rounded-lg border border-charcoal-800 bg-charcoal-900/40 px-3 py-2 text-xs font-medium text-charcoal-200 hover:border-charcoal-700"
               >
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                캘린더 {selectedCalendars.length}개 선택됨
+                <span className="inline-flex -space-x-1">
+                  {myCalendars
+                    .filter((c) => selectedCalendars.includes(c.id))
+                    .slice(0, 3)
+                    .map((c) => (
+                      <span
+                        key={c.id}
+                        className="h-2.5 w-2.5 rounded-full ring-2 ring-[rgb(var(--bg-base))]"
+                        style={{ backgroundColor: c.color }}
+                      />
+                    ))}
+                </span>
+                캘린더 {selectedCalendars.length}개
                 <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                 </svg>
@@ -455,9 +508,48 @@ export default function CalendarView({
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowCalendarPicker(false)} />
                   <div className="absolute right-0 z-50 mt-2 w-72 rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] p-3 shadow-2xl">
-                    <p className="mb-2 text-xs font-medium text-charcoal-400">Google 캘린더 선택</p>
-                    <div className="max-h-64 space-y-1 overflow-y-auto">
-                      {googleCalendars.map((cal) => (
+                    <div className="mb-2 flex items-center justify-between">
+                      <p className="text-xs font-medium text-charcoal-400">내 캘린더</p>
+                      <div className="flex gap-1 text-[10px]">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const all = myCalendars.map((c) => c.id);
+                            setSelectedCalendars(all);
+                            startTransition(async () => {
+                              const data = await getEvents(year, month, all);
+                              setEvents(data);
+                            });
+                            refetchWeekDays(
+                              new Date(year, month, selectedDay ?? today.getDate()),
+                              all,
+                            );
+                          }}
+                          className="rounded px-1.5 py-0.5 text-charcoal-500 hover:bg-charcoal-800/50 hover:text-charcoal-200"
+                        >
+                          전체
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedCalendars([]);
+                            startTransition(async () => {
+                              const data = await getEvents(year, month, []);
+                              setEvents(data);
+                            });
+                            refetchWeekDays(
+                              new Date(year, month, selectedDay ?? today.getDate()),
+                              [],
+                            );
+                          }}
+                          className="rounded px-1.5 py-0.5 text-charcoal-500 hover:bg-charcoal-800/50 hover:text-charcoal-200"
+                        >
+                          해제
+                        </button>
+                      </div>
+                    </div>
+                    <div className="max-h-64 space-y-0.5 overflow-y-auto">
+                      {myCalendars.map((cal) => (
                         <label
                           key={cal.id}
                           className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 hover:bg-charcoal-800/50"
@@ -470,13 +562,16 @@ export default function CalendarView({
                           />
                           <span
                             className="h-3 w-3 shrink-0 rounded-full"
-                            style={{ backgroundColor: cal.backgroundColor }}
+                            style={{ backgroundColor: cal.color }}
                           />
-                          <span className="truncate text-sm text-charcoal-200">
-                            {cal.summary}
-                            {cal.primary && (
-                              <span className="ml-1 text-xs text-charcoal-500">(기본)</span>
+                          <span className="min-w-0 flex-1 truncate text-sm text-charcoal-200">
+                            {cal.name}
+                            {cal.is_default && (
+                              <span className="ml-1 text-[10px] text-charcoal-500">기본</span>
                             )}
+                          </span>
+                          <span className="text-[10px] text-charcoal-500">
+                            {cal.source === "google" ? "G" : "N"}
                           </span>
                         </label>
                       ))}
@@ -485,7 +580,7 @@ export default function CalendarView({
                 </>
               )}
             </div>
-          ) : (
+          ) : !googleConnected ? (
             <a
               href="/api/google"
               className="flex items-center gap-2 rounded-lg border border-charcoal-700 px-3 py-2 text-xs font-medium text-charcoal-400 hover:border-charcoal-600 hover:text-charcoal-200"
@@ -498,7 +593,7 @@ export default function CalendarView({
               </svg>
               Google Calendar 연동
             </a>
-          )}
+          ) : null}
           <button
             onClick={() => openCreateForm()}
             className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500"
@@ -711,17 +806,15 @@ export default function CalendarView({
       )}
 
       {viewMode === "week" && (
-        <WeekView
-          year={year}
-          month={month}
-          selectedDay={selectedDay ?? today.getDate()}
-          events={events}
-          eventsForDay={eventsForDay}
-          today={today}
-          onCreateAtTime={openCreateFormAtTime}
-          onEdit={openEditForm}
-          onDelete={handleDelete}
-          isPending={isPending}
+        <WeekCalendar
+          username={username}
+          days={weekDays}
+          viewerIsOwner={viewerIsOwner}
+          emptyMessage={
+            viewerIsOwner
+              ? "이 주가 비어있어요. 슬롯을 열거나 이벤트를 추가해보세요."
+              : "이 주에 공개된 일정이나 예약 가능한 시간이 없어요."
+          }
         />
       )}
 
@@ -798,6 +891,44 @@ export default function CalendarView({
                   placeholder="메모 (선택)"
                 />
               </div>
+
+              {/* Calendar picker */}
+              {myCalendars.length > 0 && (
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-charcoal-400">
+                    캘린더
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="h-3 w-3 shrink-0 rounded-full"
+                      style={{
+                        backgroundColor:
+                          myCalendars.find((c) => c.id === form.calendarId)?.color ??
+                          "#6366f1",
+                      }}
+                    />
+                    <select
+                      value={form.calendarId}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, calendarId: e.target.value }))
+                      }
+                      className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 focus:border-red-500 focus:outline-none"
+                    >
+                      {myCalendars.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                          {c.is_default ? " (기본)" : ""} ·{" "}
+                          {c.visibility === "public"
+                            ? "공개"
+                            : c.visibility === "followers"
+                              ? "팔로워"
+                              : "비공개"}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
 
               {/* Date */}
               <div>
@@ -963,191 +1094,6 @@ function EventList({
   );
 }
 
-// ─── Week View ──────────────────────────────────────────────
-
-function WeekView({
-  year,
-  month,
-  selectedDay,
-  events,
-  eventsForDay,
-  today,
-  onCreateAtTime,
-  onEdit,
-  onDelete,
-  isPending,
-}: {
-  year: number;
-  month: number;
-  selectedDay: number;
-  events: Event[];
-  eventsForDay: (y: number, m: number, d: number) => Event[];
-  today: Date;
-  onCreateAtTime: (day: number, hour: number, forYear?: number, forMonth?: number) => void;
-  onEdit: (event: Event) => void;
-  onDelete: (eventId: string) => void;
-  isPending: boolean;
-}) {
-  const weekDates = getWeekDates(year, month, selectedDay);
-  const hours = Array.from({ length: 24 }, (_, i) => i);
-  const nowHour = today.getHours();
-  const nowMinute = today.getMinutes();
-
-  // Collect events by day column
-  const getEventsForDate = (date: Date) => {
-    return eventsForDay(date.getFullYear(), date.getMonth(), date.getDate());
-  };
-
-  // Suppress unused vars lint — events prop used in getEventsForDate indirectly
-  void events;
-
-  return (
-    <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 p-3 overflow-x-auto md:p-4">
-      {/* Day headers */}
-      <div className="grid min-w-[600px] grid-cols-[40px_repeat(7,1fr)] gap-0 border-b border-charcoal-800/60 pb-2 mb-2 md:min-w-0 md:grid-cols-[60px_repeat(7,1fr)]">
-        <div />
-        {weekDates.map((date, i) => {
-          const isToday =
-            date.getFullYear() === today.getFullYear() &&
-            date.getMonth() === today.getMonth() &&
-            date.getDate() === today.getDate();
-          const isSat = i === 5;
-          const isSun = i === 6;
-          return (
-            <div key={i} className="text-center">
-              <div
-                className={`text-xs font-medium ${
-                  isSat ? "text-blue-400/70" : isSun ? "text-red-400/70" : "text-charcoal-500"
-                }`}
-              >
-                {DAYS_MON[i]}
-              </div>
-              <div
-                className={`mt-1 inline-flex h-7 w-7 items-center justify-center text-sm font-medium ${
-                  isToday ? "rounded-full bg-red-600 text-white" : "text-charcoal-300"
-                }`}
-              >
-                {date.getDate()}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Time grid */}
-      <div className="relative max-h-[600px] overflow-y-auto">
-        <div className="grid min-w-[600px] grid-cols-[40px_repeat(7,1fr)] gap-0 md:min-w-0 md:grid-cols-[60px_repeat(7,1fr)]">
-          {hours.map((hour) => (
-            <div key={hour} className="contents">
-              {/* Time label */}
-              <div className="h-12 pr-2 text-right text-[10px] text-charcoal-600 leading-none pt-0">
-                {String(hour).padStart(2, "0")}:00
-              </div>
-              {/* Day cells */}
-              {weekDates.map((date, di) => {
-                const dateEvents = getEventsForDate(date).filter((e) => {
-                  if (e.all_day) return hour === 0;
-                  const h = new Date(e.start_at).getHours();
-                  return h === hour;
-                });
-                const isNowRow =
-                  date.getFullYear() === today.getFullYear() &&
-                  date.getMonth() === today.getMonth() &&
-                  date.getDate() === today.getDate() &&
-                  hour === nowHour;
-                return (
-                  <div
-                    key={di}
-                    onClick={() => onCreateAtTime(date.getDate(), hour, date.getFullYear(), date.getMonth())}
-                    className="relative h-12 border-t border-l border-charcoal-800/30 cursor-pointer hover:bg-charcoal-800/20 transition-colors"
-                  >
-                    {/* Current time line */}
-                    {isNowRow && (
-                      <div
-                        className="absolute left-0 right-0 border-t-2 border-red-500/70 z-10 pointer-events-none"
-                        style={{ top: `${(nowMinute / 60) * 100}%` }}
-                      >
-                        <div className="absolute -left-1 -top-1 h-2 w-2 rounded-full bg-red-500" />
-                      </div>
-                    )}
-                    {/* Events */}
-                    {dateEvents.map((ev) => (
-                      <div
-                        key={ev.id}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (ev.source !== "google") onEdit(ev);
-                        }}
-                        className={`absolute inset-x-0.5 top-0.5 z-20 rounded px-1 py-0.5 text-[10px] leading-tight overflow-hidden max-h-[42px] ${
-                          ev.source === "google"
-                            ? "bg-blue-500/20 text-blue-300 cursor-default"
-                            : "bg-red-600/30 text-red-200 cursor-pointer hover:bg-red-600/50"
-                        }`}
-                        title={`${ev.title}${ev.all_day ? " (종일)" : ` ${formatTime(ev.start_at)}-${formatTime(ev.end_at)}`}`}
-                      >
-                        <span className="flex items-center gap-0.5 truncate">
-                          {ev.source === "google" && (
-                            <span className="shrink-0 text-[8px] font-bold text-blue-400">G</span>
-                          )}
-                          <span className="truncate">{ev.title}</span>
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {isPending && (
-        <div className="mt-2 text-center text-xs text-charcoal-500">불러오는 중...</div>
-      )}
-
-      {/* Week event sidebar — shows selected day events below */}
-      <div className="mt-4 border-t border-charcoal-800/60 pt-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-charcoal-200">
-            이번 주 일정 ({events.length})
-          </h3>
-        </div>
-        {events.length === 0 ? (
-          <p className="text-sm text-charcoal-600">일정이 없습니다</p>
-        ) : (
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {events.slice(0, 12).map((ev) => (
-              <div
-                key={ev.id}
-                className="group rounded-lg border border-charcoal-800/40 bg-charcoal-800/20 p-2.5"
-              >
-                <div className="flex items-center gap-1.5">
-                  <span
-                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${ev.source === "google" ? "bg-blue-400" : "bg-red-400"}`}
-                  />
-                  <p className="text-xs font-medium text-charcoal-200 truncate">{ev.title}</p>
-                  {ev.source === "google" && (
-                    <span className="shrink-0 rounded bg-blue-500/10 px-1 py-0.5 text-[8px] text-blue-400">G</span>
-                  )}
-                </div>
-                <p className="mt-0.5 text-[10px] text-charcoal-500">
-                  {new Date(ev.start_at).getDate()}일{" "}
-                  {ev.all_day ? "종일" : formatTime(ev.start_at)}
-                </p>
-                {ev.source !== "google" && (
-                  <div className="mt-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => onEdit(ev)} className="text-[10px] text-charcoal-500 hover:text-charcoal-300">수정</button>
-                    <button onClick={() => onDelete(ev.id)} className="text-[10px] text-charcoal-500 hover:text-red-400">삭제</button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 // ─── Year View ──────────────────────────────────────────────
 
