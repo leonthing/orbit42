@@ -80,7 +80,7 @@ export function WeekCalendar({
       </div>
 
       {/* Day headers (sticky) */}
-      <div className="grid grid-cols-[48px_repeat(7,minmax(0,1fr))] border-b border-charcoal-800/40 bg-charcoal-900/30">
+      <div className="grid grid-cols-[44px_repeat(7,minmax(0,1fr))] border-b border-charcoal-800/40 bg-charcoal-900/30">
         <div className="border-r border-charcoal-800/40" />
         {days.map((day) => (
           <DayHeader key={day.date.toISOString()} day={day} />
