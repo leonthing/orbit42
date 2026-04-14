@@ -46,16 +46,14 @@ export default async function LandingPage() {
               Time, shared and sold
             </p>
             <h1 className="mt-3 text-3xl font-bold leading-[1.15] tracking-tight text-charcoal-100 sm:text-4xl md:text-5xl lg:text-6xl">
-              내 한 주가
+              시간은 가장 큰
               <br />
               <span className="bg-gradient-to-r from-red-600 to-red-400 bg-clip-text text-transparent">
-                재고가 됩니다.
+                자산입니다.
               </span>
             </h1>
             <p className="mt-5 max-w-md text-sm leading-relaxed text-charcoal-400 sm:text-base">
-              캘린더로 일상을 공유하고, 비어 있는 시간 중 일부를
-              슬롯으로 열어 팔거나 나눠주세요. 누군가는 당신의 다음
-              화요일 3시를 기다리고 있어요.
+              비어있는 시간을 슬롯으로 열어 판매하여 수익을 창출하세요.
             </p>
 
             <div className="mt-7 flex flex-col gap-2 sm:flex-row sm:gap-3">
