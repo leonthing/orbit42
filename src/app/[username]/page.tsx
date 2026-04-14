@@ -7,7 +7,8 @@ import { getFollowStats, isFollowing } from "@/lib/follows";
 import { listPublicSlotsByUsername } from "@/lib/slots";
 import { getReactionsForMany } from "@/lib/reactions";
 import { ReactionStrip } from "@/components/ReactionStrip";
-import { getPublicEvents } from "@/lib/public-calendar";
+import { getProfileWeek, startOfWeek } from "@/lib/profile-week";
+import { WeekCalendar } from "@/components/WeekCalendar";
 import { FollowButton } from "./FollowButton";
 
 export const dynamic = "force-dynamic";
@@ -34,15 +35,15 @@ export default async function PublicProfile({
   const profile = await getProfile(params.username);
   if (!profile) notFound();
 
-  const now = new Date();
-  const weekHorizon = new Date(now.getTime() + 7 * 24 * 60 * 60_000);
+  const weekStart = startOfWeek(new Date());
+  const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60_000);
 
-  const [session, stats, viewerFollowing, slots, weekEvents] = await Promise.all([
+  const [session, stats, viewerFollowing, slots, weekDays] = await Promise.all([
     getSession(),
     getFollowStats(params.username),
     isFollowing(params.username),
     listPublicSlotsByUsername(params.username),
-    getPublicEvents(params.username, now, weekHorizon).catch(() => []),
+    getProfileWeek(params.username, weekStart, weekEnd),
   ]);
   const slotReactions = await getReactionsForMany(
     "slot",
@@ -58,135 +59,126 @@ export default async function PublicProfile({
   });
   const interests = (profile.interests || []) as string[];
 
+  const totalSlotWindows = weekDays.reduce(
+    (n, d) => n + d.items.filter((i) => i.kind === "slot").length,
+    0,
+  );
+
   return (
     <div className="space-y-8">
-      <section className="rounded-2xl border border-charcoal-800/60 bg-charcoal-900/30 p-6 md:p-8">
-        <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-          <div className="flex items-start gap-5">
-            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-navy-600/20 text-3xl font-bold text-navy-400">
-              {(profile.display_name || profile.username).charAt(0).toUpperCase()}
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-2xl font-bold text-charcoal-100 md:text-3xl">
-                {profile.display_name || profile.username}
-              </h1>
-              <p className="text-sm text-charcoal-500">@{profile.username}</p>
-              {profile.bio && (
-                <p className="mt-3 max-w-xl text-sm text-charcoal-300">{profile.bio}</p>
+      {/* Identity row — compact */}
+      <header className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center gap-4">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-navy-600/40 to-amber-500/30 text-2xl font-bold text-charcoal-100">
+            {(profile.display_name || profile.username).charAt(0).toUpperCase()}
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold text-charcoal-100 md:text-[28px]">
+              {profile.display_name || profile.username}
+            </h1>
+            <p className="text-sm text-charcoal-500">@{profile.username}</p>
+            <div className="mt-2 flex gap-4 text-xs text-charcoal-400">
+              <span>
+                <strong className="text-charcoal-100">{stats.followers}</strong>{" "}
+                <span className="text-charcoal-500">orbiters</span>
+              </span>
+              <span>
+                <strong className="text-charcoal-100">{stats.following}</strong>{" "}
+                <span className="text-charcoal-500">orbiting</span>
+              </span>
+              {totalSlotWindows > 0 && (
+                <span>
+                  <strong className="text-amber-300">{totalSlotWindows}</strong>{" "}
+                  <span className="text-charcoal-500">예약가능</span>
+                </span>
               )}
-              <div className="mt-4 flex gap-5 text-sm text-charcoal-400">
-                <span>
-                  <strong className="text-charcoal-100">{stats.followers}</strong>{" "}
-                  <span className="text-charcoal-500">orbiters</span>
-                </span>
-                <span>
-                  <strong className="text-charcoal-100">{stats.following}</strong>{" "}
-                  <span className="text-charcoal-500">orbiting</span>
-                </span>
-              </div>
             </div>
           </div>
-
-          <div className="flex shrink-0 items-center gap-2">
-            {isOwner ? (
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {isOwner ? (
+            <>
+              <Link
+                href={`/${params.username}/slots`}
+                className="rounded-lg bg-amber-500/90 px-4 py-2 text-sm font-semibold text-charcoal-950 hover:bg-amber-400"
+              >
+                Sell my time
+              </Link>
               <Link
                 href={`/${params.username}/settings`}
                 className="rounded-lg border border-charcoal-700 px-4 py-2 text-sm font-medium text-charcoal-200 hover:border-charcoal-600 hover:text-charcoal-100"
               >
-                Edit profile
+                Edit
               </Link>
-            ) : (
-              <FollowButton
-                targetUsername={params.username}
-                initiallyFollowing={viewerFollowing}
-                loggedIn={!!session}
-              />
-            )}
-          </div>
+            </>
+          ) : (
+            <FollowButton
+              targetUsername={params.username}
+              initiallyFollowing={viewerFollowing}
+              loggedIn={!!session}
+            />
+          )}
         </div>
+      </header>
 
-        {interests.length > 0 && (
-          <div className="mt-6 flex flex-wrap gap-2">
-            {interests.map((tag) => (
-              <span
-                key={tag}
-                className="rounded-full bg-navy-600/15 px-3 py-1 text-xs font-medium text-navy-400"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {weekEvents.length > 0 && (
-        <section className="space-y-3">
-          <div className="flex items-baseline justify-between">
-            <h2 className="text-lg font-semibold text-charcoal-100">This week</h2>
-            <Link
-              href={`/${params.username}/c`}
-              className="text-xs text-navy-400 hover:text-navy-300"
-            >
-              See full calendar →
-            </Link>
-          </div>
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {weekEvents.slice(0, 12).map((e) => (
-              <div
-                key={e.id}
-                className="flex w-44 shrink-0 flex-col rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-3"
-              >
-                <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider text-charcoal-500">
-                  <span
-                    className="h-2 w-2 rounded-full"
-                    style={{ backgroundColor: e.calendar_color }}
-                  />
-                  <span>
-                    {new Date(e.start_at).toLocaleDateString("ko-KR", {
-                      month: "short",
-                      day: "numeric",
-                      weekday: "short",
-                    })}
-                  </span>
-                </div>
-                <p className="mt-1 line-clamp-2 text-sm font-semibold text-charcoal-100">
-                  {e.title}
-                </p>
-                <p className="mt-auto pt-2 text-xs text-charcoal-500">
-                  {e.all_day
-                    ? "하루 종일"
-                    : new Date(e.start_at).toLocaleTimeString("ko-KR", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
+      {profile.bio && (
+        <p className="max-w-2xl text-sm leading-relaxed text-charcoal-300">{profile.bio}</p>
       )}
+
+      {interests.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {interests.map((tag) => (
+            <span
+              key={tag}
+              className="rounded-full bg-navy-600/15 px-3 py-1 text-xs font-medium text-navy-300"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* HERO: week calendar with events + bookable slots */}
+      <WeekCalendar
+        username={params.username}
+        days={weekDays}
+        emptyMessage={
+          isOwner
+            ? "이번 주가 비어있어요. Sell my time에서 슬롯을 열거나 캘린더를 공개해보세요."
+            : "이번 주에 공개된 일정이나 예약 가능한 시간이 없어요."
+        }
+      />
+
+      <div className="flex items-center justify-end">
+        <Link
+          href={`/${params.username}/c`}
+          className="text-xs font-medium text-charcoal-400 hover:text-charcoal-100"
+        >
+          See full calendar →
+        </Link>
+      </div>
 
       {slots.length > 0 && (
         <section className="space-y-3">
           <div className="flex items-baseline justify-between">
-            <h2 className="text-lg font-semibold text-charcoal-100">Slots</h2>
-            <span className="text-xs text-charcoal-500">{slots.length}개의 시간</span>
+            <h2 className="text-lg font-semibold text-charcoal-100">All slots</h2>
+            <span className="text-xs text-charcoal-500">{slots.length}개</span>
           </div>
           <div className="grid gap-3 md:grid-cols-2">
             {slots.map((s) => (
               <div
                 key={s.id}
-                className="group rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5 transition-colors hover:border-navy-500/60"
+                className="group rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5 transition-colors hover:border-amber-500/50"
               >
                 <Link href={`/${params.username}/s/${s.slug}`} className="block">
                   <div className="flex items-baseline justify-between gap-2">
-                    <h3 className="truncate text-sm font-semibold text-charcoal-100 group-hover:text-navy-300">
+                    <h3 className="truncate text-sm font-semibold text-charcoal-100 group-hover:text-amber-200">
                       {s.title}
                     </h3>
-                    <span className="shrink-0 text-xs font-medium text-charcoal-400">
+                    <span className="shrink-0 rounded-md bg-amber-500/15 px-2 py-0.5 text-xs font-bold text-amber-300">
                       {s.price_cents === 0
-                        ? "Free"
-                        : `${(s.price_cents / 100).toLocaleString("ko-KR")}원`}
+                        ? "FREE"
+                        : `₩${(s.price_cents / 100).toLocaleString("ko-KR")}`}
                     </span>
                   </div>
                   <p className="mt-1 text-xs text-charcoal-500">
@@ -214,28 +206,25 @@ export default async function PublicProfile({
         </section>
       )}
 
-      <div className="grid gap-6 md:grid-cols-3">
-        <SectionCard
-          title="Calendar"
-          cta="View calendar →"
-          href={`/${params.username}/c`}
+      <div className="grid gap-3 md:grid-cols-2">
+        <Link
+          href={`/${params.username}/blog`}
+          className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5 hover:border-charcoal-700"
         >
-          <p className="text-sm text-charcoal-400">
-            공개된 일정을 캘린더 뷰에서 볼 수 있어요.
+          <p className="text-xs font-semibold uppercase tracking-wider text-charcoal-500">
+            Posts
           </p>
-        </SectionCard>
-
-        <SectionCard title="Slots">
-          <p className="text-sm text-charcoal-400">
-            {slots.length > 0
-              ? `예약 가능한 시간 ${slots.length}개`
-              : "아직 열린 시간이 없어요."}
+          <p className="mt-1 text-sm text-charcoal-200">최근 글 둘러보기 →</p>
+        </Link>
+        <Link
+          href={`/${params.username}/c`}
+          className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5 hover:border-charcoal-700"
+        >
+          <p className="text-xs font-semibold uppercase tracking-wider text-charcoal-500">
+            Calendar
           </p>
-        </SectionCard>
-
-        <SectionCard title="Posts" cta="Read posts →" href={`/${params.username}/blog`}>
-          <p className="text-sm text-charcoal-400">최근에 쓴 글을 모아봤어요.</p>
-        </SectionCard>
+          <p className="mt-1 text-sm text-charcoal-200">월별 캘린더 보기 →</p>
+        </Link>
       </div>
 
       {education.length > 0 && (
@@ -276,53 +265,21 @@ export default async function PublicProfile({
       )}
 
       {Object.values(socialLinks).some(Boolean) && (
-        <section className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30">
-          <div className="border-b border-charcoal-800/40 px-5 py-3">
-            <h2 className="text-sm font-semibold text-charcoal-200">SNS</h2>
-          </div>
-          <div className="flex flex-wrap gap-2 p-5">
-            {Object.entries(socialLinks)
-              .filter(([, v]) => !!v)
-              .map(([k, v]) => (
-                <a
-                  key={k}
-                  href={v as string}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-lg border border-charcoal-800/60 bg-charcoal-800/20 px-3 py-1.5 text-xs font-medium text-charcoal-300 hover:border-charcoal-600 hover:text-charcoal-100"
-                >
-                  {k}
-                </a>
-              ))}
-          </div>
+        <section className="flex flex-wrap gap-2">
+          {Object.entries(socialLinks)
+            .filter(([, v]) => !!v)
+            .map(([k, v]) => (
+              <a
+                key={k}
+                href={v as string}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-lg border border-charcoal-800/60 bg-charcoal-800/20 px-3 py-1.5 text-xs font-medium text-charcoal-300 hover:border-charcoal-600 hover:text-charcoal-100"
+              >
+                {k}
+              </a>
+            ))}
         </section>
-      )}
-    </div>
-  );
-}
-
-function SectionCard({
-  title,
-  cta,
-  href,
-  children,
-}: {
-  title: string;
-  cta?: string;
-  href?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-col rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5">
-      <h3 className="text-sm font-semibold text-charcoal-100">{title}</h3>
-      <div className="mt-2 flex-1">{children}</div>
-      {cta && href && (
-        <Link
-          href={href}
-          className="mt-4 text-xs font-medium text-navy-400 hover:text-navy-300"
-        >
-          {cta}
-        </Link>
       )}
     </div>
   );
