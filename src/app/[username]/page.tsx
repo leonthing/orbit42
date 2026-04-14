@@ -11,6 +11,11 @@ import { AllSlotsGrid } from "@/components/AllSlotsGrid";
 import { getValueStats } from "@/lib/value-stats";
 import { Avatar } from "@/components/Avatar";
 import { FollowButton } from "./FollowButton";
+import { listFeedPostsByAuthors } from "@/lib/feed-posts";
+import { getAdminClient } from "@/lib/supabase";
+import { DeleteFeedPostButton } from "@/components/DeleteFeedPostButton";
+import { ReactionStrip } from "@/components/ReactionStrip";
+import Image from "next/image";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +51,21 @@ export default async function PublicProfile({
   const slotReactions = await getReactionsForMany(
     "slot",
     slots.map((s) => s.id),
+  );
+
+  const db = getAdminClient();
+  const { data: userRow } = await db
+    .from("users")
+    .select("id")
+    .eq("username", params.username)
+    .single();
+  const authorId = (userRow?.id as string | undefined) ?? null;
+  const myFeedPosts = authorId
+    ? await listFeedPostsByAuthors([authorId], 20)
+    : [];
+  const feedPostReactions = await getReactionsForMany(
+    "feed_post",
+    myFeedPosts.map((p) => p.id),
   );
 
   const isOwner = session?.username === params.username;
@@ -221,15 +241,97 @@ export default async function PublicProfile({
         </SlotPanelProvider>
       )}
 
+      {myFeedPosts.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-lg font-semibold text-charcoal-100">
+              내가 쓴 글
+            </h2>
+            <span className="text-xs text-charcoal-500">
+              {myFeedPosts.length}
+            </span>
+          </div>
+          <ul className="space-y-2.5">
+            {myFeedPosts.map((p) => (
+              <li
+                key={p.id}
+                className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-4"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <time className="text-[11px] font-medium text-charcoal-500">
+                    {new Date(p.created_at).toLocaleString("ko-KR", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </time>
+                  {isOwner && (
+                    <DeleteFeedPostButton id={p.id} />
+                  )}
+                </div>
+                {p.body && (
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-charcoal-100">
+                    {p.body}
+                  </p>
+                )}
+                {p.image_urls.length > 0 && (
+                  <div
+                    className={`mt-3 grid gap-2 ${
+                      p.image_urls.length === 1
+                        ? "grid-cols-1"
+                        : p.image_urls.length === 2
+                          ? "grid-cols-2"
+                          : "grid-cols-2 sm:grid-cols-3"
+                    }`}
+                  >
+                    {p.image_urls.map((url) => (
+                      <div
+                        key={url}
+                        className="relative aspect-video overflow-hidden rounded-lg bg-charcoal-800/40"
+                      >
+                        <Image
+                          src={url}
+                          alt=""
+                          fill
+                          sizes="(max-width: 768px) 50vw, 300px"
+                          className="object-cover"
+                          unoptimized
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {p.location_label && (
+                  <p className="mt-2 text-xs text-charcoal-500">
+                    📍 {p.location_label}
+                  </p>
+                )}
+                <div className="mt-3">
+                  <ReactionStrip
+                    target_type="feed_post"
+                    target_id={p.id}
+                    initial={feedPostReactions.get(p.id) ?? []}
+                    loggedIn={!!session}
+                    size="sm"
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <div className="grid gap-3 md:grid-cols-2">
         <Link
           href={`/${params.username}/blog`}
           className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5 hover:border-charcoal-700"
         >
           <p className="text-xs font-semibold uppercase tracking-wider text-charcoal-500">
-            Posts
+            긴 글
           </p>
-          <p className="mt-1 text-sm text-charcoal-200">최근 글 둘러보기 →</p>
+          <p className="mt-1 text-sm text-charcoal-200">블로그 둘러보기 →</p>
         </Link>
         <Link
           href={`/${params.username}/c`}
