@@ -460,8 +460,8 @@ function DayCard({
             isToday
               ? "bg-red-600 text-white"
               : isPast
-                ? "bg-charcoal-800 text-charcoal-400"
-                : "bg-red-500/15 text-red-200 ring-1 ring-red-500/30"
+                ? "bg-charcoal-800/40 text-charcoal-500 ring-1 ring-charcoal-300 dark:ring-0"
+                : "bg-red-500/15 text-red-800 ring-1 ring-red-500/40 dark:text-red-200 dark:ring-red-500/30"
           }`}
         >
           {relative}
@@ -566,7 +566,7 @@ function EntryBody({
       {item.kind === "feed_post" && (
         <div className="mt-3 space-y-3">
           {item.attached_event_id && (
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-700/20 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-300">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-800 ring-1 ring-emerald-500/40 dark:text-emerald-200 dark:ring-0">
               일정 공유
             </div>
           )}
@@ -635,10 +635,26 @@ function formatTimeShort(iso: string) {
 
 function KindBadge({ kind }: { kind: FeedItem["kind"] }) {
   const map: Record<FeedItem["kind"], { label: string; color: string }> = {
-    event: { label: "일정", color: "bg-emerald-500/15 text-emerald-200 ring-1 ring-emerald-500/30" },
-    feed_post: { label: "글", color: "bg-charcoal-800/60 text-charcoal-200 ring-1 ring-charcoal-700" },
-    post: { label: "긴 글", color: "bg-red-500/15 text-red-200 ring-1 ring-red-500/30" },
-    slot: { label: "슬롯", color: "bg-red-500/15 text-red-200 ring-1 ring-red-500/30" },
+    event: {
+      label: "일정",
+      color:
+        "bg-emerald-500/15 text-emerald-800 ring-1 ring-emerald-500/40 dark:text-emerald-200 dark:ring-emerald-500/30",
+    },
+    feed_post: {
+      label: "글",
+      color:
+        "bg-charcoal-800/15 text-charcoal-200 ring-1 ring-charcoal-300 dark:bg-charcoal-800/60 dark:text-charcoal-100 dark:ring-charcoal-700",
+    },
+    post: {
+      label: "긴 글",
+      color:
+        "bg-red-500/15 text-red-800 ring-1 ring-red-500/40 dark:text-red-200 dark:ring-red-500/30",
+    },
+    slot: {
+      label: "슬롯",
+      color:
+        "bg-red-500/15 text-red-800 ring-1 ring-red-500/40 dark:text-red-200 dark:ring-red-500/30",
+    },
   };
   const m = map[kind];
   return (
@@ -737,7 +753,7 @@ function FeedSlotCard({
           <p className="truncate text-sm font-semibold text-charcoal-100">
             {item.title}
           </p>
-          <span className="shrink-0 rounded-md bg-red-500/15 px-2 py-0.5 text-xs font-bold text-red-300">
+          <span className="shrink-0 rounded-md bg-red-500/15 px-2 py-0.5 text-xs font-bold text-red-700 dark:text-red-300">
             {item.price_cents === 0
               ? "FREE"
               : `₩${(item.price_cents / 100).toLocaleString("ko-KR")}`}
@@ -761,14 +777,14 @@ function FeedSlotCard({
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="inline-flex items-center rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-300">
+          <span className="inline-flex items-center rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-800 ring-1 ring-amber-500/40 dark:text-amber-200 dark:ring-0">
             {auctionEnded ? "경매 종료" : "경매"}
           </span>
           <p className="truncate text-sm font-semibold text-charcoal-100">
             {item.title}
           </p>
         </div>
-        <span className="shrink-0 rounded-md bg-amber-500/20 px-2 py-0.5 text-xs font-bold text-amber-200">
+        <span className="shrink-0 rounded-md bg-amber-500/20 px-2 py-0.5 text-xs font-bold text-amber-800 dark:text-amber-200">
           {priceLabel}
         </span>
       </div>
@@ -789,7 +805,7 @@ function FeedSlotCard({
             className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
               auctionEnded
                 ? "bg-charcoal-700/40 text-charcoal-500"
-                : "bg-amber-500/20 text-amber-300"
+                : "bg-amber-500/20 text-amber-800 dark:text-amber-200"
             }`}
           >
             {remaining}

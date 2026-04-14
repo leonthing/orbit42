@@ -281,8 +281,8 @@ function ToolButton({
       title={label}
       className={`flex h-9 w-9 items-center justify-center rounded-full text-base transition-colors ${
         active
-          ? "bg-red-500/20 text-red-300"
-          : "text-charcoal-400 hover:bg-charcoal-800/60 hover:text-charcoal-200"
+          ? "bg-red-500/20 text-red-700 dark:text-red-300"
+          : "text-charcoal-500 hover:bg-charcoal-800/10 hover:text-charcoal-100 dark:text-charcoal-400 dark:hover:bg-charcoal-800/60 dark:hover:text-charcoal-200"
       } disabled:cursor-not-allowed disabled:opacity-40`}
     >
       {icon}
