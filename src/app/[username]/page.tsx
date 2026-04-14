@@ -80,14 +80,20 @@ export default async function PublicProfile({
             </h1>
             <p className="text-sm text-charcoal-500">@{profile.username}</p>
             <div className="mt-2 flex gap-4 text-xs text-charcoal-400">
-              <span>
+              <Link
+                href={`/${params.username}/followers`}
+                className="hover:text-charcoal-200"
+              >
                 <strong className="text-charcoal-100">{stats.followers}</strong>{" "}
                 <span className="text-charcoal-500">orbiters</span>
-              </span>
-              <span>
+              </Link>
+              <Link
+                href={`/${params.username}/following`}
+                className="hover:text-charcoal-200"
+              >
                 <strong className="text-charcoal-100">{stats.following}</strong>{" "}
                 <span className="text-charcoal-500">orbiting</span>
-              </span>
+              </Link>
               {totalSlotWindows > 0 && (
                 <span>
                   <strong className="text-amber-300">{totalSlotWindows}</strong>{" "}

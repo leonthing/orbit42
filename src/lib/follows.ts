@@ -114,3 +114,18 @@ export async function listFollowing(username: string) {
     data?.map((row) => row.following as unknown as { id: string; username: string; display_name: string | null }) ?? []
   );
 }
+
+export async function listFollowers(username: string) {
+  const db = getAdminClient();
+  const userId = await getUserIdByUsername(username);
+  if (!userId) return [] as { username: string; display_name: string | null; id: string }[];
+
+  const { data } = await db
+    .from("follows")
+    .select("follower:users!follows_follower_id_fkey(id, username, display_name)")
+    .eq("following_id", userId);
+
+  return (
+    data?.map((row) => row.follower as unknown as { id: string; username: string; display_name: string | null }) ?? []
+  );
+}
