@@ -171,5 +171,8 @@ export function startOfWeek(d: Date) {
 }
 
 function dayKey(d: Date) {
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  // Use Asia/Seoul day boundaries regardless of where this runs. The
+  // server is UTC (Vercel) and the client is usually KST; picking a
+  // fixed timezone keeps week navigation consistent between them.
+  return d.toLocaleDateString("en-CA", { timeZone: "Asia/Seoul" });
 }
