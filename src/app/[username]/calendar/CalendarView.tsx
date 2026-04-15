@@ -17,7 +17,7 @@ import {
 import LifeCalendarViewExternal from "./LifeCalendarView";
 import type { LifeMemory } from "./life-actions";
 import { WeekCalendar } from "@/components/WeekCalendar";
-import type { WeekDay } from "@/lib/profile-week";
+import type { WeekDay, WeekItem } from "@/lib/profile-week";
 import type { Calendar } from "@/lib/calendars-types";
 
 // ─── Helpers ────────────────────────────────────────────────
@@ -135,6 +135,7 @@ export default function CalendarView({
   const [month, setMonth] = useState(initialMonth);
   const [events, setEvents] = useState<Event[]>(initialEvents);
   const [completed, setCompleted] = useState<Set<string>>(new Set());
+  const [detailEvent, setDetailEvent] = useState<WeekItem | null>(null);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
@@ -866,11 +867,22 @@ export default function CalendarView({
           viewerIsOwner={viewerIsOwner}
           completedKeys={completed}
           onToggleComplete={handleToggleComplete}
+          onEventClick={(item) => setDetailEvent(item)}
           emptyMessage={
             viewerIsOwner
               ? "이 주가 비어있어요. 슬롯을 열거나 이벤트를 추가해보세요."
               : "이 주에 공개된 일정이나 예약 가능한 시간이 없어요."
           }
+        />
+      )}
+
+      {detailEvent && (
+        <EventDetailModal
+          item={detailEvent}
+          isCompleted={completed.has(detailEvent.id)}
+          canToggleComplete={!!viewerIsOwner}
+          onToggleComplete={() => handleToggleComplete(detailEvent.id)}
+          onClose={() => setDetailEvent(null)}
         />
       )}
 
@@ -1374,4 +1386,100 @@ function QuarterView({
   );
 }
 // LifeCalendarView is now in LifeCalendarView.tsx
-// EOF-MARKER
+
+function EventDetailModal({
+  item,
+  isCompleted,
+  canToggleComplete,
+  onToggleComplete,
+  onClose,
+}: {
+  item: WeekItem;
+  isCompleted: boolean;
+  canToggleComplete: boolean;
+  onToggleComplete: () => void;
+  onClose: () => void;
+}) {
+  if (item.kind !== "event") return null;
+  const fmt = (iso: string) =>
+    new Date(iso).toLocaleString("ko-KR", {
+      timeZone: "Asia/Seoul",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      weekday: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md rounded-2xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] p-5 shadow-2xl"
+      >
+        <div className="flex items-start gap-3">
+          <span
+            className="mt-1 inline-block h-3 w-3 shrink-0 rounded-sm"
+            style={{ background: item.color }}
+          />
+          <div className="min-w-0 flex-1">
+            <h3
+              className={`text-base font-semibold ${
+                isCompleted
+                  ? "text-charcoal-500 line-through"
+                  : "text-charcoal-100"
+              }`}
+            >
+              {item.title}
+            </h3>
+            <p className="mt-1 text-xs text-charcoal-500">
+              {item.all_day
+                ? "종일"
+                : `${fmt(item.start_at)} – ${new Date(item.end_at).toLocaleTimeString(
+                    "ko-KR",
+                    {
+                      timeZone: "Asia/Seoul",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: false,
+                    },
+                  )}`}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 flex items-center justify-between gap-2">
+          {canToggleComplete ? (
+            <button
+              type="button"
+              onClick={() => {
+                onToggleComplete();
+              }}
+              className={`rounded-lg px-3 py-2 text-sm font-medium ${
+                isCompleted
+                  ? "bg-charcoal-800 text-charcoal-300 hover:bg-charcoal-700"
+                  : "bg-red-600 text-white hover:bg-red-500"
+              }`}
+            >
+              {isCompleted ? "완료 취소" : "완료로 표시"}
+            </button>
+          ) : (
+            <span />
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg px-3 py-2 text-sm text-charcoal-300 hover:bg-charcoal-800/60"
+          >
+            닫기
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type { WeekDay, WeekItem } from "@/lib/profile-week";
 import { ShareEventButton } from "@/components/ShareEventButton";
 import { useSlotPanel } from "@/components/SlotPanel";
@@ -36,6 +36,7 @@ export function WeekCalendar({
   viewerIsOwner,
   completedKeys,
   onToggleComplete,
+  onEventClick,
 }: {
   username: string;
   days: WeekDay[];
@@ -43,6 +44,7 @@ export function WeekCalendar({
   viewerIsOwner?: boolean;
   completedKeys?: Set<string>;
   onToggleComplete?: (eventId: string) => void;
+  onEventClick?: (item: WeekItem) => void;
 }) {
   const totalSlots = days.reduce(
     (n, d) => n + d.items.filter((i) => i.kind === "slot").length,
@@ -112,24 +114,18 @@ export function WeekCalendar({
             </div>
           )}
 
-          {/* Time grid */}
-          <div
-            className="grid grid-cols-[44px_repeat(7,minmax(0,1fr))]"
-            style={{ height: GRID_HEIGHT }}
-          >
-            <TimeAxis />
-            {positionedByDay.map((items, idx) => (
-              <DayColumn
-                key={days[idx].date.toISOString()}
-                items={items.filter((i) => !i.allDay)}
-                isToday={days[idx].isToday}
-                username={username}
-                viewerIsOwner={viewerIsOwner}
-                completedKeys={completedKeys}
-                onToggleComplete={onToggleComplete}
-              />
-            ))}
-          </div>
+          {/* Time grid — scrollable so we can show all 24 hours without
+              the page becoming too tall. Starts scrolled to 06:00 by
+              default, which is where most events live. */}
+          <ScrollableTimeGrid
+            positionedByDay={positionedByDay}
+            days={days}
+            username={username}
+            viewerIsOwner={viewerIsOwner}
+            completedKeys={completedKeys}
+            onToggleComplete={onToggleComplete}
+            onEventClick={onEventClick}
+          />
         </div>
       </div>
 
@@ -232,6 +228,55 @@ function AllDayColumn({ items }: { items: PositionedItem[] }) {
   );
 }
 
+function ScrollableTimeGrid({
+  positionedByDay,
+  days,
+  username,
+  viewerIsOwner,
+  completedKeys,
+  onToggleComplete,
+  onEventClick,
+}: {
+  positionedByDay: PositionedItem[][];
+  days: WeekDay[];
+  username: string;
+  viewerIsOwner?: boolean;
+  completedKeys?: Set<string>;
+  onToggleComplete?: (eventId: string) => void;
+  onEventClick?: (item: WeekItem) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  // Scroll to 06:00 on mount so the grid opens where most events live.
+  useEffect(() => {
+    if (ref.current) ref.current.scrollTop = 6 * ROW_HEIGHT;
+  }, []);
+  return (
+    <div
+      ref={ref}
+      className="max-h-[600px] overflow-y-auto"
+    >
+      <div
+        className="grid grid-cols-[44px_repeat(7,minmax(0,1fr))]"
+        style={{ height: GRID_HEIGHT }}
+      >
+        <TimeAxis />
+        {positionedByDay.map((items, idx) => (
+          <DayColumn
+            key={days[idx].date.toISOString()}
+            items={items.filter((i) => !i.allDay)}
+            isToday={days[idx].isToday}
+            username={username}
+            viewerIsOwner={viewerIsOwner}
+            completedKeys={completedKeys}
+            onToggleComplete={onToggleComplete}
+            onEventClick={onEventClick}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function DayColumn({
   items,
   isToday,
@@ -239,6 +284,7 @@ function DayColumn({
   viewerIsOwner,
   completedKeys,
   onToggleComplete,
+  onEventClick,
 }: {
   items: PositionedItem[];
   isToday: boolean;
@@ -246,6 +292,7 @@ function DayColumn({
   viewerIsOwner?: boolean;
   completedKeys?: Set<string>;
   onToggleComplete?: (eventId: string) => void;
+  onEventClick?: (item: WeekItem) => void;
 }) {
   return (
     <div
@@ -282,6 +329,7 @@ function DayColumn({
           viewerIsOwner={viewerIsOwner}
           completed={!!completedKeys?.has(item.id)}
           onToggleComplete={onToggleComplete}
+          onEventClick={onEventClick}
         />
       ))}
     </div>
@@ -309,12 +357,14 @@ function ItemBlock({
   viewerIsOwner,
   completed,
   onToggleComplete,
+  onEventClick,
 }: {
   item: PositionedItem;
   username: string;
   viewerIsOwner?: boolean;
   completed?: boolean;
   onToggleComplete?: (eventId: string) => void;
+  onEventClick?: (item: WeekItem) => void;
 }) {
   const panel = useSlotPanel();
   // Clamp to visible window and translate into grid coordinates.
@@ -334,11 +384,25 @@ function ItemBlock({
 
   if (item.kind === "event") {
     const canToggle = !!(viewerIsOwner && onToggleComplete);
+    const clickable = !!onEventClick;
     return (
       <div
+        role={clickable ? "button" : undefined}
+        tabIndex={clickable ? 0 : undefined}
+        onClick={clickable ? () => onEventClick?.(item) : undefined}
+        onKeyDown={
+          clickable
+            ? (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onEventClick?.(item);
+                }
+              }
+            : undefined
+        }
         className={`group absolute overflow-hidden rounded-md border-l-[3px] px-1.5 py-1 shadow-sm transition-opacity ${
-          completed ? "bg-charcoal-800/50 opacity-50" : "bg-charcoal-800"
-        }`}
+          clickable ? "cursor-pointer hover:ring-1 hover:ring-charcoal-500" : ""
+        } ${completed ? "bg-charcoal-800/50 opacity-50" : "bg-charcoal-800"}`}
         style={{ ...style, borderColor: item.color }}
       >
         <div className="flex items-start gap-1">
@@ -518,8 +582,16 @@ function position(items: WeekItem[], dayDate: Date): PositionedItem[] {
         Math.round((e.getTime() - dayStart.getTime()) / 60_000),
       ),
     );
+    // Only events with a date-only timestamp (no "T" part) qualify as
+    // all-day. Timed events always render in the time grid, even if
+    // their upstream `all_day` flag is accidentally true.
+    const hasTimeComponent = item.start_at.includes("T");
     const allDay =
-      item.kind === "event" && item.all_day && s <= dayStart && e >= dayEnd;
+      item.kind === "event" &&
+      item.all_day &&
+      !hasTimeComponent &&
+      s <= dayStart &&
+      e >= dayEnd;
     return { item, startMin: allDay ? 0 : startMin, endMin: allDay ? 60 : endMin, allDay };
   });
 
