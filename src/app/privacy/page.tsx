@@ -164,8 +164,8 @@ export default function PrivacyPage() {
               </li>
               <li>
                 개인정보 열람·정정·삭제·처리정지 요구는{" "}
-                <a href="mailto:privacy@orbit42.org" className="text-red-500 hover:underline">
-                  privacy@orbit42.org
+                <a href="mailto:connect@nthing.net" className="text-red-500 hover:underline">
+                  connect@nthing.net
                 </a>
                 로 요청할 수 있으며, 회사는 관련 법령에 따라 지체 없이 조치합니다.
               </li>
@@ -213,14 +213,14 @@ export default function PrivacyPage() {
               <li>개인정보 보호책임자: 주식회사 엔씽 대표이사</li>
               <li>
                 문의:{" "}
-                <a href="mailto:privacy@orbit42.org" className="text-red-500 hover:underline">
-                  privacy@orbit42.org
+                <a href="mailto:connect@nthing.net" className="text-red-500 hover:underline">
+                  connect@nthing.net
                 </a>
               </li>
               <li>
                 일반 문의:{" "}
-                <a href="mailto:hello@orbit42.org" className="text-red-500 hover:underline">
-                  hello@orbit42.org
+                <a href="mailto:connect@nthing.net" className="text-red-500 hover:underline">
+                  connect@nthing.net
                 </a>
               </li>
             </List>
