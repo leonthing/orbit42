@@ -45,7 +45,7 @@ export function MyCalendars({
         <button
           type="button"
           onClick={() => setShowNew((v) => !v)}
-          className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-charcoal-950 hover:bg-red-400"
+          className="shrink-0 whitespace-nowrap rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500"
         >
           {showNew ? "닫기" : "+ 새 캘린더"}
         </button>
@@ -168,10 +168,10 @@ function CalendarRow({ calendar }: { calendar: Calendar }) {
         <button
           type="button"
           onClick={() => changePurpose(null)}
-          className={`rounded-full px-2.5 py-0.5 text-[11px] ${
+          className={`whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] ${
             calendar.purpose === null
-              ? "bg-charcoal-700 text-charcoal-100"
-              : "text-charcoal-500 hover:text-charcoal-300"
+              ? "bg-charcoal-700 text-white"
+              : "text-charcoal-600 hover:text-charcoal-900 dark:text-charcoal-500 dark:hover:text-charcoal-300"
           }`}
         >
           없음
@@ -181,10 +181,10 @@ function CalendarRow({ calendar }: { calendar: Calendar }) {
             key={p.value}
             type="button"
             onClick={() => changePurpose(p.value)}
-            className={`rounded-full px-2.5 py-0.5 text-[11px] transition-colors ${
+            className={`whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] transition-colors ${
               calendar.purpose === p.value
-                ? "bg-red-500/25 text-red-200"
-                : "bg-charcoal-900/50 text-charcoal-400 hover:text-charcoal-200"
+                ? "bg-red-600 text-white"
+                : "bg-charcoal-900/50 text-charcoal-700 hover:text-charcoal-900 dark:text-charcoal-400 dark:hover:text-charcoal-200"
             }`}
           >
             {p.label}
@@ -260,10 +260,10 @@ function NewCalendarForm({
             key={p.value}
             type="button"
             onClick={() => setPurpose(p.value)}
-            className={`rounded-full px-3 py-1 text-xs transition-colors ${
+            className={`whitespace-nowrap rounded-full px-3 py-1 text-xs transition-colors ${
               purpose === p.value
-                ? "bg-red-500/25 text-red-200"
-                : "bg-charcoal-800/40 text-charcoal-400 hover:text-charcoal-200"
+                ? "bg-red-600 text-white"
+                : "bg-charcoal-800/40 text-charcoal-700 hover:text-charcoal-900 dark:text-charcoal-400 dark:hover:text-charcoal-200"
             }`}
           >
             {p.label}

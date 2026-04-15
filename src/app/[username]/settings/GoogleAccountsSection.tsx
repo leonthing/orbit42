@@ -41,7 +41,7 @@ export function GoogleAccountsSection({
         </div>
         <a
           href="/api/google?return=settings&add=1"
-          className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-charcoal-950 hover:bg-red-400"
+          className="shrink-0 whitespace-nowrap rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500"
         >
           + 계정 추가
         </a>
