@@ -117,9 +117,9 @@ export async function getEvents(
     google_calendar_id: string | null;
   }>;
 
-  const filterProvided = !!(calendarIds && calendarIds.length > 0);
+  const hasExplicitFilter = Array.isArray(calendarIds);
   const filterSet = new Set(calendarIds ?? []);
-  const selectedCals = filterProvided
+  const selectedCals = hasExplicitFilter
     ? allCals.filter((c) => filterSet.has(c.id))
     : allCals;
   const googleCalIdsToFetch = selectedCals
@@ -134,7 +134,7 @@ export async function getEvents(
     .gte("start_at", startOfMonth)
     .lte("start_at", endOfMonth)
     .order("start_at", { ascending: true });
-  if (filterProvided) {
+  if (hasExplicitFilter) {
     const nativeIds = selectedCals
       .filter((c) => c.source === "native")
       .map((c) => c.id);
@@ -155,7 +155,7 @@ export async function getEvents(
   try {
     const calendar = await getAuthenticatedCalendar(userId);
     if (calendar) {
-      const ids = filterProvided
+      const ids = hasExplicitFilter
         ? googleCalIdsToFetch
         : googleCalIdsToFetch.length > 0
           ? googleCalIdsToFetch

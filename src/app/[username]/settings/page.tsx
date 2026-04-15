@@ -33,7 +33,7 @@ export default async function SettingsPage({
   ]);
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full min-w-0 max-w-xl space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-charcoal-100">Settings</h1>
         <p className="mt-1 text-sm text-charcoal-500">계정 및 프로필 설정</p>
@@ -48,6 +48,18 @@ export default async function SettingsPage({
         name={profile.display_name || profile.username}
       />
 
+      <GoogleAccountsSection
+        primaryConnected={googleConnected}
+        primaryEmail={null}
+        extras={extras.map((a) => ({
+          id: a.id,
+          email: a.email,
+          created_at: (a as unknown as { created_at?: string }).created_at ?? new Date().toISOString(),
+        }))}
+      />
+
+      <MyCalendars initial={myCalendars} googleConnected={googleConnected} />
+
       <SettingsForm
         username={profile.username}
         displayName={profile.display_name || ""}
@@ -61,18 +73,6 @@ export default async function SettingsPage({
         emailVerified={!!profile.email_verified}
         createdAt={profile.created_at}
       />
-
-      <GoogleAccountsSection
-        primaryConnected={googleConnected}
-        primaryEmail={null}
-        extras={extras.map((a) => ({
-          id: a.id,
-          email: a.email,
-          created_at: (a as unknown as { created_at?: string }).created_at ?? new Date().toISOString(),
-        }))}
-      />
-
-      <MyCalendars initial={myCalendars} googleConnected={googleConnected} />
 
       <DeleteAccountSection username={profile.username} />
     </div>

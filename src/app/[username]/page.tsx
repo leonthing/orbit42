@@ -152,18 +152,12 @@ export default async function PublicProfile({
           </div>
         </div>
         {isOwner && (
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <Link
               href={`/${params.username}/slots`}
-              className="flex-1 whitespace-nowrap rounded-lg bg-red-600 px-4 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:flex-none"
+              className="whitespace-nowrap rounded-lg bg-red-600 px-4 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-red-500"
             >
               Sell my time
-            </Link>
-            <Link
-              href={`/${params.username}/settings`}
-              className="flex-1 whitespace-nowrap rounded-lg border border-charcoal-700 bg-charcoal-900/30 px-4 py-2 text-center text-sm font-medium text-charcoal-100 hover:border-charcoal-600 hover:bg-charcoal-900/60 sm:flex-none"
-            >
-              Edit
             </Link>
           </div>
         )}

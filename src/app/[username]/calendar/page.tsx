@@ -5,6 +5,8 @@ import { getLifeMemories } from "./life-actions";
 import type { LifeMemory } from "./life-actions";
 import { getProfileWeek, startOfWeek } from "@/lib/profile-week";
 import { listMyCalendars } from "@/lib/calendars";
+import { syncGoogleCalendarsToDb } from "@/lib/google";
+import { getUserId } from "@/lib/db";
 import CalendarView from "./CalendarView";
 import { SlotPanelProvider } from "@/components/SlotPanel";
 
@@ -22,14 +24,21 @@ export default async function CalendarPage({
   const weekStart = startOfWeek(new Date());
   const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60_000);
 
-  const [googleConnected, profile, lifeMemories, session, myCalendars] =
+  const [googleConnected, profile, lifeMemories, session, viewerId] =
     await Promise.all([
       isGoogleCalendarConnected().catch(() => false),
       getProfile(params.username).catch(() => null),
       getLifeMemories().catch(() => [] as LifeMemory[]),
       getSession().catch(() => null),
-      listMyCalendars().catch(() => []),
+      getUserId().catch(() => null),
     ]);
+
+  // One-shot backfill: sync Google-owned calendars into the `calendars`
+  // table so they appear in the picker. Safe no-op if nothing new.
+  if (googleConnected && viewerId && session?.username === params.username) {
+    await syncGoogleCalendarsToDb(viewerId).catch(() => {});
+  }
+  const myCalendars = await listMyCalendars().catch(() => []);
 
   // Default selection: user's default native calendar.
   const defaultCal =

@@ -97,6 +97,62 @@ export async function saveGoogleTokens(
       updated_at: new Date().toISOString(),
     })
     .eq("id", userId);
+
+  await syncGoogleCalendarsToDb(userId).catch((err) =>
+    console.error("syncGoogleCalendarsToDb", err),
+  );
+}
+
+/**
+ * Upsert a `calendars` row for each Google calendar the user owns so
+ * they show up in the Settings / picker alongside native ones. Skips
+ * calendars already linked.
+ */
+export async function syncGoogleCalendarsToDb(userId: string) {
+  const calendar = await getAuthenticatedCalendar(userId);
+  if (!calendar) return;
+  let items: Array<{
+    id?: string | null;
+    summary?: string | null;
+    backgroundColor?: string | null;
+    accessRole?: string | null;
+    primary?: boolean | null;
+  }> = [];
+  try {
+    const res = await calendar.calendarList.list();
+    items = (res.data.items ?? []) as typeof items;
+  } catch {
+    return;
+  }
+  const owned = items.filter(
+    (i) => !!i.id && i.accessRole === "owner",
+  );
+  if (owned.length === 0) return;
+
+  const db = getAdminClient();
+  const { data: existingRows } = await db
+    .from("calendars")
+    .select("google_calendar_id")
+    .eq("user_id", userId)
+    .eq("source", "google");
+  const existing = new Set(
+    ((existingRows ?? []) as { google_calendar_id: string | null }[])
+      .map((r) => r.google_calendar_id)
+      .filter(Boolean) as string[],
+  );
+  const rows = owned
+    .filter((i) => !existing.has(i.id as string))
+    .map((i) => ({
+      user_id: userId,
+      name: i.summary || "Google calendar",
+      purpose: "personal" as const,
+      color: i.backgroundColor || "#4285f4",
+      visibility: "private" as const,
+      source: "google" as const,
+      google_calendar_id: i.id as string,
+    }));
+  if (rows.length === 0) return;
+  await db.from("calendars").insert(rows);
 }
 
 async function getAuthenticatedClient(userId: string) {

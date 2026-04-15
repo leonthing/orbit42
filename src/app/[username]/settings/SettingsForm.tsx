@@ -204,7 +204,7 @@ export function SettingsForm({
   const inputClass = "w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-4 py-2.5 text-sm text-charcoal-100 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500/50";
 
   return (
-    <div className="w-full max-w-xl min-w-0 space-y-8">
+    <div className="w-full min-w-0 space-y-8">
       {/* Profile Section */}
       <section className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/40">
         <div className="border-b border-charcoal-800/40 px-5 py-3">

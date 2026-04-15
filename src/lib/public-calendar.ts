@@ -53,12 +53,13 @@ export async function getPublicEvents(
   const scoped = forPublicFeed
     ? visibleCalendars.filter((c) => c.visibility === "public")
     : visibleCalendars;
-  const filtered =
-    calendarIds && calendarIds.length > 0
-      ? scoped.filter((c) => calendarIds.includes(c.id))
-      : scoped;
+  // Distinguish "undefined (no filter)" from "[] (explicit deselect all)".
+  const hasExplicitFilter = Array.isArray(calendarIds);
+  const filtered = hasExplicitFilter
+    ? scoped.filter((c) => calendarIds!.includes(c.id))
+    : scoped;
+  if (hasExplicitFilter && filtered.length === 0) return [];
   if (filtered.length === 0 && !isOwner) return [];
-  // When scoped to public feed, disable the owner-fallback too.
   if (filtered.length === 0 && forPublicFeed) return [];
 
   // ── Google-backed calendars ──────────────────────────────────────────
@@ -90,7 +91,7 @@ export async function getPublicEvents(
     } catch {
       calendarMeta = {};
     }
-    if (isOwner && !forPublicFeed && (!calendarIds || calendarIds.length === 0)) {
+    if (isOwner && !forPublicFeed && !hasExplicitFilter) {
       const linkedIds = new Set(
         googleBackedCals.map((c) => c.google_calendar_id as string),
       );
