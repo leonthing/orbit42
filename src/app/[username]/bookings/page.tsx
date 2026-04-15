@@ -121,6 +121,7 @@ function mockBookings(): BookingRow[] {
     message: r.message,
     guest_name: r.guestName,
     guest_email: r.guestEmail,
+    selected_menu_ids: [],
     guest: r.guest,
     slot: { title: r.slotTitle, slug: r.slug },
   }));

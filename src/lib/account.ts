@@ -5,6 +5,7 @@ import { randomBytes } from "node:crypto";
 import { getAdminClient } from "@/lib/supabase";
 import { getSession } from "@/lib/auth";
 import { sendPasswordResetEmail, sendVerifyEmail } from "@/lib/email";
+import { clientKey, rateLimit } from "@/lib/rate-limit";
 
 const VERIFY_TTL_HOURS = 24;
 const RESET_TTL_HOURS = 1;
@@ -38,6 +39,14 @@ export async function startEmailVerification(userId: string, email: string) {
 export async function resendVerificationEmail() {
   const session = await getSession();
   if (!session) return { error: "로그인이 필요해요." };
+  const limit = rateLimit(
+    clientKey("resend-verify", session.username),
+    5,
+    60 * 60_000,
+  );
+  if (!limit.ok) {
+    return { error: "잠시 후 다시 시도해주세요." };
+  }
   const db = getAdminClient();
   const { data: user } = await db
     .from("users")
@@ -81,6 +90,17 @@ export async function verifyEmail(token: string) {
 export async function requestPasswordReset(email: string) {
   const normalized = email.trim().toLowerCase();
   if (!normalized) return { success: true };
+  // Throttle both per-IP (prevent mass enumeration) and per-email
+  // (prevent inbox-spamming a target).
+  const ipLimit = rateLimit(clientKey("pwreset-ip"), 10, 60 * 60_000);
+  const mailLimit = rateLimit(
+    clientKey("pwreset-mail", normalized),
+    3,
+    60 * 60_000,
+  );
+  if (!ipLimit.ok || !mailLimit.ok) {
+    return { success: true }; // fail quietly to avoid signal
+  }
   const db = getAdminClient();
   const { data: user } = await db
     .from("users")
@@ -105,30 +125,31 @@ export async function resetPassword(token: string, newPassword: string) {
     return { error: "비밀번호는 6자 이상이어야 해요." };
   }
   const db = getAdminClient();
-  const { data: row } = await db
+
+  // Atomically mark the token used so this code path is single-use even
+  // if the password RPC fails or races. Only one concurrent caller will
+  // get a row back from the conditional update.
+  const nowIso = new Date().toISOString();
+  const { data: claimed } = await db
     .from("password_reset_tokens")
-    .select("user_id, expires_at, used_at")
+    .update({ used_at: nowIso })
     .eq("token", token)
+    .is("used_at", null)
+    .gt("expires_at", nowIso)
+    .select("user_id")
     .maybeSingle();
-  if (!row) return { error: "유효하지 않은 링크예요." };
-  if (row.used_at) return { error: "이미 사용된 링크예요." };
-  if (new Date(row.expires_at as string).getTime() < Date.now()) {
-    return { error: "만료된 링크예요." };
+  if (!claimed) {
+    return { error: "유효하지 않거나 만료된 링크예요." };
   }
-  // Fetch username to call change_password rpc (which needs current password).
-  // Instead, update directly via a dedicated RPC; fall back to crypt update.
+
   const { error } = await db.rpc("reset_password_for_user", {
-    p_user_id: row.user_id,
+    p_user_id: claimed.user_id,
     p_new_password: newPassword,
   });
   if (error) {
     console.error("reset_password_for_user", error);
     return { error: "비밀번호 변경에 실패했어요." };
   }
-  await db
-    .from("password_reset_tokens")
-    .update({ used_at: new Date().toISOString() })
-    .eq("token", token);
   return { success: true };
 }
 
@@ -136,10 +157,16 @@ export async function deleteMyAccount() {
   const session = await getSession();
   if (!session) return { error: "로그인이 필요해요." };
   const db = getAdminClient();
-  const { error } = await db
+  const { data: user } = await db
     .from("users")
-    .delete()
-    .eq("username", session.username);
+    .select("id")
+    .eq("username", session.username)
+    .maybeSingle();
+  if (!user) {
+    cookies().delete(COOKIE_NAME);
+    return { success: true };
+  }
+  const { error } = await db.from("users").delete().eq("id", user.id);
   if (error) {
     console.error("delete account", error);
     return { error: "탈퇴 처리에 실패했어요." };

@@ -159,11 +159,11 @@ export default function BookingForm({
         disabled={pending || !selectedKey}
         className="w-full rounded-lg bg-red-600 px-4 py-3 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-60"
       >
-        {totalCents > 0
-          ? `${(totalCents / 100).toLocaleString("ko-KR")}원 결제하고 예약`
-          : pending
-            ? "예약 중…"
-            : "예약하기"}
+        {pending
+          ? "예약 중…"
+          : totalCents > 0
+            ? `${(totalCents / 100).toLocaleString("ko-KR")}원 · 예약 진행`
+            : "무료 예약하기"}
       </button>
 
       {!loggedIn && (

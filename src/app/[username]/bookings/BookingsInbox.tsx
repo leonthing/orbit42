@@ -310,6 +310,23 @@ function HostSection({
                         </span>
                       )}
                     </p>
+                    {b.selected_menus && b.selected_menus.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {b.selected_menus.map((m) => (
+                          <span
+                            key={m.id}
+                            className="inline-flex items-center gap-1 rounded-md bg-red-500/10 px-2 py-0.5 text-[11px] text-red-700 ring-1 ring-red-500/30 dark:text-red-200 dark:ring-0"
+                          >
+                            {m.name}
+                            <span className="text-charcoal-500">
+                              {m.price_cents === 0
+                                ? "· Free"
+                                : `· ₩${(m.price_cents / 100).toLocaleString("ko-KR")}`}
+                            </span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     {b.message && (
                       <p className="mt-2 rounded-md bg-charcoal-800/40 px-3 py-2 text-xs leading-relaxed text-charcoal-400">
                         {b.message}

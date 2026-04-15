@@ -34,7 +34,7 @@ function ResetPasswordInner() {
       setLoading(false);
       return;
     }
-    router.push("/?reset=1");
+    router.push("/login?reset=1");
   };
 
   return (

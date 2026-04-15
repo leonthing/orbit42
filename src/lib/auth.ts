@@ -2,10 +2,15 @@
 
 import { cookies } from "next/headers";
 import { getAdminClient } from "@/lib/supabase";
+import { clientKey, rateLimit } from "@/lib/rate-limit";
 
 const COOKIE_NAME = "orbit42_session";
 
 export async function login(username: string, password: string) {
+  const limit = rateLimit(clientKey("login", username), 8, 5 * 60_000);
+  if (!limit.ok) {
+    return { error: `너무 많은 시도예요. ${limit.retryAfter}초 후 다시 시도해주세요.` };
+  }
   const db = getAdminClient();
   const { data, error } = await db
     .rpc("verify_user", { p_username: username, p_password: password });
@@ -29,6 +34,10 @@ export async function signup(
   email: string,
   displayName?: string,
 ) {
+  const limit = rateLimit(clientKey("signup"), 5, 60 * 60_000);
+  if (!limit.ok) {
+    return { error: `너무 많은 시도예요. ${limit.retryAfter}초 후 다시 시도해주세요.` };
+  }
   if (!username || !password || !email) {
     return { error: "아이디, 비밀번호, 이메일을 모두 입력해주세요." };
   }
@@ -246,8 +255,9 @@ export async function uploadAvatar(formData: FormData) {
 
   const file = formData.get("avatar") as File | null;
   if (!file || file.size === 0) return { error: "사진을 선택해주세요." };
-  if (!file.type.startsWith("image/"))
-    return { error: "이미지 파일만 가능합니다." };
+  if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type)) {
+    return { error: "JPG, PNG, WEBP, GIF 이미지만 가능합니다." };
+  }
   if (file.size > 3 * 1024 * 1024) return { error: "3MB 이하 사진만 가능해요." };
 
   const db = getAdminClient();

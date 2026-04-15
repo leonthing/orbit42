@@ -39,6 +39,7 @@ RETURNS void AS $$
   WHERE username = p_username;
 $$ LANGUAGE sql SECURITY DEFINER;
 
--- Seed: Leo's account (password: orbit42admin)
-INSERT INTO users (username, password_hash, display_name)
-VALUES ('leo', crypt('orbit42admin', gen_salt('bf')), 'Leo Kim');
+-- Seed removed. Historical note: this migration previously inserted a
+-- 'leo' account with a hardcoded password. That password is now rotated
+-- by migration 20260416000000_rotate_seed_admin.sql so anyone who cloned
+-- the old file can no longer log in with it.

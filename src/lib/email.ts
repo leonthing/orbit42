@@ -7,7 +7,16 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://orbit42.org";
 
 function client(): Resend | null {
   const key = process.env.RESEND_API_KEY;
-  if (!key) return null;
+  if (!key) {
+    if (process.env.NODE_ENV === "production") {
+      // Don't silently no-op in production — a missing key means
+      // verification / reset / booking mails aren't going out. Log loud.
+      console.error(
+        "[email] RESEND_API_KEY is not set in production. Transactional emails will NOT be delivered.",
+      );
+    }
+    return null;
+  }
   return new Resend(key);
 }
 

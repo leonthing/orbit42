@@ -47,10 +47,16 @@ export async function createFeedPost(formData: FormData) {
     if (f.size > MAX_BYTES) {
       return { error: `사진 한 장은 ${MAX_BYTES / 1024 / 1024}MB 이하여야 합니다.` };
     }
-    if (!f.type.startsWith("image/")) {
-      return { error: "사진만 업로드할 수 있습니다." };
+    if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(f.type)) {
+      return { error: "JPG, PNG, WEBP, GIF 사진만 업로드할 수 있습니다." };
     }
-    const ext = (f.name.split(".").pop() || "jpg").toLowerCase().slice(0, 5);
+    const extByType: Record<string, string> = {
+      "image/jpeg": "jpg",
+      "image/png": "png",
+      "image/webp": "webp",
+      "image/gif": "gif",
+    };
+    const ext = extByType[f.type] || "jpg";
     const key = `${userId}/${Date.now()}-${randomUUID().slice(0, 8)}.${ext}`;
     const buf = Buffer.from(await f.arrayBuffer());
     const { error: upErr } = await db.storage

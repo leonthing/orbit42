@@ -652,8 +652,14 @@ export type BookingRow = {
   message: string | null;
   guest_name: string | null;
   guest_email: string | null;
+  selected_menu_ids: string[];
   guest: { username: string; display_name: string | null } | null;
   slot: { title: string; slug: string };
+  selected_menus?: {
+    id: string;
+    name: string;
+    price_cents: number;
+  }[];
 };
 
 export type GuestBookingRow = {
@@ -685,11 +691,34 @@ export async function listMyHostBookings(): Promise<BookingRow[]> {
   const { data } = await db
     .from("bookings")
     .select(
-      "id, scheduled_at, scheduled_end_at, status, message, guest_name, guest_email, guest:users!bookings_guest_id_fkey(username, display_name), slot:time_slots!bookings_slot_id_fkey(title, slug)",
+      "id, scheduled_at, scheduled_end_at, status, message, guest_name, guest_email, selected_menu_ids, guest:users!bookings_guest_id_fkey(username, display_name), slot:time_slots!bookings_slot_id_fkey(title, slug)",
     )
     .eq("host_id", userId)
     .order("scheduled_at", { ascending: true });
-  return ((data ?? []) as unknown) as BookingRow[];
+  const rows = ((data ?? []) as unknown) as BookingRow[];
+
+  // Hydrate selected menu names in one query.
+  const allMenuIds = new Set<string>();
+  for (const r of rows) {
+    for (const id of r.selected_menu_ids ?? []) allMenuIds.add(id);
+  }
+  if (allMenuIds.size > 0) {
+    const { data: menuRows } = await db
+      .from("menus")
+      .select("id, name, price_cents")
+      .in("id", Array.from(allMenuIds));
+    const byId = new Map(
+      ((menuRows ?? []) as { id: string; name: string; price_cents: number }[]).map(
+        (m) => [m.id, m],
+      ),
+    );
+    for (const r of rows) {
+      r.selected_menus = (r.selected_menu_ids ?? [])
+        .map((id) => byId.get(id))
+        .filter(Boolean) as BookingRow["selected_menus"];
+    }
+  }
+  return rows;
 }
 
 export async function updateBookingStatus(
