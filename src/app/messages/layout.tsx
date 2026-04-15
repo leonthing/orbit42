@@ -3,7 +3,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { getSession, getProfile } from "@/lib/auth";
 import { unreadMessageCount } from "@/lib/messages";
 
-export default async function FeedLayout({
+export default async function MessagesLayout({
   children,
 }: {
   children: React.ReactNode;

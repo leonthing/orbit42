@@ -11,17 +11,19 @@ export function AppShell({
   viewerUsername,
   viewerDisplayName,
   viewerAvatarUrl = null,
+  unreadMessages = 0,
   children,
 }: {
   viewerUsername: string;
   viewerDisplayName: string;
   viewerAvatarUrl?: string | null;
+  unreadMessages?: number;
   children: React.ReactNode;
 }) {
   return (
     <MobileMenuProvider>
       <div className="flex h-screen overflow-hidden bg-[rgb(var(--bg-base))]">
-        <Sidebar username={viewerUsername} />
+        <Sidebar username={viewerUsername} unreadMessages={unreadMessages} />
         <div className="flex flex-1 flex-col overflow-hidden">
           <TopBar
             username={viewerUsername}

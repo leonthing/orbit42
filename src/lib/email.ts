@@ -157,6 +157,24 @@ function escapeHtml(s: string) {
   })[ch] as string);
 }
 
+export async function sendNewMessageEmail(
+  to: string,
+  args: { fromLabel: string; preview: string; conversationId: string },
+) {
+  const url = siteUrl(`/messages/${args.conversationId}`);
+  const html = `
+    <div style="font-family:ui-sans-serif,system-ui,-apple-system;line-height:1.55;color:#111">
+      <h2 style="margin:0 0 12px">${escapeHtml(args.fromLabel)}님이 메시지를 보냈어요</h2>
+      <blockquote style="margin:12px 0;padding:10px 14px;border-left:3px solid #e5e5e5;color:#444">${escapeHtml(args.preview)}</blockquote>
+      <p style="margin:16px 0">
+        <a href="${url}" style="display:inline-block;padding:10px 18px;border-radius:8px;background:#dc2626;color:#fff;text-decoration:none;font-weight:600">대화 열기</a>
+      </p>
+      <p style="color:#888;font-size:12px">알림은 10분 간격으로 묶어서 보내드려요.</p>
+    </div>
+  `;
+  return send(to, `[Orbit42] ${args.fromLabel}님의 새 메시지`, html);
+}
+
 export async function sendPasswordResetEmail(to: string, token: string) {
   const url = siteUrl(`/reset-password?token=${encodeURIComponent(token)}`);
   const html = `

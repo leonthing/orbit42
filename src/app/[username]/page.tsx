@@ -11,6 +11,7 @@ import { AllSlotsGrid } from "@/components/AllSlotsGrid";
 import { getValueStats } from "@/lib/value-stats";
 import { Avatar } from "@/components/Avatar";
 import { FollowButton } from "./FollowButton";
+import { MessageButton } from "./MessageButton";
 import { listFeedPostsByAuthors } from "@/lib/feed-posts";
 import { getAdminClient } from "@/lib/supabase";
 import { DeleteFeedPostButton } from "@/components/DeleteFeedPostButton";
@@ -117,11 +118,17 @@ export default async function PublicProfile({
                 {profile.display_name || profile.username}
               </h1>
               {!isOwner && (
-                <FollowButton
-                  targetUsername={params.username}
-                  initiallyFollowing={viewerFollowing}
-                  loggedIn={!!session}
-                />
+                <>
+                  <FollowButton
+                    targetUsername={params.username}
+                    initiallyFollowing={viewerFollowing}
+                    loggedIn={!!session}
+                  />
+                  <MessageButton
+                    targetUsername={params.username}
+                    loggedIn={!!session}
+                  />
+                </>
               )}
             </div>
             <p className="truncate text-sm text-charcoal-500">
