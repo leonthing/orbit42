@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { updateBookingStatus } from "@/lib/slots";
+import { updateBookingStatus, cancelMyBooking } from "@/lib/slots";
 import type { BookingRow, GuestBookingRow } from "@/lib/slots";
 
 const STATUS_STYLES: Record<string, string> = {
@@ -59,6 +59,15 @@ export default function BookingsInbox({
     if (isMock) return;
     startTransition(async () => {
       await updateBookingStatus(id, status);
+      router.refresh();
+    });
+  };
+
+  const cancelSelf = (id: string) => {
+    if (!confirm("이 예약을 취소할까요?")) return;
+    startTransition(async () => {
+      const res = await cancelMyBooking(id);
+      if (res.error) alert(res.error);
       router.refresh();
     });
   };
@@ -120,12 +129,16 @@ export default function BookingsInbox({
             title="예정된 예약"
             rows={guestUpcoming}
             username={username}
+            onCancel={cancelSelf}
+            pending={pending}
             emptyHint="아직 예정된 예약이 없어요. 오르빗을 둘러보고 시간을 잡아보세요."
           />
           <GuestSection
             title="지난 예약"
             rows={guestPast}
             username={username}
+            onCancel={cancelSelf}
+            pending={pending}
             muted
             emptyHint="지난 예약이 없어요."
           />
@@ -375,12 +388,16 @@ function HostSection({
 function GuestSection({
   title,
   rows,
+  onCancel,
+  pending,
   muted,
   emptyHint,
 }: {
   title: string;
   rows: GuestBookingRow[];
   username: string;
+  onCancel: (id: string) => void;
+  pending: boolean;
   muted?: boolean;
   emptyHint: string;
 }) {
@@ -438,14 +455,26 @@ function GuestSection({
                       </p>
                     )}
                   </div>
-                  {b.host && (
-                    <Link
-                      href={`/${b.host.username}/s/${b.slot.slug}`}
-                      className="shrink-0 rounded-md border border-charcoal-800 px-2.5 py-1 text-xs text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
-                    >
-                      슬롯
-                    </Link>
-                  )}
+                  <div className="flex shrink-0 flex-col gap-1">
+                    {b.host && (
+                      <Link
+                        href={`/${b.host.username}/s/${b.slot.slug}`}
+                        className="rounded-md border border-charcoal-800 px-2.5 py-1 text-center text-xs text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
+                      >
+                        슬롯
+                      </Link>
+                    )}
+                    {b.status !== "canceled" && b.status !== "completed" && (
+                      <button
+                        type="button"
+                        onClick={() => onCancel(b.id)}
+                        disabled={pending}
+                        className="rounded-md border border-charcoal-800 px-2.5 py-1 text-xs text-charcoal-400 hover:border-red-500/60 hover:text-red-500 disabled:opacity-50"
+                      >
+                        취소
+                      </button>
+                    )}
+                  </div>
                 </div>
               </li>
             );

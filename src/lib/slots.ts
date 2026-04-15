@@ -786,3 +786,62 @@ export async function updateBookingStatus(
   revalidatePath("/", "layout");
   return { success: true };
 }
+
+/** Guest cancels their own booking. Emails the host. */
+export async function cancelMyBooking(bookingId: string) {
+  const userId = await requireUserId();
+  const db = getAdminClient();
+  const { data: booking } = await db
+    .from("bookings")
+    .select(
+      "id, guest_id, host_id, scheduled_at, status, slot:time_slots!bookings_slot_id_fkey(title, location_detail)",
+    )
+    .eq("id", bookingId)
+    .eq("guest_id", userId)
+    .maybeSingle();
+  if (!booking) return { error: "예약을 찾을 수 없어요." };
+  if (booking.status === "canceled" || booking.status === "completed") {
+    return { error: "이미 종료된 예약이에요." };
+  }
+  const { error } = await db
+    .from("bookings")
+    .update({ status: "canceled", updated_at: new Date().toISOString() })
+    .eq("id", bookingId)
+    .eq("guest_id", userId);
+  if (error) return { error: "취소에 실패했어요." };
+
+  // Notify host.
+  try {
+    const slotInfo = booking.slot as unknown as {
+      title: string;
+      location_detail: string | null;
+    } | null;
+    const { data: host } = await db
+      .from("users")
+      .select("email, display_name, username")
+      .eq("id", booking.host_id)
+      .single();
+    const { data: guest } = await db
+      .from("users")
+      .select("email, display_name, username")
+      .eq("id", userId)
+      .single();
+    if (host?.email) {
+      const { sendBookingReceivedToHost } = await import("@/lib/email");
+      await sendBookingReceivedToHost(host.email as string, {
+        slotTitle: slotInfo?.title ?? "예약",
+        when: booking.scheduled_at as string,
+        guestLabel: (guest?.display_name || guest?.username || "게스트") as string,
+        guestEmail: (guest?.email as string | null) ?? null,
+        message: "게스트가 예약을 취소했어요.",
+        autoApprove: true,
+        manageUrl: `/${host.username}/bookings`,
+      });
+    }
+  } catch (err) {
+    console.error("cancelMyBooking email", err);
+  }
+
+  revalidatePath("/", "layout");
+  return { success: true };
+}

@@ -62,6 +62,8 @@ export function TopBar({ username, displayName }: { username: string; displayNam
       <div className="relative">
         <button
           onClick={() => setShowMenu(!showMenu)}
+          aria-label="계정 메뉴"
+          aria-expanded={showMenu}
           className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-charcoal-800/50"
         >
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-red-600/20 text-xs font-bold text-red-400">

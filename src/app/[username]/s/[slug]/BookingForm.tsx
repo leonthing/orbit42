@@ -126,24 +126,29 @@ export default function BookingForm({
       )}
 
       {!loggedIn && (
-        <div className="grid gap-2 sm:grid-cols-2">
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="이름"
-            required
-            className="rounded-lg border border-charcoal-800/40 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100"
-          />
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="이메일"
-            required
-            className="rounded-lg border border-charcoal-800/40 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100"
-          />
-        </div>
+        <>
+          <p className="-mb-1 rounded-md bg-charcoal-800/30 px-3 py-2 text-[11px] leading-relaxed text-charcoal-500">
+            계정이 없어도 예약할 수 있어요. 입력한 이메일로 확인 메일이 가요.
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="이름"
+              required
+              className="rounded-lg border border-charcoal-800/40 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100"
+            />
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="이메일"
+              required
+              className="rounded-lg border border-charcoal-800/40 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100"
+            />
+          </div>
+        </>
       )}
 
       <textarea

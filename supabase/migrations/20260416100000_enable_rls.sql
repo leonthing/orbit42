@@ -27,7 +27,7 @@ declare
   r record;
 begin
   for r in (
-    select polname, tablename
+    select policyname, tablename
     from pg_policies
     where schemaname = 'public'
       and tablename in (
@@ -36,6 +36,6 @@ begin
         'email_verification_tokens', 'password_reset_tokens', 'reactions'
       )
   ) loop
-    execute format('drop policy if exists %I on public.%I', r.polname, r.tablename);
+    execute format('drop policy if exists %I on public.%I', r.policyname, r.tablename);
   end loop;
 end $$;
