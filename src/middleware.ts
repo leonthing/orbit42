@@ -10,6 +10,7 @@ const PUBLIC_PATHS = [
   "/reset-password",
   "/terms",
   "/privacy",
+  "/forbidden",
 ];
 
 // Sub-paths under /[username] that require the visitor to be the owner.
@@ -54,7 +55,7 @@ export function middleware(request: NextRequest) {
   try {
     const session = JSON.parse(raw);
     if (session.username !== urlUsername) {
-      return NextResponse.redirect(new URL("/feed", request.url));
+      return NextResponse.redirect(new URL("/forbidden", request.url));
     }
     return NextResponse.next();
   } catch {
