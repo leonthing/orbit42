@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { listMyHostBookings } from "@/lib/slots";
+import { listMyHostBookings, listMyGuestBookings } from "@/lib/slots";
 import type { BookingRow } from "@/lib/slots";
 import BookingsInbox from "./BookingsInbox";
 
@@ -7,13 +7,24 @@ export const metadata: Metadata = { title: "Bookings" };
 export const dynamic = "force-dynamic";
 
 export default async function BookingsPage({
+  params,
   searchParams,
 }: {
+  params: { username: string };
   searchParams: { mock?: string };
 }) {
   const useMock = searchParams.mock === "1";
-  const bookings = useMock ? mockBookings() : await listMyHostBookings();
-  return <BookingsInbox initial={bookings} isMock={useMock} />;
+  const [hostBookings, guestBookings] = useMock
+    ? [mockBookings(), []]
+    : await Promise.all([listMyHostBookings(), listMyGuestBookings()]);
+  return (
+    <BookingsInbox
+      username={params.username}
+      hostBookings={hostBookings}
+      guestBookings={guestBookings}
+      isMock={useMock}
+    />
+  );
 }
 
 function mockBookings(): BookingRow[] {

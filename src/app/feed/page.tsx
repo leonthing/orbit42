@@ -409,11 +409,11 @@ function DayCard({
   day: DayGroup;
   children: React.ReactNode;
 }) {
-  const monthDay = day.date.toLocaleDateString("ko-KR", {
+  const monthDay = day.date.toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul",
     month: "long",
     day: "numeric",
   });
-  const weekday = day.date.toLocaleDateString("ko-KR", { weekday: "long" });
+  const weekday = day.date.toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul", weekday: "long" });
   const isToday = day.dayOffset === 0;
   const isPast = day.dayOffset < 0;
   const relative =
@@ -624,7 +624,7 @@ function EntryBody({
 }
 
 function formatTimeShort(iso: string) {
-  return new Date(iso).toLocaleTimeString("ko-KR", {
+  return new Date(iso).toLocaleTimeString("ko-KR", { timeZone: "Asia/Seoul",
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -664,7 +664,7 @@ function KindBadge({ kind }: { kind: FeedItem["kind"] }) {
 function formatEventTime(start: string, end: string, allDay: boolean) {
   const s = new Date(start);
   if (allDay) {
-    return s.toLocaleDateString("ko-KR", {
+    return s.toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul",
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -672,13 +672,13 @@ function formatEventTime(start: string, end: string, allDay: boolean) {
     });
   }
   const e = new Date(end);
-  return `${s.toLocaleString("ko-KR", {
+  return `${s.toLocaleString("ko-KR", { timeZone: "Asia/Seoul",
     month: "long",
     day: "numeric",
     weekday: "short",
     hour: "2-digit",
     minute: "2-digit",
-  })} – ${e.toLocaleTimeString("ko-KR", {
+  })} – ${e.toLocaleTimeString("ko-KR", { timeZone: "Asia/Seoul",
     hour: "2-digit",
     minute: "2-digit",
   })}`;

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getAdminClient } from "@/lib/supabase";
 import { getSession } from "@/lib/auth";
 import { getUserId, requireUserId } from "@/lib/db";
-import { getAuthenticatedCalendar, sendGmailFromUser } from "@/lib/google";
+import { getAuthenticatedCalendar } from "@/lib/google";
 import { computeAutoAvailability } from "@/lib/slot-availability";
 import type { WorkingHours, AutoSlotOption } from "@/lib/slot-availability";
 
@@ -40,6 +40,9 @@ export type TimeSlot = {
   current_high_bid_cents: number | null;
   current_high_bidder_id: string | null;
   calendar_id: string | null;
+  valid_from: string | null;
+  valid_until: string | null;
+  auto_approve: boolean;
   created_at: string;
 };
 
@@ -73,6 +76,9 @@ export type SlotInput = {
   reserve_price_cents?: number | null;
   auction_ends_at?: string | null;
   calendar_id?: string | null;
+  valid_from?: string | null;
+  valid_until?: string | null;
+  auto_approve?: boolean;
 };
 
 function safeDecode(s: string) {
@@ -158,6 +164,15 @@ export type BookableOption = {
 };
 
 export async function getBookableOptions(slot: TimeSlot): Promise<BookableOption[]> {
+  const from = slot.valid_from ? new Date(slot.valid_from).getTime() : null;
+  const until = slot.valid_until ? new Date(slot.valid_until).getTime() : null;
+  const withinWindow = (iso: string) => {
+    const t = new Date(iso).getTime();
+    if (from !== null && t < from) return false;
+    if (until !== null && t > until) return false;
+    return true;
+  };
+
   if (slot.mode === "auto") {
     const opts = await computeAutoAvailability(slot.host_id, {
       duration_min: slot.duration_min,
@@ -167,17 +182,20 @@ export async function getBookableOptions(slot: TimeSlot): Promise<BookableOption
       max_advance_days: slot.max_advance_days,
       buffer_min: slot.buffer_min,
     });
-    return opts.map((o: AutoSlotOption) => ({
-      availability_id: null,
-      start_at: o.start_at,
-      end_at: o.end_at,
-      remaining: 1,
-    }));
+    return opts
+      .filter((o: AutoSlotOption) => withinWindow(o.start_at))
+      .map((o: AutoSlotOption) => ({
+        availability_id: null,
+        start_at: o.start_at,
+        end_at: o.end_at,
+        remaining: 1,
+      }));
   }
 
   const avails = await getUpcomingAvailabilities(slot.id);
   return avails
     .filter((a) => a.booked_count < a.capacity)
+    .filter((a) => withinWindow(a.start_at))
     .map((a) => ({
       availability_id: a.id,
       start_at: a.start_at,
@@ -265,6 +283,9 @@ export async function createSlot(input: SlotInput) {
       reserve_price_cents: input.reserve_price_cents ?? null,
       auction_ends_at: input.auction_ends_at ?? null,
       calendar_id: calendarId,
+      valid_from: input.valid_from ?? null,
+      valid_until: input.valid_until ?? null,
+      auto_approve: input.auto_approve ?? true,
     })
     .select()
     .single();
@@ -287,26 +308,36 @@ export async function createSlot(input: SlotInput) {
 export async function updateSlot(id: string, patch: Partial<SlotInput>) {
   const userId = await requireUserId();
   const db = getAdminClient();
+  const updateData: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
+  const fields: (keyof SlotInput)[] = [
+    "title",
+    "description",
+    "duration_min",
+    "price_cents",
+    "capacity",
+    "slot_type",
+    "location_type",
+    "location_detail",
+    "active",
+    "mode",
+    "working_hours",
+    "slot_interval_min",
+    "min_notice_hours",
+    "max_advance_days",
+    "buffer_min",
+    "calendar_id",
+    "valid_from",
+    "valid_until",
+    "auto_approve",
+  ];
+  for (const f of fields) {
+    if (patch[f] !== undefined) updateData[f] = patch[f];
+  }
   const { error } = await db
     .from("time_slots")
-    .update({
-      title: patch.title,
-      description: patch.description,
-      duration_min: patch.duration_min,
-      price_cents: patch.price_cents,
-      capacity: patch.capacity,
-      slot_type: patch.slot_type,
-      location_type: patch.location_type,
-      location_detail: patch.location_detail,
-      active: patch.active,
-      mode: patch.mode,
-      working_hours: patch.working_hours,
-      slot_interval_min: patch.slot_interval_min,
-      min_notice_hours: patch.min_notice_hours,
-      max_advance_days: patch.max_advance_days,
-      buffer_min: patch.buffer_min,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updateData)
     .eq("id", id)
     .eq("host_id", userId);
   if (error) return { error: "수정 실패" };
@@ -388,7 +419,7 @@ export async function bookSlot(args: {
   const { data: slot } = await db
     .from("time_slots")
     .select(
-      "id, host_id, duration_min, active, mode, pricing_model, title, location_detail, working_hours, slot_interval_min, min_notice_hours, max_advance_days, buffer_min, capacity, calendar_id",
+      "id, host_id, duration_min, active, mode, pricing_model, title, location_detail, working_hours, slot_interval_min, min_notice_hours, max_advance_days, buffer_min, capacity, calendar_id, valid_from, valid_until, auto_approve",
     )
     .eq("id", args.slotId)
     .single();
@@ -396,6 +427,13 @@ export async function bookSlot(args: {
   if (slot.pricing_model === "auction") {
     return { error: "경매 슬롯은 입찰을 통해 거래됩니다." };
   }
+
+  const windowFrom = slot.valid_from
+    ? new Date(slot.valid_from as string).getTime()
+    : null;
+  const windowUntil = slot.valid_until
+    ? new Date(slot.valid_until as string).getTime()
+    : null;
 
   let startAt: Date;
   let availabilityId: string | null = null;
@@ -417,6 +455,11 @@ export async function bookSlot(args: {
       (o) => new Date(o.start_at).getTime() === startAt.getTime(),
     );
     if (!ok) return { error: "이미 지나갔거나 잡을 수 없는 시간입니다." };
+    const t = startAt.getTime();
+    if (windowFrom !== null && t < windowFrom)
+      return { error: "아직 예약 가능한 기간이 아니에요." };
+    if (windowUntil !== null && t > windowUntil)
+      return { error: "예약 가능한 기간이 끝났어요." };
   } else {
     if (!args.availabilityId) return { error: "시간을 선택해주세요." };
     const { data: avail } = await db
@@ -431,6 +474,11 @@ export async function bookSlot(args: {
     if (avail.slot_id !== slot.id) return { error: "잘못된 요청입니다." };
     startAt = new Date(avail.start_at as string);
     availabilityId = avail.id as string;
+    const t = startAt.getTime();
+    if (windowFrom !== null && t < windowFrom)
+      return { error: "아직 예약 가능한 기간이 아니에요." };
+    if (windowUntil !== null && t > windowUntil)
+      return { error: "예약 가능한 기간이 끝났어요." };
   }
 
   const endAt = new Date(startAt.getTime() + (slot.duration_min as number) * 60_000);
@@ -448,6 +496,9 @@ export async function bookSlot(args: {
     validMenuIds = args.selected_menu_ids.filter((m) => attached.has(m));
   }
 
+  const autoApprove = (slot.auto_approve as boolean | null) !== false;
+  const initialStatus = autoApprove ? "confirmed" : "pending";
+
   // Create the booking row first so we never lose it on a Google API failure.
   const { data: booking, error: bookErr } = await db
     .from("bookings")
@@ -462,10 +513,46 @@ export async function bookSlot(args: {
       scheduled_at: startAt.toISOString(),
       scheduled_end_at: endAt.toISOString(),
       selected_menu_ids: validMenuIds,
+      status: initialStatus,
     })
     .select("id")
     .single();
   if (bookErr || !booking) return { error: "예약에 실패했습니다." };
+
+  // Notify host (always) and guest (only if auto-confirmed — otherwise
+  // they'll get a confirmation email later when the host approves).
+  try {
+    const { sendBookingReceivedToHost, sendBookingConfirmedToGuest } =
+      await import("@/lib/email");
+    const { data: host } = await db
+      .from("users")
+      .select("email, display_name, username")
+      .eq("id", slot.host_id)
+      .single();
+    const guestEmail = args.guest_email ?? (await getEmailForUser(guestId));
+    const guestLabel = args.guest_name ?? host?.display_name ?? "Guest";
+    if (host?.email) {
+      await sendBookingReceivedToHost(host.email as string, {
+        slotTitle: slot.title as string,
+        when: startAt.toISOString(),
+        guestLabel,
+        guestEmail: guestEmail ?? null,
+        message: args.message ?? null,
+        autoApprove,
+        manageUrl: `/${host.username}/bookings`,
+      });
+    }
+    if (autoApprove && guestEmail) {
+      await sendBookingConfirmedToGuest(guestEmail, {
+        slotTitle: slot.title as string,
+        when: startAt.toISOString(),
+        hostLabel: (host?.display_name || host?.username || "Host") as string,
+        location: (slot.location_detail as string | null) ?? null,
+      });
+    }
+  } catch (err) {
+    console.error("booking emails", err);
+  }
 
   if (availabilityId) {
     await db
@@ -542,45 +629,19 @@ export async function bookSlot(args: {
     console.error("Calendar mirror for booking failed:", err);
   }
 
-  // Best-effort: send a confirmation email to the guest from the host's Gmail.
-  const guestEmailFinal =
-    args.guest_email ?? (await getEmailForUser(guestId));
-  if (guestEmailFinal) {
-    const when = startAt.toLocaleString("ko-KR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      weekday: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    void sendGmailFromUser(slot.host_id as string, {
-      to: guestEmailFinal,
-      subject: `[Orbit42] 예약 확인: ${slot.title}`,
-      body: [
-        `안녕하세요${args.guest_name ? ` ${args.guest_name}님` : ""},`,
-        ``,
-        `요청하신 시간으로 예약이 등록되었습니다.`,
-        ``,
-        `· 슬롯: ${slot.title}`,
-        `· 시간: ${when} (${slot.duration_min}분)`,
-        slot.location_detail ? `· 장소: ${slot.location_detail}` : null,
-        ``,
-        `이 메일은 Orbit42에서 자동으로 발송되었습니다.`,
-      ]
-        .filter(Boolean)
-        .join("\n"),
-    });
-  }
-
   revalidatePath("/", "layout");
   return { success: true };
 }
 
 async function getEmailForUser(userId: string | null): Promise<string | null> {
   if (!userId) return null;
-  // We don't store emails for users yet; placeholder for future expansion.
-  return null;
+  const db = getAdminClient();
+  const { data } = await db
+    .from("users")
+    .select("email")
+    .eq("id", userId)
+    .maybeSingle();
+  return (data?.email as string | null) ?? null;
 }
 
 export type BookingRow = {
@@ -594,6 +655,29 @@ export type BookingRow = {
   guest: { username: string; display_name: string | null } | null;
   slot: { title: string; slug: string };
 };
+
+export type GuestBookingRow = {
+  id: string;
+  scheduled_at: string;
+  scheduled_end_at: string;
+  status: string;
+  message: string | null;
+  host: { username: string; display_name: string | null } | null;
+  slot: { title: string; slug: string; location_detail: string | null };
+};
+
+export async function listMyGuestBookings(): Promise<GuestBookingRow[]> {
+  const userId = await requireUserId();
+  const db = getAdminClient();
+  const { data } = await db
+    .from("bookings")
+    .select(
+      "id, scheduled_at, scheduled_end_at, status, message, host:users!bookings_host_id_fkey(username, display_name), slot:time_slots!bookings_slot_id_fkey(title, slug, location_detail)",
+    )
+    .eq("guest_id", userId)
+    .order("scheduled_at", { ascending: true });
+  return ((data ?? []) as unknown) as GuestBookingRow[];
+}
 
 export async function listMyHostBookings(): Promise<BookingRow[]> {
   const userId = await requireUserId();
@@ -617,7 +701,9 @@ export async function updateBookingStatus(
 
   const { data: booking } = await db
     .from("bookings")
-    .select("guest_email, guest_name, scheduled_at, slot:time_slots!bookings_slot_id_fkey(title)")
+    .select(
+      "guest_id, guest_email, guest_name, scheduled_at, slot:time_slots!bookings_slot_id_fkey(title, location_detail)",
+    )
     .eq("id", id)
     .eq("host_id", userId)
     .single();
@@ -629,24 +715,43 @@ export async function updateBookingStatus(
     .eq("host_id", userId);
   if (error) return { error: "변경 실패" };
 
-  if (booking && booking.guest_email && status !== "completed") {
-    const slotTitle =
-      (booking.slot as unknown as { title: string } | null)?.title ?? "예약";
-    const when = new Date(booking.scheduled_at as string).toLocaleString("ko-KR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    void sendGmailFromUser(userId, {
-      to: booking.guest_email as string,
-      subject: `[Orbit42] 예약 ${status === "confirmed" ? "확정" : "취소"}: ${slotTitle}`,
-      body:
-        status === "confirmed"
-          ? `${booking.guest_name ?? "안녕하세요"}님, ${when} 예약이 확정되었습니다.\n\nOrbit42`
-          : `${booking.guest_name ?? "안녕하세요"}님, ${when} 예약이 취소되었습니다. 죄송합니다.\n\nOrbit42`,
-    });
+  // Notify the guest via Resend whenever a decision is made.
+  if (booking && status !== "completed") {
+    const slotInfo = booking.slot as unknown as {
+      title: string;
+      location_detail: string | null;
+    } | null;
+    const slotTitle = slotInfo?.title ?? "예약";
+    const guestEmail =
+      (booking.guest_email as string | null) ??
+      (await getEmailForUser(booking.guest_id as string | null));
+    if (guestEmail) {
+      try {
+        const { data: host } = await db
+          .from("users")
+          .select("display_name, username")
+          .eq("id", userId)
+          .single();
+        if (status === "confirmed") {
+          const { sendBookingConfirmedToGuest } = await import("@/lib/email");
+          await sendBookingConfirmedToGuest(guestEmail, {
+            slotTitle,
+            when: booking.scheduled_at as string,
+            hostLabel: (host?.display_name || host?.username || "Host") as string,
+            location: slotInfo?.location_detail ?? null,
+          });
+        } else if (status === "canceled") {
+          const { sendBookingCanceledToGuest } = await import("@/lib/email");
+          await sendBookingCanceledToGuest(guestEmail, {
+            slotTitle,
+            when: booking.scheduled_at as string,
+            hostLabel: (host?.display_name || host?.username || "Host") as string,
+          });
+        }
+      } catch (err) {
+        console.error("booking status email", err);
+      }
+    }
   }
 
   revalidatePath("/", "layout");

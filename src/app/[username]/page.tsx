@@ -27,9 +27,23 @@ export async function generateMetadata({
   const profile = await getProfile(params.username);
   if (!profile) return { title: "Not found" };
   const name = profile.display_name || profile.username;
+  const title = `${name} (@${profile.username})`;
+  const description = profile.bio || `${name}'s orbit on Orbit42`;
   return {
-    title: `${name} (@${profile.username})`,
-    description: profile.bio || `${name}'s orbit on Orbit42`,
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "profile",
+      siteName: "Orbit42",
+      locale: "ko_KR",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
   };
 }
 
@@ -294,7 +308,7 @@ export default async function PublicProfile({
               >
                 <div className="flex items-start justify-between gap-3">
                   <time className="text-[11px] font-medium text-charcoal-500">
-                    {new Date(p.created_at).toLocaleString("ko-KR", {
+                    {new Date(p.created_at).toLocaleString("ko-KR", { timeZone: "Asia/Seoul",
                       year: "numeric",
                       month: "long",
                       day: "numeric",

@@ -1,29 +1,56 @@
 "use client";
 
-import { useTransition } from "react";
+import Link from "next/link";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateBookingStatus } from "@/lib/slots";
-import type { BookingRow } from "@/lib/slots";
+import type { BookingRow, GuestBookingRow } from "@/lib/slots";
 
 const STATUS_STYLES: Record<string, string> = {
-  pending: "bg-red-600/20 text-red-300",
-  confirmed: "bg-emerald-600/20 text-emerald-300",
+  pending: "bg-amber-500/15 text-amber-800 ring-1 ring-amber-500/40 dark:text-amber-200 dark:ring-0",
+  confirmed: "bg-emerald-500/15 text-emerald-800 ring-1 ring-emerald-500/40 dark:text-emerald-200 dark:ring-0",
   canceled: "bg-charcoal-700/40 text-charcoal-500",
-  completed: "bg-red-600/20 text-red-300",
+  completed: "bg-charcoal-700/40 text-charcoal-600 dark:text-charcoal-300",
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  pending: "대기",
+  confirmed: "확정",
+  canceled: "취소",
+  completed: "완료",
+};
+
+type Tab = "host" | "guest";
+
 export default function BookingsInbox({
-  initial,
+  username,
+  hostBookings,
+  guestBookings,
   isMock = false,
 }: {
-  initial: BookingRow[];
+  username: string;
+  hostBookings: BookingRow[];
+  guestBookings: GuestBookingRow[];
   isMock?: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [tab, setTab] = useState<Tab>(
+    hostBookings.length === 0 && guestBookings.length > 0 ? "guest" : "host",
+  );
 
-  const upcoming = initial.filter((b) => new Date(b.scheduled_at) >= new Date());
-  const past = initial.filter((b) => new Date(b.scheduled_at) < new Date());
+  const upcoming = hostBookings.filter(
+    (b) => new Date(b.scheduled_at) >= new Date(),
+  );
+  const past = hostBookings.filter(
+    (b) => new Date(b.scheduled_at) < new Date(),
+  );
+  const guestUpcoming = guestBookings.filter(
+    (b) => new Date(b.scheduled_at) >= new Date(),
+  );
+  const guestPast = guestBookings.filter(
+    (b) => new Date(b.scheduled_at) < new Date(),
+  );
 
   const pendingCount = upcoming.filter((b) => b.status === "pending").length;
   const confirmedCount = upcoming.filter((b) => b.status === "confirmed").length;
@@ -37,43 +64,98 @@ export default function BookingsInbox({
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-charcoal-100">Bookings</h1>
           <p className="mt-1 text-sm text-charcoal-500">
-            내 슬롯에 들어온 예약을 한곳에서 관리하세요.
+            받은 예약과 내가 한 예약을 한곳에서 볼 수 있어요.
           </p>
         </div>
-        <div className="flex gap-2">
-          <Stat label="승인 대기" value={pendingCount} accent />
-          <Stat label="예정" value={confirmedCount} />
-          <Stat label="지난 예약" value={past.length} muted />
-        </div>
+        {tab === "host" && (
+          <div className="flex gap-2">
+            <Stat label="승인 대기" value={pendingCount} accent />
+            <Stat label="예정" value={confirmedCount} />
+            <Stat label="지난 예약" value={past.length} muted />
+          </div>
+        )}
       </header>
 
-      {isMock && (
+      <div className="flex rounded-md bg-charcoal-800/40 p-0.5">
+        <TabButton active={tab === "host"} onClick={() => setTab("host")}>
+          받은 예약 {hostBookings.length > 0 && `(${hostBookings.length})`}
+        </TabButton>
+        <TabButton active={tab === "guest"} onClick={() => setTab("guest")}>
+          내가 한 예약 {guestBookings.length > 0 && `(${guestBookings.length})`}
+        </TabButton>
+      </div>
+
+      {isMock && tab === "host" && (
         <div className="rounded-lg border border-red-700/40 bg-red-700/10 px-4 py-2 text-xs text-red-200">
           샘플 데이터 미리보기 — URL에서 <code>?mock=1</code> 제거 시 실제 데이터로 복귀합니다.
         </div>
       )}
 
-      <Section
-        title="예정된 예약"
-        rows={upcoming}
-        update={update}
-        pending={pending}
-        emptyHint="아직 예정된 예약이 없어요."
-      />
-      <Section
-        title="지난 예약"
-        rows={past}
-        update={update}
-        pending={pending}
-        muted
-        emptyHint="지난 예약이 없어요."
-      />
+      {tab === "host" ? (
+        <>
+          <HostSection
+            title="예정된 예약"
+            rows={upcoming}
+            update={update}
+            pending={pending}
+            emptyHint="아직 예정된 예약이 없어요."
+          />
+          <HostSection
+            title="지난 예약"
+            rows={past}
+            update={update}
+            pending={pending}
+            muted
+            emptyHint="지난 예약이 없어요."
+          />
+        </>
+      ) : (
+        <>
+          <GuestSection
+            title="예정된 예약"
+            rows={guestUpcoming}
+            username={username}
+            emptyHint="아직 예정된 예약이 없어요. 오르빗을 둘러보고 시간을 잡아보세요."
+          />
+          <GuestSection
+            title="지난 예약"
+            rows={guestPast}
+            username={username}
+            muted
+            emptyHint="지난 예약이 없어요."
+          />
+        </>
+      )}
     </div>
+  );
+}
+
+function TabButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex-1 rounded-[5px] px-3 py-1.5 text-xs font-semibold transition-colors ${
+        active
+          ? "bg-red-600 text-white shadow-sm"
+          : "text-charcoal-500 hover:text-charcoal-900 dark:text-charcoal-400 dark:hover:text-charcoal-100"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -96,7 +178,7 @@ function Stat({
       <p
         className={`mt-0.5 text-lg font-bold tabular-nums ${
           accent
-            ? "text-red-300"
+            ? "text-red-700 dark:text-red-300"
             : muted
               ? "text-charcoal-500"
               : "text-charcoal-100"
@@ -108,7 +190,71 @@ function Stat({
   );
 }
 
-function Section({
+function SectionHeader({
+  title,
+  count,
+}: {
+  title: string;
+  count: number;
+}) {
+  return (
+    <div className="flex items-baseline justify-between">
+      <h2 className="text-sm font-semibold uppercase tracking-wider text-charcoal-500">
+        {title}
+      </h2>
+      <span className="text-xs text-charcoal-500">{count}</span>
+    </div>
+  );
+}
+
+function EmptyCard({ hint }: { hint: string }) {
+  return (
+    <div className="rounded-xl border border-dashed border-charcoal-800/60 bg-charcoal-900/20 px-5 py-6 text-center">
+      <p className="text-sm text-charcoal-500">{hint}</p>
+    </div>
+  );
+}
+
+function DateStamp({ iso }: { iso: string }) {
+  const d = new Date(iso);
+  return (
+    <div className="flex w-14 shrink-0 flex-col items-center rounded-lg bg-charcoal-800/40 px-2 py-2 text-center">
+      <span className="text-[10px] font-semibold uppercase tracking-wider text-charcoal-500">
+        {d.toLocaleDateString("ko-KR", { month: "short" })}
+      </span>
+      <span className="mt-0.5 text-xl font-bold tabular-nums text-charcoal-100">
+        {d.getDate()}
+      </span>
+      <span className="text-[10px] text-charcoal-500">
+        {d.toLocaleDateString("ko-KR", { weekday: "short" })}
+      </span>
+    </div>
+  );
+}
+
+function StatusPill({ status }: { status: string }) {
+  return (
+    <span
+      className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+        STATUS_STYLES[status] ?? "bg-charcoal-700/40 text-charcoal-500"
+      }`}
+    >
+      {STATUS_LABELS[status] ?? status}
+    </span>
+  );
+}
+
+function TimeLine({ start, end }: { start: Date; end: Date }) {
+  return (
+    <p className="mt-0.5 text-xs tabular-nums text-charcoal-500">
+      {start.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}
+      {" – "}
+      {end.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}
+    </p>
+  );
+}
+
+function HostSection({
   title,
   rows,
   update,
@@ -125,16 +271,9 @@ function Section({
 }) {
   return (
     <section className="space-y-3">
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-charcoal-500">
-          {title}
-        </h2>
-        <span className="text-xs text-charcoal-500">{rows.length}</span>
-      </div>
+      <SectionHeader title={title} count={rows.length} />
       {rows.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-charcoal-800/60 bg-charcoal-900/20 px-5 py-6 text-center">
-          <p className="text-sm text-charcoal-500">{emptyHint}</p>
-        </div>
+        <EmptyCard hint={emptyHint} />
       ) : (
         <ul className="space-y-2">
           {rows.map((b) => {
@@ -149,47 +288,20 @@ function Section({
             return (
               <li
                 key={b.id}
-                className={`group rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-4 transition-colors hover:border-charcoal-700 ${
+                className={`rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-4 ${
                   muted ? "opacity-70" : ""
                 }`}
               >
                 <div className="flex items-start gap-4">
-                  <div className="flex w-14 shrink-0 flex-col items-center rounded-lg bg-charcoal-800/40 px-2 py-2 text-center">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-charcoal-500">
-                      {start.toLocaleDateString("ko-KR", { month: "short" })}
-                    </span>
-                    <span className="mt-0.5 text-xl font-bold tabular-nums text-charcoal-100">
-                      {start.getDate()}
-                    </span>
-                    <span className="text-[10px] text-charcoal-500">
-                      {start.toLocaleDateString("ko-KR", { weekday: "short" })}
-                    </span>
-                  </div>
+                  <DateStamp iso={b.scheduled_at} />
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <p className="truncate text-sm font-semibold text-charcoal-100">
                         {b.slot.title}
                       </p>
-                      <span
-                        className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
-                          STATUS_STYLES[b.status] ??
-                          "bg-charcoal-700/40 text-charcoal-500"
-                        }`}
-                      >
-                        {b.status}
-                      </span>
+                      <StatusPill status={b.status} />
                     </div>
-                    <p className="mt-0.5 text-xs tabular-nums text-charcoal-500">
-                      {start.toLocaleTimeString("ko-KR", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                      {" – "}
-                      {end.toLocaleTimeString("ko-KR", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
+                    <TimeLine start={start} end={end} />
                     <p className="mt-2 text-sm text-charcoal-200">
                       {guestLabel}
                       {guestSub && (
@@ -205,22 +317,20 @@ function Section({
                     )}
                   </div>
                   <div className="flex shrink-0 flex-col gap-1">
-                    {b.status !== "confirmed" &&
-                      b.status !== "canceled" &&
-                      b.status !== "completed" && (
-                        <button
-                          onClick={() => update(b.id, "confirmed")}
-                          disabled={pending}
-                          className="rounded-md bg-emerald-600/20 px-3 py-1 text-xs font-semibold text-emerald-300 hover:bg-emerald-600/30"
-                        >
-                          수락
-                        </button>
-                      )}
+                    {b.status === "pending" && (
+                      <button
+                        onClick={() => update(b.id, "confirmed")}
+                        disabled={pending}
+                        className="rounded-md bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-60"
+                      >
+                        수락
+                      </button>
+                    )}
                     {b.status !== "canceled" && b.status !== "completed" && (
                       <button
                         onClick={() => update(b.id, "canceled")}
                         disabled={pending}
-                        className="rounded-md border border-charcoal-700 px-3 py-1 text-xs text-charcoal-400 hover:border-red-500/60 hover:text-red-400"
+                        className="rounded-md border border-charcoal-700 px-3 py-1 text-xs text-charcoal-400 hover:border-red-500/60 hover:text-red-500"
                       >
                         취소
                       </button>
@@ -235,6 +345,90 @@ function Section({
                       </button>
                     )}
                   </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function GuestSection({
+  title,
+  rows,
+  muted,
+  emptyHint,
+}: {
+  title: string;
+  rows: GuestBookingRow[];
+  username: string;
+  muted?: boolean;
+  emptyHint: string;
+}) {
+  return (
+    <section className="space-y-3">
+      <SectionHeader title={title} count={rows.length} />
+      {rows.length === 0 ? (
+        <EmptyCard hint={emptyHint} />
+      ) : (
+        <ul className="space-y-2">
+          {rows.map((b) => {
+            const start = new Date(b.scheduled_at);
+            const end = new Date(b.scheduled_end_at);
+            const hostLabel = b.host
+              ? b.host.display_name || b.host.username
+              : "Host";
+            return (
+              <li
+                key={b.id}
+                className={`rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-4 ${
+                  muted ? "opacity-70" : ""
+                }`}
+              >
+                <div className="flex items-start gap-4">
+                  <DateStamp iso={b.scheduled_at} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="truncate text-sm font-semibold text-charcoal-100">
+                        {b.slot.title}
+                      </p>
+                      <StatusPill status={b.status} />
+                    </div>
+                    <TimeLine start={start} end={end} />
+                    {b.host && (
+                      <p className="mt-2 text-sm text-charcoal-200">
+                        <Link
+                          href={`/${b.host.username}`}
+                          className="hover:underline"
+                        >
+                          {hostLabel}
+                        </Link>
+                        <span className="ml-1.5 text-xs text-charcoal-500">
+                          @{b.host.username}
+                        </span>
+                      </p>
+                    )}
+                    {b.slot.location_detail && (
+                      <p className="mt-0.5 text-xs text-charcoal-500">
+                        📍 {b.slot.location_detail}
+                      </p>
+                    )}
+                    {b.message && (
+                      <p className="mt-2 rounded-md bg-charcoal-800/40 px-3 py-2 text-xs leading-relaxed text-charcoal-400">
+                        {b.message}
+                      </p>
+                    )}
+                  </div>
+                  {b.host && (
+                    <Link
+                      href={`/${b.host.username}/s/${b.slot.slug}`}
+                      className="shrink-0 rounded-md border border-charcoal-800 px-2.5 py-1 text-xs text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
+                    >
+                      슬롯
+                    </Link>
+                  )}
                 </div>
               </li>
             );

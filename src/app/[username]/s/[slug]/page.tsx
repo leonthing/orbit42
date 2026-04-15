@@ -9,6 +9,19 @@ import BookingForm from "./BookingForm";
 import AuctionPanel from "./AuctionPanel";
 import { SlotDatePreview } from "@/components/SlotDatePicker";
 
+function formatWindow(from: string | null, until: string | null): string {
+  const fmt = (iso: string) =>
+    new Date(iso).toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  if (from && until) return `예약 가능 기간: ${fmt(from)} – ${fmt(until)}`;
+  if (until) return `${fmt(until)}까지 예약 가능`;
+  if (from) return `${fmt(from)}부터 예약 가능`;
+  return "";
+}
+
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
@@ -18,9 +31,33 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const data = await getSlotBySlug(params.username, params.slug);
   if (!data) return { title: "Not found" };
+  const { slot, host } = data;
+  const hostName = host.display_name || host.username;
+  const title = `${slot.title} · ${hostName} (@${host.username})`;
+  const isAuction = slot.pricing_model === "auction";
+  const priceLabel = isAuction
+    ? `경매 · 시작가 ₩${((slot.reserve_price_cents ?? 0) / 100).toLocaleString("ko-KR")}`
+    : slot.price_cents === 0
+      ? "무료"
+      : `₩${(slot.price_cents / 100).toLocaleString("ko-KR")}`;
+  const description =
+    slot.description?.slice(0, 140) ??
+    `${slot.duration_min}분 · ${priceLabel} · Orbit42에서 예약하기`;
   return {
-    title: `${data.slot.title} · @${data.host.username}`,
-    description: data.slot.description ?? undefined,
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      siteName: "Orbit42",
+      locale: "ko_KR",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
   };
 }
 
@@ -79,6 +116,11 @@ export default async function SlotPage({
         {slot.description && (
           <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-charcoal-300">
             {slot.description}
+          </p>
+        )}
+        {(slot.valid_from || slot.valid_until) && (
+          <p className="mt-3 text-xs text-charcoal-500">
+            {formatWindow(slot.valid_from, slot.valid_until)}
           </p>
         )}
         {attachedMenus.length > 0 && (

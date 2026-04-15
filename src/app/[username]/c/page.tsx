@@ -57,7 +57,7 @@ export default async function PublicCalendarPage({
             ← {profile.display_name || profile.username}
           </Link>
           <h1 className="mt-1 text-2xl font-bold text-charcoal-100">
-            {monthStart.toLocaleString("ko-KR", { year: "numeric", month: "long" })}
+            {monthStart.toLocaleString("ko-KR", { timeZone: "Asia/Seoul", year: "numeric", month: "long" })}
           </h1>
         </div>
         <div className="flex gap-1">
@@ -110,7 +110,7 @@ function Agenda({
   // Group by date string
   const groups: Record<string, typeof events> = {};
   for (const e of events) {
-    const key = new Date(e.start_at).toLocaleDateString("ko-KR", {
+    const key = new Date(e.start_at).toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul",
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -143,10 +143,10 @@ function Agenda({
                   <p className="mt-0.5 text-xs text-charcoal-500">
                     {e.all_day
                       ? "하루 종일"
-                      : `${new Date(e.start_at).toLocaleTimeString("ko-KR", {
+                      : `${new Date(e.start_at).toLocaleTimeString("ko-KR", { timeZone: "Asia/Seoul",
                           hour: "2-digit",
                           minute: "2-digit",
-                        })} – ${new Date(e.end_at).toLocaleTimeString("ko-KR", {
+                        })} – ${new Date(e.end_at).toLocaleTimeString("ko-KR", { timeZone: "Asia/Seoul",
                           hour: "2-digit",
                           minute: "2-digit",
                         })}`}

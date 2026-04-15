@@ -142,6 +142,10 @@ function NewSlotForm({
     myCalendars.find((c) => c.is_default)?.id ?? myCalendars[0]?.id ?? "";
   const [calendarId, setCalendarId] = useState<string>(defaultCalendarId);
   const [selectedMenus, setSelectedMenus] = useState<string[]>([]);
+  const [validPreset, setValidPreset] = useState<ValidPreset>("none");
+  const [validFrom, setValidFrom] = useState("");
+  const [validUntil, setValidUntil] = useState("");
+  const [autoApprove, setAutoApprove] = useState(true);
   const [pending, startTransition] = useTransition();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -185,6 +189,7 @@ function NewSlotForm({
       if (ends >= slotTime)
         return alert("경매 종료 시간은 슬롯 시간보다 앞이어야 합니다.");
     }
+    const [vFrom, vUntil] = resolveValidity(validPreset, validFrom, validUntil);
     startTransition(async () => {
       const res = await createSlot({
         title: title.trim(),
@@ -197,6 +202,9 @@ function NewSlotForm({
         mode: pricingModel === "auction" ? "manual" : mode,
         pricing_model: pricingModel,
         calendar_id: calendarId || null,
+        valid_from: vFrom,
+        valid_until: vUntil,
+        auto_approve: autoApprove,
         ...(pricingModel === "auction"
           ? {
               reserve_price_cents: Math.round(reservePrice) * 100,
@@ -501,6 +509,29 @@ function NewSlotForm({
               setBuffer={setBuffer}
             />
           )}
+        </Section>
+
+        {/* 판매 기간 */}
+        <Section
+          title="판매 기간"
+          hint="이 슬롯이 예약 가능한 기간을 정해요. 기본은 무제한."
+        >
+          <ValidityPicker
+            preset={validPreset}
+            setPreset={setValidPreset}
+            from={validFrom}
+            setFrom={setValidFrom}
+            until={validUntil}
+            setUntil={setValidUntil}
+          />
+        </Section>
+
+        {/* 수락 방식 */}
+        <Section
+          title="수락 방식"
+          hint="예약을 자동으로 확정할지, 직접 확인 후 수락할지 선택해요."
+        >
+          <ApprovalPicker value={autoApprove} onChange={setAutoApprove} />
         </Section>
       </div>
 
@@ -1147,6 +1178,16 @@ function EditSlotForm({
   const [locationDetail, setLocationDetail] = useState(slot.location_detail ?? "");
   const [calendarId, setCalendarId] = useState<string>(slot.calendar_id ?? "");
   const [selectedMenus, setSelectedMenus] = useState<string[]>(initialMenuIds);
+  const [validPreset, setValidPreset] = useState<ValidPreset>(
+    slot.valid_from || slot.valid_until ? "custom" : "none",
+  );
+  const [validFrom, setValidFrom] = useState<string>(
+    slot.valid_from ? toLocalInput(slot.valid_from) : "",
+  );
+  const [validUntil, setValidUntil] = useState<string>(
+    slot.valid_until ? toLocalInput(slot.valid_until) : "",
+  );
+  const [autoApprove, setAutoApprove] = useState<boolean>(slot.auto_approve);
 
   const isAuction = slot.pricing_model === "auction";
   const selectedCal = myCalendars.find((c) => c.id === calendarId);
@@ -1159,6 +1200,7 @@ function EditSlotForm({
     if (violating) {
       return alert("유료 슬롯은 공개 캘린더에만 만들 수 있어요.");
     }
+    const [vFrom, vUntil] = resolveValidity(validPreset, validFrom, validUntil);
     startTransition(async () => {
       const res = await updateSlot(slot.id, {
         title: title.trim(),
@@ -1169,6 +1211,9 @@ function EditSlotForm({
         slot_type: slotType,
         location_detail: locationDetail.trim() || null,
         calendar_id: calendarId || null,
+        valid_from: vFrom,
+        valid_until: vUntil,
+        auto_approve: autoApprove,
       });
       if (res && "error" in res && res.error) return alert(res.error);
       await setSlotMenus(slot.id, selectedMenus);
@@ -1301,6 +1346,23 @@ function EditSlotForm({
         />
       </div>
 
+      <div>
+        <p className="mb-2 text-xs font-medium text-charcoal-400">판매 기간</p>
+        <ValidityPicker
+          preset={validPreset}
+          setPreset={setValidPreset}
+          from={validFrom}
+          setFrom={setValidFrom}
+          until={validUntil}
+          setUntil={setValidUntil}
+        />
+      </div>
+
+      <div>
+        <p className="mb-2 text-xs font-medium text-charcoal-400">수락 방식</p>
+        <ApprovalPicker value={autoApprove} onChange={setAutoApprove} />
+      </div>
+
       <div className="flex justify-end gap-2">
         <button
           type="button"
@@ -1405,3 +1467,130 @@ function MenuPicker({
   );
 }
 
+
+type ValidPreset = "none" | "1m" | "3m" | "6m" | "1y" | "custom";
+
+function resolveValidity(
+  preset: ValidPreset,
+  from: string,
+  until: string,
+): [string | null, string | null] {
+  if (preset === "none") return [null, null];
+  if (preset === "custom") {
+    return [
+      from ? new Date(from).toISOString() : null,
+      until ? new Date(until).toISOString() : null,
+    ];
+  }
+  const months = preset === "1m" ? 1 : preset === "3m" ? 3 : preset === "6m" ? 6 : 12;
+  const end = new Date();
+  end.setMonth(end.getMonth() + months);
+  return [null, end.toISOString()];
+}
+
+function ValidityPicker({
+  preset,
+  setPreset,
+  from,
+  setFrom,
+  until,
+  setUntil,
+}: {
+  preset: ValidPreset;
+  setPreset: (p: ValidPreset) => void;
+  from: string;
+  setFrom: (v: string) => void;
+  until: string;
+  setUntil: (v: string) => void;
+}) {
+  const presets: { value: ValidPreset; label: string }[] = [
+    { value: "none", label: "무제한" },
+    { value: "1m", label: "1개월" },
+    { value: "3m", label: "3개월" },
+    { value: "6m", label: "6개월" },
+    { value: "1y", label: "1년" },
+    { value: "custom", label: "직접 지정" },
+  ];
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-1.5">
+        {presets.map((p) => (
+          <button
+            key={p.value}
+            type="button"
+            onClick={() => setPreset(p.value)}
+            className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              preset === p.value
+                ? "bg-red-600 text-white"
+                : "bg-charcoal-800/40 text-charcoal-700 hover:text-charcoal-900 dark:text-charcoal-300 dark:hover:text-charcoal-100"
+            }`}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+      {preset === "custom" && (
+        <div className="grid gap-2 sm:grid-cols-2">
+          <label className="block">
+            <span className="mb-1 block text-[11px] font-medium text-charcoal-500">
+              시작 (선택)
+            </span>
+            <input
+              type="datetime-local"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+              className={INPUT}
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-[11px] font-medium text-charcoal-500">
+              종료 (선택)
+            </span>
+            <input
+              type="datetime-local"
+              value={until}
+              onChange={(e) => setUntil(e.target.value)}
+              className={INPUT}
+            />
+          </label>
+        </div>
+      )}
+      {preset !== "none" && preset !== "custom" && (
+        <p className="text-xs text-charcoal-500">
+          오늘부터 앞으로 {preset === "1m" ? "1개월" : preset === "3m" ? "3개월" : preset === "6m" ? "6개월" : "1년"} 동안만 예약할 수 있어요.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function toLocalInput(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function ApprovalPicker({
+  value,
+  onChange,
+}: {
+  value: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="grid gap-2 md:grid-cols-2">
+      <ChoiceCard
+        active={value}
+        onClick={() => onChange(true)}
+        title="자동 수락"
+        hint="예약이 들어오면 바로 확정돼요."
+      />
+      <ChoiceCard
+        active={!value}
+        onClick={() => onChange(false)}
+        title="직접 확인"
+        hint="호스트가 수락해야 확정돼요."
+      />
+    </div>
+  );
+}
