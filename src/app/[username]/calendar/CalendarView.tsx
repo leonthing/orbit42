@@ -1,6 +1,10 @@
 "use client";
 
-import { useState, useTransition, useCallback, useMemo } from "react";
+import { useState, useTransition, useCallback, useMemo, useEffect } from "react";
+import {
+  getCompletedKeys,
+  toggleEventCompletion,
+} from "@/lib/event-completions";
 import {
   type Event,
   type EventInput,
@@ -130,6 +134,7 @@ export default function CalendarView({
   const [year, setYear] = useState(initialYear);
   const [month, setMonth] = useState(initialMonth);
   const [events, setEvents] = useState<Event[]>(initialEvents);
+  const [completed, setCompleted] = useState<Set<string>>(new Set());
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
@@ -155,6 +160,44 @@ export default function CalendarView({
   const [viewMode, setViewMode] = useState<ViewMode>("week");
   const [quarter, setQuarter] = useState(getQuarterForMonth(initialMonth));
   const [weekDays, setWeekDays] = useState<WeekDay[]>(initialWeekDays);
+
+  // Load completion marks whenever events change.
+  useEffect(() => {
+    const keys = events.map((e) => e.id);
+    if (keys.length === 0) {
+      setCompleted(new Set());
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const done = await getCompletedKeys(keys);
+      if (!cancelled) setCompleted(new Set(done));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [events]);
+
+  const handleToggleComplete = useCallback(async (eventId: string) => {
+    const isDone = completed.has(eventId);
+    // Optimistic update.
+    setCompleted((prev) => {
+      const next = new Set(prev);
+      if (isDone) next.delete(eventId);
+      else next.add(eventId);
+      return next;
+    });
+    const res = await toggleEventCompletion(eventId, !isDone);
+    if ("error" in res) {
+      // Roll back.
+      setCompleted((prev) => {
+        const next = new Set(prev);
+        if (isDone) next.add(eventId);
+        else next.delete(eventId);
+        return next;
+      });
+    }
+  }, [completed]);
 
   const refetchWeekDays = useCallback(
     (anchor: Date, cals?: string[]) => {
@@ -794,6 +837,8 @@ export default function CalendarView({
                       events={selectedDayEvents}
                       onEdit={openEditForm}
                       onDelete={handleDelete}
+                      completed={completed}
+                      onToggleComplete={handleToggleComplete}
                     />
                   )}
                 </>
@@ -1012,22 +1057,54 @@ function EventList({
   events,
   onEdit,
   onDelete,
+  completed,
+  onToggleComplete,
 }: {
   events: Event[];
   onEdit: (event: Event) => void;
   onDelete: (eventId: string) => void;
+  completed: Set<string>;
+  onToggleComplete: (eventId: string) => void;
 }) {
   return (
     <ul className="space-y-3">
-      {events.map((ev) => (
+      {events.map((ev) => {
+        const isDone = completed.has(ev.id);
+        return (
         <li
           key={ev.id}
-          className="group rounded-lg border border-charcoal-800/40 bg-charcoal-800/20 p-3"
+          className={`group rounded-lg border p-3 transition-opacity ${
+            isDone
+              ? "border-charcoal-800/40 bg-charcoal-800/10 opacity-60"
+              : "border-charcoal-800/40 bg-charcoal-800/20"
+          }`}
         >
           <div className="flex items-start justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => onToggleComplete(ev.id)}
+              aria-label={isDone ? "미완료로 표시" : "완료로 표시"}
+              className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
+                isDone
+                  ? "border-red-500 bg-red-600 text-white"
+                  : "border-charcoal-600 hover:border-charcoal-400"
+              }`}
+            >
+              {isDone && (
+                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                </svg>
+              )}
+            </button>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
-                <p className="text-sm font-medium text-charcoal-200 truncate">
+                <p
+                  className={`text-sm font-medium truncate ${
+                    isDone
+                      ? "text-charcoal-500 line-through"
+                      : "text-charcoal-200"
+                  }`}
+                >
                   {ev.title}
                 </p>
                 {ev.source === "google" && (
@@ -1089,7 +1166,8 @@ function EventList({
             )}
           </div>
         </li>
-      ))}
+        );
+      })}
     </ul>
   );
 }

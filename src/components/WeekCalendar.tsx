@@ -6,13 +6,12 @@ import type { WeekDay, WeekItem } from "@/lib/profile-week";
 import { ShareEventButton } from "@/components/ShareEventButton";
 import { useSlotPanel } from "@/components/SlotPanel";
 
-// Visible window: 06:00 – 24:00 (18 one-hour rows). Items before 06:00
-// clamp to 06:00 so nothing disappears but the grid fits without scroll.
-const START_HOUR = 6;
+// Visible window: 00:00 – 24:00 (full day, 24 one-hour rows).
+const START_HOUR = 0;
 const END_HOUR = 24;
 const ROW_HEIGHT = 32; // px per hour
 const ROWS = END_HOUR - START_HOUR; // 18
-const GRID_HEIGHT = ROWS * ROW_HEIGHT; // 576
+const GRID_HEIGHT = ROWS * ROW_HEIGHT; // 24 * 32 = 768
 const START_MIN = START_HOUR * 60;
 const END_MIN = END_HOUR * 60;
 const PX_PER_MIN = ROW_HEIGHT / 60;
@@ -177,13 +176,22 @@ function TimeAxis() {
     >
       {Array.from({ length: ROWS + 1 }).map((_, i) => {
         const h = START_HOUR + i;
+        const isFirst = i === 0;
+        const isLast = i === ROWS;
+        // First label sits just below the top edge; last sits just above the
+        // bottom edge; middle labels are centered on their gridline.
+        const offsetClass = isFirst
+          ? "translate-y-0"
+          : isLast
+            ? "-translate-y-full"
+            : "-translate-y-1/2";
         return (
           <div
             key={h}
-            className="absolute right-1.5 -translate-y-1/2 text-[11px] font-medium tabular-nums text-charcoal-400"
+            className={`absolute right-1.5 ${offsetClass} text-[11px] font-medium tabular-nums text-charcoal-400`}
             style={{ top: i * ROW_HEIGHT }}
           >
-            {h === START_HOUR ? "" : `${String(h).padStart(2, "0")}:00`}
+            {`${String(h).padStart(2, "0")}:00`}
           </div>
         );
       })}
