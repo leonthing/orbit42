@@ -124,9 +124,10 @@ export async function syncGoogleCalendarsToDb(userId: string) {
   } catch {
     return;
   }
-  const owned = items.filter(
-    (i) => !!i.id && i.accessRole === "owner",
-  );
+  // Only import the user's PRIMARY Google calendar. Secondary ones
+  // (project-specific, subscribed team/holiday feeds etc.) should be
+  // opted into manually so random shared calendars don't leak in.
+  const owned = items.filter((i) => !!i.id && i.primary === true);
   if (owned.length === 0) return;
 
   const db = getAdminClient();
