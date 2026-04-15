@@ -4,9 +4,18 @@ import { getAdminClient } from "@/lib/supabase";
 
 // Manual/scheduled cleanup endpoint. Gate with CRON_SECRET so random
 // traffic can't trigger deletes.
+function authorized(request: NextRequest): boolean {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return false;
+  // Vercel Cron sends Authorization: Bearer <CRON_SECRET> when the
+  // env var is set; manual pings can pass ?key=<CRON_SECRET>.
+  const header = request.headers.get("authorization");
+  if (header === `Bearer ${secret}`) return true;
+  return request.nextUrl.searchParams.get("key") === secret;
+}
+
 export async function GET(request: NextRequest) {
-  const token = request.nextUrl.searchParams.get("key");
-  if (!process.env.CRON_SECRET || token !== process.env.CRON_SECRET) {
+  if (!authorized(request)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const db = getAdminClient();

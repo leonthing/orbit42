@@ -126,7 +126,7 @@ export default function BookingForm({
       )}
 
       {!loggedIn && (
-        <div className="grid gap-2 md:grid-cols-2">
+        <div className="grid gap-2 sm:grid-cols-2">
           <input
             type="text"
             value={name}
@@ -198,11 +198,12 @@ function PaymentStep({
     <div className="space-y-4 rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 p-5">
       <div>
         <p className="text-xs font-medium uppercase tracking-wider text-charcoal-500">
-          결제
+          결제 확인
         </p>
         <p className="mt-2 text-sm text-charcoal-200">{slotTitle}</p>
         <p className="mt-1 text-xs text-charcoal-500">
           {new Date(when).toLocaleString("ko-KR", {
+            timeZone: "Asia/Seoul",
             year: "numeric",
             month: "long",
             day: "numeric",
@@ -217,27 +218,21 @@ function PaymentStep({
         </p>
       </div>
 
-      <div className="rounded-lg border border-red-700/40 bg-red-700/10 p-3 text-xs text-red-200">
-        토스페이먼츠 연동은 곧 출시됩니다. 지금은 결제 없이 예약을 진행해주세요 —
-        호스트가 별도로 결제 안내를 드립니다.
+      <div className="rounded-lg border border-amber-600/40 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-200">
+        온라인 결제 기능은 아직 준비 중이에요. 지금은 예약을 먼저 확정하고,
+        호스트가 별도로 결제 안내를 드릴 예정이에요.
       </div>
 
-      <button
-        type="button"
-        disabled
-        className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/40 px-4 py-3 text-sm font-medium text-charcoal-500"
-      >
-        Pay with Toss (준비 중)
-      </button>
-
-      <label className="flex items-center gap-2 text-xs text-charcoal-400">
+      <label className="flex items-start gap-2 text-xs text-charcoal-400">
         <input
           type="checkbox"
           checked={acknowledged}
           onChange={(e) => setAcknowledged(e.target.checked)}
-          className="accent-red-500"
+          className="mt-0.5 accent-red-500"
         />
-        결제 없이 예약 진행에 동의합니다.
+        <span>
+          호스트와 직접 결제를 진행한다는 점에 동의하고 예약을 확정합니다.
+        </span>
       </label>
 
       <div className="flex gap-2">
@@ -253,9 +248,9 @@ function PaymentStep({
           type="button"
           onClick={onPay}
           disabled={pending || !acknowledged}
-          className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-50"
+          className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:bg-charcoal-800 disabled:text-charcoal-500"
         >
-          {pending ? "예약 중…" : "결제 없이 예약"}
+          {pending ? "예약 중…" : "예약 확정"}
         </button>
       </div>
     </div>

@@ -236,17 +236,24 @@ function TimeGroup({
               key={k}
               type="button"
               onClick={() => onSelect(k)}
-              className={`rounded-md border px-3 py-2 text-sm transition-colors tabular-nums ${
+              className={`flex flex-col items-center rounded-md border px-3 py-2 text-sm transition-colors tabular-nums ${
                 active
                   ? "border-red-500 bg-red-600/15 font-semibold text-charcoal-100"
                   : "border-charcoal-800/60 bg-charcoal-800/20 text-charcoal-200 hover:border-charcoal-700"
               }`}
             >
-              {new Date(o.start_at).toLocaleTimeString("ko-KR", {
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: false,
-              })}
+              <span>
+                {new Date(o.start_at).toLocaleTimeString("ko-KR", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: false,
+                })}
+              </span>
+              {o.remaining > 1 && (
+                <span className="mt-0.5 text-[10px] font-normal text-charcoal-500">
+                  {o.remaining}자리 남음
+                </span>
+              )}
             </button>
           );
         })}

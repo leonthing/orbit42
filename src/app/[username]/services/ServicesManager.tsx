@@ -31,6 +31,10 @@ export default function ServicesManager({ initial }: { initial: Menu[] }) {
           <p className="mt-1 text-sm text-charcoal-500">
             슬롯에 연결할 수 있는 항목을 관리하세요. 예약할 때 게스트가 선택해요.
           </p>
+          <p className="mt-1 text-xs text-charcoal-600">
+            팁: 서비스를 만든 뒤에는 <b>Timeslots</b>에서 각 슬롯의{" "}
+            <b>수정</b>을 눌러 연결해야 게스트에게 노출돼요.
+          </p>
         </div>
         {!showNew && (
           <button
