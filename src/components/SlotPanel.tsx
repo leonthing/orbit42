@@ -277,6 +277,7 @@ function SlotPanelBody({
                 loggedIn={loggedIn}
                 priceCents={slot.price_cents}
                 slotTitle={slot.title}
+                paymentMethod={slot.payment_method}
                 menus={menus.map((m) => ({
                   id: m.id,
                   name: m.name,

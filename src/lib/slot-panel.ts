@@ -21,6 +21,7 @@ export type SlotPanelData = {
     | "mode"
     | "pricing_model"
     | "reserve_price_cents"
+    | "payment_method"
   >;
   host: { username: string; display_name: string | null };
   options: BookableOption[];
@@ -57,6 +58,7 @@ export async function getSlotPanelData(
       mode: slot.mode,
       pricing_model: slot.pricing_model,
       reserve_price_cents: slot.reserve_price_cents,
+      payment_method: slot.payment_method,
     },
     host,
     options,

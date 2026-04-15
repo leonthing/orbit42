@@ -84,7 +84,29 @@ export default async function SlotPage({
         ← {host.display_name || host.username}
       </Link>
 
-      <header className="rounded-2xl border border-charcoal-800/60 bg-charcoal-900/30 p-6">
+      <header className="overflow-hidden rounded-2xl border border-charcoal-800/60 bg-charcoal-900/30">
+        {slot.image_urls && slot.image_urls.length > 0 && (
+          <div
+            className={`grid gap-1 ${
+              slot.image_urls.length === 1
+                ? "grid-cols-1"
+                : slot.image_urls.length === 2
+                  ? "grid-cols-2"
+                  : "grid-cols-2 sm:grid-cols-3"
+            }`}
+          >
+            {slot.image_urls.slice(0, 6).map((url) => (
+              <div
+                key={url}
+                className="relative aspect-[4/3] bg-charcoal-800/40"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={url} alt="" className="h-full w-full object-cover" />
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="p-6">
         <div className="flex items-baseline gap-2">
           <h1 className="text-2xl font-bold text-charcoal-100">{slot.title}</h1>
           {!slot.active && (
@@ -145,6 +167,7 @@ export default async function SlotPage({
             </ul>
           </div>
         )}
+        </div>
       </header>
 
       {isAuction ? (
@@ -199,6 +222,7 @@ async function BookingSection({
             loggedIn={!!session}
             priceCents={slot.price_cents}
             slotTitle={slot.title}
+            paymentMethod={slot.payment_method}
             menus={menus.map((m) => ({
               id: m.id,
               name: m.name,

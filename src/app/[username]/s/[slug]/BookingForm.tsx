@@ -22,6 +22,7 @@ export default function BookingForm({
   loggedIn,
   priceCents,
   slotTitle,
+  paymentMethod = "offline",
   menus = [],
 }: {
   slotId: string;
@@ -29,6 +30,7 @@ export default function BookingForm({
   loggedIn: boolean;
   priceCents: number;
   slotTitle: string;
+  paymentMethod?: "online" | "offline";
   menus?: BookingMenu[];
 }) {
   const router = useRouter();
@@ -100,6 +102,7 @@ export default function BookingForm({
         slotTitle={slotTitle}
         when={selectedOpt.start_at}
         pending={pending}
+        paymentMethod={paymentMethod}
         onCancel={() => setStage("form")}
         onPay={doBook}
       />
@@ -188,6 +191,7 @@ function PaymentStep({
   slotTitle,
   when,
   pending,
+  paymentMethod,
   onCancel,
   onPay,
 }: {
@@ -195,6 +199,7 @@ function PaymentStep({
   slotTitle: string;
   when: string;
   pending: boolean;
+  paymentMethod: "online" | "offline";
   onCancel: () => void;
   onPay: () => void;
 }) {
@@ -223,10 +228,22 @@ function PaymentStep({
         </p>
       </div>
 
-      <div className="rounded-lg border border-amber-600/40 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-200">
-        온라인 결제 기능은 아직 준비 중이에요. 지금은 예약을 먼저 확정하고,
-        호스트가 별도로 결제 안내를 드릴 예정이에요.
-      </div>
+      {paymentMethod === "offline" ? (
+        <div className="rounded-lg border border-charcoal-700 bg-charcoal-800/40 p-3 text-xs leading-relaxed text-charcoal-300">
+          <p className="font-semibold text-charcoal-100">
+            만나서 호스트에게 직접 결제
+          </p>
+          <p className="mt-1">
+            예약을 먼저 확정하고, 호스트가 별도로 결제 안내를 드려요. 약속
+            장소에서 현장 결제하시면 돼요.
+          </p>
+        </div>
+      ) : (
+        <div className="rounded-lg border border-amber-600/40 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-200">
+          온라인 결제 기능은 아직 준비 중이에요. 지금은 예약을 먼저
+          확정하고, 호스트가 결제 안내를 드려요.
+        </div>
+      )}
 
       <label className="flex items-start gap-2 text-xs text-charcoal-400">
         <input
@@ -236,7 +253,9 @@ function PaymentStep({
           className="mt-0.5 accent-red-500"
         />
         <span>
-          호스트와 직접 결제를 진행한다는 점에 동의하고 예약을 확정합니다.
+          {paymentMethod === "offline"
+            ? "호스트와 만나서 직접 결제한다는 점에 동의하고 예약을 확정합니다."
+            : "호스트와 직접 결제를 진행한다는 점에 동의하고 예약을 확정합니다."}
         </span>
       </label>
 

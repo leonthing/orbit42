@@ -23,9 +23,14 @@ export default async function UsernameLayout({
 
   const viewer = await getProfile(session.username);
   const displayName = viewer?.display_name || session.username;
+  const avatarUrl = (viewer?.avatar_url as string | null) ?? null;
 
   return (
-    <AppShell viewerUsername={session.username} viewerDisplayName={displayName}>
+    <AppShell
+      viewerUsername={session.username}
+      viewerDisplayName={displayName}
+      viewerAvatarUrl={avatarUrl}
+    >
       {children}
     </AppShell>
   );

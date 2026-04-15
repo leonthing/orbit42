@@ -43,6 +43,9 @@ export type TimeSlot = {
   valid_from: string | null;
   valid_until: string | null;
   auto_approve: boolean;
+  payment_method: "online" | "offline";
+  image_urls: string[];
+  show_on_feed: boolean;
   created_at: string;
 };
 
@@ -79,6 +82,9 @@ export type SlotInput = {
   valid_from?: string | null;
   valid_until?: string | null;
   auto_approve?: boolean;
+  payment_method?: "online" | "offline";
+  image_urls?: string[];
+  show_on_feed?: boolean;
 };
 
 function safeDecode(s: string) {
@@ -286,6 +292,9 @@ export async function createSlot(input: SlotInput) {
       valid_from: input.valid_from ?? null,
       valid_until: input.valid_until ?? null,
       auto_approve: input.auto_approve ?? true,
+      payment_method: input.payment_method ?? "offline",
+      image_urls: input.image_urls ?? [],
+      show_on_feed: input.show_on_feed ?? true,
     })
     .select()
     .single();
@@ -331,6 +340,9 @@ export async function updateSlot(id: string, patch: Partial<SlotInput>) {
     "valid_from",
     "valid_until",
     "auto_approve",
+    "payment_method",
+    "image_urls",
+    "show_on_feed",
   ];
   for (const f of fields) {
     if (patch[f] !== undefined) updateData[f] = patch[f];

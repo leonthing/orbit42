@@ -120,9 +120,10 @@ export default async function FeedPage() {
     db
       .from("time_slots")
       .select(
-        "id, slug, title, duration_min, price_cents, slot_type, created_at, host_id, pricing_model, reserve_price_cents, auction_ends_at, current_high_bid_cents",
+        "id, slug, title, duration_min, price_cents, slot_type, created_at, host_id, pricing_model, reserve_price_cents, auction_ends_at, current_high_bid_cents, image_urls",
       )
       .eq("active", true)
+      .eq("show_on_feed", true)
       .in("host_id", authorIds)
       .gte("created_at", recentSince.toISOString())
       .order("created_at", { ascending: false })

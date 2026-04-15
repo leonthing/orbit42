@@ -1,40 +1,45 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { logout } from "@/lib/auth";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMobileMenu } from "./MobileMenuContext";
+import { Avatar } from "@/components/Avatar";
 
-const PAGE_TITLES: Record<string, string> = {
-  calendar: "Calendar",
-  slots: "Timeslots",
-  services: "Services",
-  bookings: "Bookings",
-  blog: "Posts",
-  network: "Orbits",
-  settings: "Settings",
-  profile: "Profile",
-};
+function formatNow(d: Date) {
+  return d.toLocaleString("ko-KR", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+}
 
-export function TopBar({ username, displayName }: { username: string; displayName: string }) {
-  const pathname = usePathname();
+export function TopBar({
+  username,
+  displayName,
+  avatarUrl = null,
+}: {
+  username: string;
+  displayName: string;
+  avatarUrl?: string | null;
+}) {
   const router = useRouter();
   const [showMenu, setShowMenu] = useState(false);
   const { toggle } = useMobileMenu();
+  const [now, setNow] = useState<string>("");
 
-  // Extract current page from path: /leo/calendar → calendar
-  const segment = pathname.split("/")[2] || "calendar";
-  const title = PAGE_TITLES[segment] || segment;
-
-  const today = new Date();
-  const dateStr = today.toLocaleDateString("ko-KR", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    weekday: "short",
-  });
+  useEffect(() => {
+    setNow(formatNow(new Date()));
+    const id = setInterval(() => setNow(formatNow(new Date())), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -43,7 +48,7 @@ export function TopBar({ username, displayName }: { username: string; displayNam
 
   return (
     <header className="flex h-12 shrink-0 items-center justify-between border-b border-charcoal-800/40 px-4 md:px-6">
-      {/* Left: Hamburger (mobile) + Page title + date */}
+      {/* Left: Hamburger (mobile) + live clock */}
       <div className="flex items-center gap-3">
         <button
           onClick={toggle}
@@ -54,8 +59,12 @@ export function TopBar({ username, displayName }: { username: string; displayNam
             <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
           </svg>
         </button>
-        <h1 className="text-sm font-semibold text-charcoal-200">{title}</h1>
-        <span className="hidden text-xs text-charcoal-600 sm:inline">{dateStr}</span>
+        <span
+          className="font-mono text-xs tabular-nums text-charcoal-500"
+          suppressHydrationWarning
+        >
+          {now}
+        </span>
       </div>
 
       {/* Right: User */}
@@ -66,9 +75,7 @@ export function TopBar({ username, displayName }: { username: string; displayNam
           aria-expanded={showMenu}
           className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-charcoal-800/50"
         >
-          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-red-600/20 text-xs font-bold text-red-400">
-            {displayName[0].toUpperCase()}
-          </div>
+          <Avatar url={avatarUrl} name={displayName} size={28} />
           <span className="text-sm text-charcoal-300">{displayName}</span>
           <svg className="hidden h-3 w-3 text-charcoal-500 sm:block" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />

@@ -14,6 +14,7 @@ export default async function FeedLayout({
     <AppShell
       viewerUsername={session.username}
       viewerDisplayName={viewer?.display_name || session.username}
+      viewerAvatarUrl={(viewer?.avatar_url as string | null) ?? null}
     >
       {children}
     </AppShell>

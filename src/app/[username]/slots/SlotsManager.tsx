@@ -146,6 +146,10 @@ function NewSlotForm({
   const [validFrom, setValidFrom] = useState("");
   const [validUntil, setValidUntil] = useState("");
   const [autoApprove, setAutoApprove] = useState(true);
+  const [paymentMethod, setPaymentMethod] =
+    useState<"online" | "offline">("offline");
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [showOnFeed, setShowOnFeed] = useState(true);
   const [pending, startTransition] = useTransition();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -205,6 +209,9 @@ function NewSlotForm({
         valid_from: vFrom,
         valid_until: vUntil,
         auto_approve: autoApprove,
+        payment_method: paymentMethod,
+        image_urls: imageUrls,
+        show_on_feed: showOnFeed,
         ...(pricingModel === "auction"
           ? {
               reserve_price_cents: Math.round(reservePrice) * 100,
@@ -532,6 +539,40 @@ function NewSlotForm({
           hint="예약을 자동으로 확정할지, 직접 확인 후 수락할지 선택해요."
         >
           <ApprovalPicker value={autoApprove} onChange={setAutoApprove} />
+        </Section>
+
+        {/* 결제 방식 */}
+        {pricingModel === "fixed" && price > 0 && (
+          <Section
+            title="결제 방식"
+            hint="온라인 결제는 곧 지원돼요. 지금은 호스트와 직접 만나서 결제하는 방식이 기본이에요."
+          >
+            <PaymentMethodPicker value={paymentMethod} onChange={setPaymentMethod} />
+          </Section>
+        )}
+
+        {/* 이미지 */}
+        <Section
+          title="이미지 (선택)"
+          hint="슬롯 페이지에 함께 보일 사진을 최대 6장까지 올릴 수 있어요."
+        >
+          <SlotImagePicker urls={imageUrls} onChange={setImageUrls} />
+        </Section>
+
+        {/* 피드 노출 */}
+        <Section
+          title="피드 노출"
+          hint="꺼두면 이 슬롯이 피드에 나타나지 않아요. 공개 페이지에서는 그대로 보여요."
+        >
+          <label className="flex items-center gap-3 rounded-lg border border-charcoal-800/60 bg-charcoal-800/10 px-4 py-3 text-sm text-charcoal-200">
+            <input
+              type="checkbox"
+              checked={showOnFeed}
+              onChange={(e) => setShowOnFeed(e.target.checked)}
+              className="h-4 w-4 accent-red-500"
+            />
+            피드에 노출
+          </label>
         </Section>
       </div>
 
@@ -1188,6 +1229,13 @@ function EditSlotForm({
     slot.valid_until ? toLocalInput(slot.valid_until) : "",
   );
   const [autoApprove, setAutoApprove] = useState<boolean>(slot.auto_approve);
+  const [paymentMethod, setPaymentMethod] = useState<"online" | "offline">(
+    slot.payment_method ?? "offline",
+  );
+  const [imageUrls, setImageUrls] = useState<string[]>(slot.image_urls ?? []);
+  const [showOnFeed, setShowOnFeed] = useState<boolean>(
+    slot.show_on_feed ?? true,
+  );
 
   const isAuction = slot.pricing_model === "auction";
   const selectedCal = myCalendars.find((c) => c.id === calendarId);
@@ -1214,6 +1262,9 @@ function EditSlotForm({
         valid_from: vFrom,
         valid_until: vUntil,
         auto_approve: autoApprove,
+        payment_method: paymentMethod,
+        image_urls: imageUrls,
+        show_on_feed: showOnFeed,
       });
       if (res && "error" in res && res.error) return alert(res.error);
       await setSlotMenus(slot.id, selectedMenus);
@@ -1362,6 +1413,38 @@ function EditSlotForm({
         <p className="mb-2 text-xs font-medium text-charcoal-400">수락 방식</p>
         <ApprovalPicker value={autoApprove} onChange={setAutoApprove} />
       </div>
+
+      {!isAuction && price > 0 && (
+        <div>
+          <p className="mb-2 text-xs font-medium text-charcoal-400">결제 방식</p>
+          <PaymentMethodPicker
+            value={paymentMethod}
+            onChange={setPaymentMethod}
+          />
+        </div>
+      )}
+
+      <div>
+        <p className="mb-2 text-xs font-medium text-charcoal-400">
+          이미지 (선택)
+        </p>
+        <SlotImagePicker urls={imageUrls} onChange={setImageUrls} />
+      </div>
+
+      <label className="flex items-center gap-3 rounded-lg border border-charcoal-800/60 bg-charcoal-800/10 px-4 py-3 text-sm text-charcoal-200">
+        <input
+          type="checkbox"
+          checked={showOnFeed}
+          onChange={(e) => setShowOnFeed(e.target.checked)}
+          className="h-4 w-4 accent-red-500"
+        />
+        <span>
+          <span className="block">피드에 노출</span>
+          <span className="block text-[11px] font-normal text-charcoal-500">
+            꺼두면 이 슬롯이 피드에 올라가지 않아요.
+          </span>
+        </span>
+      </label>
 
       <div className="flex justify-end gap-2">
         <button
@@ -1591,6 +1674,103 @@ function ApprovalPicker({
         title="직접 확인"
         hint="호스트가 수락해야 확정돼요."
       />
+    </div>
+  );
+}
+
+function PaymentMethodPicker({
+  value,
+  onChange,
+}: {
+  value: "online" | "offline";
+  onChange: (v: "online" | "offline") => void;
+}) {
+  return (
+    <div className="grid gap-2 md:grid-cols-2">
+      <ChoiceCard
+        active={value === "offline"}
+        onClick={() => onChange("offline")}
+        title="호스트에게 직접 결제"
+        hint="만나서 현장 결제 (현금/계좌이체 등 호스트가 안내)"
+      />
+      <ChoiceCard
+        active={value === "online"}
+        onClick={() => onChange("online")}
+        title="온라인 결제 (준비 중)"
+        hint="토스페이먼츠 연동 후 활성화 예정"
+      />
+    </div>
+  );
+}
+
+function SlotImagePicker({
+  urls,
+  onChange,
+}: {
+  urls: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const handleFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try {
+      const { uploadSlotImages } = await import("@/lib/slot-media");
+      const fd = new FormData();
+      Array.from(files).forEach((f) => fd.append("files", f));
+      const res = await uploadSlotImages(fd);
+      if ("error" in res) {
+        alert(res.error);
+        return;
+      }
+      onChange([...urls, ...res.urls].slice(0, 6));
+    } finally {
+      setUploading(false);
+    }
+  };
+  const removeAt = (i: number) => {
+    onChange(urls.filter((_, idx) => idx !== i));
+  };
+  return (
+    <div className="space-y-3">
+      {urls.length > 0 && (
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+          {urls.map((url, i) => (
+            <div
+              key={url}
+              className="group relative aspect-square overflow-hidden rounded-lg bg-charcoal-800/40"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={url}
+                alt=""
+                className="h-full w-full object-cover"
+              />
+              <button
+                type="button"
+                onClick={() => removeAt(i)}
+                aria-label="Remove image"
+                className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      {urls.length < 6 && (
+        <label className="flex cursor-pointer items-center justify-center rounded-lg border border-dashed border-charcoal-700 bg-charcoal-800/20 px-4 py-6 text-sm text-charcoal-400 hover:border-charcoal-600 hover:text-charcoal-200">
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            multiple
+            className="hidden"
+            onChange={(e) => handleFiles(e.target.files)}
+            disabled={uploading}
+          />
+          {uploading ? "업로드 중…" : "+ 사진 추가"}
+        </label>
+      )}
     </div>
   );
 }
