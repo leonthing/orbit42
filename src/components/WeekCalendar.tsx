@@ -89,6 +89,21 @@ export function WeekCalendar({
         ))}
       </div>
 
+      {/* All-day lane */}
+      {positionedByDay.some((col) => col.some((i) => i.allDay)) && (
+        <div className="grid grid-cols-[44px_repeat(7,minmax(0,1fr))] border-b border-charcoal-800/40 bg-charcoal-900/20">
+          <div className="flex items-start justify-end border-r border-charcoal-800/40 px-1.5 pt-1.5 text-[10px] font-medium text-charcoal-500">
+            종일
+          </div>
+          {positionedByDay.map((items, idx) => (
+            <AllDayColumn
+              key={`ad-${days[idx].date.toISOString()}`}
+              items={items.filter((i) => i.allDay)}
+            />
+          ))}
+        </div>
+      )}
+
       {/* Time grid — fits in view without scrolling */}
       <div
         className="grid grid-cols-[44px_repeat(7,minmax(0,1fr))]"
@@ -98,7 +113,7 @@ export function WeekCalendar({
         {positionedByDay.map((items, idx) => (
           <DayColumn
             key={days[idx].date.toISOString()}
-            items={items}
+            items={items.filter((i) => !i.allDay)}
             isToday={days[idx].isToday}
             username={username}
             viewerIsOwner={viewerIsOwner}
@@ -165,6 +180,33 @@ function TimeAxis() {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function AllDayColumn({ items }: { items: PositionedItem[] }) {
+  const visible = items.slice(0, 3);
+  const extra = items.length - visible.length;
+  return (
+    <div className="min-h-[28px] space-y-1 border-r border-charcoal-800/40 px-1 py-1 last:border-r-0">
+      {visible.map((item) => {
+        if (item.kind === "event") {
+          return (
+            <div
+              key={item.id}
+              className="truncate rounded-sm border-l-[3px] bg-charcoal-800/60 px-1 py-0.5 text-[10px] font-medium text-charcoal-100"
+              style={{ borderColor: item.color }}
+              title={item.title}
+            >
+              {item.title}
+            </div>
+          );
+        }
+        return null;
+      })}
+      {extra > 0 && (
+        <div className="px-1 text-[10px] text-charcoal-500">+{extra}</div>
+      )}
     </div>
   );
 }

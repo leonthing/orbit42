@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
   createNativeCalendar,
-  createGoogleLinkedCalendar,
   updateCalendar,
   deleteCalendar,
   type Calendar,
@@ -220,7 +219,6 @@ function CalendarRow({ calendar }: { calendar: Calendar }) {
 }
 
 function NewCalendarForm({
-  googleConnected,
   onDone,
 }: {
   googleConnected: boolean;
@@ -230,16 +228,18 @@ function NewCalendarForm({
   const [purpose, setPurpose] = useState<CalendarPurpose>("personal");
   const [color, setColor] = useState(CALENDAR_COLORS[0]);
   const [visibility, setVisibility] = useState<CalendarVisibility>("private");
-  const [alsoGoogle, setAlsoGoogle] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return alert("이름을 입력해주세요.");
     startTransition(async () => {
-      const res = alsoGoogle
-        ? await createGoogleLinkedCalendar({ name, purpose, color, visibility })
-        : await createNativeCalendar({ name, purpose, color, visibility });
+      const res = await createNativeCalendar({
+        name,
+        purpose,
+        color,
+        visibility,
+      });
       if (res.error) return alert(res.error);
       onDone();
     });
@@ -304,21 +304,6 @@ function NewCalendarForm({
           </button>
         ))}
       </div>
-
-      <label
-        className={`flex items-center gap-2 text-xs ${
-          googleConnected ? "text-charcoal-300" : "text-charcoal-600"
-        }`}
-      >
-        <input
-          type="checkbox"
-          checked={alsoGoogle}
-          disabled={!googleConnected}
-          onChange={(e) => setAlsoGoogle(e.target.checked)}
-          className="accent-red-500"
-        />
-        Google 캘린더로도 생성 {!googleConnected && "(Google 연결 후 사용 가능)"}
-      </label>
 
       <div className="flex justify-end gap-2 pt-1">
         <button

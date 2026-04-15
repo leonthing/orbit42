@@ -57,6 +57,8 @@ export default async function SettingsPage({
         education={profile.education || []}
         experience={profile.experience || []}
         interests={profile.interests || []}
+        email={(profile.email as string | null) ?? null}
+        emailVerified={!!profile.email_verified}
         createdAt={profile.created_at}
       />
 

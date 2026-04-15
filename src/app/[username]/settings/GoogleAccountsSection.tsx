@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { disconnectExtraAccount } from "@/lib/google-accounts";
+import { disconnectGoogleCalendar } from "@/app/[username]/calendar/actions";
 
 type Account = {
   id: string;
@@ -26,6 +27,19 @@ export function GoogleAccountsSection({
     if (!confirm("이 Google 계정 연결을 해제할까요?")) return;
     startTransition(async () => {
       await disconnectExtraAccount(id);
+      router.refresh();
+    });
+  };
+
+  const disconnectPrimary = () => {
+    if (
+      !confirm(
+        "기본 Google 계정 연결을 해제할까요? 이 계정에서 가져오던 캘린더 이벤트가 더 이상 표시되지 않아요.",
+      )
+    )
+      return;
+    startTransition(async () => {
+      await disconnectGoogleCalendar();
       router.refresh();
     });
   };
@@ -63,10 +77,19 @@ export function GoogleAccountsSection({
               </p>
             )}
           </div>
-          {!primaryConnected && (
+          {primaryConnected ? (
+            <button
+              type="button"
+              onClick={disconnectPrimary}
+              disabled={pending}
+              className="shrink-0 whitespace-nowrap rounded-lg border border-charcoal-700 px-3 py-1.5 text-xs text-charcoal-400 hover:border-red-500/60 hover:text-red-500"
+            >
+              해제
+            </button>
+          ) : (
             <a
               href="/api/google?return=settings"
-              className="rounded-lg border border-charcoal-700 px-3 py-1.5 text-xs text-charcoal-200 hover:border-charcoal-600"
+              className="shrink-0 rounded-lg border border-charcoal-700 px-3 py-1.5 text-xs text-charcoal-200 hover:border-charcoal-600"
             >
               연결
             </a>

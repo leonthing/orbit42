@@ -77,6 +77,8 @@ export function SettingsForm({
   education: initialEducation,
   experience: initialExperience,
   interests: initialInterests,
+  email,
+  emailVerified,
   createdAt,
 }: {
   username: string;
@@ -87,6 +89,8 @@ export function SettingsForm({
   education: Education[];
   experience: Experience[];
   interests: string[];
+  email: string | null;
+  emailVerified: boolean;
   createdAt: string;
 }) {
   const [displayName, setDisplayName] = useState(initialDisplayName);
@@ -218,6 +222,29 @@ export function SettingsForm({
           <div>
             <label className="mb-1.5 block text-xs font-medium text-charcoal-400">Display Name</label>
             <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className={inputClass} />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-charcoal-400">
+              이메일
+            </label>
+            <div className="flex items-center gap-2 rounded-lg border border-charcoal-800 bg-charcoal-800/30 px-4 py-2.5">
+              <span className="min-w-0 flex-1 truncate text-sm text-charcoal-200">
+                {email || "등록된 이메일이 없어요"}
+              </span>
+              <span
+                className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                  emailVerified
+                    ? "bg-emerald-500/15 text-emerald-800 ring-1 ring-emerald-500/40 dark:text-emerald-200 dark:ring-0"
+                    : "bg-amber-500/15 text-amber-800 ring-1 ring-amber-500/40 dark:text-amber-200 dark:ring-0"
+                }`}
+              >
+                {emailVerified ? "확인됨" : "확인 필요"}
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-charcoal-600">
+              이메일 변경 기능은 곧 지원될 예정이에요.
+            </p>
           </div>
 
           <div>

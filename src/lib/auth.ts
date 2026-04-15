@@ -128,11 +128,20 @@ export async function loginOrSignupWithGoogle(
   // 1. Existing user with this email?
   const { data: existing } = await db
     .from("users")
-    .select("username")
-    .eq("email", normalized)
+    .select("id, username, email_verified")
+    .ilike("email", normalized)
     .maybeSingle();
 
   if (existing?.username) {
+    // Google has already verified this email, so promote the flag if
+    // it is still false (covers users created before verification
+    // feature shipped).
+    if (!existing.email_verified) {
+      await db
+        .from("users")
+        .update({ email_verified: true })
+        .eq("id", existing.id);
+    }
     cookies().set(COOKIE_NAME, JSON.stringify({ username: existing.username }), {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
