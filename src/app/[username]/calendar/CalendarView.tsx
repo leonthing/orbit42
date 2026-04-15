@@ -161,9 +161,18 @@ export default function CalendarView({
   const [quarter, setQuarter] = useState(getQuarterForMonth(initialMonth));
   const [weekDays, setWeekDays] = useState<WeekDay[]>(initialWeekDays);
 
-  // Load completion marks whenever events change.
+  // Load completion marks whenever visible events change. We pull keys
+  // from BOTH the month events and the week-day items so checkboxes
+  // work in whichever view the user lands on.
   useEffect(() => {
-    const keys = events.map((e) => e.id);
+    const keySet = new Set<string>();
+    for (const e of events) keySet.add(e.id);
+    for (const d of weekDays) {
+      for (const it of d.items) {
+        if (it.kind === "event") keySet.add(it.id);
+      }
+    }
+    const keys = Array.from(keySet);
     if (keys.length === 0) {
       setCompleted(new Set());
       return;
@@ -176,7 +185,7 @@ export default function CalendarView({
     return () => {
       cancelled = true;
     };
-  }, [events]);
+  }, [events, weekDays]);
 
   const handleToggleComplete = useCallback(async (eventId: string) => {
     const isDone = completed.has(eventId);
@@ -855,6 +864,8 @@ export default function CalendarView({
           username={username}
           days={weekDays}
           viewerIsOwner={viewerIsOwner}
+          completedKeys={completed}
+          onToggleComplete={handleToggleComplete}
           emptyMessage={
             viewerIsOwner
               ? "이 주가 비어있어요. 슬롯을 열거나 이벤트를 추가해보세요."

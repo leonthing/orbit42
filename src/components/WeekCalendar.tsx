@@ -34,11 +34,15 @@ export function WeekCalendar({
   days,
   emptyMessage,
   viewerIsOwner,
+  completedKeys,
+  onToggleComplete,
 }: {
   username: string;
   days: WeekDay[];
   emptyMessage?: string;
   viewerIsOwner?: boolean;
+  completedKeys?: Set<string>;
+  onToggleComplete?: (eventId: string) => void;
 }) {
   const totalSlots = days.reduce(
     (n, d) => n + d.items.filter((i) => i.kind === "slot").length,
@@ -121,6 +125,8 @@ export function WeekCalendar({
                 isToday={days[idx].isToday}
                 username={username}
                 viewerIsOwner={viewerIsOwner}
+                completedKeys={completedKeys}
+                onToggleComplete={onToggleComplete}
               />
             ))}
           </div>
@@ -231,11 +237,15 @@ function DayColumn({
   isToday,
   username,
   viewerIsOwner,
+  completedKeys,
+  onToggleComplete,
 }: {
   items: PositionedItem[];
   isToday: boolean;
   username: string;
   viewerIsOwner?: boolean;
+  completedKeys?: Set<string>;
+  onToggleComplete?: (eventId: string) => void;
 }) {
   return (
     <div
@@ -270,6 +280,8 @@ function DayColumn({
           item={item}
           username={username}
           viewerIsOwner={viewerIsOwner}
+          completed={!!completedKeys?.has(item.id)}
+          onToggleComplete={onToggleComplete}
         />
       ))}
     </div>
@@ -295,10 +307,14 @@ function ItemBlock({
   item,
   username,
   viewerIsOwner,
+  completed,
+  onToggleComplete,
 }: {
   item: PositionedItem;
   username: string;
   viewerIsOwner?: boolean;
+  completed?: boolean;
+  onToggleComplete?: (eventId: string) => void;
 }) {
   const panel = useSlotPanel();
   // Clamp to visible window and translate into grid coordinates.
@@ -317,14 +333,50 @@ function ItemBlock({
   };
 
   if (item.kind === "event") {
+    const canToggle = !!(viewerIsOwner && onToggleComplete);
     return (
       <div
-        className="group absolute overflow-hidden rounded-md border-l-[3px] bg-charcoal-800 px-1.5 py-1 shadow-sm"
+        className={`group absolute overflow-hidden rounded-md border-l-[3px] px-1.5 py-1 shadow-sm transition-opacity ${
+          completed ? "bg-charcoal-800/50 opacity-50" : "bg-charcoal-800"
+        }`}
         style={{ ...style, borderColor: item.color }}
       >
-        <p className="truncate text-[11px] font-semibold leading-tight text-charcoal-50">
-          {item.title}
-        </p>
+        <div className="flex items-start gap-1">
+          {canToggle && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleComplete?.(item.id);
+              }}
+              aria-label={completed ? "미완료로 표시" : "완료로 표시"}
+              className={`mt-[1px] flex h-3 w-3 shrink-0 items-center justify-center rounded-sm border ${
+                completed
+                  ? "border-red-400 bg-red-500 text-white"
+                  : "border-charcoal-500 bg-charcoal-900/40 hover:border-charcoal-300"
+              }`}
+            >
+              {completed && (
+                <svg
+                  className="h-2.5 w-2.5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={4}
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                </svg>
+              )}
+            </button>
+          )}
+          <p
+            className={`min-w-0 flex-1 truncate text-[11px] font-semibold leading-tight ${
+              completed ? "text-charcoal-400 line-through" : "text-charcoal-50"
+            }`}
+          >
+            {item.title}
+          </p>
+        </div>
         {!item.allDay && height >= 32 && (
           <p className="truncate text-[10px] leading-tight text-charcoal-300">
             {minToHM(item.startMin)}
