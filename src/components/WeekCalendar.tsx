@@ -451,14 +451,8 @@ function position(items: WeekItem[], dayDate: Date): PositionedItem[] {
         Math.round((e.getTime() - dayStart.getTime()) / 60_000),
       ),
     );
-    // Treat events as "all-day-like" when explicitly flagged OR when
-    // they occupy most of the visible day — long events were otherwise
-    // packed into the timed grid and became unreadable slivers.
-    const spanMinutes = endMin - startMin;
-    const isLongSpan = item.kind === "event" && spanMinutes >= 8 * 60;
     const allDay =
-      (item.kind === "event" && item.all_day && s <= dayStart && e >= dayEnd) ||
-      isLongSpan;
+      item.kind === "event" && item.all_day && s <= dayStart && e >= dayEnd;
     return { item, startMin: allDay ? 0 : startMin, endMin: allDay ? 60 : endMin, allDay };
   });
 
@@ -491,30 +485,18 @@ function position(items: WeekItem[], dayDate: Date): PositionedItem[] {
   }
   if (current.length) clusters.push(current);
 
-  // Cap visible columns so narrow clusters stay readable. Extra items
-  // are tagged with column=-1 so the renderer can roll them into a
-  // "+N more" indicator instead of slicing the cell into unusable
-  // slivers.
-  const MAX_COLS = 3;
   const colCountFor = new Map<string, number>();
   for (const cluster of clusters) {
-    const raw = cluster.reduce((m, r) => Math.max(m, r.column + 1), 0);
-    const visibleCount = Math.min(raw, MAX_COLS);
-    for (const r of cluster) colCountFor.set(r.item.id, visibleCount);
+    const count = cluster.reduce((m, r) => Math.max(m, r.column + 1), 0);
+    for (const r of cluster) colCountFor.set(r.item.id, count);
   }
 
-  return withColumns.map((r) => {
-    const visible = colCountFor.get(r.item.id) ?? 1;
-    // Items packed beyond the visible column cap spill into the all-day
-    // lane rather than becoming unreadable slivers in the timed grid.
-    const overflow = r.column >= visible;
-    return {
-      ...r.item,
-      startMin: overflow ? 0 : r.startMin,
-      endMin: overflow ? 60 : r.endMin,
-      column: overflow ? 0 : r.column,
-      columnCount: visible,
-      allDay: overflow ? true : r.allDay,
-    };
-  }) as PositionedItem[];
+  return withColumns.map((r) => ({
+    ...r.item,
+    startMin: r.startMin,
+    endMin: r.endMin,
+    column: r.column,
+    columnCount: colCountFor.get(r.item.id) ?? 1,
+    allDay: r.allDay,
+  })) as PositionedItem[];
 }

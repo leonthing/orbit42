@@ -40,10 +40,10 @@ export default async function CalendarPage({
   }
   const myCalendars = await listMyCalendars().catch(() => []);
 
-  // Default selection: user's default native calendar.
-  const defaultCal =
-    myCalendars.find((c) => c.is_default) ?? myCalendars[0] ?? null;
-  const defaultSelection = defaultCal ? [defaultCal.id] : [];
+  // Default selection: all of the user's calendars. Users almost always
+  // want to see everything when they land on the page; they can deselect
+  // anything they don't want via the picker.
+  const defaultSelection = myCalendars.map((c) => c.id);
 
   const [events, weekDays] = await Promise.all([
     getEvents(year, month, defaultSelection).catch(() => []),
