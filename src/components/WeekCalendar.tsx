@@ -81,44 +81,51 @@ export function WeekCalendar({
         </div>
       </div>
 
-      {/* Day headers (sticky) */}
-      <div className="grid grid-cols-[44px_repeat(7,minmax(0,1fr))] border-b border-charcoal-800/40 bg-charcoal-900/30">
-        <div className="border-r border-charcoal-800/40" />
-        {days.map((day) => (
-          <DayHeader key={day.date.toISOString()} day={day} />
-        ))}
-      </div>
-
-      {/* All-day lane */}
-      {positionedByDay.some((col) => col.some((i) => i.allDay)) && (
-        <div className="grid grid-cols-[44px_repeat(7,minmax(0,1fr))] border-b border-charcoal-800/40 bg-charcoal-900/20">
-          <div className="flex items-start justify-end border-r border-charcoal-800/40 px-1.5 pt-1.5 text-[10px] font-medium text-charcoal-500">
-            종일
+      {/* On mobile, horizontally scroll through 2-day chunks. 44px for
+          the time axis + 2 day cols ≈ 360px viewport. Users swipe the
+          rest. Desktop fits all 7 days naturally. */}
+      <div className="overflow-x-auto md:overflow-x-visible">
+        <div className="w-[calc(44px+7*168px)] md:w-full">
+          {/* Day headers */}
+          <div className="grid grid-cols-[44px_repeat(7,minmax(0,1fr))] border-b border-charcoal-800/40 bg-charcoal-900/30">
+            <div className="border-r border-charcoal-800/40" />
+            {days.map((day) => (
+              <DayHeader key={day.date.toISOString()} day={day} />
+            ))}
           </div>
-          {positionedByDay.map((items, idx) => (
-            <AllDayColumn
-              key={`ad-${days[idx].date.toISOString()}`}
-              items={items.filter((i) => i.allDay)}
-            />
-          ))}
-        </div>
-      )}
 
-      {/* Time grid — fits in view without scrolling */}
-      <div
-        className="grid grid-cols-[44px_repeat(7,minmax(0,1fr))]"
-        style={{ height: GRID_HEIGHT }}
-      >
-        <TimeAxis />
-        {positionedByDay.map((items, idx) => (
-          <DayColumn
-            key={days[idx].date.toISOString()}
-            items={items.filter((i) => !i.allDay)}
-            isToday={days[idx].isToday}
-            username={username}
-            viewerIsOwner={viewerIsOwner}
-          />
-        ))}
+          {/* All-day lane */}
+          {positionedByDay.some((col) => col.some((i) => i.allDay)) && (
+            <div className="grid grid-cols-[44px_repeat(7,minmax(0,1fr))] border-b border-charcoal-800/40 bg-charcoal-900/20">
+              <div className="flex items-start justify-end border-r border-charcoal-800/40 px-1.5 pt-1.5 text-[10px] font-medium text-charcoal-500">
+                종일
+              </div>
+              {positionedByDay.map((items, idx) => (
+                <AllDayColumn
+                  key={`ad-${days[idx].date.toISOString()}`}
+                  items={items.filter((i) => i.allDay)}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Time grid */}
+          <div
+            className="grid grid-cols-[44px_repeat(7,minmax(0,1fr))]"
+            style={{ height: GRID_HEIGHT }}
+          >
+            <TimeAxis />
+            {positionedByDay.map((items, idx) => (
+              <DayColumn
+                key={days[idx].date.toISOString()}
+                items={items.filter((i) => !i.allDay)}
+                isToday={days[idx].isToday}
+                username={username}
+                viewerIsOwner={viewerIsOwner}
+              />
+            ))}
+          </div>
+        </div>
       </div>
 
       {totalSlots === 0 && totalEvents === 0 && emptyMessage && (
