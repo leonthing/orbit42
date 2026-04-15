@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { login, signup } from "@/lib/auth";
 
@@ -11,6 +12,7 @@ export function AuthCard({ initialMode = "signup" }: { initialMode?: Mode }) {
   const [mode, setMode] = useState<Mode>(initialMode);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -22,7 +24,7 @@ export function AuthCard({ initialMode = "signup" }: { initialMode?: Mode }) {
     const res =
       mode === "signin"
         ? await login(username, password)
-        : await signup(username, password, displayName || undefined);
+        : await signup(username, password, email, displayName || undefined);
     if (res.error) {
       setError(res.error);
       setLoading(false);
@@ -32,11 +34,11 @@ export function AuthCard({ initialMode = "signup" }: { initialMode?: Mode }) {
   };
 
   const input =
-    "w-full rounded-lg border border-charcoal-700 bg-charcoal-900/60 px-4 py-3 text-sm text-charcoal-100 placeholder:text-charcoal-500 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500/40";
+    "w-full rounded-md border border-charcoal-700 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-500 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500/40";
 
   return (
-    <div className="rounded-2xl border border-charcoal-800/60 bg-charcoal-900/50 p-5 shadow-2xl backdrop-blur sm:p-6">
-      <div className="mb-5 flex rounded-lg bg-charcoal-800/40 p-1">
+    <div className="mx-auto w-full max-w-sm rounded-2xl border border-charcoal-800/60 bg-charcoal-900/50 p-4 shadow-xl backdrop-blur sm:p-5">
+      <div className="mb-3 flex rounded-md bg-charcoal-800/40 p-0.5">
         <TabButton
           active={mode === "signin"}
           onClick={() => {
@@ -59,7 +61,7 @@ export function AuthCard({ initialMode = "signup" }: { initialMode?: Mode }) {
 
       <a
         href="/api/auth/google"
-        className="mb-3 flex w-full items-center justify-center gap-2 rounded-lg border border-charcoal-700 bg-white px-4 py-2.5 text-sm font-semibold text-charcoal-900 hover:bg-charcoal-100"
+        className="mb-2.5 flex w-full items-center justify-center gap-2 rounded-md bg-[#111] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1f1f1f] ring-1 ring-black/5"
       >
         <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden>
           <path fill="#4285f4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
@@ -70,13 +72,13 @@ export function AuthCard({ initialMode = "signup" }: { initialMode?: Mode }) {
         Continue with Google
       </a>
 
-      <div className="mb-3 flex items-center gap-3 text-[10px] uppercase tracking-wider text-charcoal-500">
+      <div className="mb-2.5 flex items-center gap-2 text-[10px] uppercase tracking-wider text-charcoal-500">
         <span className="h-px flex-1 bg-charcoal-800/60" />
         <span>or</span>
         <span className="h-px flex-1 bg-charcoal-800/60" />
       </div>
 
-      <form onSubmit={onSubmit} className="space-y-3">
+      <form onSubmit={onSubmit} className="space-y-2">
         <input
           type="text"
           autoComplete="username"
@@ -92,18 +94,29 @@ export function AuthCard({ initialMode = "signup" }: { initialMode?: Mode }) {
           required
         />
         {mode === "signup" && username && (
-          <p className="-mt-1 text-xs text-charcoal-500">
-            orbit42.org/<span className="text-red-400">{username}</span>
+          <p className="-mt-0.5 text-[11px] text-charcoal-500">
+            orbit42.org/<span className="text-red-500">{username}</span>
           </p>
         )}
         {mode === "signup" && (
-          <input
-            type="text"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            placeholder="Display name (선택)"
-            className={input}
-          />
+          <>
+            <input
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="이메일"
+              className={input}
+              required
+            />
+            <input
+              type="text"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              placeholder="Display name (선택)"
+              className={input}
+            />
+          </>
         )}
         <input
           type="password"
@@ -115,12 +128,12 @@ export function AuthCard({ initialMode = "signup" }: { initialMode?: Mode }) {
           required
         />
 
-        {error && <p className="text-sm text-red-400">{error}</p>}
+        {error && <p className="text-xs text-red-500">{error}</p>}
 
         <button
           type="submit"
           disabled={loading || !username || !password}
-          className="w-full rounded-lg bg-red-600 py-3 text-sm font-semibold text-white shadow-sm hover:bg-red-500 disabled:cursor-not-allowed disabled:bg-charcoal-800 disabled:text-charcoal-500"
+          className="!mt-3 w-full rounded-md bg-red-600 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 disabled:cursor-not-allowed disabled:bg-charcoal-800 disabled:text-charcoal-500"
         >
           {loading
             ? "..."
@@ -130,10 +143,24 @@ export function AuthCard({ initialMode = "signup" }: { initialMode?: Mode }) {
         </button>
       </form>
 
-      <p className="mt-4 text-center text-xs text-charcoal-500">
-        {mode === "signup"
-          ? "가입하면 Orbit42의 서비스 약관에 동의하게 됩니다."
-          : "비밀번호를 잊으셨나요? 지금은 호스트에게 문의해주세요."}
+      <p className="mt-3 text-center text-[11px] text-charcoal-500">
+        {mode === "signup" ? (
+          <>
+            가입하면{" "}
+            <Link href="/terms" className="underline hover:text-charcoal-300">
+              이용약관
+            </Link>
+            과{" "}
+            <Link href="/privacy" className="underline hover:text-charcoal-300">
+              개인정보처리방침
+            </Link>
+            에 동의하게 됩니다.
+          </>
+        ) : (
+          <Link href="/forgot-password" className="hover:underline">
+            비밀번호를 잊으셨나요?
+          </Link>
+        )}
       </p>
     </div>
   );
@@ -152,10 +179,10 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
-      className={`flex-1 rounded-md px-3 py-1.5 text-sm font-semibold transition-colors ${
+      className={`flex-1 rounded-[5px] px-3 py-1 text-xs font-semibold transition-colors ${
         active
           ? "bg-red-600 text-white shadow-sm"
-          : "text-charcoal-400 hover:text-charcoal-100"
+          : "text-charcoal-500 hover:text-charcoal-900 dark:text-charcoal-400 dark:hover:text-charcoal-100"
       }`}
     >
       {children}

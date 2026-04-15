@@ -1,7 +1,16 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/", "/login", "/signup"];
+const PUBLIC_PATHS = [
+  "/",
+  "/login",
+  "/signup",
+  "/verify-email",
+  "/forgot-password",
+  "/reset-password",
+  "/terms",
+  "/privacy",
+];
 
 // Sub-paths under /[username] that require the visitor to be the owner.
 const OWNER_ONLY_SEGMENTS = ["settings", "calendar", "slots", "bookings", "network"];

@@ -163,12 +163,14 @@ function CalendarRow({ calendar }: { calendar: Calendar }) {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-1.5">
-        <span className="text-[10px] uppercase tracking-wider text-charcoal-500">용도</span>
+      <div className="flex items-center gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden">
+        <span className="shrink-0 text-[10px] uppercase tracking-wider text-charcoal-500">
+          용도
+        </span>
         <button
           type="button"
           onClick={() => changePurpose(null)}
-          className={`whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] ${
+          className={`shrink-0 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] ${
             calendar.purpose === null
               ? "bg-charcoal-700 text-white"
               : "text-charcoal-600 hover:text-charcoal-900 dark:text-charcoal-500 dark:hover:text-charcoal-300"
@@ -181,7 +183,7 @@ function CalendarRow({ calendar }: { calendar: Calendar }) {
             key={p.value}
             type="button"
             onClick={() => changePurpose(p.value)}
-            className={`whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] transition-colors ${
+            className={`shrink-0 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] transition-colors ${
               calendar.purpose === p.value
                 ? "bg-red-600 text-white"
                 : "bg-charcoal-900/50 text-charcoal-700 hover:text-charcoal-900 dark:text-charcoal-400 dark:hover:text-charcoal-200"

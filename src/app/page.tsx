@@ -18,12 +18,7 @@ export default async function LandingPage() {
           </div>
           <span className="text-base font-semibold text-charcoal-100">Orbit42</span>
         </Link>
-        <Link
-          href="/explore"
-          className="rounded-lg px-2.5 py-1.5 text-sm text-charcoal-300 hover:text-charcoal-100"
-        >
-          Explore
-        </Link>
+<span />
       </header>
 
       <main className="mx-auto max-w-6xl px-4 pb-16 pt-8 sm:px-6 md:px-10 md:pt-16 lg:pt-20">
@@ -43,6 +38,29 @@ export default async function LandingPage() {
               캘린더로 일상을 공유하고, 비어있는 시간을 슬롯으로
               판매하여 수익을 창출하세요.
             </p>
+
+            <div className="mt-7 flex justify-center md:justify-start">
+              <Link
+                href="/explore"
+                className="group inline-flex w-full items-center justify-center gap-2.5 rounded-full bg-red-600 px-6 py-3.5 text-base font-semibold text-white shadow-lg shadow-red-500/20 transition-all hover:bg-red-500 hover:shadow-red-500/30 sm:w-auto md:py-3 md:text-sm"
+              >
+                <svg
+                  className="h-5 w-5 md:h-4 md:w-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="m21 21-4.3-4.3" />
+                </svg>
+                활동 중인 사람들 둘러보기
+                <span className="transition-transform group-hover:translate-x-0.5">→</span>
+              </Link>
+            </div>
           </div>
 
           <div className="relative order-2 min-w-0 md:col-start-2 md:row-span-2 md:row-start-1">
@@ -50,11 +68,6 @@ export default async function LandingPage() {
             <div className="pointer-events-none absolute -inset-4 -z-10 rounded-3xl bg-gradient-to-br from-red-500/10 via-transparent to-red-600/20 blur-3xl" />
           </div>
 
-          <div className="order-3 grid grid-cols-1 gap-2.5 sm:grid-cols-3 md:col-start-1 md:row-start-2 md:mt-2">
-            <Pill label="Calendar" hint="공개 · 팔로워 · 비공개" />
-            <Pill label="Timeslots" hint="무료 · 유료 · 경매" />
-            <Pill label="Orbits" hint="팔로우 · 피드" />
-          </div>
         </section>
 
         <section className="mt-16 md:mt-24">
@@ -84,17 +97,25 @@ export default async function LandingPage() {
       </main>
 
       <footer className="border-t border-charcoal-800/40 px-4 py-6 text-center text-xs text-charcoal-500 sm:px-6">
-        © {new Date().getFullYear()} Orbit42
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+          <span>© {new Date().getFullYear()} 주식회사 엔씽 (N.THING Inc.)</span>
+          <span className="hidden text-charcoal-700 sm:inline">·</span>
+          <Link href="/terms" className="hover:text-charcoal-300">
+            이용약관
+          </Link>
+          <span className="text-charcoal-700">·</span>
+          <Link href="/privacy" className="hover:text-charcoal-300">
+            개인정보처리방침
+          </Link>
+          <span className="text-charcoal-700">·</span>
+          <a
+            href="mailto:hello@orbit42.org"
+            className="hover:text-charcoal-300"
+          >
+            hello@orbit42.org
+          </a>
+        </div>
       </footer>
-    </div>
-  );
-}
-
-function Pill({ label, hint }: { label: string; hint: string }) {
-  return (
-    <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 px-4 py-3">
-      <span className="text-sm font-semibold text-charcoal-100">{label}</span>
-      <p className="mt-0.5 text-[11px] text-charcoal-500">{hint}</p>
     </div>
   );
 }

@@ -9,6 +9,7 @@ export default function SignupPage() {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -17,7 +18,7 @@ export default function SignupPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    const result = await signup(username, password, displayName || undefined);
+    const result = await signup(username, password, email, displayName || undefined);
     if (result.error) {
       setError(result.error);
       setLoading(false);
@@ -55,6 +56,16 @@ export default function SignupPage() {
                   orbit42.org/<span className="text-red-400">{username}</span>
                 </p>
               )}
+            </div>
+            <div>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email"
+                required
+                className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-4 py-3 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500/50"
+              />
             </div>
             <div>
               <input

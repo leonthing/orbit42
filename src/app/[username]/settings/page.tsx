@@ -9,6 +9,10 @@ import { listExtraGoogleAccounts } from "@/lib/google";
 import { getUserId } from "@/lib/db";
 import { GoogleAccountsSection } from "./GoogleAccountsSection";
 import { MyCalendars } from "./MyCalendars";
+import {
+  VerifyEmailBanner,
+  DeleteAccountSection,
+} from "./AccountDangerZone";
 
 export const metadata: Metadata = { title: "Settings" };
 export const dynamic = "force-dynamic";
@@ -34,6 +38,10 @@ export default async function SettingsPage({
         <h1 className="text-2xl font-bold text-charcoal-100">Settings</h1>
         <p className="mt-1 text-sm text-charcoal-500">계정 및 프로필 설정</p>
       </div>
+
+      {!profile.email_verified && (
+        <VerifyEmailBanner email={(profile.email as string | null) ?? null} />
+      )}
 
       <AvatarUploader
         initialUrl={(profile.avatar_url as string | null) ?? null}
@@ -63,6 +71,8 @@ export default async function SettingsPage({
       />
 
       <MyCalendars initial={myCalendars} googleConnected={googleConnected} />
+
+      <DeleteAccountSection username={profile.username} />
     </div>
   );
 }

@@ -23,15 +23,24 @@ export async function login(username: string, password: string) {
   return { success: true, username };
 }
 
-export async function signup(username: string, password: string, displayName?: string) {
-  if (!username || !password) {
-    return { error: "아이디와 비밀번호를 입력해주세요." };
+export async function signup(
+  username: string,
+  password: string,
+  email: string,
+  displayName?: string,
+) {
+  if (!username || !password || !email) {
+    return { error: "아이디, 비밀번호, 이메일을 모두 입력해주세요." };
   }
   if (username.length < 2 || !/^[a-z0-9_-]+$/.test(username)) {
     return { error: "아이디는 2자 이상, 영문 소문자/숫자/하이픈만 가능합니다." };
   }
   if (password.length < 6) {
     return { error: "비밀번호는 6자 이상이어야 합니다." };
+  }
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    return { error: "이메일 형식이 올바르지 않아요." };
   }
 
   const db = getAdminClient();
@@ -42,9 +51,18 @@ export async function signup(username: string, password: string, displayName?: s
     .select("id")
     .eq("username", username)
     .single();
-
   if (existing) {
     return { error: "이미 사용 중인 아이디입니다." };
+  }
+
+  // Check if email already used
+  const { data: byEmail } = await db
+    .from("users")
+    .select("id")
+    .ilike("email", normalizedEmail)
+    .maybeSingle();
+  if (byEmail) {
+    return { error: "이미 사용 중인 이메일입니다." };
   }
 
   // Create user with hashed password
@@ -58,13 +76,17 @@ export async function signup(username: string, password: string, displayName?: s
     return { error: "회원가입에 실패했습니다." };
   }
 
-  // Give the new user a default native calendar.
+  // Attach email + default native calendar + send verification.
   const { data: freshUser } = await db
     .from("users")
     .select("id")
     .eq("username", username)
     .single();
   if (freshUser) {
+    await db
+      .from("users")
+      .update({ email: normalizedEmail, email_verified: false })
+      .eq("id", freshUser.id);
     await db.from("calendars").insert({
       user_id: freshUser.id,
       name: "내 캘린더",
@@ -74,6 +96,9 @@ export async function signup(username: string, password: string, displayName?: s
       source: "native",
       is_default: true,
     });
+    // Fire-and-forget verification email.
+    const { startEmailVerification } = await import("@/lib/account");
+    await startEmailVerification(freshUser.id as string, normalizedEmail);
   }
 
   // Auto login
@@ -153,7 +178,7 @@ export async function loginOrSignupWithGoogle(
   if (fresh) {
     await db
       .from("users")
-      .update({ email: normalized })
+      .update({ email: normalized, email_verified: true })
       .eq("id", fresh.id);
     await db.from("calendars").insert({
       user_id: fresh.id,
@@ -199,7 +224,7 @@ export async function getProfile(username: string) {
   const { data } = await db
     .from("users")
     .select(
-      "username, display_name, birth_date, bio, avatar_url, social_links, education, experience, interests, created_at",
+      "username, display_name, birth_date, bio, avatar_url, social_links, education, experience, interests, email, email_verified, created_at",
     )
     .eq("username", username)
     .single();
