@@ -1,6 +1,7 @@
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopBar } from "@/components/layout/TopBar";
 import { MobileMenuProvider } from "@/components/layout/MobileMenuContext";
+import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 
 /**
  * Authenticated shell: sidebar + topbar wrapping the page content.
@@ -33,12 +34,17 @@ export function AppShell({
             avatarUrl={viewerAvatarUrl}
             unreadNotifications={unreadNotifications}
           />
-          <main className="flex-1 overflow-y-auto">
-            <div className="w-full px-3 py-3 sm:px-4 md:px-6 md:py-5">
+          <main className="flex-1 overflow-y-auto pb-16 md:pb-0">
+            <div className="w-full px-4 py-4 sm:px-5 md:px-6 md:py-5">
               {children}
             </div>
           </main>
         </div>
+        <MobileBottomNav
+          username={viewerUsername}
+          unreadMessages={unreadMessages}
+          unreadNotifications={unreadNotifications}
+        />
       </div>
     </MobileMenuProvider>
   );

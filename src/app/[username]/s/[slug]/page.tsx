@@ -106,23 +106,27 @@ export default async function SlotPage({
             ))}
           </div>
         )}
-        <div className="p-6">
-        <div className="flex items-baseline gap-2">
-          <h1 className="text-2xl font-bold text-charcoal-100">{slot.title}</h1>
-          {!slot.active && (
-            <span className="rounded-full bg-charcoal-700/40 px-2 py-0.5 text-[10px] font-semibold text-charcoal-500">
-              OFF
+        <div className="p-5 sm:p-6">
+        <div className="flex flex-wrap items-start gap-x-2 gap-y-1.5">
+          <h1 className="min-w-0 flex-1 break-words text-xl font-bold leading-tight text-charcoal-100 sm:text-2xl">
+            {slot.title}
+          </h1>
+          <div className="flex shrink-0 items-center gap-1.5">
+            {!slot.active && (
+              <span className="rounded-full bg-charcoal-700/40 px-2 py-0.5 text-[10px] font-semibold text-charcoal-500">
+                OFF
+              </span>
+            )}
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
+                isAuction
+                  ? "bg-red-500/20 text-red-300"
+                  : "bg-charcoal-800/60 text-charcoal-400"
+              }`}
+            >
+              {isAuction ? "Auction" : slot.mode}
             </span>
-          )}
-          <span
-            className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
-              isAuction
-                ? "bg-red-500/20 text-red-300"
-                : "bg-charcoal-800/60 text-charcoal-400"
-            }`}
-          >
-            {isAuction ? "Auction" : slot.mode}
-          </span>
+          </div>
         </div>
         <p className="mt-2 text-sm text-charcoal-400">
           {slot.duration_min}분 ·{" "}

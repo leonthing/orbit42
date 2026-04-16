@@ -516,9 +516,10 @@ function EntryBody({
   const timeStr = formatTimeShort(item.timestamp);
   return (
     <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-3 md:p-4">
-      <div className="flex items-center gap-2 text-xs">
+      <div className="flex min-w-0 items-center gap-2 text-xs">
         <Link
           href={`/${author.username}`}
+          className="shrink-0"
           title={`${author.display_name || author.username} (@${author.username})`}
         >
           <Avatar
@@ -529,19 +530,21 @@ function EntryBody({
         </Link>
         <Link
           href={`/${author.username}`}
-          className="truncate font-semibold text-charcoal-200 hover:text-charcoal-100"
+          className="min-w-0 truncate font-semibold text-charcoal-200 hover:text-charcoal-100"
         >
           {author.display_name || author.username}
         </Link>
-        <span className="hidden truncate text-charcoal-600 sm:inline">
+        <span className="hidden min-w-0 truncate text-charcoal-600 sm:inline">
           @{author.username}
         </span>
-        <span className="font-medium tabular-nums text-charcoal-500">
+        <span className="shrink-0 font-medium tabular-nums text-charcoal-500">
           · {timeStr}
         </span>
-        <KindBadge kind={item.kind} />
+        <div className="shrink-0">
+          <KindBadge kind={item.kind} />
+        </div>
         {isMine && item.kind === "feed_post" && (
-          <div className="ml-auto">
+          <div className="ml-auto shrink-0">
             <DeleteFeedPostButton id={item.id} />
           </div>
         )}

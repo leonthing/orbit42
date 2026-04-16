@@ -147,17 +147,17 @@ export default async function LandingPage() {
         </section>
 
         {/* CTA bottom */}
-        <section className="mt-20 overflow-hidden rounded-3xl border border-charcoal-800/60 bg-gradient-to-br from-red-600/15 via-charcoal-900/60 to-charcoal-900/30 p-8 text-center md:mt-28 md:p-12">
-          <h2 className="text-2xl font-bold text-charcoal-100 md:text-3xl">
+        <section className="mt-20 overflow-hidden rounded-3xl border border-charcoal-800/60 bg-gradient-to-br from-red-600/15 via-charcoal-900/60 to-charcoal-900/30 p-6 text-center sm:p-8 md:mt-28 md:p-12">
+          <h2 className="text-xl font-bold leading-tight text-charcoal-100 sm:text-2xl md:text-3xl">
             시간은 가장 중요한 자산입니다
           </h2>
-          <p className="mx-auto mt-3 max-w-lg text-sm text-charcoal-400">
+          <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-charcoal-400">
             지금 초대 기반으로 운영 중이에요. 초대 코드가 있다면 위 가입
             화면에, 없다면 지인에게 물어보세요.
           </p>
           <Link
             href="/explore"
-            className="mt-6 inline-flex items-center gap-2 rounded-full bg-red-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-500"
+            className="mt-5 inline-flex items-center gap-2 rounded-full bg-red-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-500"
           >
             먼저 구경해볼게요
             <span>→</span>

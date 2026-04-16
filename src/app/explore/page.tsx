@@ -180,15 +180,15 @@ export default async function ExplorePage() {
                 key={s.id}
                 className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5"
               >
-                <div className="flex items-center gap-2 text-xs text-charcoal-500">
+                <div className="flex min-w-0 items-center gap-2 text-xs text-charcoal-500">
                   <Link
                     href={`/${s.host.username}`}
-                    className="font-medium text-charcoal-300 hover:text-charcoal-100"
+                    className="min-w-0 truncate font-medium text-charcoal-300 hover:text-charcoal-100"
                   >
                     {s.host.display_name || s.host.username}
                   </Link>
-                  <span>·</span>
-                  <span>@{s.host.username}</span>
+                  <span className="shrink-0">·</span>
+                  <span className="min-w-0 truncate">@{s.host.username}</span>
                 </div>
                 <Link
                   href={`/${s.host.username}/s/${s.slug}`}

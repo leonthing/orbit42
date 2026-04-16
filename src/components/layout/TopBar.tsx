@@ -78,11 +78,13 @@ export function TopBar({
           onClick={() => setShowMenu(!showMenu)}
           aria-label="계정 메뉴"
           aria-expanded={showMenu}
-          className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-charcoal-800/50"
+          className="flex max-w-[160px] items-center gap-2 rounded-lg px-2 py-1 hover:bg-charcoal-800/50 sm:max-w-[220px]"
         >
           <Avatar url={avatarUrl} name={displayName} size={28} />
-          <span className="text-sm text-charcoal-300">{displayName}</span>
-          <svg className="hidden h-3 w-3 text-charcoal-500 sm:block" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+          <span className="hidden truncate text-sm text-charcoal-300 sm:inline">
+            {displayName}
+          </span>
+          <svg className="hidden h-3 w-3 shrink-0 text-charcoal-500 sm:block" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
           </svg>
         </button>

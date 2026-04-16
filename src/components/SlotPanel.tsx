@@ -116,7 +116,7 @@ function SlotPanelDrawer({
       <aside
         role="dialog"
         aria-modal="true"
-        className="relative flex h-full w-full max-w-[480px] flex-col overflow-hidden border-l border-charcoal-800/60 bg-[rgb(var(--bg-surface))] shadow-2xl"
+        className="relative flex h-full w-[min(480px,100vw)] flex-col overflow-hidden border-l border-charcoal-800/60 bg-[rgb(var(--bg-surface))] shadow-2xl"
       >
         <header className="flex items-center justify-between border-b border-charcoal-800/40 px-5 py-3.5">
           <Link
