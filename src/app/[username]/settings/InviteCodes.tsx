@@ -8,7 +8,11 @@ export function InviteCodes({ codes: initial }: { codes: InviteCode[] }) {
   const [copied, setCopied] = useState<string | null>(null);
 
   const copy = async (code: string) => {
-    await navigator.clipboard.writeText(code);
+    const origin =
+      typeof window !== "undefined" ? window.location.origin : "https://orbit42.org";
+    const url = `${origin}/signup?code=${encodeURIComponent(code)}`;
+    const text = `Orbit42 초대 코드: ${code}\n${url}`;
+    await navigator.clipboard.writeText(text);
     setCopied(code);
     setTimeout(() => setCopied(null), 2000);
   };
@@ -22,7 +26,7 @@ export function InviteCodes({ codes: initial }: { codes: InviteCode[] }) {
         초대 코드
       </h2>
       <p className="mb-4 text-xs text-charcoal-500">
-        {available.length}개 남음 · 코드를 공유하면 상대방이 가입할 수 있어요
+        {available.length}개 남음 · 복사 버튼을 누르면 초대 코드 + 가입 링크가 함께 복사돼요
       </p>
 
       {available.length > 0 && (
@@ -40,7 +44,7 @@ export function InviteCodes({ codes: initial }: { codes: InviteCode[] }) {
                 onClick={() => copy(c.code)}
                 className="rounded-md px-2.5 py-1 text-xs font-medium text-charcoal-400 hover:bg-charcoal-700/50 hover:text-charcoal-200"
               >
-                {copied === c.code ? "복사됨" : "복사"}
+                {copied === c.code ? "복사됨" : "코드 + 링크 복사"}
               </button>
             </div>
           ))}

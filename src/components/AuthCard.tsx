@@ -1,20 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { login, signup } from "@/lib/auth";
 
 type Mode = "signin" | "signup";
 
 export function AuthCard({ initialMode = "signup" }: { initialMode?: Mode }) {
+  return (
+    <Suspense fallback={null}>
+      <AuthCardInner initialMode={initialMode} />
+    </Suspense>
+  );
+}
+
+function AuthCardInner({ initialMode }: { initialMode: Mode }) {
   const router = useRouter();
-  const [mode, setMode] = useState<Mode>(initialMode);
+  const searchParams = useSearchParams();
+  const urlCode = (searchParams.get("code") ?? "").toUpperCase();
+  const [mode, setMode] = useState<Mode>(urlCode ? "signup" : initialMode);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
-  const [inviteCode, setInviteCode] = useState("");
+  const [inviteCode, setInviteCode] = useState(urlCode);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
