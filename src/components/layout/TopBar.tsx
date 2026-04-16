@@ -63,7 +63,7 @@ export function TopBar({
           </svg>
         </button>
         <span
-          className="font-mono text-xs tabular-nums text-charcoal-500"
+          className="hidden font-mono text-xs tabular-nums text-charcoal-500 sm:inline"
           suppressHydrationWarning
         >
           {now}
