@@ -74,6 +74,26 @@ export async function follow(targetUsername: string) {
   if (error && !error.message.includes("duplicate")) {
     return { error: "팔로우에 실패했습니다." };
   }
+  if (!error) {
+    const { createNotification } = await import("@/lib/notifications");
+    const { data: follower } = await db
+      .from("users")
+      .select("username, display_name")
+      .eq("id", followerId)
+      .single();
+    const label =
+      (follower?.display_name as string | null) ||
+      (follower?.username as string) ||
+      "누군가";
+    await createNotification({
+      userId: followingId,
+      type: "new_follower",
+      title: `${label}님이 회원님을 팔로우합니다`,
+      body: null,
+      link: `/${follower?.username}`,
+      actorId: followerId,
+    });
+  }
   revalidatePath(`/${targetUsername}`);
   return { success: true };
 }

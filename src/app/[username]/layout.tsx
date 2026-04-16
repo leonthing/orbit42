@@ -2,6 +2,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { PublicChrome } from "@/components/layout/PublicChrome";
 import { getProfile, getSession } from "@/lib/auth";
 import { unreadMessageCount } from "@/lib/messages";
+import { unreadNotificationCount } from "@/lib/notifications";
 import { notFound } from "next/navigation";
 
 export default async function UsernameLayout({
@@ -22,9 +23,10 @@ export default async function UsernameLayout({
     return <PublicChrome viewerUsername={null}>{children}</PublicChrome>;
   }
 
-  const [viewer, unread] = await Promise.all([
+  const [viewer, unread, unreadN] = await Promise.all([
     getProfile(session.username),
     unreadMessageCount(),
+    unreadNotificationCount(),
   ]);
   const displayName = viewer?.display_name || session.username;
   const avatarUrl = (viewer?.avatar_url as string | null) ?? null;
@@ -35,6 +37,7 @@ export default async function UsernameLayout({
       viewerDisplayName={displayName}
       viewerAvatarUrl={avatarUrl}
       unreadMessages={unread}
+      unreadNotifications={unreadN}
     >
       {children}
     </AppShell>

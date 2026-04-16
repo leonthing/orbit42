@@ -548,6 +548,7 @@ export async function bookSlot(args: {
   try {
     const { sendBookingReceivedToHost, sendBookingConfirmedToGuest } =
       await import("@/lib/email");
+    const { createNotification } = await import("@/lib/notifications");
     const { data: host } = await db
       .from("users")
       .select("email, display_name, username")
@@ -566,12 +567,40 @@ export async function bookSlot(args: {
         manageUrl: `/${host.username}/bookings`,
       });
     }
+    // In-app notification for the host.
+    await createNotification({
+      userId: slot.host_id as string,
+      type: "booking_received",
+      title: autoApprove
+        ? `새 예약: ${slot.title}`
+        : `예약 요청: ${slot.title}`,
+      body: `${guestLabel} · ${startAt.toLocaleString("ko-KR", { timeZone: "Asia/Seoul", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}`,
+      link: `/${host?.username}/bookings`,
+      actorId: guestId,
+    });
     if (autoApprove && guestEmail) {
       await sendBookingConfirmedToGuest(guestEmail, {
         slotTitle: slot.title as string,
         when: startAt.toISOString(),
         hostLabel: (host?.display_name || host?.username || "Host") as string,
         location: (slot.location_detail as string | null) ?? null,
+      });
+    }
+    // If the guest is a registered user, notify them too on auto-confirm.
+    if (autoApprove && guestId) {
+      await createNotification({
+        userId: guestId,
+        type: "booking_confirmed",
+        title: `예약 확정: ${slot.title}`,
+        body: startAt.toLocaleString("ko-KR", {
+          timeZone: "Asia/Seoul",
+          month: "long",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        link: `/bookings`,
+        actorId: slot.host_id as string,
       });
     }
   } catch (err) {
@@ -755,7 +784,7 @@ export async function updateBookingStatus(
   const { data: booking } = await db
     .from("bookings")
     .select(
-      "guest_id, guest_email, guest_name, scheduled_at, slot:time_slots!bookings_slot_id_fkey(title, location_detail)",
+      "guest_id, guest_email, guest_name, scheduled_at, host_id, slot:time_slots!bookings_slot_id_fkey(title, location_detail)",
     )
     .eq("id", id)
     .eq("host_id", userId)
@@ -803,6 +832,34 @@ export async function updateBookingStatus(
         }
       } catch (err) {
         console.error("booking status email", err);
+      }
+    }
+    // Guest in-app notification (if a registered user).
+    if (booking.guest_id) {
+      try {
+        const { createNotification } = await import("@/lib/notifications");
+        await createNotification({
+          userId: booking.guest_id as string,
+          type: status === "confirmed" ? "booking_confirmed" : "booking_canceled",
+          title:
+            status === "confirmed"
+              ? `예약 확정: ${slotTitle}`
+              : `예약 취소: ${slotTitle}`,
+          body: new Date(booking.scheduled_at as string).toLocaleString(
+            "ko-KR",
+            {
+              timeZone: "Asia/Seoul",
+              month: "long",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            },
+          ),
+          link: `/bookings`,
+          actorId: booking.host_id as string,
+        });
+      } catch (err) {
+        console.error("booking status notification", err);
       }
     }
   }

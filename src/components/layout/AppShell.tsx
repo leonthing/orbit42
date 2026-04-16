@@ -12,12 +12,14 @@ export function AppShell({
   viewerDisplayName,
   viewerAvatarUrl = null,
   unreadMessages = 0,
+  unreadNotifications = 0,
   children,
 }: {
   viewerUsername: string;
   viewerDisplayName: string;
   viewerAvatarUrl?: string | null;
   unreadMessages?: number;
+  unreadNotifications?: number;
   children: React.ReactNode;
 }) {
   return (
@@ -29,6 +31,7 @@ export function AppShell({
             username={viewerUsername}
             displayName={viewerDisplayName}
             avatarUrl={viewerAvatarUrl}
+            unreadNotifications={unreadNotifications}
           />
           <main className="flex-1 overflow-y-auto">
             <div className="w-full px-3 py-3 sm:px-4 md:px-6 md:py-5">

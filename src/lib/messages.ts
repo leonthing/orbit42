@@ -5,6 +5,7 @@ import { getSession } from "@/lib/auth";
 import { getAdminClient } from "@/lib/supabase";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
 import { sendNewMessageEmail } from "@/lib/email";
+import { createNotification } from "@/lib/notifications";
 import type { ConversationSummary, Message } from "@/lib/messages-types";
 
 // --- Helpers -------------------------------------------------------------
@@ -220,8 +221,27 @@ export async function sendMessage(conversationId: string, body: string) {
 
   await db.from("conversations").update(patch).eq("id", conversationId);
 
-  // Throttled email notification to the other party.
+  // In-app notification always (aggregates on the recipient's side).
   const otherId = conv.user_a === me ? conv.user_b : conv.user_a;
+  const { data: sender } = await db
+    .from("users")
+    .select("username, display_name")
+    .eq("id", me)
+    .single();
+  const senderLabel =
+    (sender?.display_name as string | null) ||
+    (sender?.username as string) ||
+    "누군가";
+  await createNotification({
+    userId: otherId,
+    type: "new_message",
+    title: `${senderLabel}님의 새 메시지`,
+    body: preview,
+    link: `/messages/${conversationId}`,
+    actorId: me,
+  });
+
+  // Throttled email notification to the other party.
   const otherLastNotified =
     conv.user_a === me ? conv.b_last_notified_at : conv.a_last_notified_at;
   const otherLastRead =
@@ -237,11 +257,6 @@ export async function sendMessage(conversationId: string, body: string) {
       true);
 
   if (shouldNotify) {
-    const { data: sender } = await db
-      .from("users")
-      .select("username, display_name")
-      .eq("id", me)
-      .single();
     const { data: other } = await db
       .from("users")
       .select("email, email_verified, display_name")

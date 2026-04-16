@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useMobileMenu } from "./MobileMenuContext";
 import { Avatar } from "@/components/Avatar";
+import { NotificationBell } from "./NotificationBell";
 
 function formatNow(d: Date) {
   return d.toLocaleString("ko-KR", {
@@ -25,10 +26,12 @@ export function TopBar({
   username,
   displayName,
   avatarUrl = null,
+  unreadNotifications = 0,
 }: {
   username: string;
   displayName: string;
   avatarUrl?: string | null;
+  unreadNotifications?: number;
 }) {
   const router = useRouter();
   const [showMenu, setShowMenu] = useState(false);
@@ -67,8 +70,10 @@ export function TopBar({
         </span>
       </div>
 
-      {/* Right: User */}
-      <div className="relative">
+      {/* Right: Bell + User */}
+      <div className="flex items-center gap-1">
+        <NotificationBell initialUnread={unreadNotifications} />
+        <div className="relative">
         <button
           onClick={() => setShowMenu(!showMenu)}
           aria-label="계정 메뉴"
@@ -120,6 +125,7 @@ export function TopBar({
             </div>
           </>
         )}
+        </div>
       </div>
     </header>
   );

@@ -4,7 +4,7 @@ import { getSession, getProfile } from "@/lib/auth";
 import { unreadMessageCount } from "@/lib/messages";
 import { unreadNotificationCount } from "@/lib/notifications";
 
-export default async function FeedLayout({
+export default async function NotificationsLayout({
   children,
 }: {
   children: React.ReactNode;
