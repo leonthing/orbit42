@@ -141,7 +141,11 @@ export async function computeAutoAvailability(
         cur = new Date(cur.getTime() + spec.slot_interval_min * 60_000);
       }
     }
-    if (options.length >= 60) break; // cap output
+    // Safety cap to keep server memory bounded on misconfigured slots
+    // (e.g. 365 days × 30-min intervals × 24h = 17,520 options). Higher
+    // than before so long working hours + long validity still return
+    // the full range.
+    if (options.length >= 5000) break;
   }
 
   return options;
