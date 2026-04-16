@@ -18,7 +18,12 @@ export function AuthCard({ initialMode = "signup" }: { initialMode?: Mode }) {
 function AuthCardInner({ initialMode }: { initialMode: Mode }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const urlCode = (searchParams.get("code") ?? "").toUpperCase();
+  // Chat apps sometimes bundle our whole invite message into ?code= so
+  // keep only the first 8 alphanumerics.
+  const urlCode = (searchParams.get("code") ?? "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "")
+    .slice(0, 8);
   const [mode, setMode] = useState<Mode>(urlCode ? "signup" : initialMode);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -118,7 +123,14 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
             <input
               type="text"
               value={inviteCode}
-              onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+              onChange={(e) =>
+                setInviteCode(
+                  e.target.value
+                    .toUpperCase()
+                    .replace(/[^A-Z0-9]/g, "")
+                    .slice(0, 8),
+                )
+              }
               placeholder="초대 코드"
               className={input}
               required

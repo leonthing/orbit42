@@ -10,7 +10,7 @@ export function InviteCodes({ codes: initial }: { codes: InviteCode[] }) {
   const copy = async (code: string) => {
     const origin =
       typeof window !== "undefined" ? window.location.origin : "https://orbit42.org";
-    const url = `${origin}/signup?code=${encodeURIComponent(code)}`;
+    const url = `${origin}/?code=${encodeURIComponent(code)}`;
     // URL first so it auto-links cleanly in chat apps; code echoed
     // below as a fallback if the recipient types manually.
     const text = `${url}\n\nOrbit42에 초대합니다.\n초대 코드: ${code}`;
