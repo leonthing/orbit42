@@ -13,6 +13,7 @@ import { ReactionStrip } from "@/components/ReactionStrip";
 import { ComposeBox } from "@/components/ComposeBox";
 import { DeleteFeedPostButton } from "@/components/DeleteFeedPostButton";
 import { Avatar } from "@/components/Avatar";
+import { CommentSection } from "@/components/CommentSection";
 
 export const metadata: Metadata = { title: "Feed" };
 export const dynamic = "force-dynamic";
@@ -308,6 +309,7 @@ export default async function FeedPage() {
         <DailyCalendar
           days={dayGroups}
           viewerUsername={session.username}
+          viewerUserId={viewerId ?? null}
           reactions={{
             event: eventReactions,
             slot: slotReactions,
@@ -367,6 +369,7 @@ function DailyCalendar({
   days,
   reactions,
   viewerUsername,
+  viewerUserId,
 }: {
   days: DayGroup[];
   reactions: {
@@ -376,6 +379,7 @@ function DailyCalendar({
     feed_post: Map<string, import("@/lib/reactions-types").ReactionSummary[]>;
   };
   viewerUsername: string;
+  viewerUserId: string | null;
 }) {
   return (
     <div className="space-y-6">
@@ -386,6 +390,7 @@ function DailyCalendar({
               key={`${item.kind}-${item.id}`}
               item={item}
               viewerUsername={viewerUsername}
+              viewerUserId={viewerUserId}
               reactions={
                 item.kind === "event"
                   ? reactions.event.get(item.id) ?? []
@@ -476,14 +481,21 @@ function DayEntry({
   item,
   reactions,
   viewerUsername,
+  viewerUserId,
 }: {
   item: FeedItem;
   reactions: import("@/lib/reactions-types").ReactionSummary[];
   viewerUsername: string;
+  viewerUserId: string | null;
 }) {
   return (
     <li>
-      <EntryBody item={item} reactions={reactions} viewerUsername={viewerUsername} />
+      <EntryBody
+        item={item}
+        reactions={reactions}
+        viewerUsername={viewerUsername}
+        viewerUserId={viewerUserId}
+      />
     </li>
   );
 }
@@ -492,10 +504,12 @@ function EntryBody({
   item,
   reactions,
   viewerUsername,
+  viewerUserId,
 }: {
   item: FeedItem;
   reactions: import("@/lib/reactions-types").ReactionSummary[];
   viewerUsername: string;
+  viewerUserId: string | null;
 }) {
   const isMine = item.author.username === viewerUsername;
   const author = item.author;
@@ -620,6 +634,15 @@ function EntryBody({
           size="sm"
         />
       </div>
+
+      {item.kind === "feed_post" && (
+        <CommentSection
+          targetType="feed_post"
+          targetId={item.id}
+          loggedIn
+          viewerId={viewerUserId}
+        />
+      )}
     </div>
   );
 }

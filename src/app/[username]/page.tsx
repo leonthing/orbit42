@@ -16,6 +16,7 @@ import { listFeedPostsByAuthors } from "@/lib/feed-posts";
 import { getAdminClient } from "@/lib/supabase";
 import { DeleteFeedPostButton } from "@/components/DeleteFeedPostButton";
 import { ReactionStrip } from "@/components/ReactionStrip";
+import { CommentSection } from "@/components/CommentSection";
 import Image from "next/image";
 
 export const dynamic = "force-dynamic";
@@ -367,6 +368,12 @@ export default async function PublicProfile({
                     size="sm"
                   />
                 </div>
+                <CommentSection
+                  targetType="feed_post"
+                  targetId={p.id}
+                  loggedIn={!!session}
+                  viewerId={null}
+                />
               </li>
             ))}
           </ul>

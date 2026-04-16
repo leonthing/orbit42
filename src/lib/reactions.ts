@@ -19,7 +19,7 @@ export async function toggleReaction(
   if (!REACTION_EMOJIS.includes(emoji as (typeof REACTION_EMOJIS)[number])) {
     return { error: "지원하지 않는 이모지입니다." };
   }
-  if (!["event", "post", "slot", "feed_post"].includes(target_type)) {
+  if (!["event", "post", "slot", "feed_post", "comment"].includes(target_type)) {
     return { error: "지원하지 않는 대상입니다." };
   }
 
@@ -33,6 +33,7 @@ export async function toggleReaction(
     .eq("emoji", emoji)
     .maybeSingle();
 
+  let created = false;
   if (existing) {
     await db.from("reactions").delete().eq("id", existing.id);
   } else {
@@ -42,7 +43,19 @@ export async function toggleReaction(
       target_id,
       emoji,
     });
+    created = true;
   }
+
+  // Notify the target's author on a new reaction.
+  if (created) {
+    try {
+      const { notifyReaction } = await import("@/lib/reaction-notify");
+      await notifyReaction(userId, target_type, target_id, emoji);
+    } catch (err) {
+      console.error("reaction notify", err);
+    }
+  }
+
   revalidatePath("/", "layout");
   return { success: true };
 }
