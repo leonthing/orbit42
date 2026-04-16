@@ -7,11 +7,11 @@ export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-[rgb(var(--bg-base))]">
       <header className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4 sm:px-6">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-red-600 to-red-500">
-            <span className="text-sm font-bold text-white">O</span>
-          </div>
-          <span className="text-base font-semibold text-charcoal-100">Orbit42</span>
+        <Link
+          href="/"
+          className="text-base font-semibold tracking-tight text-charcoal-100 hover:text-red-400"
+        >
+          Orbit42
         </Link>
         <Link
           href="/terms"

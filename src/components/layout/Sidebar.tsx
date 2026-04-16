@@ -132,13 +132,15 @@ export function Sidebar({
   const navContent = (
     <>
       {/* Logo */}
-      <div className="flex h-12 items-center gap-2 border-b border-charcoal-800/40 px-4">
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-red-600/20">
-          <span className="text-xs font-bold text-red-400">O</span>
-        </div>
-        <span className={`text-sm font-semibold text-charcoal-200 ${collapsed ? "hidden" : "md:block"}`}>
+      <div className="flex h-12 items-center border-b border-charcoal-800/40 px-4">
+        <span className={`text-sm font-semibold tracking-tight text-charcoal-100 ${collapsed ? "hidden" : "md:block"}`}>
           Orbit42
         </span>
+        {collapsed && (
+          <span className="text-sm font-semibold tracking-tight text-charcoal-100">
+            42
+          </span>
+        )}
       </div>
 
       {/* Nav */}

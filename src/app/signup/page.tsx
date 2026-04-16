@@ -28,12 +28,9 @@ export default async function SignupPage({
         <div className="flex-1 space-y-6">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 text-charcoal-400 hover:text-charcoal-100"
+            className="inline-block text-sm font-semibold tracking-tight text-charcoal-100 hover:text-red-400"
           >
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-600/20">
-              <span className="text-xs font-bold text-red-400">O</span>
-            </span>
-            <span className="text-sm font-semibold">Orbit42</span>
+            Orbit42
           </Link>
 
           {validInvite && invite?.inviter ? (

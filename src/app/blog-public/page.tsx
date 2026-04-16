@@ -33,10 +33,9 @@ export default async function BlogRootPage() {
   return (
     <>
       <header className="mb-12 text-center">
-        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-red-600/20">
-          <span className="text-2xl font-bold text-red-400">O</span>
-        </div>
-        <h1 className="text-3xl font-bold text-charcoal-100">Orbit42 Blog</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-charcoal-100">
+          Orbit42 Blog
+        </h1>
         <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-charcoal-400">
           기록하고, 정리하고, 공유하는 공간.<br />
           Orbit42 사용자들의 블로그를 만나보세요.

@@ -5,11 +5,11 @@ export const metadata = { title: "접근 권한 없음" };
 export default function ForbiddenPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-[rgb(var(--bg-base))] px-4 py-12">
-      <Link href="/" className="mb-10 flex items-center gap-2">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-red-600 to-red-500">
-          <span className="text-sm font-bold text-white">O</span>
-        </div>
-        <span className="text-base font-semibold text-charcoal-100">Orbit42</span>
+      <Link
+        href="/"
+        className="mb-10 text-base font-semibold tracking-tight text-charcoal-100 hover:text-red-400"
+      >
+        Orbit42
       </Link>
 
       <div className="max-w-sm text-center">

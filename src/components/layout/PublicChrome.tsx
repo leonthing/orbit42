@@ -10,11 +10,8 @@ export function PublicChrome({
   return (
     <div className="min-h-screen bg-[rgb(var(--bg-base))]">
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-charcoal-800/40 bg-[rgb(var(--bg-base))]/85 px-4 backdrop-blur md:px-8">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-600/20">
-            <span className="text-xs font-bold text-red-400">O</span>
-          </div>
-          <span className="text-sm font-semibold text-charcoal-100">Orbit42</span>
+        <Link href="/" className="text-sm font-semibold tracking-tight text-charcoal-100">
+          Orbit42
         </Link>
 
         <div className="flex items-center gap-2">
