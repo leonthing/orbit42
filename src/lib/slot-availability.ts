@@ -88,7 +88,23 @@ export async function computeAutoAvailability(
     end: new Date(b.scheduled_end_at as string),
   }));
 
-  const blocks = [...busy, ...booked];
+  // 3. Pull host's native (in-app) calendar events — if the host creates
+  // an event during a would-be-bookable window, the slot should close.
+  const { data: nativeEvents } = await db
+    .from("events")
+    .select("start_at, end_at, all_day")
+    .eq("user_id", hostId)
+    .gte("start_at", now.toISOString())
+    .lte("start_at", horizon.toISOString());
+  const nativeBlocks = (nativeEvents ?? [])
+    .filter((e) => !e.all_day)
+    .map((e) => ({
+      start: new Date(e.start_at as string),
+      end: new Date((e.end_at ?? e.start_at) as string),
+    }))
+    .filter((b) => b.end.getTime() > b.start.getTime());
+
+  const blocks = [...busy, ...booked, ...nativeBlocks];
 
   // 3. Generate candidate options day by day.
   const options: AutoSlotOption[] = [];
