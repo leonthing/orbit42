@@ -71,6 +71,39 @@ export async function validateInviteCode(
   return { valid: true, id: data.id as string };
 }
 
+/** Look up the inviter's public profile for an invite code (for landing UI). */
+export async function getInviterByCode(code: string): Promise<{
+  code: string;
+  status: "ok" | "used" | "invalid";
+  inviter: { username: string; display_name: string | null; avatar_url: string | null } | null;
+}> {
+  const normalized = code.trim().toUpperCase();
+  if (!normalized) return { code: normalized, status: "invalid", inviter: null };
+  const db = getAdminClient();
+  const { data } = await db
+    .from("invite_codes")
+    .select("code, creator_id, used_by")
+    .eq("code", normalized)
+    .maybeSingle();
+  if (!data) return { code: normalized, status: "invalid", inviter: null };
+  const { data: inviter } = await db
+    .from("users")
+    .select("username, display_name, avatar_url")
+    .eq("id", data.creator_id)
+    .single();
+  return {
+    code: normalized,
+    status: data.used_by ? "used" : "ok",
+    inviter: inviter
+      ? {
+          username: inviter.username as string,
+          display_name: (inviter.display_name as string | null) ?? null,
+          avatar_url: (inviter.avatar_url as string | null) ?? null,
+        }
+      : null,
+  };
+}
+
 /** Mark invite code as used + generate CODES_PER_USER new codes for the new user. */
 export async function claimInviteCode(codeId: string, newUserId: string) {
   const db = getAdminClient();

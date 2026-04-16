@@ -140,13 +140,14 @@ export async function signup(
 export async function loginOrSignupWithGoogle(
   email: string,
   displayName: string | null,
+  inviteCode: string | null = null,
 ): Promise<{ username: string } | { error: string }> {
   const normalized = email.trim().toLowerCase();
   if (!normalized) return { error: "이메일을 가져올 수 없어요." };
 
   const db = getAdminClient();
 
-  // 1. Existing user with this email?
+  // 1. Existing user with this email? — simple sign-in, no code needed.
   const { data: existing } = await db
     .from("users")
     .select("id, username, email_verified")
@@ -172,7 +173,18 @@ export async function loginOrSignupWithGoogle(
     return { username: existing.username as string };
   }
 
-  // 2. Fresh signup — generate a unique username from email.
+  // 2. Fresh signup — gate on invite code first.
+  const { validateInviteCode } = await import("@/lib/invite");
+  const codeCheck = await validateInviteCode(inviteCode ?? "");
+  if (!codeCheck.valid) {
+    // No URL error channel is great for this, send them to /signup
+    // with a friendly hint.
+    return {
+      error:
+        "아직 초대 기반 가입이에요. 가입하려면 초대 코드가 필요합니다.",
+    };
+  }
+
   const base = normalized
     .split("@")[0]
     .replace(/[^a-z0-9_-]/g, "")
@@ -219,6 +231,10 @@ export async function loginOrSignupWithGoogle(
       source: "native",
       is_default: true,
     });
+
+    // Claim the invite code + seed new codes for this user.
+    const { claimInviteCode } = await import("@/lib/invite");
+    await claimInviteCode(codeCheck.id, fresh.id as string);
   }
 
   cookies().set(COOKIE_NAME, JSON.stringify({ username }), {

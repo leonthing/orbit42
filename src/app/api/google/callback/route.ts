@@ -16,7 +16,12 @@ export async function GET(request: NextRequest) {
   const stateRaw = searchParams.get("state") || "";
 
   // Landing-page sign-in/sign-up (no session yet).
-  if (stateRaw === "signin") {
+  // state format: "signin" (existing user only) or "signin:CODE" for a
+  // fresh signup with an invite code.
+  if (stateRaw === "signin" || stateRaw.startsWith("signin:")) {
+    const inviteCode = stateRaw.startsWith("signin:")
+      ? stateRaw.slice("signin:".length)
+      : "";
     if (!code) {
       return NextResponse.redirect(
         new URL("/?error=google_auth_failed", request.url),
@@ -30,7 +35,7 @@ export async function GET(request: NextRequest) {
           new URL("/?error=google_no_email", request.url),
         );
       }
-      const res = await loginOrSignupWithGoogle(email, name);
+      const res = await loginOrSignupWithGoogle(email, name, inviteCode || null);
       if ("error" in res) {
         return NextResponse.redirect(
           new URL(`/?error=${encodeURIComponent(res.error)}`, request.url),

@@ -71,7 +71,11 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
       </div>
 
       <a
-        href="/api/auth/google"
+        href={
+          mode === "signup" && inviteCode
+            ? `/api/auth/google?code=${encodeURIComponent(inviteCode)}`
+            : "/api/auth/google"
+        }
         className="mb-2.5 flex w-full items-center justify-center gap-2 rounded-md bg-[#111] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1f1f1f] ring-1 ring-black/5"
       >
         <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden>
