@@ -71,22 +71,25 @@ export default async function LandingPage() {
             title="미팅 예약, 더 쉬울 수가 없어요"
             body="슬롯을 열고 링크를 보내면, 상대는 이름과 이메일만 남기고 바로 예약 완료. 가입도, 로그인도 필요 없어요."
           />
-          <div className="mt-8 grid gap-4 md:grid-cols-3">
-            <Step
-              n={1}
-              title="슬롯 열기"
-              body="요일 · 시간대 · 가격을 정해 슬롯을 만들어요. 30초면 충분해요."
-            />
-            <Step
-              n={2}
-              title="링크 공유"
-              body="예약 페이지 URL을 카톡/이메일로 전송. 미리보기까지 예쁘게 떠요."
-            />
-            <Step
-              n={3}
-              title="자동 확정"
-              body="상대가 시간을 고르면 양쪽에 알림 + 캘린더에 자동 등록돼요."
-            />
+          <div className="mt-8 grid gap-6 md:grid-cols-2 md:items-start">
+            <div className="space-y-3">
+              <Step
+                n={1}
+                title="슬롯 열기"
+                body="요일 · 시간대 · 가격을 정해 슬롯을 만들어요. 30초면 충분해요."
+              />
+              <Step
+                n={2}
+                title="링크 공유"
+                body="예약 페이지 URL을 카톡/이메일로 전송. 미리보기까지 예쁘게 떠요."
+              />
+              <Step
+                n={3}
+                title="자동 확정"
+                body="상대가 시간을 고르면 양쪽에 알림 + 캘린더에 자동 등록돼요."
+              />
+            </div>
+            <DemoBookingPage />
           </div>
         </section>
 
@@ -248,6 +251,124 @@ const DEMO_ITEMS: DemoItem[] = [
   { kind: "slot", title: "주말 점심식사", time: "토 12:00", price: "₩32,000", auction: true },
   { kind: "event", title: "디자인 싱크 (Google Calendar)", time: "목 14:00", color: "#a78bfa" },
 ];
+
+function DemoBookingPage() {
+  const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
+  // Hardcoded demo: April 2026 starts on a Wednesday.
+  const firstDow = 3;
+  const daysInMonth = 30;
+  const cells: (number | null)[] = [];
+  for (let i = 0; i < firstDow; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const bookable = new Set([16, 17, 20, 21, 22, 23, 24, 27, 28, 29, 30]);
+  const today = 17;
+  const selected = 21;
+  const times = ["10:00", "11:00", "14:00", "15:00", "16:00", "17:00"];
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-charcoal-800/60 bg-charcoal-900/40 shadow-2xl">
+      <div className="border-b border-charcoal-800/50 p-5">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-charcoal-500">
+          예약 페이지 예시
+        </p>
+        <div className="mt-2 flex items-baseline gap-2">
+          <h3 className="text-base font-bold text-charcoal-100">
+            프로덕트 멘토링
+          </h3>
+          <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-bold text-red-400">
+            ₩50,000
+          </span>
+        </div>
+        <p className="mt-1 text-xs text-charcoal-500">
+          60분 · @leokim5854
+        </p>
+      </div>
+
+      <div className="p-5">
+        <p className="mb-3 text-xs font-semibold text-charcoal-200">
+          예약 가능한 시간
+        </p>
+
+        {/* Mini calendar */}
+        <div className="mb-4">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-xs font-semibold text-charcoal-300">2026년 4월</p>
+            <div className="flex gap-1">
+              <span className="flex h-5 w-5 items-center justify-center rounded text-[10px] text-charcoal-500">‹</span>
+              <span className="flex h-5 w-5 items-center justify-center rounded text-[10px] text-charcoal-500">›</span>
+            </div>
+          </div>
+          <div className="grid grid-cols-7 gap-1 text-center text-[9px] font-semibold uppercase tracking-wider text-charcoal-500">
+            {weekdays.map((w, i) => (
+              <span
+                key={w}
+                className={i === 0 ? "text-red-500/70" : i === 6 ? "text-blue-400/70" : ""}
+              >
+                {w}
+              </span>
+            ))}
+          </div>
+          <div className="mt-1 grid grid-cols-7 gap-1">
+            {cells.map((d, i) => {
+              if (d === null) return <span key={i} />;
+              const has = bookable.has(d);
+              const isSelected = d === selected;
+              const isToday = d === today;
+              return (
+                <div
+                  key={i}
+                  className={`flex aspect-square items-center justify-center rounded-md text-xs ${
+                    isSelected
+                      ? "bg-red-600 font-bold text-white"
+                      : isToday
+                        ? "ring-1 ring-red-500/60 text-charcoal-200"
+                        : has
+                          ? "text-charcoal-100"
+                          : "text-charcoal-600"
+                  }`}
+                >
+                  <div className="flex flex-col items-center">
+                    <span>{d}</span>
+                    {has && !isSelected && (
+                      <span className="mt-0.5 h-1 w-1 rounded-full bg-red-500" />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Time pills */}
+        <p className="mb-2 text-[11px] font-medium text-charcoal-500">오전 · 오후</p>
+        <div className="grid grid-cols-3 gap-1.5">
+          {times.map((t, i) => (
+            <div
+              key={t}
+              className={`rounded-md border px-2 py-1.5 text-center text-xs tabular-nums ${
+                i === 2
+                  ? "border-red-500 bg-red-600/15 font-semibold text-charcoal-100"
+                  : "border-charcoal-800/60 bg-charcoal-800/20 text-charcoal-200"
+              }`}
+            >
+              {t}
+            </div>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          disabled
+          className="mt-4 w-full rounded-lg bg-red-600 py-2.5 text-sm font-semibold text-white"
+        >
+          ₩50,000 · 예약 진행
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function DemoCalendar() {
   return (
