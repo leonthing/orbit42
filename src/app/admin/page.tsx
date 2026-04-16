@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/admin";
 import { getAdminClient } from "@/lib/supabase";
 import { Avatar } from "@/components/Avatar";
+import { DeleteUserButton } from "./DeleteUserButton";
 
 export const metadata: Metadata = { title: "Admin · Orbit42" };
 export const dynamic = "force-dynamic";
@@ -88,6 +89,7 @@ export default async function AdminPage() {
                   <th className="px-3 py-2 font-semibold">이메일</th>
                   <th className="px-3 py-2 font-semibold">초대한 사람</th>
                   <th className="px-3 py-2 font-semibold">가입일</th>
+                  <th className="px-3 py-2 font-semibold" />
                 </tr>
               </thead>
               <tbody>
@@ -153,6 +155,12 @@ export default async function AdminPage() {
                         )}
                       </td>
                       <td className="px-3 py-2.5 text-charcoal-500">{created}</td>
+                      <td className="px-3 py-2.5 text-right">
+                        <DeleteUserButton
+                          userId={u.id as string}
+                          username={u.username as string}
+                        />
+                      </td>
                     </tr>
                   );
                 })}
