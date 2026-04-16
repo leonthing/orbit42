@@ -9,6 +9,8 @@ import { listExtraGoogleAccounts } from "@/lib/google";
 import { getUserId } from "@/lib/db";
 import { GoogleAccountsSection } from "./GoogleAccountsSection";
 import { MyCalendars } from "./MyCalendars";
+import { InviteCodes } from "./InviteCodes";
+import { getMyInviteCodes } from "@/lib/invite";
 import {
   VerifyEmailBanner,
   DeleteAccountSection,
@@ -26,10 +28,11 @@ export default async function SettingsPage({
   if (!profile) notFound();
 
   const userId = await getUserId();
-  const [googleConnected, myCalendars, extras] = await Promise.all([
+  const [googleConnected, myCalendars, extras, inviteCodes] = await Promise.all([
     isGoogleCalendarConnected().catch(() => false),
     listMyCalendars().catch(() => []),
     userId ? listExtraGoogleAccounts(userId) : Promise.resolve([]),
+    getMyInviteCodes().catch(() => []),
   ]);
 
   return (
@@ -59,6 +62,8 @@ export default async function SettingsPage({
       />
 
       <MyCalendars initial={myCalendars} googleConnected={googleConnected} />
+
+      <InviteCodes codes={inviteCodes} />
 
       <SettingsForm
         username={profile.username}

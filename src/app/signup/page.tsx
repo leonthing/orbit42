@@ -11,6 +11,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -18,7 +19,7 @@ export default function SignupPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    const result = await signup(username, password, email, displayName || undefined);
+    const result = await signup(username, password, email, displayName || undefined, inviteCode || undefined);
     if (result.error) {
       setError(result.error);
       setLoading(false);
@@ -45,11 +46,22 @@ export default function SignupPage() {
             <div>
               <input
                 type="text"
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                placeholder="초대 코드"
+                maxLength={8}
+                required
+                className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-4 py-3 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500/50"
+                autoFocus
+              />
+            </div>
+            <div>
+              <input
+                type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ""))}
                 placeholder="Username (영문 소문자, 숫자)"
                 className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-4 py-3 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500/50"
-                autoFocus
               />
               {username && (
                 <p className="mt-1.5 text-xs text-charcoal-500">

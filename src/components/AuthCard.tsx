@@ -14,6 +14,7 @@ export function AuthCard({ initialMode = "signup" }: { initialMode?: Mode }) {
   const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -24,7 +25,7 @@ export function AuthCard({ initialMode = "signup" }: { initialMode?: Mode }) {
     const res =
       mode === "signin"
         ? await login(username, password)
-        : await signup(username, password, email, displayName || undefined);
+        : await signup(username, password, email, displayName || undefined, inviteCode || undefined);
     if (res.error) {
       setError(res.error);
       setLoading(false);
@@ -100,6 +101,15 @@ export function AuthCard({ initialMode = "signup" }: { initialMode?: Mode }) {
         )}
         {mode === "signup" && (
           <>
+            <input
+              type="text"
+              value={inviteCode}
+              onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+              placeholder="초대 코드"
+              className={input}
+              required
+              maxLength={8}
+            />
             <input
               type="email"
               autoComplete="email"

@@ -33,6 +33,7 @@ export async function signup(
   password: string,
   email: string,
   displayName?: string,
+  inviteCode?: string,
 ) {
   const limit = rateLimit(clientKey("signup"), 5, 60 * 60_000);
   if (!limit.ok) {
@@ -40,6 +41,13 @@ export async function signup(
   }
   if (!username || !password || !email) {
     return { error: "아이디, 비밀번호, 이메일을 모두 입력해주세요." };
+  }
+
+  // Invite code required for signup.
+  const { validateInviteCode } = await import("@/lib/invite");
+  const codeResult = await validateInviteCode(inviteCode ?? "");
+  if (!codeResult.valid) {
+    return { error: codeResult.error };
   }
   if (username.length < 2 || !/^[a-z0-9_-]+$/.test(username)) {
     return { error: "아이디는 2자 이상, 영문 소문자/숫자/하이픈만 가능합니다." };
@@ -108,6 +116,10 @@ export async function signup(
     // Fire-and-forget verification email.
     const { startEmailVerification } = await import("@/lib/account");
     await startEmailVerification(freshUser.id as string, normalizedEmail);
+
+    // Claim the invite code + generate new codes for this user.
+    const { claimInviteCode } = await import("@/lib/invite");
+    await claimInviteCode(codeResult.id, freshUser.id as string);
   }
 
   // Auto login
