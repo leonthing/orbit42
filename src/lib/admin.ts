@@ -1,7 +1,7 @@
 import { getSession } from "@/lib/auth";
 
 function adminList(): string[] {
-  const raw = process.env.ADMIN_USERNAMES || "leo";
+  const raw = process.env.ADMIN_USERNAMES || "leokim5854";
   return raw
     .split(",")
     .map((s) => s.trim().toLowerCase())
