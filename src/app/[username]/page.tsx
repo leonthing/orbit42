@@ -393,15 +393,6 @@ export default async function PublicProfile({
 
       <div className="grid gap-3 md:grid-cols-2">
         <Link
-          href={`/${params.username}/blog`}
-          className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5 hover:border-charcoal-700"
-        >
-          <p className="text-xs font-semibold uppercase tracking-wider text-charcoal-500">
-            긴 글
-          </p>
-          <p className="mt-1 text-sm text-charcoal-200">블로그 둘러보기 →</p>
-        </Link>
-        <Link
           href={`/${params.username}/c`}
           className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5 hover:border-charcoal-700"
         >
@@ -409,6 +400,15 @@ export default async function PublicProfile({
             Calendar
           </p>
           <p className="mt-1 text-sm text-charcoal-200">월별 캘린더 보기 →</p>
+        </Link>
+        <Link
+          href={`/${params.username}/blog`}
+          className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5 hover:border-charcoal-700"
+        >
+          <p className="text-xs font-semibold uppercase tracking-wider text-charcoal-500">
+            긴 글
+          </p>
+          <p className="mt-1 text-sm text-charcoal-200">블로그 둘러보기 →</p>
         </Link>
       </div>
 
