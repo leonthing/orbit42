@@ -16,10 +16,12 @@ import { BlockMenu } from "./BlockMenu";
 import { isBlocked } from "@/lib/blocks";
 import { listFeedPostsByAuthors } from "@/lib/feed-posts";
 import { getAdminClient } from "@/lib/supabase";
+import { getPublicEvents } from "@/lib/public-calendar";
 import { DeleteFeedPostButton } from "@/components/DeleteFeedPostButton";
 import { ReactionStrip } from "@/components/ReactionStrip";
 import { CommentSection } from "@/components/CommentSection";
 import { Markdown } from "@/components/Markdown";
+import { ComingUpCard } from "./ComingUpCard";
 import Image from "next/image";
 
 export const dynamic = "force-dynamic";
@@ -90,6 +92,13 @@ export default async function PublicProfile({
   );
 
   const isOwner = session?.username === params.username;
+
+  const now = new Date();
+  const upcomingEnd = new Date(now.getTime() + 7 * 24 * 60 * 60_000);
+  const upcomingEvents = isOwner
+    ? await getPublicEvents(params.username, now, upcomingEnd).catch(() => [])
+    : [];
+
   const socialLinks = (profile.social_links || {}) as SocialLinks;
   const education = ((profile.education || []) as Education[]).sort((a, b) => {
     const yearA = parseInt(a.startYear || "0") || 0;
@@ -259,6 +268,14 @@ export default async function PublicProfile({
             <ActionPill href={`/${params.username}/settings`} label="Visibility" />
           </div>
         </div>
+      )}
+
+      {isOwner && upcomingEvents.length > 0 && (
+        <ComingUpCard
+          username={params.username}
+          events={upcomingEvents}
+          nowIso={now.toISOString()}
+        />
       )}
 
       {!isOwner && totalSlotWindows > 0 && (
