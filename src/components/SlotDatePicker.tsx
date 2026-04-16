@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export type DatedOption = {
   availability_id: string | null;
@@ -11,8 +11,49 @@ export type DatedOption = {
 
 const WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"];
 
+// ---- KST-pinned date helpers --------------------------------------------
+// All date/time comparisons happen in Asia/Seoul so SSR (UTC on Vercel)
+// and the client render the same strings.
+
+const KST_FMT = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Seoul",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+  weekday: "short",
+});
+
+type KSTParts = {
+  year: number;
+  month: number; // 0-indexed
+  day: number;
+  hour: number;
+  minute: number;
+  weekday: string;
+};
+
+function kstParts(d: Date): KSTParts {
+  const parts = KST_FMT.formatToParts(d);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "0";
+  return {
+    year: parseInt(get("year"), 10),
+    month: parseInt(get("month"), 10) - 1,
+    day: parseInt(get("day"), 10),
+    hour: parseInt(get("hour"), 10) % 24,
+    minute: parseInt(get("minute"), 10),
+    weekday: get("weekday"),
+  };
+}
+
 function dayKey(d: Date) {
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  const p = kstParts(d);
+  return `${p.year}-${p.month}-${p.day}`;
+}
+function dayKeyOf(y: number, m: number, d: number) {
+  return `${y}-${m}-${d}`;
 }
 function startOfMonth(y: number, m: number) {
   return new Date(y, m, 1);
@@ -73,20 +114,35 @@ export function SlotDatePicker({
     return new Date(sorted[0].start_at);
   }, [options]);
 
-  const [cursor, setCursor] = useState<Date>(() =>
-    firstAvailable
-      ? startOfMonth(firstAvailable.getFullYear(), firstAvailable.getMonth())
-      : startOfMonth(new Date().getFullYear(), new Date().getMonth()),
-  );
+  const initialCursor = useMemo<Date>(() => {
+    if (firstAvailable) {
+      const p = kstParts(firstAvailable);
+      return startOfMonth(p.year, p.month);
+    }
+    // Fall back to the first option's month, or epoch — we rebase on mount.
+    return startOfMonth(2000, 0);
+  }, [firstAvailable]);
+
+  const [cursor, setCursor] = useState<Date>(initialCursor);
   const [selectedDay, setSelectedDay] = useState<string | null>(() =>
     firstAvailable ? dayKey(firstAvailable) : null,
   );
 
+  // Today is resolved after mount to avoid SSR (UTC) vs client (KST)
+  // rendering mismatches that trigger React hydration errors.
+  const [todayKey, setTodayKey] = useState<string | null>(null);
+  useEffect(() => {
+    setTodayKey(dayKey(new Date()));
+    // If no options exist, park the cursor on the current month.
+    if (!firstAvailable) {
+      const p = kstParts(new Date());
+      setCursor(startOfMonth(p.year, p.month));
+    }
+  }, [firstAvailable]);
+
   const year = cursor.getFullYear();
   const month = cursor.getMonth();
   const grid = useMemo(() => buildMonthGrid(year, month), [year, month]);
-  const today = new Date();
-  const todayKey = dayKey(today);
 
   const selectedOpts = selectedDay
     ? (optionsByDay.get(selectedDay) ?? []).sort(
@@ -94,11 +150,9 @@ export function SlotDatePicker({
       )
     : [];
 
-  const am = selectedOpts.filter(
-    (o) => new Date(o.start_at).getHours() < 12,
-  );
+  const am = selectedOpts.filter((o) => kstParts(new Date(o.start_at)).hour < 12);
   const pm = selectedOpts.filter(
-    (o) => new Date(o.start_at).getHours() >= 12,
+    (o) => kstParts(new Date(o.start_at)).hour >= 12,
   );
 
   return (
@@ -144,7 +198,9 @@ export function SlotDatePicker({
       <div className="grid grid-cols-7 gap-1">
         {grid.map((d, idx) => {
           if (!d) return <span key={idx} />;
-          const key = dayKey(d);
+          // Use the grid's (y,m,d) directly instead of Intl-formatting a
+          // Date whose instant differs between UTC and KST environments.
+          const key = dayKeyOf(year, month, d.getDate());
           const has = optionsByDay.has(key);
           const isSelected = selectedDay === key;
           const isToday = key === todayKey;
@@ -244,6 +300,7 @@ function TimeGroup({
             >
               <span>
                 {new Date(o.start_at).toLocaleTimeString("ko-KR", {
+                  timeZone: "Asia/Seoul",
                   hour: "2-digit",
                   minute: "2-digit",
                   hour12: false,
