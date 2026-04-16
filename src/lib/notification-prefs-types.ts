@@ -7,6 +7,7 @@ export const NOTIFICATION_TYPES = [
   { key: "comment_received", label: "댓글" },
   { key: "reply_received", label: "답글" },
   { key: "reaction", label: "반응(좋아요)" },
+  { key: "invite_used", label: "내 초대 코드 사용됨" },
 ] as const;
 
 export type NotificationPref = {

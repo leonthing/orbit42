@@ -104,9 +104,20 @@ export async function getInviterByCode(code: string): Promise<{
   };
 }
 
-/** Mark invite code as used + generate CODES_PER_USER new codes for the new user. */
+/**
+ * Mark invite code as used, generate CODES_PER_USER new codes for the
+ * new user, send them a welcome email, and notify the inviter (email
+ * + in-app). Best-effort on notifications — DB claim is what matters.
+ */
 export async function claimInviteCode(codeId: string, newUserId: string) {
   const db = getAdminClient();
+  const { data: code } = await db
+    .from("invite_codes")
+    .select("creator_id")
+    .eq("id", codeId)
+    .single();
+  const inviterId = (code?.creator_id as string | undefined) ?? null;
+
   await db
     .from("invite_codes")
     .update({ used_by: newUserId, used_at: new Date().toISOString() })
@@ -116,6 +127,77 @@ export async function claimInviteCode(codeId: string, newUserId: string) {
     p_user_id: newUserId,
     p_count: CODES_PER_USER,
   });
+
+  // Best-effort welcome + inviter notifications.
+  try {
+    const { sendWelcomeEmail, sendInviteUsedEmail } = await import(
+      "@/lib/email"
+    );
+    const { createNotification } = await import("@/lib/notifications");
+
+    const { data: newUser } = await db
+      .from("users")
+      .select("email, email_verified, username, display_name")
+      .eq("id", newUserId)
+      .single();
+
+    let inviter: {
+      username: string;
+      display_name: string | null;
+      email: string | null;
+      email_verified: boolean | null;
+    } | null = null;
+    if (inviterId) {
+      const { data } = await db
+        .from("users")
+        .select("username, display_name, email, email_verified")
+        .eq("id", inviterId)
+        .single();
+      if (data) {
+        inviter = {
+          username: data.username as string,
+          display_name: (data.display_name as string | null) ?? null,
+          email: (data.email as string | null) ?? null,
+          email_verified: (data.email_verified as boolean | null) ?? null,
+        };
+      }
+    }
+
+    if (newUser?.email) {
+      await sendWelcomeEmail(newUser.email as string, {
+        username: newUser.username as string,
+        displayName: (newUser.display_name as string | null) ?? null,
+        inviterLabel: inviter
+          ? inviter.display_name || inviter.username
+          : null,
+        inviterUsername: inviter?.username ?? null,
+      });
+    }
+
+    if (inviterId) {
+      const inviteeLabel =
+        (newUser?.display_name as string | null) ||
+        (newUser?.username as string) ||
+        "새 멤버";
+      const inviteeUsername = (newUser?.username as string) || "";
+      await createNotification({
+        userId: inviterId,
+        type: "invite_used",
+        title: `${inviteeLabel}님이 당신의 초대로 가입했어요`,
+        body: null,
+        link: inviteeUsername ? `/${inviteeUsername}` : null,
+        actorId: newUserId,
+      });
+      if (inviter?.email && inviter.email_verified) {
+        await sendInviteUsedEmail(inviter.email, {
+          inviteeLabel,
+          inviteeUsername,
+        });
+      }
+    }
+  } catch (err) {
+    console.error("invite claim notifications", err);
+  }
 }
 
 /** Seed initial codes for the admin/founder (run once). */
