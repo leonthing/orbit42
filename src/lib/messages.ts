@@ -154,6 +154,10 @@ export async function startConversation(targetUsername: string) {
     .single();
   if (!target) return { error: "상대를 찾을 수 없어요." };
   if (target.id === me) return { error: "자기 자신에게는 보낼 수 없어요." };
+  const { isBlockedEitherWay } = await import("@/lib/blocks");
+  if (await isBlockedEitherWay(me, target.id as string)) {
+    return { error: "이 사용자와 대화할 수 없어요." };
+  }
 
   const [a, b] = orderedPair(me, target.id as string);
   const { data: existing } = await db

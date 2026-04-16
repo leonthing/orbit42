@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   createSlot,
   deleteSlot,
+  cloneSlot,
   addAvailability,
   removeAvailability,
   updateSlot,
@@ -965,6 +966,17 @@ function SlotCard({
     });
   };
 
+  const clone = () => {
+    startTransition(async () => {
+      const res = await cloneSlot(row.slot.id);
+      if ("error" in res && res.error) {
+        alert(res.error);
+        return;
+      }
+      router.refresh();
+    });
+  };
+
   const addWindow = () => {
     if (!newWindow) return;
     startTransition(async () => {
@@ -1091,6 +1103,15 @@ function SlotCard({
             className="rounded-md border border-charcoal-800 px-2.5 py-1.5 text-xs text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
           >
             {row.slot.active ? "Pause" : "활성화"}
+          </button>
+          <button
+            type="button"
+            onClick={clone}
+            disabled={pending}
+            className="rounded-md border border-charcoal-800 px-2.5 py-1.5 text-xs text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
+            title="복제"
+          >
+            복제
           </button>
           <button
             type="button"

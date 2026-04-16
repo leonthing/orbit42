@@ -11,6 +11,8 @@ import { GoogleAccountsSection } from "./GoogleAccountsSection";
 import { MyCalendars } from "./MyCalendars";
 import { InviteCodes } from "./InviteCodes";
 import { getMyInviteCodes } from "@/lib/invite";
+import { NotificationPrefs } from "./NotificationPrefs";
+import { getMyPrefs } from "@/lib/notification-prefs";
 import {
   VerifyEmailBanner,
   DeleteAccountSection,
@@ -28,12 +30,14 @@ export default async function SettingsPage({
   if (!profile) notFound();
 
   const userId = await getUserId();
-  const [googleConnected, myCalendars, extras, inviteCodes] = await Promise.all([
-    isGoogleCalendarConnected().catch(() => false),
-    listMyCalendars().catch(() => []),
-    userId ? listExtraGoogleAccounts(userId) : Promise.resolve([]),
-    getMyInviteCodes().catch(() => []),
-  ]);
+  const [googleConnected, myCalendars, extras, inviteCodes, notifPrefs] =
+    await Promise.all([
+      isGoogleCalendarConnected().catch(() => false),
+      listMyCalendars().catch(() => []),
+      userId ? listExtraGoogleAccounts(userId) : Promise.resolve([]),
+      getMyInviteCodes().catch(() => []),
+      getMyPrefs().catch(() => ({})),
+    ]);
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-xl space-y-6">
@@ -64,6 +68,8 @@ export default async function SettingsPage({
       <MyCalendars initial={myCalendars} googleConnected={googleConnected} />
 
       <InviteCodes codes={inviteCodes} />
+
+      <NotificationPrefs initial={notifPrefs} />
 
       <SettingsForm
         username={profile.username}

@@ -12,11 +12,14 @@ import { getValueStats } from "@/lib/value-stats";
 import { Avatar } from "@/components/Avatar";
 import { FollowButton } from "./FollowButton";
 import { MessageButton } from "./MessageButton";
+import { BlockMenu } from "./BlockMenu";
+import { isBlocked } from "@/lib/blocks";
 import { listFeedPostsByAuthors } from "@/lib/feed-posts";
 import { getAdminClient } from "@/lib/supabase";
 import { DeleteFeedPostButton } from "@/components/DeleteFeedPostButton";
 import { ReactionStrip } from "@/components/ReactionStrip";
 import { CommentSection } from "@/components/CommentSection";
+import { Markdown } from "@/components/Markdown";
 import Image from "next/image";
 
 export const dynamic = "force-dynamic";
@@ -57,13 +60,15 @@ export default async function PublicProfile({
   const profile = await getProfile(params.username);
   if (!profile) notFound();
 
-  const [session, stats, viewerFollowing, slots, value] = await Promise.all([
-    getSession(),
-    getFollowStats(params.username),
-    isFollowing(params.username),
-    listPublicSlotsByUsername(params.username),
-    getValueStats(params.username),
-  ]);
+  const [session, stats, viewerFollowing, slots, value, viewerBlocked] =
+    await Promise.all([
+      getSession(),
+      getFollowStats(params.username),
+      isFollowing(params.username),
+      listPublicSlotsByUsername(params.username),
+      getValueStats(params.username),
+      isBlocked(params.username).catch(() => false),
+    ]);
   const slotReactions = await getReactionsForMany(
     "slot",
     slots.map((s) => s.id),
@@ -128,6 +133,12 @@ export default async function PublicProfile({
                     targetUsername={params.username}
                     loggedIn={!!session}
                   />
+                  {session && (
+                    <BlockMenu
+                      targetUsername={params.username}
+                      initiallyBlocked={viewerBlocked}
+                    />
+                  )}
                 </>
               )}
             </div>
@@ -322,9 +333,10 @@ export default async function PublicProfile({
                   )}
                 </div>
                 {p.body && (
-                  <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-charcoal-100">
-                    {p.body}
-                  </p>
+                  <Markdown
+                    body={p.body}
+                    className="mt-2 break-words text-sm leading-relaxed text-charcoal-100"
+                  />
                 )}
                 {p.image_urls.length > 0 && (
                   <div
@@ -508,14 +520,15 @@ function ValueStat({
   accent?: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-4">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-charcoal-500">
+    <div className="min-w-0 rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-3 sm:p-4">
+      <p className="truncate text-[10px] font-semibold uppercase tracking-wider text-charcoal-500">
         {label}
       </p>
       <p
-        className={`mt-1 text-lg font-bold ${
+        className={`mt-1 truncate text-base font-bold sm:text-lg ${
           accent ? "text-red-700 dark:text-red-300" : "text-charcoal-100"
         }`}
+        title={value}
       >
         {value}
       </p>

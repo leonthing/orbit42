@@ -31,6 +31,9 @@ export async function createNotification(args: {
   actorId?: string | null;
 }) {
   try {
+    const { getPrefFor } = await import("@/lib/notification-prefs");
+    const pref = await getPrefFor(args.userId, args.type);
+    if (!pref.in_app) return;
     const db = getAdminClient();
     await db.from("notifications").insert({
       user_id: args.userId,

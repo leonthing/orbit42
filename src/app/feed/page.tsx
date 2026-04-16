@@ -14,6 +14,7 @@ import { ComposeBox } from "@/components/ComposeBox";
 import { DeleteFeedPostButton } from "@/components/DeleteFeedPostButton";
 import { Avatar } from "@/components/Avatar";
 import { CommentSection } from "@/components/CommentSection";
+import { Markdown } from "@/components/Markdown";
 
 export const metadata: Metadata = { title: "Feed" };
 export const dynamic = "force-dynamic";
@@ -586,9 +587,10 @@ function EntryBody({
             </div>
           )}
           {item.body && (
-            <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-charcoal-100">
-              {item.body}
-            </p>
+            <Markdown
+              body={item.body}
+              className="break-words text-[15px] leading-relaxed text-charcoal-100"
+            />
           )}
           {item.image_urls.length > 0 && (
             <div

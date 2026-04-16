@@ -364,6 +364,58 @@ export async function updateSlot(id: string, patch: Partial<SlotInput>) {
   return { success: true };
 }
 
+/** Duplicate an existing slot (no availabilities copied, title gets "사본"). */
+export async function cloneSlot(id: string) {
+  const userId = await requireUserId();
+  const db = getAdminClient();
+  const { data: src } = await db
+    .from("time_slots")
+    .select("*")
+    .eq("id", id)
+    .eq("host_id", userId)
+    .single();
+  if (!src) return { error: "슬롯을 찾을 수 없어요." };
+
+  const newTitle = `${src.title} (사본)`;
+  const slug = slugify(newTitle) + "-" + Math.random().toString(36).slice(2, 6);
+  const { data: created, error } = await db
+    .from("time_slots")
+    .insert({
+      host_id: userId,
+      slug,
+      title: newTitle,
+      description: src.description,
+      duration_min: src.duration_min,
+      price_cents: src.price_cents,
+      capacity: src.capacity,
+      slot_type: src.slot_type,
+      location_type: src.location_type,
+      location_detail: src.location_detail,
+      active: false, // clone starts inactive so user can review before publishing
+      mode: src.mode,
+      working_hours: src.working_hours ?? {},
+      slot_interval_min: src.slot_interval_min,
+      min_notice_hours: src.min_notice_hours,
+      max_advance_days: src.max_advance_days,
+      buffer_min: src.buffer_min,
+      pricing_model: "fixed", // auction clones aren't meaningful
+      reserve_price_cents: null,
+      auction_ends_at: null,
+      calendar_id: src.calendar_id,
+      valid_from: src.valid_from,
+      valid_until: src.valid_until,
+      auto_approve: src.auto_approve,
+      payment_method: src.payment_method,
+      image_urls: src.image_urls ?? [],
+      show_on_feed: src.show_on_feed,
+    })
+    .select("id")
+    .single();
+  if (error || !created) return { error: "복제에 실패했어요." };
+  revalidatePath("/", "layout");
+  return { ok: true as const, id: created.id as string };
+}
+
 export async function deleteSlot(id: string) {
   const userId = await requireUserId();
   const db = getAdminClient();
