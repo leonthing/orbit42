@@ -101,7 +101,7 @@ export function BookingCalendar({
   }
 
   return (
-    <div className="grid gap-6 md:grid-cols-[320px_minmax(0,1fr)]">
+    <div className="grid gap-5 md:grid-cols-[300px_minmax(0,1fr)] md:gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
       <MonthCalendar
         anchor={monthAnchor}
         onAnchorChange={setMonthAnchor}

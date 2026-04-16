@@ -110,8 +110,7 @@ export default async function PublicProfile({
           <Avatar
             url={(profile.avatar_url as string | null) ?? null}
             name={profile.display_name || profile.username}
-            size={56}
-            className="sm:!h-[72px] sm:!w-[72px]"
+            size={64}
           />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
