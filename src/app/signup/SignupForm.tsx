@@ -65,7 +65,14 @@ export function SignupForm({ initialCode }: { initialCode: string }) {
         <input
           type="text"
           value={inviteCode}
-          onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+          onChange={(e) =>
+            setInviteCode(
+              e.target.value
+                .toUpperCase()
+                .replace(/[^A-Z0-9]/g, "")
+                .slice(0, 8),
+            )
+          }
           placeholder="초대 코드"
           maxLength={8}
           required

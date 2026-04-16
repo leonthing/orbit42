@@ -12,7 +12,12 @@ export default async function SignupPage({
 }: {
   searchParams: { code?: string };
 }) {
-  const rawCode = (searchParams.code ?? "").toUpperCase();
+  // Sanitize: chat apps sometimes bundle our whole invite message into
+  // ?code=, so pick off just the first 8 alphanumerics.
+  const rawCode = (searchParams.code ?? "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "")
+    .slice(0, 8);
   const invite = rawCode ? await getInviterByCode(rawCode) : null;
   const validInvite = invite?.status === "ok";
 
