@@ -57,12 +57,20 @@ export default async function AdminPage() {
             </p>
             <h1 className="mt-1 text-2xl font-bold text-charcoal-100">대시보드</h1>
           </div>
-          <Link
-            href="/feed"
-            className="text-xs text-charcoal-500 hover:text-charcoal-200"
-          >
-            ← 돌아가기
-          </Link>
+          <div className="flex items-center gap-3 text-xs">
+            <Link
+              href="/admin/email-preview"
+              className="rounded-md border border-charcoal-800/60 px-2.5 py-1 text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
+            >
+              이메일 미리보기
+            </Link>
+            <Link
+              href="/feed"
+              className="text-charcoal-500 hover:text-charcoal-200"
+            >
+              ← 돌아가기
+            </Link>
+          </div>
         </div>
 
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
