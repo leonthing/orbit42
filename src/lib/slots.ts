@@ -180,12 +180,19 @@ export async function getBookableOptions(slot: TimeSlot): Promise<BookableOption
   };
 
   if (slot.mode === "auto") {
+    // When valid_until is set, extend the horizon to cover the full
+    // validity period instead of being capped by max_advance_days.
+    let effectiveMaxDays = slot.max_advance_days;
+    if (until !== null) {
+      const daysToEnd = Math.ceil((until - Date.now()) / 86_400_000);
+      effectiveMaxDays = Math.max(effectiveMaxDays, Math.min(daysToEnd, 365));
+    }
     const opts = await computeAutoAvailability(slot.host_id, {
       duration_min: slot.duration_min,
       slot_interval_min: slot.slot_interval_min,
       working_hours: slot.working_hours ?? {},
       min_notice_hours: slot.min_notice_hours,
-      max_advance_days: slot.max_advance_days,
+      max_advance_days: effectiveMaxDays,
       buffer_min: slot.buffer_min,
     });
     return opts
@@ -455,12 +462,17 @@ export async function bookSlot(args: {
     startAt = new Date(args.startAt);
 
     // Re-validate against current free/busy and working hours.
+    let bookMaxDays = slot.max_advance_days as number;
+    if (windowUntil !== null) {
+      const d = Math.ceil((windowUntil - Date.now()) / 86_400_000);
+      bookMaxDays = Math.max(bookMaxDays, Math.min(d, 365));
+    }
     const options = await computeAutoAvailability(slot.host_id as string, {
       duration_min: slot.duration_min as number,
       slot_interval_min: slot.slot_interval_min as number,
       working_hours: (slot.working_hours ?? {}) as WorkingHours,
       min_notice_hours: slot.min_notice_hours as number,
-      max_advance_days: slot.max_advance_days as number,
+      max_advance_days: bookMaxDays,
       buffer_min: slot.buffer_min as number,
     });
     const ok = options.some(
