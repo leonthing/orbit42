@@ -11,7 +11,9 @@ export function InviteCodes({ codes: initial }: { codes: InviteCode[] }) {
     const origin =
       typeof window !== "undefined" ? window.location.origin : "https://orbit42.org";
     const url = `${origin}/signup?code=${encodeURIComponent(code)}`;
-    const text = `Orbit42 초대 코드: ${code}\n${url}`;
+    // URL first so it auto-links cleanly in chat apps; code echoed
+    // below as a fallback if the recipient types manually.
+    const text = `${url}\n\nOrbit42에 초대합니다.\n초대 코드: ${code}`;
     await navigator.clipboard.writeText(text);
     setCopied(code);
     setTimeout(() => setCopied(null), 2000);
@@ -26,7 +28,7 @@ export function InviteCodes({ codes: initial }: { codes: InviteCode[] }) {
         초대 코드
       </h2>
       <p className="mb-4 text-xs text-charcoal-500">
-        {available.length}개 남음 · 복사 버튼을 누르면 초대 코드 + 가입 링크가 함께 복사돼요
+        {available.length}개 남음 · 카톡/메신저에 붙여넣으면 링크가 자동 연결돼요
       </p>
 
       {available.length > 0 && (
