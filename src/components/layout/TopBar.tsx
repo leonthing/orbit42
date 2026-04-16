@@ -70,18 +70,8 @@ export function TopBar({
         </span>
       </div>
 
-      {/* Right: Search + Bell + User */}
+      {/* Right: Bell + User */}
       <div className="flex items-center gap-1">
-        <Link
-          href="/search"
-          aria-label="검색"
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-charcoal-400 hover:bg-charcoal-800/50 hover:text-charcoal-100"
-        >
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <circle cx="11" cy="11" r="7" />
-            <path strokeLinecap="round" d="m21 21-4.3-4.3" />
-          </svg>
-        </Link>
         <NotificationBell initialUnread={unreadNotifications} />
         <div className="relative">
         <button

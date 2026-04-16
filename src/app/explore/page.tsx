@@ -7,6 +7,7 @@ import { getReactionsForMany } from "@/lib/reactions";
 import { ReactionStrip } from "@/components/ReactionStrip";
 import { Avatar } from "@/components/Avatar";
 import { FollowButton } from "@/app/[username]/FollowButton";
+import { ExploreSearchBar } from "./ExploreSearchBar";
 
 export const metadata: Metadata = { title: "Explore" };
 export const dynamic = "force-dynamic";
@@ -140,11 +141,14 @@ export default async function ExplorePage() {
 
   return (
     <>
-      <header className="mb-8">
-        <h1 className="text-2xl font-bold text-charcoal-100">Explore</h1>
-        <p className="mt-1 text-sm text-charcoal-500">
-          새로운 궤도를 발견해보세요.
-        </p>
+      <header className="mb-8 space-y-4">
+        <div>
+          <h1 className="text-2xl font-bold text-charcoal-100">Explore</h1>
+          <p className="mt-1 text-sm text-charcoal-500">
+            새로운 궤도를 발견해보세요.
+          </p>
+        </div>
+        <ExploreSearchBar />
       </header>
 
       <section className="mb-10">
