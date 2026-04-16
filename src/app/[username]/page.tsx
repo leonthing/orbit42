@@ -17,6 +17,7 @@ import { isBlocked } from "@/lib/blocks";
 import { listFeedPostsByAuthors } from "@/lib/feed-posts";
 import { getAdminClient } from "@/lib/supabase";
 import { getPublicEvents } from "@/lib/public-calendar";
+import { listMyCalendars } from "@/lib/calendars";
 import { DeleteFeedPostButton } from "@/components/DeleteFeedPostButton";
 import { ReactionStrip } from "@/components/ReactionStrip";
 import { CommentSection } from "@/components/CommentSection";
@@ -95,8 +96,19 @@ export default async function PublicProfile({
 
   const now = new Date();
   const upcomingEnd = new Date(now.getTime() + 7 * 24 * 60 * 60_000);
+  // Scope to calendars the user has explicitly curated in `calendars`
+  // (same as /calendar default selection). Without an explicit filter,
+  // getPublicEvents falls back to every Google calendar the user has
+  // owner access to — which drags in secondary/shared feeds.
   const upcomingEvents = isOwner
-    ? await getPublicEvents(params.username, now, upcomingEnd).catch(() => [])
+    ? await (async () => {
+        const myCals = await listMyCalendars().catch(() => []);
+        const ids = myCals.map((c) => c.id);
+        if (ids.length === 0) return [];
+        return getPublicEvents(params.username, now, upcomingEnd, ids).catch(
+          () => [],
+        );
+      })()
     : [];
 
   const socialLinks = (profile.social_links || {}) as SocialLinks;
