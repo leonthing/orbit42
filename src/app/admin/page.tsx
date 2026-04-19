@@ -52,6 +52,12 @@ export default async function AdminPage() {
           </div>
           <div className="flex items-center gap-3 text-xs">
             <Link
+              href="/admin/feedback"
+              className="rounded-md border border-charcoal-800/60 px-2.5 py-1 text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
+            >
+              피드백
+            </Link>
+            <Link
               href="/admin/email-preview"
               className="rounded-md border border-charcoal-800/60 px-2.5 py-1 text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
             >

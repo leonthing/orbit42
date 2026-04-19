@@ -199,6 +199,59 @@ export async function sendInviteUsedEmail(
   return send(to, inviteUsedSubject(args.inviteeLabel), inviteUsedBody(args));
 }
 
+export async function sendFeedbackEmail(args: {
+  body: string;
+  from: {
+    username: string | null;
+    displayName: string | null;
+    email: string | null;
+  };
+  path: string | null;
+}) {
+  const to = process.env.FEEDBACK_EMAIL || "connect@nthing.net";
+  const label = args.from.displayName || args.from.username || "익명";
+  const suffix = args.from.username ? ` (@${args.from.username})` : "";
+  const emailLine = args.from.email
+    ? `<p style="margin:0;color:#555;font-size:13px">회신 주소: <a href="mailto:${escapeHtml(args.from.email)}">${escapeHtml(args.from.email)}</a></p>`
+    : "";
+  const pathLine = args.path
+    ? `<p style="margin:0;color:#888;font-size:12px">경로: ${escapeHtml(args.path)}</p>`
+    : "";
+  const html = `
+    <div style="font-family:ui-sans-serif,system-ui,-apple-system;line-height:1.55;color:#111">
+      <h2 style="margin:0 0 12px">Orbit42 피드백이 도착했어요</h2>
+      <p style="margin:0 0 4px"><b>${escapeHtml(label)}</b>${escapeHtml(suffix)}</p>
+      ${emailLine}
+      ${pathLine}
+      <blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid #e5e5e5;color:#222;white-space:pre-wrap">${escapeHtml(args.body)}</blockquote>
+      <p style="margin:16px 0">
+        <a href="${siteUrl("/admin/feedback")}" style="display:inline-block;padding:10px 18px;border-radius:8px;background:#dc2626;color:#fff;text-decoration:none;font-weight:600">어드민에서 열기</a>
+      </p>
+    </div>
+  `;
+  const replyTo = args.from.email || undefined;
+  const subject = `[Orbit42] 피드백: ${label}${suffix}`;
+  const r = client();
+  if (!r) {
+    console.warn("[email] feedback would have been sent:", { to, subject });
+    console.warn(html);
+    return { ok: true, dev: true };
+  }
+  try {
+    await r.emails.send({
+      from: FROM,
+      to,
+      subject,
+      html,
+      replyTo,
+    });
+    return { ok: true };
+  } catch (err) {
+    console.error("resend feedback", err);
+    return { ok: false };
+  }
+}
+
 export async function sendPasswordResetEmail(to: string, token: string) {
   const url = siteUrl(`/reset-password?token=${encodeURIComponent(token)}`);
   const html = `

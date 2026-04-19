@@ -164,7 +164,7 @@ export default async function LandingPage() {
 
       <footer className="border-t border-charcoal-800/40 px-4 py-6 text-center text-xs text-charcoal-500 sm:px-6">
         <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
-          <span>© {new Date().getFullYear()} N.THING Inc.</span>
+          <span>© {new Date().getFullYear()} Orbit42</span>
           <span className="hidden text-charcoal-700 sm:inline">·</span>
           <Link href="/terms" className="hover:text-charcoal-300">
             이용약관

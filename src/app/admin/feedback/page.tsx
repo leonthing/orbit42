@@ -1,0 +1,127 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { requireAdmin } from "@/lib/admin";
+import { listFeedback } from "@/lib/feedback";
+import { Avatar } from "@/components/Avatar";
+import { ResolveButton } from "./ResolveButton";
+
+export const metadata: Metadata = { title: "Feedback · Admin · Orbit42" };
+export const dynamic = "force-dynamic";
+
+export default async function AdminFeedbackPage() {
+  const admin = await requireAdmin();
+  if (!admin) redirect("/");
+
+  const items = await listFeedback();
+  const unresolved = items.filter((i) => !i.resolved_at);
+
+  return (
+    <div className="min-h-screen bg-[rgb(var(--bg-base))]">
+      <div className="mx-auto max-w-4xl px-5 py-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-charcoal-500">
+              Admin · Feedback
+            </p>
+            <h1 className="mt-1 text-2xl font-bold text-charcoal-100">
+              사용자 피드백
+            </h1>
+            <p className="mt-1 text-xs text-charcoal-500">
+              전체 {items.length}건 · 미해결 {unresolved.length}건
+            </p>
+          </div>
+          <Link
+            href="/admin"
+            className="text-xs text-charcoal-500 hover:text-charcoal-200"
+          >
+            ← 대시보드
+          </Link>
+        </div>
+
+        {items.length === 0 ? (
+          <p className="mt-12 rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-10 text-center text-sm text-charcoal-500">
+            아직 피드백이 없어요.
+          </p>
+        ) : (
+          <ul className="mt-6 space-y-3">
+            {items.map((f) => {
+              const when = new Date(f.created_at).toLocaleString("ko-KR", {
+                timeZone: "Asia/Seoul",
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+              });
+              return (
+                <li
+                  key={f.id}
+                  className={`rounded-xl border p-5 ${
+                    f.resolved_at
+                      ? "border-charcoal-800/40 bg-charcoal-900/20 opacity-70"
+                      : "border-charcoal-800/60 bg-charcoal-900/40"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      {f.user ? (
+                        <>
+                          <Avatar
+                            url={f.user.avatar_url}
+                            name={f.user.display_name || f.user.username}
+                            size={28}
+                          />
+                          <div className="min-w-0">
+                            <Link
+                              href={`/${f.user.username}`}
+                              className="truncate text-sm font-semibold text-charcoal-100 hover:text-red-400"
+                            >
+                              {f.user.display_name || f.user.username}
+                            </Link>
+                            <p className="truncate text-[11px] text-charcoal-500">
+                              @{f.user.username}
+                              {f.email ? ` · ${f.email}` : ""}
+                            </p>
+                          </div>
+                        </>
+                      ) : (
+                        <div>
+                          <p className="text-sm font-semibold text-charcoal-300">
+                            익명
+                          </p>
+                          <p className="text-[11px] text-charcoal-500">
+                            {f.email ?? "회신 주소 없음"}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2 text-[11px] text-charcoal-500">
+                      <span>{when}</span>
+                      <ResolveButton
+                        id={f.id}
+                        resolved={!!f.resolved_at}
+                      />
+                    </div>
+                  </div>
+
+                  <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-charcoal-100">
+                    {f.body}
+                  </p>
+
+                  {(f.path || f.user_agent) && (
+                    <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-charcoal-600">
+                      {f.path && <span>📍 {f.path}</span>}
+                      {f.user_agent && (
+                        <span className="truncate">🖥 {f.user_agent}</span>
+                      )}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}

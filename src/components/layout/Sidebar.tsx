@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { NAV_ITEMS } from "@/lib/constants";
 import { useState } from "react";
 import { useMobileMenu } from "./MobileMenuContext";
+import { FeedbackBox } from "./FeedbackBox";
 
 const icons: Record<string, React.ReactNode> = {
   home: (
@@ -211,11 +212,12 @@ export function Sidebar({
         })}
       </nav>
 
-      {/* Bottom: Collapse (desktop only) */}
-      <div className="hidden border-t border-charcoal-800/40 p-2 md:block">
+      {/* Bottom: Feedback + Collapse */}
+      <div className="border-t border-charcoal-800/40 p-2 space-y-1">
+        <FeedbackBox collapsed={collapsed} loggedIn />
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-charcoal-500 hover:bg-charcoal-800/50 hover:text-charcoal-300"
+          className="hidden w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-charcoal-500 hover:bg-charcoal-800/50 hover:text-charcoal-300 md:flex"
         >
           <svg className={`h-5 w-5 transition-transform ${collapsed ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M18.75 19.5l-7.5-7.5 7.5-7.5m-6 15L5.25 12l7.5-7.5" />
