@@ -6,7 +6,10 @@ export type CalendarPurpose =
   | "couple"
   | "income"
   | "hobby"
-  | "other";
+  | "other"
+  | "health"
+  | "social"
+  | "learning";
 
 export type CalendarSetting = {
   google_calendar_id: string;
@@ -17,13 +20,47 @@ export type CalendarSetting = {
 };
 
 export const PURPOSE_OPTIONS: { value: CalendarPurpose; label: string }[] = [
-  { value: "personal", label: "개인" },
   { value: "work", label: "업무" },
-  { value: "couple", label: "커플" },
   { value: "income", label: "수익" },
+  { value: "personal", label: "개인" },
+  { value: "couple", label: "커플" },
+  { value: "health", label: "건강" },
+  { value: "social", label: "사교" },
+  { value: "learning", label: "학습" },
   { value: "hobby", label: "취미" },
   { value: "other", label: "기타" },
 ];
+
+/** Coarse grouping used by insights / time analytics. */
+export type PurposeGroup = "work" | "personal" | "other";
+
+export const PURPOSE_GROUP: Record<CalendarPurpose, PurposeGroup> = {
+  work: "work",
+  income: "work",
+  personal: "personal",
+  couple: "personal",
+  health: "personal",
+  social: "personal",
+  learning: "personal",
+  hobby: "personal",
+  other: "other",
+};
+
+export function purposeGroup(p: CalendarPurpose | null): PurposeGroup {
+  return p ? PURPOSE_GROUP[p] : "other";
+}
+
+export const PURPOSE_GROUP_LABEL: Record<PurposeGroup, string> = {
+  work: "업무",
+  personal: "업무 외",
+  other: "미분류",
+};
+
+export const PURPOSE_GROUP_COLOR: Record<PurposeGroup, string> = {
+  work: "#ef4444", // red — work
+  personal: "#10b981", // emerald — personal
+  other: "#6b7280", // gray — uncategorized
+};
 
 export const CALENDAR_COLORS = [
   "#6366f1", // indigo

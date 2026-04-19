@@ -23,6 +23,12 @@ import { ReactionStrip } from "@/components/ReactionStrip";
 import { CommentSection } from "@/components/CommentSection";
 import { Markdown } from "@/components/Markdown";
 import { ComingUpCard } from "./ComingUpCard";
+import { InsightsCard } from "./InsightsCard";
+import {
+  getWeekInsights,
+  getWorkHours,
+  weekStartMonday,
+} from "@/lib/insights";
 import Image from "next/image";
 
 export const dynamic = "force-dynamic";
@@ -110,6 +116,15 @@ export default async function PublicProfile({
         );
       })()
     : [];
+
+  const weekInsights = isOwner
+    ? await (async () => {
+        if (!authorId) return null;
+        const weekStart = weekStartMonday(now);
+        const hours = await getWorkHours(authorId).catch(() => ({}));
+        return getWeekInsights(authorId, weekStart, hours).catch(() => null);
+      })()
+    : null;
 
   const socialLinks = (profile.social_links || {}) as SocialLinks;
   const education = ((profile.education || []) as Education[]).sort((a, b) => {
@@ -276,10 +291,15 @@ export default async function PublicProfile({
             <ActionPill href="/feed" label="Share status" />
             <ActionPill href={`/${params.username}/slots`} label="Open slot" highlight />
             <ActionPill href={`/${params.username}/calendar`} label="Add event" />
+            <ActionPill href={`/${params.username}/insights`} label="Time insights" />
             <ActionPill href={`/${params.username}/book`} label="Share booking link" />
             <ActionPill href={`/${params.username}/settings`} label="Visibility" />
           </div>
         </div>
+      )}
+
+      {isOwner && weekInsights && (
+        <InsightsCard username={params.username} insights={weekInsights} />
       )}
 
       {isOwner && upcomingEvents.length > 0 && (

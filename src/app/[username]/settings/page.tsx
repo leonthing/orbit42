@@ -9,6 +9,8 @@ import { listExtraGoogleAccounts } from "@/lib/google";
 import { getUserId } from "@/lib/db";
 import { GoogleAccountsSection } from "./GoogleAccountsSection";
 import { MyCalendars } from "./MyCalendars";
+import { WorkHoursForm } from "./WorkHoursForm";
+import { getWorkHours } from "@/lib/insights";
 import { InviteCodes } from "./InviteCodes";
 import { getMyInviteCodes } from "@/lib/invite";
 import { NotificationPrefs } from "./NotificationPrefs";
@@ -30,13 +32,14 @@ export default async function SettingsPage({
   if (!profile) notFound();
 
   const userId = await getUserId();
-  const [googleConnected, myCalendars, extras, inviteCodes, notifPrefs] =
+  const [googleConnected, myCalendars, extras, inviteCodes, notifPrefs, workHours] =
     await Promise.all([
       isGoogleCalendarConnected().catch(() => false),
       listMyCalendars().catch(() => []),
       userId ? listExtraGoogleAccounts(userId) : Promise.resolve([]),
       getMyInviteCodes().catch(() => []),
       getMyPrefs().catch(() => ({})),
+      userId ? getWorkHours(userId) : Promise.resolve({}),
     ]);
 
   return (
@@ -66,6 +69,8 @@ export default async function SettingsPage({
       />
 
       <MyCalendars initial={myCalendars} googleConnected={googleConnected} />
+
+      <WorkHoursForm initial={workHours} />
 
       <InviteCodes codes={inviteCodes} />
 
