@@ -11,13 +11,18 @@ export function SignupForm({ initialRef }: { initialRef: string }) {
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError("");
+    if (password !== passwordConfirm) {
+      setError("비밀번호가 일치하지 않아요.");
+      return;
+    }
+    setLoading(true);
     const res = await signup(
       username,
       password,
@@ -63,19 +68,11 @@ export function SignupForm({ initialRef }: { initialRef: string }) {
 
       <form onSubmit={onSubmit} className="space-y-2.5">
         <input
-          type="text"
-          value={referrerRef}
-          onChange={(e) =>
-            setReferrerRef(
-              e.target.value
-                .trim()
-                .replace(/^@/, "")
-                .toLowerCase()
-                .replace(/[^a-z0-9_-]/g, ""),
-            )
-          }
-          placeholder="추천인 @username (선택)"
-          maxLength={32}
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="이메일"
+          required
           className={input}
           autoFocus={!initialRef}
         />
@@ -97,14 +94,6 @@ export function SignupForm({ initialRef }: { initialRef: string }) {
           </p>
         )}
         <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="이메일"
-          required
-          className={input}
-        />
-        <input
           type="text"
           value={displayName}
           onChange={(e) => setDisplayName(e.target.value)}
@@ -117,6 +106,30 @@ export function SignupForm({ initialRef }: { initialRef: string }) {
           onChange={(e) => setPassword(e.target.value)}
           placeholder="비밀번호 (6자 이상)"
           required
+          className={input}
+        />
+        <input
+          type="password"
+          value={passwordConfirm}
+          onChange={(e) => setPasswordConfirm(e.target.value)}
+          placeholder="비밀번호 확인"
+          required
+          className={input}
+        />
+        <input
+          type="text"
+          value={referrerRef}
+          onChange={(e) =>
+            setReferrerRef(
+              e.target.value
+                .trim()
+                .replace(/^@/, "")
+                .toLowerCase()
+                .replace(/[^a-z0-9_-]/g, ""),
+            )
+          }
+          placeholder="추천인 @username (선택)"
+          maxLength={32}
           className={input}
         />
 

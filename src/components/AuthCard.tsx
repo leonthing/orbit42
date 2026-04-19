@@ -38,6 +38,7 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [referrerRef, setReferrerRef] = useState(urlRef);
+  const [passwordConfirm, setPasswordConfirm] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -52,6 +53,10 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    if (mode === "signup" && password !== passwordConfirm) {
+      setError("비밀번호가 일치하지 않아요.");
+      return;
+    }
     setLoading(true);
     const res =
       mode === "signin"
@@ -124,6 +129,17 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
       </div>
 
       <form onSubmit={onSubmit} className="space-y-2">
+        {mode === "signup" && (
+          <input
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="이메일"
+            className={input}
+            required
+          />
+        )}
         <input
           type="text"
           autoComplete="username"
@@ -144,40 +160,13 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
           </p>
         )}
         {mode === "signup" && (
-          <>
-            <input
-              type="text"
-              value={referrerRef}
-              onChange={(e) =>
-                setReferrerRef(
-                  e.target.value
-                    .trim()
-                    .replace(/^@/, "")
-                    .toLowerCase()
-                    .replace(/[^a-z0-9_-]/g, ""),
-                )
-              }
-              placeholder="추천인 @username (선택)"
-              className={input}
-              maxLength={32}
-            />
-            <input
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="이메일"
-              className={input}
-              required
-            />
-            <input
-              type="text"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Display name (선택)"
-              className={input}
-            />
-          </>
+          <input
+            type="text"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            placeholder="Display name (선택)"
+            className={input}
+          />
         )}
         <input
           type="password"
@@ -188,6 +177,35 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
           className={input}
           required
         />
+        {mode === "signup" && (
+          <input
+            type="password"
+            autoComplete="new-password"
+            value={passwordConfirm}
+            onChange={(e) => setPasswordConfirm(e.target.value)}
+            placeholder="Password 확인"
+            className={input}
+            required
+          />
+        )}
+        {mode === "signup" && (
+          <input
+            type="text"
+            value={referrerRef}
+            onChange={(e) =>
+              setReferrerRef(
+                e.target.value
+                  .trim()
+                  .replace(/^@/, "")
+                  .toLowerCase()
+                  .replace(/[^a-z0-9_-]/g, ""),
+              )
+            }
+            placeholder="추천인 @username (선택)"
+            className={input}
+            maxLength={32}
+          />
+        )}
 
         {error && <p className="text-xs text-red-500">{error}</p>}
 
