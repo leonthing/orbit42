@@ -10,29 +10,18 @@ import {
   PURPOSE_OPTIONS,
   purposeGroup,
 } from "@/lib/calendar-settings-types";
+import {
+  DEFAULT_WORK_HOURS,
+  WORK_DAY_LABEL,
+  type WorkDay,
+  type WorkHours,
+} from "@/lib/insights-types";
+
+export { DEFAULT_WORK_HOURS, WORK_DAY_LABEL };
+export type { WorkDay, WorkHours };
 
 const TZ_OFFSET_MIN = 9 * 60; // Asia/Seoul (aligns with slot-availability.ts)
 const DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
-export type WorkDay = (typeof DAYS)[number];
-export type WorkHours = Partial<Record<WorkDay, { start: string; end: string }>>;
-
-export const DEFAULT_WORK_HOURS: WorkHours = {
-  mon: { start: "09:00", end: "18:00" },
-  tue: { start: "09:00", end: "18:00" },
-  wed: { start: "09:00", end: "18:00" },
-  thu: { start: "09:00", end: "18:00" },
-  fri: { start: "09:00", end: "18:00" },
-};
-
-export const WORK_DAY_LABEL: Record<WorkDay, string> = {
-  sun: "일",
-  mon: "월",
-  tue: "화",
-  wed: "수",
-  thu: "목",
-  fri: "금",
-  sat: "토",
-};
 
 const PURPOSE_LABEL: Record<CalendarPurpose, string> = Object.fromEntries(
   PURPOSE_OPTIONS.map((p) => [p.value, p.label]),

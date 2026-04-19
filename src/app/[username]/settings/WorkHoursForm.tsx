@@ -7,7 +7,7 @@ import {
   WORK_DAY_LABEL,
   type WorkDay,
   type WorkHours,
-} from "@/lib/insights";
+} from "@/lib/insights-types";
 
 const DAY_ORDER: WorkDay[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
