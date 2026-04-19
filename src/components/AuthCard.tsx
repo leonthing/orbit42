@@ -41,6 +41,15 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  // Collapsible on mobile to save vertical space. Expanded by default
+  // on desktop (md+ via CSS), or when the visitor came in with an
+  // explicit intent (?mode=, ?ref=, or ?reset=).
+  const cameWithIntent =
+    urlMode === "signin" ||
+    urlMode === "signup" ||
+    !!urlRef ||
+    justReset;
+  const [expanded, setExpanded] = useState(cameWithIntent);
   const rootRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     // When the visitor lands here directly via /?mode=..., pull the card
@@ -79,30 +88,62 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
       id="auth"
       className="mx-auto w-full max-w-sm rounded-2xl border border-charcoal-800/60 bg-charcoal-900/50 p-4 shadow-xl backdrop-blur sm:p-5"
     >
+      {/* Collapsed trigger — mobile only, only when !expanded. */}
+      {!expanded && (
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          className="flex w-full items-center justify-between rounded-md bg-red-600/10 px-3 py-2 text-sm font-semibold text-red-300 hover:bg-red-600/20 md:hidden"
+        >
+          <span>로그인 · 가입하기</span>
+          <svg
+            className="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={2}
+            stroke="currentColor"
+            aria-hidden
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+          </svg>
+        </button>
+      )}
+
+      <div className={expanded ? "block" : "hidden md:block"}>
       {justReset && mode === "signin" && (
         <div className="mb-3 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-[11px] text-emerald-700 dark:text-emerald-200">
           비밀번호가 변경되었어요. 새 비밀번호로 로그인해주세요.
         </div>
       )}
-      <div className="mb-3 flex rounded-md bg-charcoal-800/40 p-0.5">
-        <TabButton
-          active={mode === "signin"}
-          onClick={() => {
-            setMode("signin");
-            setError("");
-          }}
+      <div className="mb-3 flex items-center gap-1.5">
+        <div className="flex flex-1 rounded-md bg-charcoal-800/40 p-0.5">
+          <TabButton
+            active={mode === "signin"}
+            onClick={() => {
+              setMode("signin");
+              setError("");
+            }}
+          >
+            Sign in
+          </TabButton>
+          <TabButton
+            active={mode === "signup"}
+            onClick={() => {
+              setMode("signup");
+              setError("");
+            }}
+          >
+            Sign up
+          </TabButton>
+        </div>
+        <button
+          type="button"
+          onClick={() => setExpanded(false)}
+          className="shrink-0 rounded-md px-2 py-1 text-[11px] text-charcoal-500 hover:text-charcoal-200 md:hidden"
+          title="접기"
         >
-          Sign in
-        </TabButton>
-        <TabButton
-          active={mode === "signup"}
-          onClick={() => {
-            setMode("signup");
-            setError("");
-          }}
-        >
-          Sign up
-        </TabButton>
+          접기
+        </button>
       </div>
 
       <a
@@ -241,6 +282,7 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
           </Link>
         )}
       </p>
+      </div>
     </div>
   );
 }
