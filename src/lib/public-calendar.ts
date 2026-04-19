@@ -67,44 +67,39 @@ export async function getPublicEvents(
     (c) => c.source === "google" && c.google_calendar_id,
   );
 
+  const calendar = await getAuthenticatedCalendar(host.id as string);
+
   // Owner fallback: when a connected Google calendar hasn't been saved
-  // into `calendars` yet, still show events from it.
+  // into `calendars` yet, still show events from it. This is the only
+  // reason we need to hit Google's `calendarList.list()` — skip the
+  // roundtrip entirely when not applicable (e.g. explicit calendar filter,
+  // public feed render, non-owner viewer).
   const ownerFallbackCals: Array<{
     id: string;
     google_calendar_id: string;
     name: string;
     color: string;
   }> = [];
-  const calendar = await getAuthenticatedCalendar(host.id as string);
-  let calendarMeta: Record<string, { summary: string; color: string }> = {};
-  if (calendar) {
+  const needsMeta = !!calendar && isOwner && !forPublicFeed && !hasExplicitFilter;
+  if (needsMeta) {
     try {
       const list = await calendar.calendarList.list();
-      for (const item of list.data.items ?? []) {
-        if (!item.id) continue;
-        if (item.accessRole !== "owner") continue;
-        calendarMeta[item.id] = {
-          summary: item.summary || item.id,
-          color: item.backgroundColor || "#4285f4",
-        };
-      }
-    } catch {
-      calendarMeta = {};
-    }
-    if (isOwner && !forPublicFeed && !hasExplicitFilter) {
       const linkedIds = new Set(
         googleBackedCals.map((c) => c.google_calendar_id as string),
       );
-      for (const [gid, meta] of Object.entries(calendarMeta)) {
-        if (!linkedIds.has(gid)) {
-          ownerFallbackCals.push({
-            id: `gfallback:${gid}`,
-            google_calendar_id: gid,
-            name: meta.summary,
-            color: meta.color,
-          });
-        }
+      for (const item of list.data.items ?? []) {
+        if (!item.id) continue;
+        if (item.accessRole !== "owner") continue;
+        if (linkedIds.has(item.id)) continue;
+        ownerFallbackCals.push({
+          id: `gfallback:${item.id}`,
+          google_calendar_id: item.id,
+          name: item.summary || item.id,
+          color: item.backgroundColor || "#4285f4",
+        });
       }
+    } catch {
+      // ignore — fall through with no fallback calendars
     }
   }
 
@@ -130,15 +125,13 @@ export async function getPublicEvents(
               orderBy: "startTime",
               maxResults: 250,
             });
-            const meta = calendarMeta[cs.google_calendar_id];
-            const color = meta?.color || cs.color;
             return (res.data.items ?? []).map((it) => ({
               id: `${cs.google_calendar_id}::${it.id}`,
               title: it.summary || "(제목 없음)",
               start_at: it.start?.dateTime || it.start?.date || "",
               end_at: it.end?.dateTime || it.end?.date || "",
               all_day: !!it.start?.date,
-              calendar_color: color,
+              calendar_color: cs.color,
               calendar_label: cs.name,
             })) as PublicEvent[];
           } catch {

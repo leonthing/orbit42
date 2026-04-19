@@ -16,8 +16,6 @@ import { BlockMenu } from "./BlockMenu";
 import { isBlocked } from "@/lib/blocks";
 import { listFeedPostsByAuthors } from "@/lib/feed-posts";
 import { getAdminClient } from "@/lib/supabase";
-import { getPublicEvents } from "@/lib/public-calendar";
-import { listMyCalendars } from "@/lib/calendars";
 import { DeleteFeedPostButton } from "@/components/DeleteFeedPostButton";
 import { ReactionStrip } from "@/components/ReactionStrip";
 import { CommentSection } from "@/components/CommentSection";
@@ -25,10 +23,12 @@ import { Markdown } from "@/components/Markdown";
 import { ComingUpCard } from "./ComingUpCard";
 import { InsightsCard } from "./InsightsCard";
 import {
-  getWeekInsights,
+  fetchTimeBlocks,
   getWorkHours,
+  summarizeBlocks,
   weekStartMonday,
 } from "@/lib/insights";
+import type { PublicEvent } from "@/lib/public-calendar";
 import Image from "next/image";
 
 export const dynamic = "force-dynamic";
@@ -102,29 +102,41 @@ export default async function PublicProfile({
 
   const now = new Date();
   const upcomingEnd = new Date(now.getTime() + 7 * 24 * 60 * 60_000);
-  // Scope to calendars the user has explicitly curated in `calendars`
-  // (same as /calendar default selection). Without an explicit filter,
-  // getPublicEvents falls back to every Google calendar the user has
-  // owner access to — which drags in secondary/shared feeds.
-  const upcomingEvents = isOwner
+  // For the owner, fetch one block range that covers both surfaces
+  // (ComingUp = now..+7d, InsightsCard = this Monday..+7d). One Google
+  // API burst instead of two.
+  const { upcomingEvents, weekInsights } = isOwner
     ? await (async () => {
-        const myCals = await listMyCalendars().catch(() => []);
-        const ids = myCals.map((c) => c.id);
-        if (ids.length === 0) return [];
-        return getPublicEvents(params.username, now, upcomingEnd, ids).catch(
-          () => [],
-        );
-      })()
-    : [];
-
-  const weekInsights = isOwner
-    ? await (async () => {
-        if (!authorId) return null;
+        if (!authorId) {
+          return { upcomingEvents: [] as PublicEvent[], weekInsights: null };
+        }
         const weekStart = weekStartMonday(now);
-        const hours = await getWorkHours(authorId).catch(() => ({}));
-        return getWeekInsights(authorId, weekStart, hours).catch(() => null);
+        const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60_000);
+        const rangeStart = weekStart < now ? weekStart : now;
+        const rangeEnd = weekEnd > upcomingEnd ? weekEnd : upcomingEnd;
+        const [blocks, hours] = await Promise.all([
+          fetchTimeBlocks(authorId, rangeStart, rangeEnd).catch(() => []),
+          getWorkHours(authorId).catch(() => ({})),
+        ]);
+        const insights = summarizeBlocks(blocks, weekStart, weekEnd, hours);
+        const upcoming: PublicEvent[] = blocks
+          .filter((b) => {
+            const end = b.end.getTime();
+            return end > now.getTime() && b.start.getTime() < upcomingEnd.getTime();
+          })
+          .sort((a, b) => a.start.getTime() - b.start.getTime())
+          .map((b) => ({
+            id: b.id,
+            title: b.title,
+            start_at: b.start.toISOString(),
+            end_at: b.end.toISOString(),
+            all_day: b.all_day,
+            calendar_color: b.calendar_color,
+            calendar_label: b.calendar_name,
+          }));
+        return { upcomingEvents: upcoming, weekInsights: insights };
       })()
-    : null;
+    : { upcomingEvents: [] as PublicEvent[], weekInsights: null };
 
   const socialLinks = (profile.social_links || {}) as SocialLinks;
   const education = ((profile.education || []) as Education[]).sort((a, b) => {

@@ -28,6 +28,8 @@ const PURPOSE_LABEL: Record<CalendarPurpose, string> = Object.fromEntries(
 ) as Record<CalendarPurpose, string>;
 
 export type TimeBlock = {
+  id: string;
+  title: string;
   start: Date;
   end: Date;
   purpose: CalendarPurpose | null;
@@ -192,7 +194,9 @@ export async function fetchTimeBlocks(
 
   const blocks: TimeBlock[] = [];
   for (const e of (native ?? []) as Array<{
+    id: string;
     calendar_id: string | null;
+    title: string;
     start_at: string;
     end_at: string | null;
     all_day: boolean;
@@ -202,6 +206,8 @@ export async function fetchTimeBlocks(
     const end = new Date(e.end_at || e.start_at);
     if (end.getTime() <= start.getTime() && !e.all_day) continue;
     blocks.push({
+      id: `native:${e.id}`,
+      title: e.title,
       start,
       end,
       all_day: e.all_day,
@@ -255,6 +261,8 @@ export async function fetchTimeBlocks(
             const end = new Date(endIso);
             if (!allDay && end.getTime() <= start.getTime()) continue;
             blocks.push({
+              id: `${cal.google_calendar_id}::${it.id}`,
+              title: it.summary || "(제목 없음)",
               start,
               end,
               all_day: allDay,
