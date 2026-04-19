@@ -156,9 +156,8 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
                     .slice(0, 8),
                 )
               }
-              placeholder="초대 코드"
+              placeholder="추천인 코드 (선택)"
               className={input}
-              required
               maxLength={8}
             />
             <input

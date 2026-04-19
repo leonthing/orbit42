@@ -73,9 +73,8 @@ export function SignupForm({ initialCode }: { initialCode: string }) {
                 .slice(0, 8),
             )
           }
-          placeholder="초대 코드"
+          placeholder="추천인 코드 (선택)"
           maxLength={8}
-          required
           className={`${input} font-mono tracking-wider`}
           autoFocus={!initialCode}
         />
@@ -124,7 +123,7 @@ export function SignupForm({ initialCode }: { initialCode: string }) {
 
         <button
           type="submit"
-          disabled={loading || !username || !password || !inviteCode}
+          disabled={loading || !username || !password}
           className="!mt-3 w-full rounded-lg bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {loading ? "가입 중…" : "가입하기"}

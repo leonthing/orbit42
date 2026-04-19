@@ -55,22 +55,6 @@ export async function getMyInviteCodes(): Promise<InviteCode[]> {
   }));
 }
 
-/** Validate an invite code. Returns creator user id if valid. */
-export async function validateInviteCode(
-  code: string,
-): Promise<{ valid: true; id: string } | { valid: false; error: string }> {
-  if (!code.trim()) return { valid: false, error: "초대 코드를 입력해주세요." };
-  const db = getAdminClient();
-  const { data } = await db
-    .from("invite_codes")
-    .select("id, used_by")
-    .eq("code", code.trim().toUpperCase())
-    .maybeSingle();
-  if (!data) return { valid: false, error: "유효하지 않은 초대 코드입니다." };
-  if (data.used_by) return { valid: false, error: "이미 사용된 초대 코드입니다." };
-  return { valid: true, id: data.id as string };
-}
-
 /** Look up the inviter's public profile for an invite code (for landing UI). */
 export async function getInviterByCode(code: string): Promise<{
   code: string;
@@ -104,100 +88,125 @@ export async function getInviterByCode(code: string): Promise<{
   };
 }
 
-/**
- * Mark invite code as used, generate CODES_PER_USER new codes for the
- * new user, send them a welcome email, and notify the inviter (email
- * + in-app). Best-effort on notifications — DB claim is what matters.
- */
-export async function claimInviteCode(codeId: string, newUserId: string) {
+/** Seed CODES_PER_USER invite codes + welcome email for a new user. */
+export async function seedNewUser(
+  newUserId: string,
+  inviter: {
+    username: string;
+    display_name: string | null;
+  } | null,
+) {
   const db = getAdminClient();
-  const { data: code } = await db
-    .from("invite_codes")
-    .select("creator_id")
-    .eq("id", codeId)
-    .single();
-  const inviterId = (code?.creator_id as string | undefined) ?? null;
-
-  await db
-    .from("invite_codes")
-    .update({ used_by: newUserId, used_at: new Date().toISOString() })
-    .eq("id", codeId)
-    .is("used_by", null);
   await db.rpc("generate_invite_codes", {
     p_user_id: newUserId,
     p_count: CODES_PER_USER,
   });
-
-  // Best-effort welcome + inviter notifications.
   try {
-    const { sendWelcomeEmail, sendInviteUsedEmail } = await import(
-      "@/lib/email"
-    );
-    const { createNotification } = await import("@/lib/notifications");
-
+    const { sendWelcomeEmail } = await import("@/lib/email");
     const { data: newUser } = await db
       .from("users")
-      .select("email, email_verified, username, display_name")
+      .select("email, username, display_name")
       .eq("id", newUserId)
       .single();
-
-    let inviter: {
-      username: string;
-      display_name: string | null;
-      email: string | null;
-      email_verified: boolean | null;
-    } | null = null;
-    if (inviterId) {
-      const { data } = await db
-        .from("users")
-        .select("username, display_name, email, email_verified")
-        .eq("id", inviterId)
-        .single();
-      if (data) {
-        inviter = {
-          username: data.username as string,
-          display_name: (data.display_name as string | null) ?? null,
-          email: (data.email as string | null) ?? null,
-          email_verified: (data.email_verified as boolean | null) ?? null,
-        };
-      }
-    }
-
     if (newUser?.email) {
       await sendWelcomeEmail(newUser.email as string, {
         username: newUser.username as string,
         displayName: (newUser.display_name as string | null) ?? null,
-        inviterLabel: inviter
-          ? inviter.display_name || inviter.username
-          : null,
+        inviterLabel: inviter ? inviter.display_name || inviter.username : null,
         inviterUsername: inviter?.username ?? null,
       });
     }
+  } catch (err) {
+    console.error("seedNewUser welcome email", err);
+  }
+}
 
-    if (inviterId) {
-      const inviteeLabel =
-        (newUser?.display_name as string | null) ||
-        (newUser?.username as string) ||
-        "새 멤버";
-      const inviteeUsername = (newUser?.username as string) || "";
-      await createNotification({
-        userId: inviterId,
-        type: "invite_used",
-        title: `${inviteeLabel}님이 당신의 초대로 가입했어요`,
-        body: null,
-        link: inviteeUsername ? `/${inviteeUsername}` : null,
-        actorId: newUserId,
+/**
+ * Open-signup referral: if the code is valid + unused, claim it,
+ * persist `invited_by_user_id`, create mutual follows, and notify
+ * the inviter. Returns the inviter's public fields (for a follow-up
+ * welcome email) or null when no referral applied.
+ */
+export async function applyReferralIfPresent(
+  newUserId: string,
+  rawCode: string | null | undefined,
+): Promise<{ username: string; display_name: string | null } | null> {
+  const code = (rawCode ?? "").trim().toUpperCase();
+  if (!code) return null;
+  const db = getAdminClient();
+  const { data } = await db
+    .from("invite_codes")
+    .select("id, creator_id, used_by")
+    .eq("code", code)
+    .maybeSingle();
+  if (!data) return null;
+  if (data.used_by) return null;
+  const inviterId = data.creator_id as string;
+  if (inviterId === newUserId) return null;
+
+  await db
+    .from("invite_codes")
+    .update({ used_by: newUserId, used_at: new Date().toISOString() })
+    .eq("id", data.id as string)
+    .is("used_by", null);
+  await db
+    .from("users")
+    .update({ invited_by_user_id: inviterId })
+    .eq("id", newUserId);
+
+  // Mutual follow — the new user's first orbit is their inviter.
+  await db
+    .from("follows")
+    .insert([
+      { follower_id: inviterId, following_id: newUserId },
+      { follower_id: newUserId, following_id: inviterId },
+    ])
+    .then(() => undefined, () => undefined);
+
+  const { data: inviter } = await db
+    .from("users")
+    .select("username, display_name, email, email_verified")
+    .eq("id", inviterId)
+    .single();
+
+  // Best-effort notify inviter (in-app + email).
+  try {
+    const { data: newUser } = await db
+      .from("users")
+      .select("username, display_name")
+      .eq("id", newUserId)
+      .single();
+    const inviteeLabel =
+      (newUser?.display_name as string | null) ||
+      (newUser?.username as string) ||
+      "새 멤버";
+    const inviteeUsername = (newUser?.username as string) || "";
+    const { createNotification } = await import("@/lib/notifications");
+    await createNotification({
+      userId: inviterId,
+      type: "invite_used",
+      title: `${inviteeLabel}님이 당신의 추천으로 가입했어요`,
+      body: null,
+      link: inviteeUsername ? `/${inviteeUsername}` : null,
+      actorId: newUserId,
+    });
+    if (inviter?.email && inviter.email_verified) {
+      const { sendInviteUsedEmail } = await import("@/lib/email");
+      await sendInviteUsedEmail(inviter.email as string, {
+        inviteeLabel,
+        inviteeUsername,
       });
-      if (inviter?.email && inviter.email_verified) {
-        await sendInviteUsedEmail(inviter.email, {
-          inviteeLabel,
-          inviteeUsername,
-        });
-      }
     }
   } catch (err) {
-    console.error("invite claim notifications", err);
+    console.error("referral notify inviter", err);
   }
+
+  return inviter
+    ? {
+        username: inviter.username as string,
+        display_name: (inviter.display_name as string | null) ?? null,
+      }
+    : null;
 }
 
 /** Seed initial codes for the admin/founder (run once). */

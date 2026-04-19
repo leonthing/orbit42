@@ -149,8 +149,8 @@ export default async function LandingPage() {
             시간은 가장 중요한 자산입니다
           </h2>
           <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-charcoal-400">
-            지금 초대 기반으로 운영 중이에요. 초대 코드가 있다면 위 가입
-            화면에, 없다면 지인에게 물어보세요.
+            누구나 바로 가입할 수 있어요. 지인의 추천 코드를 쓰면 가입 즉시
+            자동으로 연결돼 첫 궤도가 생깁니다.
           </p>
           <Link
             href="/explore"

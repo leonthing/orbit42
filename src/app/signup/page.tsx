@@ -80,32 +80,35 @@ export default async function SignupPage({
           ) : invite?.status === "used" ? (
             <div className="space-y-5">
               <h1 className="text-3xl font-bold text-charcoal-100 sm:text-4xl">
-                이미 사용된 초대장
+                이미 사용된 추천 코드
               </h1>
               <p className="max-w-md text-sm text-charcoal-400">
-                이 초대 코드는 이미 누군가 사용했어요. 다른 코드가 있다면
-                아래에 직접 입력해주세요.
+                이 코드는 이미 누군가 사용했어요. 그래도 바로 가입할 수
+                있어요 — 아래 폼에서 코드를 비워두고 진행하세요.
               </p>
+              <InvitePerks />
             </div>
           ) : invite?.status === "invalid" ? (
             <div className="space-y-5">
               <h1 className="text-3xl font-bold text-charcoal-100 sm:text-4xl">
-                초대 코드를 확인해주세요
+                Orbit42에 오신 걸 환영해요
               </h1>
               <p className="max-w-md text-sm text-charcoal-400">
-                링크의 초대 코드를 찾을 수 없어요. 직접 입력해보세요.
+                링크에 포함된 추천 코드를 찾지 못했지만, 그냥 가입해도
+                괜찮아요. 지인에게 받은 코드가 있다면 아래에 입력하세요.
               </p>
+              <InvitePerks />
             </div>
           ) : (
             <div className="space-y-5">
               <h1 className="text-3xl font-bold leading-tight text-charcoal-100 sm:text-4xl">
-                초대받은 분만
+                Orbit42에
                 <br />
-                가입할 수 있어요
+                오신 걸 환영해요
               </h1>
               <p className="max-w-md text-sm leading-relaxed text-charcoal-400">
-                Orbit42는 지금 초대 기반으로 운영 중입니다. 가입하려면 먼저
-                초대 코드가 필요해요. 코드를 이미 받으셨다면 아래에 입력하세요.
+                누구나 바로 가입할 수 있어요. 지인에게 추천 코드를 받으셨다면
+                아래에 입력해주세요 — 초대한 분과 자동으로 연결돼요.
               </p>
               <InvitePerks />
             </div>
@@ -121,13 +124,13 @@ export default async function SignupPage({
             <p className="mb-5 text-xs text-charcoal-500">
               {validInvite
                 ? "몇 가지 정보만 입력하면 시작할 수 있어요."
-                : "유효한 초대 코드가 필요해요."}
+                : "1분이면 가입할 수 있어요."}
             </p>
             <SignupForm initialCode={rawCode} />
             <p className="mt-5 text-center text-xs text-charcoal-500">
               이미 계정이 있으신가요?{" "}
               <Link
-                href="/login"
+                href="/?mode=signin#auth"
                 className="text-red-400 hover:text-red-300"
               >
                 로그인

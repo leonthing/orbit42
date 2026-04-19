@@ -42,13 +42,6 @@ export async function signup(
   if (!username || !password || !email) {
     return { error: "아이디, 비밀번호, 이메일을 모두 입력해주세요." };
   }
-
-  // Invite code required for signup.
-  const { validateInviteCode } = await import("@/lib/invite");
-  const codeResult = await validateInviteCode(inviteCode ?? "");
-  if (!codeResult.valid) {
-    return { error: codeResult.error };
-  }
   if (username.length < 2 || !/^[a-z0-9_-]+$/.test(username)) {
     return { error: "아이디는 2자 이상, 영문 소문자/숫자/하이픈만 가능합니다." };
   }
@@ -117,9 +110,16 @@ export async function signup(
     const { startEmailVerification } = await import("@/lib/account");
     await startEmailVerification(freshUser.id as string, normalizedEmail);
 
-    // Claim the invite code + generate new codes for this user.
-    const { claimInviteCode } = await import("@/lib/invite");
-    await claimInviteCode(codeResult.id, freshUser.id as string);
+    // Optional referral first (sets invited_by + mutual follow + notify)
+    // so the welcome email can address the inviter by name.
+    const { applyReferralIfPresent, seedNewUser } = await import(
+      "@/lib/invite"
+    );
+    const inviter = await applyReferralIfPresent(
+      freshUser.id as string,
+      inviteCode,
+    );
+    await seedNewUser(freshUser.id as string, inviter);
   }
 
   // Auto login
@@ -173,18 +173,7 @@ export async function loginOrSignupWithGoogle(
     return { username: existing.username as string };
   }
 
-  // 2. Fresh signup — gate on invite code first.
-  const { validateInviteCode } = await import("@/lib/invite");
-  const codeCheck = await validateInviteCode(inviteCode ?? "");
-  if (!codeCheck.valid) {
-    // No URL error channel is great for this, send them to /signup
-    // with a friendly hint.
-    return {
-      error:
-        "아직 초대 기반 가입이에요. 가입하려면 초대 코드가 필요합니다.",
-    };
-  }
-
+  // 2. Fresh signup — open. Referral code is optional.
   const base = normalized
     .split("@")[0]
     .replace(/[^a-z0-9_-]/g, "")
@@ -232,9 +221,14 @@ export async function loginOrSignupWithGoogle(
       is_default: true,
     });
 
-    // Claim the invite code + seed new codes for this user.
-    const { claimInviteCode } = await import("@/lib/invite");
-    await claimInviteCode(codeCheck.id, fresh.id as string);
+    const { applyReferralIfPresent, seedNewUser } = await import(
+      "@/lib/invite"
+    );
+    const inviter = await applyReferralIfPresent(
+      fresh.id as string,
+      inviteCode,
+    );
+    await seedNewUser(fresh.id as string, inviter);
   }
 
   cookies().set(COOKIE_NAME, JSON.stringify({ username }), {
