@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { login, signup } from "@/lib/auth";
@@ -24,7 +24,15 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
     .toUpperCase()
     .replace(/[^A-Z0-9]/g, "")
     .slice(0, 8);
-  const [mode, setMode] = useState<Mode>(urlCode ? "signup" : initialMode);
+  const urlMode = searchParams.get("mode");
+  const justReset = searchParams.get("reset") === "1";
+  const [mode, setMode] = useState<Mode>(
+    urlCode
+      ? "signup"
+      : urlMode === "signin" || urlMode === "signup"
+        ? urlMode
+        : initialMode,
+  );
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
@@ -32,6 +40,14 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
   const [inviteCode, setInviteCode] = useState(urlCode);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    // When the visitor lands here directly via /?mode=..., pull the card
+    // into view — on mobile the hero sits above it.
+    if (urlMode === "signin" || urlMode === "signup") {
+      rootRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+  }, [urlMode]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,7 +69,16 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
     "w-full rounded-md border border-charcoal-700 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-500 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500/40";
 
   return (
-    <div className="mx-auto w-full max-w-sm rounded-2xl border border-charcoal-800/60 bg-charcoal-900/50 p-4 shadow-xl backdrop-blur sm:p-5">
+    <div
+      ref={rootRef}
+      id="auth"
+      className="mx-auto w-full max-w-sm rounded-2xl border border-charcoal-800/60 bg-charcoal-900/50 p-4 shadow-xl backdrop-blur sm:p-5"
+    >
+      {justReset && mode === "signin" && (
+        <div className="mb-3 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-[11px] text-emerald-700 dark:text-emerald-200">
+          비밀번호가 변경되었어요. 새 비밀번호로 로그인해주세요.
+        </div>
+      )}
       <div className="mb-3 flex rounded-md bg-charcoal-800/40 p-0.5">
         <TabButton
           active={mode === "signin"}

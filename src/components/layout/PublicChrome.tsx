@@ -39,13 +39,13 @@ export function PublicChrome({
           ) : (
             <>
               <Link
-                href="/login"
+                href="/?mode=signin#auth"
                 className="rounded-lg px-3 py-1.5 text-sm text-charcoal-300 hover:text-charcoal-100"
               >
                 Sign in
               </Link>
               <Link
-                href="/signup"
+                href="/?mode=signup#auth"
                 className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-500"
               >
                 Get started
