@@ -18,16 +18,16 @@ export function AuthCard({ initialMode = "signup" }: { initialMode?: Mode }) {
 function AuthCardInner({ initialMode }: { initialMode: Mode }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  // Chat apps sometimes bundle our whole invite message into ?code= so
-  // keep only the first 8 alphanumerics.
-  const urlCode = (searchParams.get("code") ?? "")
-    .toUpperCase()
-    .replace(/[^A-Z0-9]/g, "")
-    .slice(0, 8);
+  // A referrer's username can arrive via ?ref=@leo or ?ref=leo.
+  const urlRef = (searchParams.get("ref") ?? "")
+    .trim()
+    .replace(/^@/, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, "");
   const urlMode = searchParams.get("mode");
   const justReset = searchParams.get("reset") === "1";
   const [mode, setMode] = useState<Mode>(
-    urlCode
+    urlRef
       ? "signup"
       : urlMode === "signin" || urlMode === "signup"
         ? urlMode
@@ -37,7 +37,7 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
   const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
-  const [inviteCode, setInviteCode] = useState(urlCode);
+  const [referrerRef, setReferrerRef] = useState(urlRef);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -56,7 +56,7 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
     const res =
       mode === "signin"
         ? await login(username, password)
-        : await signup(username, password, email, displayName || undefined, inviteCode || undefined);
+        : await signup(username, password, email, displayName || undefined, referrerRef || undefined);
     if (res.error) {
       setError(res.error);
       setLoading(false);
@@ -102,8 +102,8 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
 
       <a
         href={
-          mode === "signup" && inviteCode
-            ? `/api/auth/google?code=${encodeURIComponent(inviteCode)}`
+          mode === "signup" && referrerRef
+            ? `/api/auth/google?ref=${encodeURIComponent(referrerRef)}`
             : "/api/auth/google"
         }
         className="mb-2.5 flex w-full items-center justify-center gap-2 rounded-md bg-[#111] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1f1f1f] ring-1 ring-black/5"
@@ -147,18 +147,19 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
           <>
             <input
               type="text"
-              value={inviteCode}
+              value={referrerRef}
               onChange={(e) =>
-                setInviteCode(
+                setReferrerRef(
                   e.target.value
-                    .toUpperCase()
-                    .replace(/[^A-Z0-9]/g, "")
-                    .slice(0, 8),
+                    .trim()
+                    .replace(/^@/, "")
+                    .toLowerCase()
+                    .replace(/[^a-z0-9_-]/g, ""),
                 )
               }
-              placeholder="추천인 코드 (선택)"
+              placeholder="추천인 @username (선택)"
               className={input}
-              maxLength={8}
+              maxLength={32}
             />
             <input
               type="email"

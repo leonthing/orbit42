@@ -16,10 +16,10 @@ export async function GET(request: NextRequest) {
   const stateRaw = searchParams.get("state") || "";
 
   // Landing-page sign-in/sign-up (no session yet).
-  // state format: "signin" (existing user only) or "signin:CODE" for a
-  // fresh signup with an invite code.
+  // state format: "signin" (existing user only) or "signin:<ref>"
+  // for a fresh signup crediting a referrer username.
   if (stateRaw === "signin" || stateRaw.startsWith("signin:")) {
-    const inviteCode = stateRaw.startsWith("signin:")
+    const referrerRef = stateRaw.startsWith("signin:")
       ? stateRaw.slice("signin:".length)
       : "";
     if (!code) {
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
           new URL("/?error=google_no_email", request.url),
         );
       }
-      const res = await loginOrSignupWithGoogle(email, name, inviteCode || null);
+      const res = await loginOrSignupWithGoogle(email, name, referrerRef || null);
       if ("error" in res) {
         return NextResponse.redirect(
           new URL(`/?error=${encodeURIComponent(res.error)}`, request.url),

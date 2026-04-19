@@ -1,94 +1,45 @@
 "use server";
 
-import { getSession } from "@/lib/auth";
 import { getAdminClient } from "@/lib/supabase";
 
-const CODES_PER_USER = 3;
-
-export type InviteCode = {
-  id: string;
-  code: string;
-  used_by_username: string | null;
-  used_at: string | null;
-  created_at: string;
-};
-
-export async function getMyInviteCodes(): Promise<InviteCode[]> {
-  const session = await getSession();
-  if (!session) return [];
-  const db = getAdminClient();
-  const { data: me } = await db
-    .from("users")
-    .select("id")
-    .eq("username", session.username)
-    .single();
-  if (!me) return [];
-
-  const { data } = await db
-    .from("invite_codes")
-    .select("id, code, used_by, used_at, created_at")
-    .eq("creator_id", me.id)
-    .order("created_at", { ascending: true });
-
-  if (!data) return [];
-
-  const usedByIds = data
-    .filter((c) => c.used_by)
-    .map((c) => c.used_by as string);
-  const userMap = new Map<string, string>();
-  if (usedByIds.length > 0) {
-    const { data: users } = await db
-      .from("users")
-      .select("id, username")
-      .in("id", usedByIds);
-    for (const u of users ?? []) {
-      userMap.set(u.id as string, u.username as string);
-    }
-  }
-
-  return data.map((c) => ({
-    id: c.id as string,
-    code: c.code as string,
-    used_by_username: c.used_by ? (userMap.get(c.used_by as string) ?? null) : null,
-    used_at: (c.used_at as string | null) ?? null,
-    created_at: c.created_at as string,
-  }));
+/** Normalize user-entered refs: "@leo ", "Leo" → "leo". Empty → null. */
+function normalizeRef(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const cleaned = raw
+    .trim()
+    .replace(/^@/, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, "");
+  return cleaned || null;
 }
 
-/** Look up the inviter's public profile for an invite code (for landing UI). */
-export async function getInviterByCode(code: string): Promise<{
-  code: string;
-  status: "ok" | "used" | "invalid";
-  inviter: { username: string; display_name: string | null; avatar_url: string | null } | null;
-}> {
-  const normalized = code.trim().toUpperCase();
-  if (!normalized) return { code: normalized, status: "invalid", inviter: null };
+export type ReferrerPreview = {
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+};
+
+/** Landing-page lookup: does this ref resolve to a real user? */
+export async function getReferrerByUsername(
+  raw: string,
+): Promise<ReferrerPreview | null> {
+  const username = normalizeRef(raw);
+  if (!username) return null;
   const db = getAdminClient();
   const { data } = await db
-    .from("invite_codes")
-    .select("code, creator_id, used_by")
-    .eq("code", normalized)
-    .maybeSingle();
-  if (!data) return { code: normalized, status: "invalid", inviter: null };
-  const { data: inviter } = await db
     .from("users")
     .select("username, display_name, avatar_url")
-    .eq("id", data.creator_id)
-    .single();
+    .eq("username", username)
+    .maybeSingle();
+  if (!data) return null;
   return {
-    code: normalized,
-    status: data.used_by ? "used" : "ok",
-    inviter: inviter
-      ? {
-          username: inviter.username as string,
-          display_name: (inviter.display_name as string | null) ?? null,
-          avatar_url: (inviter.avatar_url as string | null) ?? null,
-        }
-      : null,
+    username: data.username as string,
+    display_name: (data.display_name as string | null) ?? null,
+    avatar_url: (data.avatar_url as string | null) ?? null,
   };
 }
 
-/** Seed CODES_PER_USER invite codes + welcome email for a new user. */
+/** Send the welcome email for a newly-created user. Best-effort. */
 export async function seedNewUser(
   newUserId: string,
   inviter: {
@@ -97,10 +48,6 @@ export async function seedNewUser(
   } | null,
 ) {
   const db = getAdminClient();
-  await db.rpc("generate_invite_codes", {
-    p_user_id: newUserId,
-    p_count: CODES_PER_USER,
-  });
   try {
     const { sendWelcomeEmail } = await import("@/lib/email");
     const { data: newUser } = await db
@@ -122,39 +69,35 @@ export async function seedNewUser(
 }
 
 /**
- * Open-signup referral: if the code is valid + unused, claim it,
- * persist `invited_by_user_id`, create mutual follows, and notify
- * the inviter. Returns the inviter's public fields (for a follow-up
- * welcome email) or null when no referral applied.
+ * Resolve a ref (username or @username) into a real user and, if found,
+ * persist `invited_by_user_id`, create mutual follows, and notify the
+ * inviter. Returns the inviter's public fields (so the welcome email can
+ * address them by name), or null when the ref didn't resolve.
  */
 export async function applyReferralIfPresent(
   newUserId: string,
-  rawCode: string | null | undefined,
+  rawRef: string | null | undefined,
 ): Promise<{ username: string; display_name: string | null } | null> {
-  const code = (rawCode ?? "").trim().toUpperCase();
-  if (!code) return null;
+  const username = normalizeRef(rawRef);
+  if (!username) return null;
+
   const db = getAdminClient();
-  const { data } = await db
-    .from("invite_codes")
-    .select("id, creator_id, used_by")
-    .eq("code", code)
+  const { data: inviter } = await db
+    .from("users")
+    .select("id, username, display_name, email, email_verified")
+    .eq("username", username)
     .maybeSingle();
-  if (!data) return null;
-  if (data.used_by) return null;
-  const inviterId = data.creator_id as string;
+  if (!inviter) return null;
+  const inviterId = inviter.id as string;
   if (inviterId === newUserId) return null;
 
-  await db
-    .from("invite_codes")
-    .update({ used_by: newUserId, used_at: new Date().toISOString() })
-    .eq("id", data.id as string)
-    .is("used_by", null);
   await db
     .from("users")
     .update({ invited_by_user_id: inviterId })
     .eq("id", newUserId);
 
   // Mutual follow — the new user's first orbit is their inviter.
+  // Ignore duplicates if either direction already exists.
   await db
     .from("follows")
     .insert([
@@ -162,12 +105,6 @@ export async function applyReferralIfPresent(
       { follower_id: newUserId, following_id: inviterId },
     ])
     .then(() => undefined, () => undefined);
-
-  const { data: inviter } = await db
-    .from("users")
-    .select("username, display_name, email, email_verified")
-    .eq("id", inviterId)
-    .single();
 
   // Best-effort notify inviter (in-app + email).
   try {
@@ -190,7 +127,7 @@ export async function applyReferralIfPresent(
       link: inviteeUsername ? `/${inviteeUsername}` : null,
       actorId: newUserId,
     });
-    if (inviter?.email && inviter.email_verified) {
+    if (inviter.email && inviter.email_verified) {
       const { sendInviteUsedEmail } = await import("@/lib/email");
       await sendInviteUsedEmail(inviter.email as string, {
         inviteeLabel,
@@ -201,31 +138,8 @@ export async function applyReferralIfPresent(
     console.error("referral notify inviter", err);
   }
 
-  return inviter
-    ? {
-        username: inviter.username as string,
-        display_name: (inviter.display_name as string | null) ?? null,
-      }
-    : null;
-}
-
-/** Seed initial codes for the admin/founder (run once). */
-export async function seedFounderCodes(username: string, count: number = 10) {
-  const db = getAdminClient();
-  const { data } = await db
-    .from("users")
-    .select("id")
-    .eq("username", username)
-    .single();
-  if (!data) return;
-  const { data: existing } = await db
-    .from("invite_codes")
-    .select("id")
-    .eq("creator_id", data.id)
-    .limit(1);
-  if (existing && existing.length > 0) return;
-  await db.rpc("generate_invite_codes", {
-    p_user_id: data.id,
-    p_count: count,
-  });
+  return {
+    username: inviter.username as string,
+    display_name: (inviter.display_name as string | null) ?? null,
+  };
 }

@@ -33,7 +33,7 @@ export async function signup(
   password: string,
   email: string,
   displayName?: string,
-  inviteCode?: string,
+  referrerRef?: string,
 ) {
   const limit = rateLimit(clientKey("signup"), 5, 60 * 60_000);
   if (!limit.ok) {
@@ -117,7 +117,7 @@ export async function signup(
     );
     const inviter = await applyReferralIfPresent(
       freshUser.id as string,
-      inviteCode,
+      referrerRef,
     );
     await seedNewUser(freshUser.id as string, inviter);
   }
@@ -140,7 +140,7 @@ export async function signup(
 export async function loginOrSignupWithGoogle(
   email: string,
   displayName: string | null,
-  inviteCode: string | null = null,
+  referrerRef: string | null = null,
 ): Promise<{ username: string } | { error: string }> {
   const normalized = email.trim().toLowerCase();
   if (!normalized) return { error: "이메일을 가져올 수 없어요." };
@@ -226,7 +226,7 @@ export async function loginOrSignupWithGoogle(
     );
     const inviter = await applyReferralIfPresent(
       fresh.id as string,
-      inviteCode,
+      referrerRef,
     );
     await seedNewUser(fresh.id as string, inviter);
   }

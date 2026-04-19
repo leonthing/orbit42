@@ -4,9 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signup } from "@/lib/auth";
 
-export function SignupForm({ initialCode }: { initialCode: string }) {
+export function SignupForm({ initialRef }: { initialRef: string }) {
   const router = useRouter();
-  const [inviteCode, setInviteCode] = useState(initialCode);
+  const [referrerRef, setReferrerRef] = useState(initialRef);
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -23,7 +23,7 @@ export function SignupForm({ initialCode }: { initialCode: string }) {
       password,
       email,
       displayName || undefined,
-      inviteCode || undefined,
+      referrerRef || undefined,
     );
     if ("error" in res && res.error) {
       setError(res.error);
@@ -40,8 +40,8 @@ export function SignupForm({ initialCode }: { initialCode: string }) {
     <>
       <a
         href={
-          inviteCode
-            ? `/api/auth/google?code=${encodeURIComponent(inviteCode)}`
+          referrerRef
+            ? `/api/auth/google?ref=${encodeURIComponent(referrerRef)}`
             : "/api/auth/google"
         }
         className="mb-3 flex w-full items-center justify-center gap-2 rounded-lg bg-[#111] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1f1f1f] ring-1 ring-black/5"
@@ -64,19 +64,20 @@ export function SignupForm({ initialCode }: { initialCode: string }) {
       <form onSubmit={onSubmit} className="space-y-2.5">
         <input
           type="text"
-          value={inviteCode}
+          value={referrerRef}
           onChange={(e) =>
-            setInviteCode(
+            setReferrerRef(
               e.target.value
-                .toUpperCase()
-                .replace(/[^A-Z0-9]/g, "")
-                .slice(0, 8),
+                .trim()
+                .replace(/^@/, "")
+                .toLowerCase()
+                .replace(/[^a-z0-9_-]/g, ""),
             )
           }
-          placeholder="추천인 코드 (선택)"
-          maxLength={8}
-          className={`${input} font-mono tracking-wider`}
-          autoFocus={!initialCode}
+          placeholder="추천인 @username (선택)"
+          maxLength={32}
+          className={input}
+          autoFocus={!initialRef}
         />
         <input
           type="text"

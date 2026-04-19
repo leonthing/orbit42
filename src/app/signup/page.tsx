@@ -1,25 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
-import { getInviterByCode } from "@/lib/invite";
+import { getReferrerByUsername } from "@/lib/invite";
 import { SignupForm } from "./SignupForm";
 
-export const metadata: Metadata = { title: "초대장 · Orbit42" };
+export const metadata: Metadata = { title: "가입 · Orbit42" };
 export const dynamic = "force-dynamic";
 
 export default async function SignupPage({
   searchParams,
 }: {
-  searchParams: { code?: string };
+  searchParams: { ref?: string };
 }) {
-  // Sanitize: chat apps sometimes bundle our whole invite message into
-  // ?code=, so pick off just the first 8 alphanumerics.
-  const rawCode = (searchParams.code ?? "")
-    .toUpperCase()
-    .replace(/[^A-Z0-9]/g, "")
-    .slice(0, 8);
-  const invite = rawCode ? await getInviterByCode(rawCode) : null;
-  const validInvite = invite?.status === "ok";
+  const rawRef = (searchParams.ref ?? "")
+    .trim()
+    .replace(/^@/, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, "");
+  const referrer = rawRef ? await getReferrerByUsername(rawRef) : null;
 
   return (
     <div className="min-h-screen bg-[rgb(var(--bg-base))]">
@@ -33,22 +31,22 @@ export default async function SignupPage({
             Orbit42
           </Link>
 
-          {validInvite && invite?.inviter ? (
+          {referrer ? (
             <div className="space-y-5">
               <div className="flex items-center gap-3">
                 <Avatar
-                  url={invite.inviter.avatar_url}
-                  name={invite.inviter.display_name || invite.inviter.username}
+                  url={referrer.avatar_url}
+                  name={referrer.display_name || referrer.username}
                   size={48}
                 />
                 <div>
                   <p className="text-xs uppercase tracking-wider text-charcoal-500">
-                    초대장
+                    추천
                   </p>
                   <p className="text-sm font-semibold text-charcoal-100">
-                    {invite.inviter.display_name || invite.inviter.username}
+                    {referrer.display_name || referrer.username}
                     <span className="ml-1 font-normal text-charcoal-500">
-                      @{invite.inviter.username}
+                      @{referrer.username}
                     </span>
                   </p>
                 </div>
@@ -56,46 +54,30 @@ export default async function SignupPage({
 
               <div>
                 <h1 className="text-3xl font-bold leading-tight text-charcoal-100 sm:text-4xl">
-                  당신을 Orbit42에
+                  @{referrer.username} 님이
+                  <br />
+                  당신을 Orbit42로
                   <br />
                   초대합니다
                 </h1>
                 <p className="mt-4 max-w-md text-sm leading-relaxed text-charcoal-400">
-                  시간은 가장 중요한 자산입니다. 캘린더로 하루를 공유하고,
-                  비어 있는 시간을 슬롯으로 판매하여 수익을 만드세요.
+                  가입하면 자동으로 서로의 궤도가 되어 첫 연결이 만들어져요.
+                  캘린더로 하루를 공유하고, 남는 시간을 슬롯으로 나누거나
+                  팔아보세요.
                 </p>
               </div>
 
               <InvitePerks />
-
-              <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-charcoal-500">
-                  초대 코드
-                </p>
-                <p className="mt-1 font-mono text-2xl font-bold tracking-wider text-charcoal-100">
-                  {invite.code}
-                </p>
-              </div>
             </div>
-          ) : invite?.status === "used" ? (
-            <div className="space-y-5">
-              <h1 className="text-3xl font-bold text-charcoal-100 sm:text-4xl">
-                이미 사용된 추천 코드
-              </h1>
-              <p className="max-w-md text-sm text-charcoal-400">
-                이 코드는 이미 누군가 사용했어요. 그래도 바로 가입할 수
-                있어요 — 아래 폼에서 코드를 비워두고 진행하세요.
-              </p>
-              <InvitePerks />
-            </div>
-          ) : invite?.status === "invalid" ? (
+          ) : rawRef ? (
             <div className="space-y-5">
               <h1 className="text-3xl font-bold text-charcoal-100 sm:text-4xl">
                 Orbit42에 오신 걸 환영해요
               </h1>
               <p className="max-w-md text-sm text-charcoal-400">
-                링크에 포함된 추천 코드를 찾지 못했지만, 그냥 가입해도
-                괜찮아요. 지인에게 받은 코드가 있다면 아래에 입력하세요.
+                @{rawRef} 라는 사용자를 찾지 못했어요. 그래도 바로 가입할 수
+                있어요 — 지인에게 다시 아이디를 확인해보시거나, 아래 폼에서
+                추천인을 비워두고 진행하세요.
               </p>
               <InvitePerks />
             </div>
@@ -107,8 +89,8 @@ export default async function SignupPage({
                 오신 걸 환영해요
               </h1>
               <p className="max-w-md text-sm leading-relaxed text-charcoal-400">
-                누구나 바로 가입할 수 있어요. 지인에게 추천 코드를 받으셨다면
-                아래에 입력해주세요 — 초대한 분과 자동으로 연결돼요.
+                누구나 바로 가입할 수 있어요. 지인이 추천했다면 아래에 그분의
+                @username 을 넣어주세요 — 가입과 동시에 자동으로 연결됩니다.
               </p>
               <InvitePerks />
             </div>
@@ -119,14 +101,14 @@ export default async function SignupPage({
         <div className="w-full md:w-[380px]">
           <div className="rounded-2xl border border-charcoal-800 bg-charcoal-900/60 p-6 shadow-2xl backdrop-blur sm:p-7">
             <h2 className="mb-1 text-base font-semibold text-charcoal-100">
-              {validInvite ? "초대 수락" : "계정 만들기"}
+              {referrer ? "초대 수락" : "계정 만들기"}
             </h2>
             <p className="mb-5 text-xs text-charcoal-500">
-              {validInvite
+              {referrer
                 ? "몇 가지 정보만 입력하면 시작할 수 있어요."
                 : "1분이면 가입할 수 있어요."}
             </p>
-            <SignupForm initialCode={rawCode} />
+            <SignupForm initialRef={referrer?.username ?? ""} />
             <p className="mt-5 text-center text-xs text-charcoal-500">
               이미 계정이 있으신가요?{" "}
               <Link
@@ -154,8 +136,8 @@ function InvitePerks() {
       body: "비어 있는 시간을 1:1 슬롯으로 열어 예약·수익 창출.",
     },
     {
-      title: "초대 3장",
-      body: "가입하면 지인 3명을 초대할 수 있는 코드가 자동 발급돼요.",
+      title: "무제한 추천",
+      body: "@username 하나로 지인을 마음껏 초대할 수 있어요.",
     },
   ];
   return (

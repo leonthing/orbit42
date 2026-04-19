@@ -15,37 +15,30 @@ export default async function AdminPage() {
 
   const db = getAdminClient();
 
-  const [usersRes, slotsRes, bookingsRes, messagesRes, invitesRes] =
-    await Promise.all([
-      db
-        .from("users")
-        .select("id, username, display_name, email, email_verified, avatar_url, created_at")
-        .order("created_at", { ascending: false })
-        .limit(500),
-      db.from("time_slots").select("id", { count: "exact", head: true }),
-      db.from("bookings").select("id", { count: "exact", head: true }),
-      db.from("messages").select("id", { count: "exact", head: true }),
-      db
-        .from("invite_codes")
-        .select("id, code, creator_id, used_by, used_at, created_at"),
-    ]);
+  const [usersRes, slotsRes, bookingsRes, messagesRes] = await Promise.all([
+    db
+      .from("users")
+      .select("id, username, display_name, email, email_verified, avatar_url, created_at, invited_by_user_id")
+      .order("created_at", { ascending: false })
+      .limit(500),
+    db.from("time_slots").select("id", { count: "exact", head: true }),
+    db.from("bookings").select("id", { count: "exact", head: true }),
+    db.from("messages").select("id", { count: "exact", head: true }),
+  ]);
 
   const users = usersRes.data ?? [];
-  const invites = invitesRes.data ?? [];
 
-  // Map each user → their inviter (the creator of the invite_code they used).
   const inviterByUser = new Map<string, string>();
-  for (const inv of invites) {
-    if (inv.used_by && inv.creator_id) {
-      inviterByUser.set(inv.used_by as string, inv.creator_id as string);
+  for (const u of users) {
+    if (u.invited_by_user_id) {
+      inviterByUser.set(u.id as string, u.invited_by_user_id as string);
     }
   }
   const usernameById = new Map<string, string>(
     users.map((u) => [u.id as string, u.username as string]),
   );
 
-  const totalInvitesUsed = invites.filter((i) => i.used_by).length;
-  const totalInvitesOpen = invites.filter((i) => !i.used_by).length;
+  const totalReferred = inviterByUser.size;
 
   return (
     <div className="min-h-screen bg-[rgb(var(--bg-base))]">
@@ -78,10 +71,7 @@ export default async function AdminPage() {
           <Stat label="슬롯" value={slotsRes.count ?? 0} />
           <Stat label="예약" value={bookingsRes.count ?? 0} />
           <Stat label="메시지" value={messagesRes.count ?? 0} />
-          <Stat
-            label="초대코드"
-            value={`${totalInvitesUsed} / ${totalInvitesUsed + totalInvitesOpen}`}
-          />
+          <Stat label="추천 가입" value={totalReferred} />
         </div>
 
         <div className="mt-8 overflow-hidden rounded-xl border border-charcoal-800/60 bg-charcoal-900/30">
@@ -95,7 +85,7 @@ export default async function AdminPage() {
                 <tr className="border-b border-charcoal-800/40 text-left text-[11px] uppercase tracking-wider text-charcoal-500">
                   <th className="px-5 py-2 font-semibold">사용자</th>
                   <th className="px-3 py-2 font-semibold">이메일</th>
-                  <th className="px-3 py-2 font-semibold">초대한 사람</th>
+                  <th className="px-3 py-2 font-semibold">추천인</th>
                   <th className="px-3 py-2 font-semibold">가입일</th>
                   <th className="px-3 py-2 font-semibold" />
                 </tr>

@@ -89,7 +89,7 @@ export function inviteUsedBody(args: {
     <div style="font-family:ui-sans-serif,system-ui,-apple-system;line-height:1.55;color:#111">
       <h2 style="margin:0 0 12px">${escapeHtml(args.inviteeLabel)}님이 가입했어요 🎉</h2>
       <p style="margin:0 0 12px;color:#333">
-        당신의 초대 코드로 새로운 궤도가 생겼습니다. 인사 한 마디 남겨보세요.
+        당신의 추천으로 새로운 궤도가 생겼습니다. 인사 한 마디 남겨보세요.
       </p>
       <p style="margin:16px 0">
         <a href="${url}" style="display:inline-block;padding:10px 18px;border-radius:8px;background:#dc2626;color:#fff;text-decoration:none;font-weight:600">@${args.inviteeUsername} 프로필 열기</a>
