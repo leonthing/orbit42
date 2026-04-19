@@ -10,11 +10,19 @@ CREATE INDEX IF NOT EXISTS users_invited_by_idx
   ON users (invited_by_user_id);
 
 -- Backfill from existing invite_codes: whoever claimed a code was
--- invited by that code's creator. Only touches users that don't
--- already have a referrer set.
-UPDATE users u
-SET invited_by_user_id = ic.creator_id
-FROM invite_codes ic
-WHERE ic.used_by = u.id
-  AND u.invited_by_user_id IS NULL
-  AND ic.creator_id <> u.id;
+-- invited by that code's creator. Guarded so this file is still
+-- safe to re-run after invite_codes has been dropped.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = current_schema() AND table_name = 'invite_codes'
+  ) THEN
+    UPDATE users u
+    SET invited_by_user_id = ic.creator_id
+    FROM invite_codes ic
+    WHERE ic.used_by = u.id
+      AND u.invited_by_user_id IS NULL
+      AND ic.creator_id <> u.id;
+  END IF;
+END $$;
