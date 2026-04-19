@@ -10,4 +10,5 @@ export const NAV_ITEMS = [
   { href: "/services", label: "Services", icon: "ticket" },
   { href: "/bookings", label: "Bookings", icon: "schedule" },
   { href: "/blog", label: "Posts", icon: "blog" },
+  { href: "/settings", label: "Settings", icon: "cog" },
 ] as const;
