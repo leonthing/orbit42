@@ -463,6 +463,131 @@ export async function cloneSlot(id: string) {
   return { ok: true as const, id: created.id as string };
 }
 
+/**
+ * Starter pack: creates three ready-to-tweak slots (업무 미팅, 식사,
+ * 커피챗) with sensible defaults so a new host can go from zero to
+ * "shareable bookable links" in one click. Skips titles that already
+ * exist to avoid duplicates on repeat clicks.
+ */
+export async function createDefaultSlotPresets(): Promise<
+  { ok: true; created: number } | { error: string }
+> {
+  const userId = await requireUserId();
+  const db = getAdminClient();
+
+  // Pick a default calendar (prefer user's flagged default, else any).
+  const { data: cal } = await db
+    .from("calendars")
+    .select("id")
+    .eq("user_id", userId)
+    .order("is_default", { ascending: false })
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  const calendarId = (cal?.id as string | undefined) ?? null;
+
+  // Don't clobber existing slots with the same title.
+  const titles = ["업무 미팅", "식사", "커피챗"] as const;
+  const { data: existingRows } = await db
+    .from("time_slots")
+    .select("title")
+    .eq("host_id", userId)
+    .in("title", titles as unknown as string[]);
+  const existing = new Set(
+    ((existingRows ?? []) as Array<{ title: string }>).map((r) => r.title),
+  );
+
+  const presets: Array<Parameters<typeof createSlot>[0] & { title: string }> = [
+    {
+      title: "업무 미팅",
+      description: "1:1 업무 논의 · 60분. 평일 낮에 받는 공식 미팅 슬롯.",
+      duration_min: 60,
+      price_cents: 0,
+      capacity: 1,
+      slot_type: "1on1",
+      location_type: "in_person",
+      mode: "auto",
+      working_hours: {
+        mon: [{ start: "10:00", end: "18:00" }],
+        tue: [{ start: "10:00", end: "18:00" }],
+        wed: [{ start: "10:00", end: "18:00" }],
+        thu: [{ start: "10:00", end: "18:00" }],
+        fri: [{ start: "10:00", end: "18:00" }],
+      },
+      slot_interval_min: 30,
+      min_notice_hours: 24,
+      max_advance_days: 90,
+      buffer_min: 15,
+      calendar_id: calendarId,
+      auto_approve: false,
+      payment_method: "offline",
+      show_on_feed: true,
+      active: true,
+    },
+    {
+      title: "식사",
+      description: "같이 밥 먹으며 나누는 이야기 · 90분. 점심/저녁.",
+      duration_min: 90,
+      price_cents: 0,
+      capacity: 1,
+      slot_type: "companion",
+      location_type: "in_person",
+      mode: "auto",
+      working_hours: {
+        mon: [{ start: "12:00", end: "14:00" }, { start: "18:00", end: "21:00" }],
+        tue: [{ start: "12:00", end: "14:00" }, { start: "18:00", end: "21:00" }],
+        wed: [{ start: "12:00", end: "14:00" }, { start: "18:00", end: "21:00" }],
+        thu: [{ start: "12:00", end: "14:00" }, { start: "18:00", end: "21:00" }],
+        fri: [{ start: "12:00", end: "14:00" }, { start: "18:00", end: "21:00" }],
+        sat: [{ start: "12:00", end: "14:00" }],
+        sun: [{ start: "12:00", end: "14:00" }],
+      },
+      slot_interval_min: 30,
+      min_notice_hours: 12,
+      max_advance_days: 30,
+      buffer_min: 30,
+      calendar_id: calendarId,
+      auto_approve: false,
+      payment_method: "offline",
+      show_on_feed: true,
+      active: true,
+    },
+    {
+      title: "커피챗",
+      description: "가볍게 30분 대화 · 주말에 편하게.",
+      duration_min: 30,
+      price_cents: 0,
+      capacity: 1,
+      slot_type: "1on1",
+      location_type: "in_person",
+      mode: "auto",
+      working_hours: {
+        sat: [{ start: "10:00", end: "18:00" }],
+        sun: [{ start: "10:00", end: "18:00" }],
+      },
+      slot_interval_min: 15,
+      min_notice_hours: 1,
+      max_advance_days: 14,
+      buffer_min: 10,
+      calendar_id: calendarId,
+      auto_approve: true,
+      payment_method: "offline",
+      show_on_feed: true,
+      active: true,
+    },
+  ];
+
+  let created = 0;
+  for (const preset of presets) {
+    if (existing.has(preset.title)) continue;
+    const res = await createSlot(preset);
+    if (res && "success" in res && res.success) created += 1;
+  }
+
+  revalidatePath("/", "layout");
+  return { ok: true, created };
+}
+
 /** Client helper: re-compute bookable options for the current guest's
  * chosen location. Lets the booking form filter times per location
  * without a full page reload. */

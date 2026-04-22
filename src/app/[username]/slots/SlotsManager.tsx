@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   createSlot,
+  createDefaultSlotPresets,
   deleteSlot,
   cloneSlot,
   addAvailability,
@@ -49,6 +50,29 @@ export default function SlotsManager({
 }) {
   const router = useRouter();
   const [showNew, setShowNew] = useState(initial.length === 0);
+  const [presetPending, startPresetTransition] = useTransition();
+
+  const addPresets = () => {
+    if (
+      !confirm(
+        "업무 미팅 · 식사 · 커피챗 3개를 기본 설정으로 추가할까요?\n(이미 같은 이름의 슬롯이 있으면 건너뛰어요)",
+      )
+    )
+      return;
+    startPresetTransition(async () => {
+      const res = await createDefaultSlotPresets();
+      if ("error" in res) {
+        alert(res.error);
+        return;
+      }
+      router.refresh();
+      alert(
+        res.created === 0
+          ? "이미 모두 있어요. 새로 추가된 슬롯은 없어요."
+          : `${res.created}개 추가했어요. 슬롯을 열어서 장소·가격 등을 조정해주세요.`,
+      );
+    });
+  };
 
   return (
     <div className="space-y-8">
@@ -59,15 +83,25 @@ export default function SlotsManager({
             내 타임 슬롯을 공유하거나 판매하여 수익을 창출하세요.
           </p>
         </div>
-        {!showNew && (
+        <div className="flex shrink-0 items-center gap-2">
           <button
             type="button"
-            onClick={() => setShowNew(true)}
-            className="shrink-0 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
+            onClick={addPresets}
+            disabled={presetPending}
+            className="rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2 text-xs font-medium text-charcoal-200 hover:border-charcoal-700 hover:text-white disabled:opacity-60"
           >
-            새 슬롯 만들기
+            {presetPending ? "만드는 중…" : "+ 기본 프리셋"}
           </button>
-        )}
+          {!showNew && (
+            <button
+              type="button"
+              onClick={() => setShowNew(true)}
+              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
+            >
+              새 슬롯 만들기
+            </button>
+          )}
+        </div>
       </header>
 
       {showNew && (
