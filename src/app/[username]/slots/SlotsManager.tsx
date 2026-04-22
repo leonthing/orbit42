@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   createSlot,
-  createDefaultSlotPresets,
+  createSlotFromPreset,
   deleteSlot,
   cloneSlot,
   addAvailability,
@@ -51,26 +51,21 @@ export default function SlotsManager({
   const router = useRouter();
   const [showNew, setShowNew] = useState(initial.length === 0);
   const [presetPending, startPresetTransition] = useTransition();
+  const [presetPicker, setPresetPicker] = useState(false);
 
-  const addPresets = () => {
-    if (
-      !confirm(
-        "업무 미팅 · 식사 · 커피챗 3개를 기본 설정으로 추가할까요?\n(이미 같은 이름의 슬롯이 있으면 건너뛰어요)",
-      )
-    )
-      return;
+  const pickPreset = (key: "meeting" | "meal" | "coffee", label: string) => {
     startPresetTransition(async () => {
-      const res = await createDefaultSlotPresets();
+      const res = await createSlotFromPreset(key);
       if ("error" in res) {
         alert(res.error);
         return;
       }
+      if ("skipped" in res) {
+        alert(`"${label}" 슬롯이 이미 있어서 건너뛰었어요.`);
+        return;
+      }
+      setPresetPicker(false);
       router.refresh();
-      alert(
-        res.created === 0
-          ? "이미 모두 있어요. 새로 추가된 슬롯은 없어요."
-          : `${res.created}개 추가했어요. 슬롯을 열어서 장소·가격 등을 조정해주세요.`,
-      );
     });
   };
 
@@ -86,11 +81,10 @@ export default function SlotsManager({
         <div className="flex shrink-0 items-center gap-2">
           <button
             type="button"
-            onClick={addPresets}
-            disabled={presetPending}
-            className="rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2 text-xs font-medium text-charcoal-200 hover:border-charcoal-700 hover:text-white disabled:opacity-60"
+            onClick={() => setPresetPicker((v) => !v)}
+            className="rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2 text-xs font-medium text-charcoal-200 hover:border-charcoal-700 hover:text-white"
           >
-            {presetPending ? "만드는 중…" : "+ 기본 프리셋"}
+            {presetPicker ? "닫기" : "+ 템플릿에서"}
           </button>
           {!showNew && (
             <button
@@ -103,6 +97,41 @@ export default function SlotsManager({
           )}
         </div>
       </header>
+
+      {presetPicker && (
+        <section className="rounded-2xl border border-charcoal-800/60 bg-charcoal-900/30 p-5">
+          <p className="mb-1 text-sm font-semibold text-charcoal-100">
+            템플릿 선택
+          </p>
+          <p className="mb-4 text-xs text-charcoal-500">
+            클릭하면 해당 기본 설정으로 슬롯 하나를 만들어요. 만든 뒤 열어서
+            장소·가격 등을 조정하세요.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <PresetCard
+              title="업무 미팅"
+              hint="60분 · 평일 10–18 · 24h 전까지"
+              meta="수동 승인 · buffer 15분"
+              onClick={() => pickPreset("meeting", "업무 미팅")}
+              pending={presetPending}
+            />
+            <PresetCard
+              title="식사"
+              hint="90분 · 평일 점심/저녁 + 주말 점심"
+              meta="수동 승인 · buffer 30분"
+              onClick={() => pickPreset("meal", "식사")}
+              pending={presetPending}
+            />
+            <PresetCard
+              title="커피챗"
+              hint="30분 · 주말 10–18 · 1h 전까지"
+              meta="자동 승인 · buffer 10분"
+              onClick={() => pickPreset("coffee", "커피챗")}
+              pending={presetPending}
+            />
+          </div>
+        </section>
+      )}
 
       {showNew && (
         <NewSlotForm
@@ -962,6 +991,37 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <span className="mb-1 block text-xs font-medium text-charcoal-400">{label}</span>
       {children}
     </label>
+  );
+}
+
+function PresetCard({
+  title,
+  hint,
+  meta,
+  onClick,
+  pending,
+}: {
+  title: string;
+  hint: string;
+  meta: string;
+  onClick: () => void;
+  pending: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={pending}
+      className="group flex h-full flex-col items-start gap-1.5 rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 p-4 text-left transition-colors hover:border-red-500/60 hover:bg-red-500/5 disabled:opacity-60"
+    >
+      <p className="text-sm font-semibold text-charcoal-100 group-hover:text-red-300">
+        {title}
+      </p>
+      <p className="text-[11px] leading-relaxed text-charcoal-400">{hint}</p>
+      <p className="mt-auto pt-2 text-[10px] uppercase tracking-wider text-charcoal-600">
+        {meta}
+      </p>
+    </button>
   );
 }
 

@@ -464,13 +464,14 @@ export async function cloneSlot(id: string) {
 }
 
 /**
- * Starter pack: creates three ready-to-tweak slots (업무 미팅, 식사,
- * 커피챗) with sensible defaults so a new host can go from zero to
- * "shareable bookable links" in one click. Skips titles that already
- * exist to avoid duplicates on repeat clicks.
+ * Single-click template: creates one ready-to-tweak slot from a named
+ * preset. Skips if a slot with the same title already exists so users
+ * don't accidentally duplicate.
  */
-export async function createDefaultSlotPresets(): Promise<
-  { ok: true; created: number } | { error: string }
+export async function createSlotFromPreset(
+  key: "meeting" | "meal" | "coffee",
+): Promise<
+  { ok: true; slug: string; id: string } | { skipped: true } | { error: string }
 > {
   const userId = await requireUserId();
   const db = getAdminClient();
@@ -486,27 +487,47 @@ export async function createDefaultSlotPresets(): Promise<
     .maybeSingle();
   const calendarId = (cal?.id as string | undefined) ?? null;
 
-  // Don't clobber existing slots with the same title.
-  const titles = ["업무 미팅", "식사", "커피챗"] as const;
-  const { data: existingRows } = await db
-    .from("time_slots")
-    .select("title")
-    .eq("host_id", userId)
-    .in("title", titles as unknown as string[]);
-  const existing = new Set(
-    ((existingRows ?? []) as Array<{ title: string }>).map((r) => r.title),
-  );
+  const preset = buildSlotPreset(key, calendarId);
+  if (!preset) return { error: "알 수 없는 템플릿입니다." };
 
-  const presets: Array<Parameters<typeof createSlot>[0] & { title: string }> = [
-    {
+  const { data: existing } = await db
+    .from("time_slots")
+    .select("id")
+    .eq("host_id", userId)
+    .eq("title", preset.title)
+    .limit(1)
+    .maybeSingle();
+  if (existing) return { skipped: true };
+
+  const res = await createSlot(preset);
+  if (!("success" in res) || !res.success) {
+    return { error: ("error" in res && res.error) || "생성 실패" };
+  }
+  revalidatePath("/", "layout");
+  return { ok: true, slug: res.slug, id: res.id };
+}
+
+function buildSlotPreset(
+  key: "meeting" | "meal" | "coffee",
+  calendarId: string | null,
+): SlotInput & { title: string } | null {
+  const base = {
+    price_cents: 0,
+    capacity: 1,
+    calendar_id: calendarId,
+    payment_method: "offline" as const,
+    show_on_feed: true,
+    active: true,
+    mode: "auto" as const,
+  };
+  if (key === "meeting") {
+    return {
+      ...base,
       title: "업무 미팅",
       description: "1:1 업무 논의 · 60분. 평일 낮에 받는 공식 미팅 슬롯.",
       duration_min: 60,
-      price_cents: 0,
-      capacity: 1,
       slot_type: "1on1",
       location_type: "in_person",
-      mode: "auto",
       working_hours: {
         mon: [{ start: "10:00", end: "18:00" }],
         tue: [{ start: "10:00", end: "18:00" }],
@@ -518,21 +539,17 @@ export async function createDefaultSlotPresets(): Promise<
       min_notice_hours: 24,
       max_advance_days: 90,
       buffer_min: 15,
-      calendar_id: calendarId,
       auto_approve: false,
-      payment_method: "offline",
-      show_on_feed: true,
-      active: true,
-    },
-    {
+    };
+  }
+  if (key === "meal") {
+    return {
+      ...base,
       title: "식사",
       description: "같이 밥 먹으며 나누는 이야기 · 90분. 점심/저녁.",
       duration_min: 90,
-      price_cents: 0,
-      capacity: 1,
       slot_type: "companion",
       location_type: "in_person",
-      mode: "auto",
       working_hours: {
         mon: [{ start: "12:00", end: "14:00" }, { start: "18:00", end: "21:00" }],
         tue: [{ start: "12:00", end: "14:00" }, { start: "18:00", end: "21:00" }],
@@ -546,21 +563,17 @@ export async function createDefaultSlotPresets(): Promise<
       min_notice_hours: 12,
       max_advance_days: 30,
       buffer_min: 30,
-      calendar_id: calendarId,
       auto_approve: false,
-      payment_method: "offline",
-      show_on_feed: true,
-      active: true,
-    },
-    {
+    };
+  }
+  if (key === "coffee") {
+    return {
+      ...base,
       title: "커피챗",
       description: "가볍게 30분 대화 · 주말에 편하게.",
       duration_min: 30,
-      price_cents: 0,
-      capacity: 1,
       slot_type: "1on1",
       location_type: "in_person",
-      mode: "auto",
       working_hours: {
         sat: [{ start: "10:00", end: "18:00" }],
         sun: [{ start: "10:00", end: "18:00" }],
@@ -569,23 +582,10 @@ export async function createDefaultSlotPresets(): Promise<
       min_notice_hours: 1,
       max_advance_days: 14,
       buffer_min: 10,
-      calendar_id: calendarId,
       auto_approve: true,
-      payment_method: "offline",
-      show_on_feed: true,
-      active: true,
-    },
-  ];
-
-  let created = 0;
-  for (const preset of presets) {
-    if (existing.has(preset.title)) continue;
-    const res = await createSlot(preset);
-    if (res && "success" in res && res.success) created += 1;
+    };
   }
-
-  revalidatePath("/", "layout");
-  return { ok: true, created };
+  return null;
 }
 
 /** Client helper: re-compute bookable options for the current guest's
