@@ -78,10 +78,14 @@ export default async function SlotPage({
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <Link
-        href={`/${params.username}`}
+        href={
+          isOwner
+            ? `/${params.username}/slots`
+            : `/${params.username}`
+        }
         className="inline-flex items-center gap-1 text-xs text-charcoal-500 hover:text-charcoal-300"
       >
-        ← {host.display_name || host.username}
+        ← {isOwner ? "Timeslots" : host.display_name || host.username}
       </Link>
 
       <header className="overflow-hidden rounded-2xl border border-charcoal-800/60 bg-charcoal-900/30">
