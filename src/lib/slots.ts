@@ -570,15 +570,15 @@ function buildSlotPreset(
     return {
       ...base,
       title: "커피챗",
-      description: "가볍게 30분 대화 · 주말에 편하게.",
-      duration_min: 30,
+      description: "가볍게 1시간 대화 · 주말에 편하게.",
+      duration_min: 60,
       slot_type: "1on1",
       location_type: "in_person",
       working_hours: {
         sat: [{ start: "10:00", end: "18:00" }],
         sun: [{ start: "10:00", end: "18:00" }],
       },
-      slot_interval_min: 15,
+      slot_interval_min: 60,
       min_notice_hours: 1,
       max_advance_days: 14,
       buffer_min: 10,

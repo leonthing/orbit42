@@ -68,59 +68,30 @@ export async function getProfileWeek(
     }
   }
 
-  // Materialize bookable options per slot, then merge consecutive options
-  // into visual windows so the calendar stays readable when Auto-mode slots
-  // generate many back-to-back 30-min options.
+  // Each bookable option renders as its own card on the calendar so
+  // the host can see every guest-facing slot candidate at a glance.
+  // Density is controlled at the preset level (duration / slot_interval).
   const slotItems: WeekItem[] = [];
   await Promise.all(
     slots.map(async (s) => {
       try {
         const optsRaw = await getBookableOptions(s);
-        const opts = optsRaw
-          .filter((o) => {
-            const t = new Date(o.start_at);
-            return t >= weekStart && t < weekEnd;
-          })
-          .sort(
-            (a, b) =>
-              new Date(a.start_at).getTime() - new Date(b.start_at).getTime(),
-          );
-
-        let i = 0;
-        while (i < opts.length) {
-          const windowStart = opts[i].start_at;
-          let windowEnd = opts[i].end_at;
-          let count = 1;
-          const startDay = dayKey(new Date(windowStart));
-          i++;
-          while (i < opts.length) {
-            const prevEnd = new Date(windowEnd).getTime();
-            const nextStart = new Date(opts[i].start_at).getTime();
-            const nextEnd = new Date(opts[i].end_at).getTime();
-            const sameDay = dayKey(new Date(opts[i].start_at)) === startDay;
-            // Merge if back-to-back OR overlapping and still on the same
-            // day. (Auto slots with slot_interval < duration generate
-            // overlapping candidates — collapse them into the bookable
-            // window instead of rendering each one.)
-            if (sameDay && nextStart <= prevEnd) {
-              if (nextEnd > prevEnd) windowEnd = opts[i].end_at;
-              count++;
-              i++;
-            } else {
-              break;
-            }
-          }
+        const opts = optsRaw.filter((o) => {
+          const t = new Date(o.start_at);
+          return t >= weekStart && t < weekEnd;
+        });
+        for (const o of opts) {
           slotItems.push({
             kind: "slot",
-            id: `${s.id}::${windowStart}`,
+            id: `${s.id}::${o.start_at}`,
             slot_id: s.id,
             slot_slug: s.slug,
-            start_at: windowStart,
-            end_at: windowEnd,
+            start_at: o.start_at,
+            end_at: o.end_at,
             title: s.title,
             price_cents: s.price_cents,
             duration_min: s.duration_min,
-            option_count: count,
+            option_count: 1,
             pricing_model: s.pricing_model,
             reserve_price_cents: s.reserve_price_cents,
             auction_ends_at: s.auction_ends_at,
