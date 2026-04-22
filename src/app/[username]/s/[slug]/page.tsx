@@ -226,7 +226,13 @@ async function BookingSection({
             loggedIn={!!session}
             priceCents={slot.price_cents}
             slotTitle={slot.title}
-            locations={slot.locations ?? []}
+            locations={
+              slot.locations && slot.locations.length > 0
+                ? slot.locations
+                : slot.location_detail
+                  ? [slot.location_detail]
+                  : []
+            }
             paymentMethod={slot.payment_method}
             menus={menus.map((m) => ({
               id: m.id,

@@ -145,7 +145,7 @@ export default function BookingForm({
 
   return (
     <form onSubmit={proceed} className="space-y-5">
-      {locations.length > 1 && (
+      {locations.length >= 1 && (
         <div className="rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 p-4">
           <p className="mb-2 text-xs font-semibold text-charcoal-200">
             어디서 만날까요?
@@ -158,29 +158,29 @@ export default function BookingForm({
                   key={loc}
                   type="button"
                   onClick={() => setSelectedLocation(loc)}
-                  disabled={locPending}
-                  className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                  disabled={locPending || locations.length === 1}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                     active
                       ? "border-red-500 bg-red-500/15 text-red-700 dark:text-red-300"
                       : "border-charcoal-800/60 bg-charcoal-800/20 text-charcoal-300 hover:border-charcoal-700"
                   }`}
                 >
-                  {loc}
+                  📍 {loc}
                 </button>
               );
             })}
           </div>
-          <p className="mt-2 text-[11px] text-charcoal-500">
-            호스트의 일정에 따라 선택한 위치에서 가능한 시간만 보여져요.
-            {locPending && " · 시간 다시 계산 중…"}
-          </p>
+          {locations.length > 1 ? (
+            <p className="mt-2 text-[11px] text-charcoal-500">
+              선택한 위치에서 호스트 일정에 따라 가능한 시간만 보여져요.
+              {locPending && " · 시간 다시 계산 중…"}
+            </p>
+          ) : (
+            <p className="mt-2 text-[11px] text-charcoal-500">
+              이 위치에서 만나요.
+            </p>
+          )}
         </div>
-      )}
-
-      {locations.length <= 1 && locations[0] && (
-        <p className="rounded-md bg-charcoal-800/30 px-3 py-2 text-xs text-charcoal-400">
-          📍 {locations[0]}
-        </p>
       )}
 
       {options.length === 0 ? (
