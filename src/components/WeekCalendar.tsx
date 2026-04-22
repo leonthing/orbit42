@@ -90,7 +90,7 @@ export function WeekCalendar({
           the time axis + 2 day cols ≈ 360px viewport. Users swipe the
           rest. Desktop fits all 7 days naturally. */}
       <div className="overflow-x-auto md:overflow-x-visible">
-        <div className="w-[calc(44px+7*168px)] md:w-full">
+        <div className="w-[calc(44px+7*132px)] sm:w-[calc(44px+7*168px)] md:w-full">
           {/* Day headers */}
           <div className="grid grid-cols-[44px_repeat(7,minmax(0,1fr))] border-b border-charcoal-800/40 bg-charcoal-900/30">
             <div className="border-r border-charcoal-800/40" />
