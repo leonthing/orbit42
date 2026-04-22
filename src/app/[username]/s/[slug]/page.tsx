@@ -7,7 +7,7 @@ import { listMenusForSlot } from "@/lib/menus";
 import { getSession } from "@/lib/auth";
 import BookingForm from "./BookingForm";
 import AuctionPanel from "./AuctionPanel";
-import { SlotDatePreview } from "@/components/SlotDatePicker";
+import OwnerBookingPreview from "./OwnerBookingPreview";
 
 function formatWindow(from: string | null, until: string | null): string {
   const fmt = (iso: string) =>
@@ -141,7 +141,15 @@ export default async function SlotPage({
               : `₩${(slot.price_cents / 100).toLocaleString("ko-KR")}`}
           {" · "}
           {slot.slot_type}
-          {slot.location_detail && ` · ${slot.location_detail}`}
+          {(() => {
+            const locs =
+              slot.locations && slot.locations.length > 0
+                ? slot.locations
+                : slot.location_detail
+                  ? [slot.location_detail]
+                  : [];
+            return locs.length > 0 ? ` · ${locs.join(" / ")}` : "";
+          })()}
         </p>
         {slot.description && (
           <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-charcoal-300">
@@ -216,12 +224,17 @@ async function BookingSection({
           예약 가능한 시간이 없어요. 잠시 후 다시 확인해주세요.
         </p>
       ) : isOwner ? (
-        <div className="mt-4 space-y-3">
-          <p className="text-xs text-charcoal-500">
-            본인은 예약할 수 없지만, 게스트에게 노출되는 시간을 미리 확인할 수 있어요.
-          </p>
-          <SlotDatePreview options={options} />
-        </div>
+        <OwnerBookingPreview
+          slotId={slot.id}
+          options={options}
+          locations={
+            slot.locations && slot.locations.length > 0
+              ? slot.locations
+              : slot.location_detail
+                ? [slot.location_detail]
+                : []
+          }
+        />
       ) : (
         <div className="mt-4">
           <BookingForm
