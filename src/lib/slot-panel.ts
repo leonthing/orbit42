@@ -17,6 +17,7 @@ export type SlotPanelData = {
     | "price_cents"
     | "slot_type"
     | "location_detail"
+    | "locations"
     | "active"
     | "mode"
     | "pricing_model"
@@ -54,6 +55,7 @@ export async function getSlotPanelData(
       price_cents: slot.price_cents,
       slot_type: slot.slot_type,
       location_detail: slot.location_detail,
+      locations: slot.locations ?? [],
       active: slot.active,
       mode: slot.mode,
       pricing_model: slot.pricing_model,

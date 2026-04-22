@@ -202,7 +202,13 @@ export default async function SlotPage({
           isOwner={isOwner}
         />
       ) : (
-        <BookingSection slot={slot} username={params.username} session={session} isOwner={isOwner} />
+        <BookingSection
+          slot={slot}
+          username={params.username}
+          hostLabel={host.display_name || host.username}
+          session={session}
+          isOwner={isOwner}
+        />
       )}
     </div>
   );
@@ -210,11 +216,14 @@ export default async function SlotPage({
 
 async function BookingSection({
   slot,
+  username,
+  hostLabel,
   session,
   isOwner,
 }: {
   slot: import("@/lib/slots").TimeSlot;
   username: string;
+  hostLabel: string;
   session: { username: string } | null;
   isOwner: boolean;
 }) {
@@ -251,6 +260,8 @@ async function BookingSection({
             loggedIn={!!session}
             priceCents={slot.price_cents}
             slotTitle={slot.title}
+            hostUsername={username}
+            hostLabel={hostLabel}
             locations={
               slot.locations && slot.locations.length > 0
                 ? slot.locations

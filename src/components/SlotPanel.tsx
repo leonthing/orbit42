@@ -184,7 +184,7 @@ function SlotPanelBody({
   slug: string;
   startAt?: string;
 }) {
-  const { slot, isAuction, isOwner, loggedIn, options, menus } = data;
+  const { slot, host, isAuction, isOwner, loggedIn, options, menus } = data;
 
   return (
     <div className="space-y-5">
@@ -277,6 +277,15 @@ function SlotPanelBody({
                 loggedIn={loggedIn}
                 priceCents={slot.price_cents}
                 slotTitle={slot.title}
+                hostUsername={host.username}
+                hostLabel={host.display_name || host.username}
+                locations={
+                  slot.locations && slot.locations.length > 0
+                    ? slot.locations
+                    : slot.location_detail
+                      ? [slot.location_detail]
+                      : []
+                }
                 paymentMethod={slot.payment_method}
                 menus={menus.map((m) => ({
                   id: m.id,

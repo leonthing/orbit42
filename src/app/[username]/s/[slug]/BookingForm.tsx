@@ -22,6 +22,8 @@ export default function BookingForm({
   loggedIn,
   priceCents,
   slotTitle,
+  hostUsername,
+  hostLabel,
   locations = [],
   paymentMethod = "offline",
   menus = [],
@@ -31,6 +33,8 @@ export default function BookingForm({
   loggedIn: boolean;
   priceCents: number;
   slotTitle: string;
+  hostUsername: string;
+  hostLabel: string;
   locations?: string[];
   paymentMethod?: "online" | "offline";
   menus?: BookingMenu[];
@@ -121,10 +125,79 @@ export default function BookingForm({
   };
 
   if (stage === "done") {
+    const whenLabel = selectedOpt
+      ? new Date(selectedOpt.start_at).toLocaleString("ko-KR", {
+          timeZone: "Asia/Seoul",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          weekday: "short",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : null;
     return (
-      <div className="rounded-lg border border-emerald-700/40 bg-emerald-700/10 p-4 text-sm text-emerald-300">
-        예약이 완료되었습니다. 호스트의 캘린더에 이벤트가 추가되었고,
-        등록하신 이메일로 확인 메일이 발송됩니다.
+      <div className="space-y-5">
+        <div className="rounded-xl border border-emerald-700/40 bg-emerald-700/10 p-5">
+          <p className="flex items-center gap-2 text-sm font-semibold text-emerald-300">
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+            </svg>
+            예약이 완료됐어요
+          </p>
+          <p className="mt-2 text-sm text-charcoal-100">
+            <strong>{slotTitle}</strong> · {hostLabel}
+          </p>
+          {whenLabel && (
+            <p className="mt-0.5 text-xs text-charcoal-400">{whenLabel}</p>
+          )}
+          {selectedLocation && (
+            <p className="mt-0.5 text-xs text-charcoal-400">📍 {selectedLocation}</p>
+          )}
+          <p className="mt-3 text-xs text-charcoal-500">
+            등록하신 이메일로 확인 메일이 발송됐어요. 호스트의 캘린더에도 자동으로 일정이 추가됩니다.
+          </p>
+        </div>
+
+        {!loggedIn && (
+          <div className="rounded-2xl border border-red-500/30 bg-gradient-to-br from-red-600/10 to-charcoal-900/40 p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-red-400">
+              Orbit42
+            </p>
+            <h3 className="mt-1 text-lg font-bold text-charcoal-50">
+              @{hostUsername} 처럼 나만의 궤도 만들기
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-charcoal-300">
+              시간을 공유하고 예약받는 나만의 페이지를 30초 만에 만들 수 있어요.
+              지금 가입하면 @{hostUsername} 님과 자동으로 연결돼 첫 궤도가 생겨요.
+            </p>
+            <ul className="mt-4 space-y-1.5 text-xs text-charcoal-400">
+              <li className="flex gap-2">
+                <span className="text-red-400">◦</span> 구글 캘린더 연동 → 가능한 시간 자동 계산
+              </li>
+              <li className="flex gap-2">
+                <span className="text-red-400">◦</span> 링크 하나로 예약받기 (무료/유료/경매)
+              </li>
+              <li className="flex gap-2">
+                <span className="text-red-400">◦</span> 시간 인사이트 · 업무/개인 시간 분석
+              </li>
+            </ul>
+            <div className="mt-5 flex flex-wrap items-center gap-2">
+              <a
+                href={`/?mode=signup&ref=${encodeURIComponent(hostUsername)}#auth`}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
+              >
+                내 궤도 만들기 →
+              </a>
+              <a
+                href="/explore"
+                className="text-xs text-charcoal-500 hover:text-charcoal-300"
+              >
+                먼저 둘러보기
+              </a>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
