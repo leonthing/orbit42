@@ -11,6 +11,7 @@ import {
   publishBlogPost,
   unpublishBlogPost,
 } from "../../actions";
+import { uploadBlogImage } from "@/lib/blog-media";
 import SocialSharePanel from "./SocialSharePanel";
 
 type ToolbarAction = {
@@ -46,12 +47,6 @@ const TOOLBAR_ACTIONS: ToolbarAction[] = [
     label: "링크",
     prefix: "[",
     suffix: "](url)",
-  },
-  {
-    icon: <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0 0 22.5 18.75V5.25A2.25 2.25 0 0 0 20.25 3H3.75A2.25 2.25 0 0 0 1.5 5.25v13.5A2.25 2.25 0 0 0 3.75 21Z" />,
-    label: "이미지",
-    prefix: "![alt](",
-    suffix: ")",
   },
   {
     icon: <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 6.75 22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3-4.5 16.5" />,
@@ -106,6 +101,9 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
   const [showSettings, setShowSettings] = useState(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const parseTags = (input: string) =>
     input
@@ -202,6 +200,61 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
         ta.selectionStart = ta.selectionEnd = cursorPos;
       }
     });
+  }
+
+  async function uploadAndInsert(files: FileList | File[] | null | undefined) {
+    if (!files || files.length === 0) return;
+    setUploadError(null);
+    setUploading(true);
+    try {
+      for (const f of Array.from(files)) {
+        if (!f.type.startsWith("image/")) continue;
+        const fd = new FormData();
+        fd.append("file", f);
+        const res = await uploadBlogImage(fd);
+        if ("error" in res) {
+          setUploadError(res.error);
+          break;
+        }
+        const alt = f.name.replace(/\.[^/.]+$/, "") || "image";
+        const ta = textareaRef.current;
+        const snippet = `\n![${alt}](${res.url})\n`;
+        if (ta) {
+          const pos = ta.selectionStart;
+          const newContent =
+            content.slice(0, pos) + snippet + content.slice(pos);
+          setContent(newContent);
+          requestAnimationFrame(() => {
+            ta.selectionStart = ta.selectionEnd = pos + snippet.length;
+            ta.focus();
+          });
+        } else {
+          setContent((c) => c + snippet);
+        }
+      }
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function handleTextareaPaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
+    const items = Array.from(e.clipboardData?.items ?? []);
+    const files = items
+      .filter((it) => it.kind === "file" && it.type.startsWith("image/"))
+      .map((it) => it.getAsFile())
+      .filter((f): f is File => !!f);
+    if (files.length === 0) return;
+    e.preventDefault();
+    uploadAndInsert(files);
+  }
+
+  function handleTextareaDrop(e: React.DragEvent<HTMLTextAreaElement>) {
+    const files = Array.from(e.dataTransfer?.files ?? []).filter((f) =>
+      f.type.startsWith("image/"),
+    );
+    if (files.length === 0) return;
+    e.preventDefault();
+    uploadAndInsert(files);
   }
 
   function handleTextareaKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -301,7 +354,14 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
       value={content}
       onChange={(e) => setContent(e.target.value)}
       onKeyDown={handleTextareaKeyDown}
-      placeholder="내용을 작성하세요... (Markdown 지원)"
+      onPaste={handleTextareaPaste}
+      onDrop={handleTextareaDrop}
+      onDragOver={(e) => {
+        if (Array.from(e.dataTransfer?.items ?? []).some((it) => it.kind === "file")) {
+          e.preventDefault();
+        }
+      }}
+      placeholder="내용을 작성하세요... (Markdown 지원 · 이미지는 붙여넣기/드래그 가능)"
       className="flex-1 w-full resize-none rounded-xl border border-charcoal-700 bg-charcoal-800/50 p-5 text-sm leading-relaxed text-charcoal-100 placeholder:text-charcoal-700 focus:border-red-500 focus:outline-none font-mono"
     />
   );
@@ -450,8 +510,45 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
         <div className="mb-2 flex flex-wrap items-center gap-0.5 rounded-lg border border-charcoal-700 bg-charcoal-800/30 px-1.5 py-1">
           {TOOLBAR_ACTIONS.map((action, i) => (
             <span key={action.label} className="contents">
-              {(i === 3 || i === 5 || i === 7) && (
+              {(i === 3 || i === 4 || i === 6) && (
                 <span className="mx-1 h-4 w-px bg-charcoal-700" />
+              )}
+              {i === 4 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    title="이미지 업로드 (붙여넣기/드래그도 돼요)"
+                    className="rounded p-1.5 text-charcoal-500 transition-colors hover:bg-charcoal-700/50 hover:text-charcoal-200 disabled:opacity-50"
+                  >
+                    <svg
+                      className={`h-4 w-4 ${uploading ? "animate-pulse" : ""}`}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0 0 22.5 18.75V5.25A2.25 2.25 0 0 0 20.25 3H3.75A2.25 2.25 0 0 0 1.5 5.25v13.5A2.25 2.25 0 0 0 3.75 21Z"
+                      />
+                    </svg>
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      uploadAndInsert(e.target.files);
+                      if (e.target) e.target.value = "";
+                    }}
+                  />
+                  <span className="mx-1 h-4 w-px bg-charcoal-700" />
+                </>
               )}
               <button
                 onClick={() => insertMarkdown(action.prefix, action.suffix, action.block)}
@@ -464,6 +561,16 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
               </button>
             </span>
           ))}
+          {uploading && (
+            <span className="ml-2 text-[11px] text-charcoal-500">
+              업로드 중…
+            </span>
+          )}
+          {uploadError && (
+            <span className="ml-2 text-[11px] text-red-400">
+              {uploadError}
+            </span>
+          )}
         </div>
       )}
 
