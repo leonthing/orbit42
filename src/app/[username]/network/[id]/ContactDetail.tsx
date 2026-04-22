@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Contact } from "../actions";
 import { updateContact, deleteContact } from "../actions";
+import { useToast } from "@/components/Toast";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 export default function ContactDetail({
   contact,
@@ -13,6 +15,8 @@ export default function ContactDetail({
   username: string;
 }) {
   const router = useRouter();
+  const toast = useToast();
+  const confirm = useConfirm();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -47,21 +51,26 @@ export default function ContactDetail({
       setEditing(false);
       router.refresh();
     } catch {
-      alert("저장에 실패했습니다.");
+      toast.error("저장에 실패했습니다.");
     } finally {
       setSaving(false);
     }
   }
 
   async function handleDelete() {
-    if (!confirm("이 연락처를 삭제하시겠습니까?")) return;
+    const ok = await confirm({
+      title: "이 연락처를 삭제할까요?",
+      confirmLabel: "삭제",
+      danger: true,
+    });
+    if (!ok) return;
     setDeleting(true);
     try {
       await deleteContact(contact.id);
       router.push(`/${username}/network`);
       router.refresh();
     } catch {
-      alert("삭제에 실패했습니다.");
+      toast.error("삭제에 실패했습니다.");
       setDeleting(false);
     }
   }

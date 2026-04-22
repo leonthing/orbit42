@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import type { Contact, ContactInput } from "./actions";
 import { createContact, syncGoogleContacts } from "./actions";
+import { useToast } from "@/components/Toast";
 
 export default function ContactList({
   contacts: initialContacts,
@@ -17,6 +18,7 @@ export default function ContactList({
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const toast = useToast();
 
   const filtered = useMemo(() => {
     if (!search.trim()) return initialContacts;
@@ -50,7 +52,7 @@ export default function ContactList({
       setShowModal(false);
       router.refresh();
     } catch {
-      alert("저장에 실패했습니다.");
+      toast.error("저장에 실패했습니다.");
     } finally {
       setSaving(false);
     }
@@ -74,10 +76,12 @@ export default function ContactList({
                   window.location.href = "/api/google?return=network";
                   return;
                 }
-                alert(`동기화 완료: ${result.created}건 추가, ${result.updated}건 업데이트`);
+                toast.success(
+                  `동기화 완료: ${result.created}건 추가, ${result.updated}건 업데이트`,
+                );
                 router.refresh();
               } catch {
-                alert("동기화에 실패했습니다.");
+                toast.error("동기화에 실패했습니다.");
               } finally {
                 setSyncing(false);
               }

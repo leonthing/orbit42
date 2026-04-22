@@ -4,6 +4,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useState, useMemo, useTransition } from "react";
 import type { BlogPost } from "./actions";
 import { createBlogPost, deleteBlogPost, publishBlogPost, unpublishBlogPost } from "./actions";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 type Filter = "all" | "published" | "draft";
 
@@ -42,6 +43,7 @@ function contentPreview(content: string, max = 150) {
 export default function BlogPostList({ initialPosts }: { initialPosts: BlogPost[] }) {
   const router = useRouter();
   const params = useParams<{ username: string }>();
+  const confirm = useConfirm();
   const [posts, setPosts] = useState(initialPosts);
   const [filter, setFilter] = useState<Filter>("all");
   const [search, setSearch] = useState("");
@@ -70,9 +72,15 @@ export default function BlogPostList({ initialPosts }: { initialPosts: BlogPost[
     });
   }
 
-  function handleDelete(e: React.MouseEvent, id: string) {
+  async function handleDelete(e: React.MouseEvent, id: string) {
     e.stopPropagation();
-    if (!confirm("이 글을 삭제하시겠습니까?")) return;
+    const ok = await confirm({
+      title: "이 글을 삭제할까요?",
+      body: "삭제한 글은 되돌릴 수 없어요.",
+      confirmLabel: "삭제",
+      danger: true,
+    });
+    if (!ok) return;
     startTransition(async () => {
       await deleteBlogPost(id);
       setPosts((prev) => prev.filter((p) => p.id !== id));

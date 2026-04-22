@@ -8,6 +8,7 @@ import { toggleReaction } from "@/lib/reactions";
 import { getReactionsForMany } from "@/lib/reactions";
 import type { ReactionSummary } from "@/lib/reactions-types";
 import { Avatar } from "@/components/Avatar";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 function relTime(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
@@ -248,6 +249,7 @@ function CommentItem({
   const [replying, setReplying] = useState(false);
   const mine = viewerId === node.author.id;
   const heart = reactions.get(node.id)?.find((r) => r.emoji === "❤️");
+  const confirm = useConfirm();
 
   return (
     <li className={depth === 0 ? "" : "ml-6"}>
@@ -300,7 +302,12 @@ function CommentItem({
               <button
                 type="button"
                 onClick={async () => {
-                  if (confirm("이 댓글을 삭제할까요?")) {
+                  const ok = await confirm({
+                    title: "이 댓글을 삭제할까요?",
+                    confirmLabel: "삭제",
+                    danger: true,
+                  });
+                  if (ok) {
                     await deleteComment(node.id);
                     onChange();
                   }

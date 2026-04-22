@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { startConversation } from "@/lib/messages";
+import { useToast } from "@/components/Toast";
 
 export function MessageButton({
   targetUsername,
@@ -12,6 +13,7 @@ export function MessageButton({
   loggedIn: boolean;
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [pending, setPending] = useState(false);
 
   const onClick = async () => {
@@ -23,7 +25,7 @@ export function MessageButton({
     const res = await startConversation(targetUsername);
     setPending(false);
     if ("error" in res) {
-      alert(res.error);
+      toast.error(res.error ?? "메시지를 열 수 없어요.");
       return;
     }
     router.push(`/messages/${res.id}`);

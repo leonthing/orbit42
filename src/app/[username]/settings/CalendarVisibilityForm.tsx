@@ -15,6 +15,7 @@ import {
   type CalendarPurpose,
 } from "@/lib/calendar-settings-types";
 import type { GoogleCalendarInfo } from "../calendar/actions";
+import { useToast } from "@/components/Toast";
 
 const VISIBILITY: { value: CalendarVisibility; label: string; hint: string }[] = [
   { value: "private", label: "Private", hint: "나만 보기" },
@@ -59,6 +60,7 @@ export function CalendarVisibilityForm({
   const [savingId, setSavingId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const [showNew, setShowNew] = useState(false);
+  const toast = useToast();
 
   const changeVisibility = (id: string, next: CalendarVisibility) => {
     setRows((rs) => rs.map((r) => (r.cal.id === id ? { ...r, visibility: next } : r)));
@@ -66,7 +68,7 @@ export function CalendarVisibilityForm({
     startTransition(async () => {
       const res = await setCalendarVisibility(id, next);
       setSavingId(null);
-      if (res.error) alert(res.error);
+      if (res.error) toast.error(res.error);
       router.refresh();
     });
   };
@@ -77,7 +79,7 @@ export function CalendarVisibilityForm({
     startTransition(async () => {
       const res = await setCalendarPurpose(id, next);
       setSavingId(null);
-      if (res.error) alert(res.error);
+      if (res.error) toast.error(res.error);
       router.refresh();
     });
   };
@@ -207,13 +209,14 @@ function NewCalendarForm({ onDone }: { onDone: () => void }) {
   const [purpose, setPurpose] = useState<CalendarPurpose>("work");
   const [color, setColor] = useState<string>(CALENDAR_COLORS[0]);
   const [pending, startTransition] = useTransition();
+  const toast = useToast();
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return alert("이름을 입력해주세요.");
+    if (!name.trim()) return toast.error("이름을 입력해주세요.");
     startTransition(async () => {
       const res = await createGoogleCalendar({ name, purpose, color });
-      if (res.error) return alert(res.error);
+      if (res.error) return toast.error(res.error);
       setName("");
       onDone();
     });

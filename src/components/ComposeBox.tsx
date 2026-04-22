@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createFeedPost } from "@/lib/feed-posts";
 import { Avatar } from "@/components/Avatar";
+import { useToast } from "@/components/Toast";
 
 export function ComposeBox({
   viewerName,
@@ -28,6 +29,7 @@ export function ComposeBox({
   const [addToCalendar, setAddToCalendar] = useState(false);
   const [calendarStart, setCalendarStart] = useState("");
   const [pending, startTransition] = useTransition();
+  const toast = useToast();
 
   const remaining = 1000 - body.length;
 
@@ -48,8 +50,8 @@ export function ComposeBox({
         success?: boolean;
         warn?: string;
       };
-      if (res.error) return alert(res.error);
-      if (res.warn) alert(res.warn);
+      if (res.error) return toast.error(res.error);
+      if (res.warn) toast.info(res.warn);
       setBody("");
       setFiles([]);
       previews.forEach((u) => URL.revokeObjectURL(u));
@@ -215,7 +217,7 @@ export function ComposeBox({
               <ToolButton
                 onClick={() => {
                   if (!googleConnected) {
-                    alert("Google Calendar를 먼저 연결해주세요.");
+                    toast.info("Google Calendar를 먼저 연결해주세요.");
                     return;
                   }
                   setAddToCalendar((s) => !s);

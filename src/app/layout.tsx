@@ -3,6 +3,8 @@ import localFont from "next/font/local";
 import { Inter } from "next/font/google";
 import { SITE } from "@/lib/constants";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { ToastProvider } from "@/components/Toast";
+import { ConfirmProvider } from "@/components/ConfirmDialog";
 import "./globals.css";
 
 const pretendard = localFont({
@@ -52,7 +54,11 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="font-sans antialiased">
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <ConfirmProvider>
+            <ToastProvider>{children}</ToastProvider>
+          </ConfirmProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

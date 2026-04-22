@@ -5,6 +5,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateBookingStatus, cancelMyBooking } from "@/lib/slots";
 import type { BookingRow, GuestBookingRow } from "@/lib/slots";
+import { useToast } from "@/components/Toast";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 const STATUS_STYLES: Record<string, string> = {
   pending: "bg-amber-500/15 text-amber-800 ring-1 ring-amber-500/40 dark:text-amber-200 dark:ring-0",
@@ -63,11 +65,20 @@ export default function BookingsInbox({
     });
   };
 
-  const cancelSelf = (id: string) => {
-    if (!confirm("이 예약을 취소할까요?")) return;
+  const toast = useToast();
+  const confirm = useConfirm();
+  const cancelSelf = async (id: string) => {
+    const ok = await confirm({
+      title: "이 예약을 취소할까요?",
+      body: "호스트에게도 취소 알림이 전송돼요.",
+      confirmLabel: "예약 취소",
+      danger: true,
+    });
+    if (!ok) return;
     startTransition(async () => {
       const res = await cancelMyBooking(id);
-      if (res.error) alert(res.error);
+      if (res.error) toast.error(res.error);
+      else toast.success("예약을 취소했어요.");
       router.refresh();
     });
   };

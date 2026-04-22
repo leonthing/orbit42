@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { blockUser, unblockUser } from "@/lib/blocks";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 export function BlockMenu({
   targetUsername,
@@ -12,11 +13,12 @@ export function BlockMenu({
   initiallyBlocked: boolean;
 }) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [open, setOpen] = useState(false);
   const [blocked, setBlocked] = useState(initiallyBlocked);
   const [pending, start] = useTransition();
 
-  const toggle = () => {
+  const toggle = async () => {
     if (blocked) {
       start(async () => {
         await unblockUser(targetUsername);
@@ -25,7 +27,13 @@ export function BlockMenu({
         router.refresh();
       });
     } else {
-      if (!window.confirm(`@${targetUsername}을(를) 차단할까요? 서로 팔로우가 해제되고 메시지도 더 이상 주고받을 수 없어요.`)) return;
+      const ok = await confirm({
+        title: `@${targetUsername}을(를) 차단할까요?`,
+        body: "서로 팔로우가 해제되고 메시지도 더 이상 주고받을 수 없어요.",
+        confirmLabel: "차단",
+        danger: true,
+      });
+      if (!ok) return;
       start(async () => {
         await blockUser(targetUsername);
         setBlocked(true);

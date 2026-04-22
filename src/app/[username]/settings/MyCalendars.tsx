@@ -14,6 +14,8 @@ import {
   type CalendarPurpose,
   type CalendarVisibility,
 } from "@/lib/calendars-types";
+import { useToast } from "@/components/Toast";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 const VISIBILITY: { value: CalendarVisibility; label: string }[] = [
   { value: "private", label: "Private" },
@@ -78,6 +80,8 @@ export function MyCalendars({
 
 function CalendarRow({ calendar }: { calendar: Calendar }) {
   const router = useRouter();
+  const toast = useToast();
+  const confirm = useConfirm();
   const [pending, startTransition] = useTransition();
   const [color, setColor] = useState(calendar.color);
 
@@ -101,16 +105,24 @@ function CalendarRow({ calendar }: { calendar: Calendar }) {
     });
   };
 
-  const onDelete = () => {
-    if (calendar.is_default) return alert("기본 캘린더는 삭제할 수 없어요.");
-    if (
-      !confirm(
-        calendar.source === "google"
-          ? "연결을 해제할까요? (Google에서는 유지됩니다)"
-          : "이 캘린더와 안의 일정들을 모두 삭제할까요?",
-      )
-    )
+  const onDelete = async () => {
+    if (calendar.is_default) {
+      toast.error("기본 캘린더는 삭제할 수 없어요.");
       return;
+    }
+    const ok = await confirm({
+      title:
+        calendar.source === "google"
+          ? "연결을 해제할까요?"
+          : "이 캘린더를 삭제할까요?",
+      body:
+        calendar.source === "google"
+          ? "Google 에서는 유지되고, orbit42 화면에서만 사라져요."
+          : `"${calendar.name}" 과 안에 저장된 일정이 모두 사라져요.`,
+      confirmLabel: calendar.source === "google" ? "연결 해제" : "삭제",
+      danger: true,
+    });
+    if (!ok) return;
     startTransition(async () => {
       await deleteCalendar(calendar.id);
       router.refresh();
@@ -229,10 +241,11 @@ function NewCalendarForm({
   const [color, setColor] = useState(CALENDAR_COLORS[0]);
   const [visibility, setVisibility] = useState<CalendarVisibility>("private");
   const [pending, startTransition] = useTransition();
+  const toast = useToast();
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return alert("이름을 입력해주세요.");
+    if (!name.trim()) return toast.error("이름을 입력해주세요.");
     startTransition(async () => {
       const res = await createNativeCalendar({
         name,
@@ -240,7 +253,8 @@ function NewCalendarForm({
         color,
         visibility,
       });
-      if (res.error) return alert(res.error);
+      if (res.error) return toast.error(res.error);
+      toast.success("캘린더를 만들었어요.");
       onDone();
     });
   };

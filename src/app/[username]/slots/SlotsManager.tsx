@@ -24,6 +24,8 @@ import type { Calendar } from "@/lib/calendars-types";
 import type { Menu } from "@/lib/menus";
 import { setSlotMenus } from "@/lib/menus";
 import { ShareMenu } from "@/components/ShareMenu";
+import { useToast } from "@/components/Toast";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 type Row = { slot: TimeSlot; availabilities: Availability[]; menuIds: string[] };
 const DAYS = [
@@ -50,6 +52,7 @@ export default function SlotsManager({
   locationPresets: string[];
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [showNew, setShowNew] = useState(initial.length === 0);
   const [presetPending, startPresetTransition] = useTransition();
   const [presetPicker, setPresetPicker] = useState(false);
@@ -58,14 +61,15 @@ export default function SlotsManager({
     startPresetTransition(async () => {
       const res = await createSlotFromPreset(key);
       if ("error" in res) {
-        alert(res.error);
+        toast.error(res.error);
         return;
       }
       if ("skipped" in res) {
-        alert(`"${label}" 슬롯이 이미 있어서 건너뛰었어요.`);
+        toast.info(`"${label}" 슬롯이 이미 있어서 건너뛰었어요.`);
         return;
       }
       setPresetPicker(false);
+      toast.success(`"${label}" 슬롯을 만들었어요.`);
       router.refresh();
     });
   };
@@ -209,6 +213,7 @@ function NewSlotForm({
   locationPresets: string[];
   username: string;
 }) {
+  const toast = useToast();
   const defaultCalendarId =
     myCalendars.find((c) => c.is_default)?.id ?? myCalendars[0]?.id ?? "";
   const [calendarId, setCalendarId] = useState<string>(defaultCalendarId);
@@ -255,14 +260,15 @@ function NewSlotForm({
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return alert("제목을 입력하세요.");
+    if (!title.trim()) return toast.error("제목을 입력하세요.");
     if (pricingModel === "auction") {
-      if (windows.length === 0) return alert("경매는 시간 한 개를 지정해야 해요.");
-      if (!auctionEndsAt) return alert("경매 종료 시간을 정해주세요.");
+      if (windows.length === 0)
+        return toast.error("경매는 시간 한 개를 지정해야 해요.");
+      if (!auctionEndsAt) return toast.error("경매 종료 시간을 정해주세요.");
       const ends = new Date(auctionEndsAt);
       const slotTime = new Date(windows[0]);
       if (ends >= slotTime)
-        return alert("경매 종료 시간은 슬롯 시간보다 앞이어야 합니다.");
+        return toast.error("경매 종료 시간은 슬롯 시간보다 앞이어야 합니다.");
     }
     const [vFrom, vUntil] = resolveValidity(validPreset, validFrom, validUntil);
     startTransition(async () => {
@@ -304,7 +310,7 @@ function NewSlotForm({
                 buffer_min: buffer,
               }),
       });
-      if (res.error) return alert(res.error);
+      if (res.error) return toast.error(res.error);
       if (res.id && selectedMenus.length > 0) {
         await setSlotMenus(res.id, selectedMenus);
       }
@@ -1137,6 +1143,8 @@ function SlotCard({
     .map((id) => myMenus.find((m) => m.id === id))
     .filter((m): m is Menu => !!m);
   const router = useRouter();
+  const toast = useToast();
+  const confirm = useConfirm();
   const [pending, startTransition] = useTransition();
   const [newWindow, setNewWindow] = useState("");
   const [copied, setCopied] = useState(false);
@@ -1153,10 +1161,17 @@ function SlotCard({
       router.refresh();
     });
 
-  const remove = () => {
-    if (!confirm("이 슬롯을 삭제할까요?")) return;
+  const remove = async () => {
+    const ok = await confirm({
+      title: "슬롯을 삭제할까요?",
+      body: `"${row.slot.title}" 슬롯과 관련된 가용 시간이 모두 사라져요.`,
+      confirmLabel: "삭제",
+      danger: true,
+    });
+    if (!ok) return;
     startTransition(async () => {
       await deleteSlot(row.slot.id);
+      toast.success("슬롯을 삭제했어요.");
       router.refresh();
     });
   };
@@ -1165,9 +1180,10 @@ function SlotCard({
     startTransition(async () => {
       const res = await cloneSlot(row.slot.id);
       if ("error" in res && res.error) {
-        alert(res.error);
+        toast.error(res.error);
         return;
       }
+      toast.success("복제했어요.");
       router.refresh();
     });
   };
@@ -1176,7 +1192,7 @@ function SlotCard({
     if (!newWindow) return;
     startTransition(async () => {
       const res = await addAvailability(row.slot.id, new Date(newWindow).toISOString());
-      if (res.error) return alert(res.error);
+      if (res.error) return toast.error(res.error);
       setNewWindow("");
       router.refresh();
     });
@@ -1468,6 +1484,7 @@ function EditSlotForm({
   const [showOnFeed, setShowOnFeed] = useState<boolean>(
     slot.show_on_feed ?? true,
   );
+  const toast = useToast();
 
   const isAuction = slot.pricing_model === "auction";
   const selectedCal = myCalendars.find((c) => c.id === calendarId);
@@ -1476,9 +1493,9 @@ function EditSlotForm({
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return alert("제목을 입력하세요.");
+    if (!title.trim()) return toast.error("제목을 입력하세요.");
     if (violating) {
-      return alert("유료 슬롯은 공개 캘린더에만 만들 수 있어요.");
+      return toast.error("유료 슬롯은 공개 캘린더에만 만들 수 있어요.");
     }
     const [vFrom, vUntil] = resolveValidity(validPreset, validFrom, validUntil);
     startTransition(async () => {
@@ -1499,8 +1516,9 @@ function EditSlotForm({
         image_urls: imageUrls,
         show_on_feed: showOnFeed,
       });
-      if (res && "error" in res && res.error) return alert(res.error);
+      if (res && "error" in res && res.error) return toast.error(res.error);
       await setSlotMenus(slot.id, selectedMenus);
+      toast.success("저장했어요.");
       onDone();
     });
   };
@@ -1942,6 +1960,7 @@ function SlotImagePicker({
   urls: string[];
   onChange: (next: string[]) => void;
 }) {
+  const toast = useToast();
   const [uploading, setUploading] = useState(false);
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -1952,7 +1971,7 @@ function SlotImagePicker({
       Array.from(files).forEach((f) => fd.append("files", f));
       const res = await uploadSlotImages(fd);
       if ("error" in res) {
-        alert(res.error);
+        toast.error(res.error);
         return;
       }
       onChange([...urls, ...res.urls].slice(0, 6));

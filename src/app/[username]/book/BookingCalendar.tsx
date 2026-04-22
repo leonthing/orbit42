@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { bookSlot } from "@/lib/slots";
+import { useToast } from "@/components/Toast";
 
 export type BookSlot = {
   id: string;
@@ -385,11 +386,12 @@ function ConfirmBook({
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [done, setDone] = useState(false);
+  const toast = useToast();
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!loggedIn && (!name.trim() || !email.trim())) {
-      alert("이름과 이메일을 입력하세요.");
+      toast.error("이름과 이메일을 입력하세요.");
       return;
     }
     startTransition(async () => {
@@ -401,7 +403,7 @@ function ConfirmBook({
         guest_name: loggedIn ? undefined : name.trim(),
         guest_email: loggedIn ? undefined : email.trim(),
       });
-      if (res.error) return alert(res.error);
+      if (res.error) return toast.error(res.error);
       setDone(true);
       router.refresh();
     });

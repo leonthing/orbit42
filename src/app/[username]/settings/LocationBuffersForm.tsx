@@ -8,6 +8,7 @@ import {
   deleteLocationBuffer,
 } from "@/lib/location-buffers";
 import type { LocationBuffer } from "@/lib/location-buffers-types";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 type Props = { initial: LocationBuffer[] };
 
@@ -97,6 +98,7 @@ function Row({
   const [aliases, setAliases] = useState(item.aliases.join(", "));
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const confirm = useConfirm();
 
   const save = () => {
     setError(null);
@@ -127,8 +129,13 @@ function Row({
     });
   };
 
-  const remove = () => {
-    if (!confirm(`"${item.name}" 을(를) 삭제할까요?`)) return;
+  const remove = async () => {
+    const ok = await confirm({
+      title: `"${item.name}" 을(를) 삭제할까요?`,
+      confirmLabel: "삭제",
+      danger: true,
+    });
+    if (!ok) return;
     startTransition(async () => {
       const res = await deleteLocationBuffer(item.id);
       if ("error" in res) {

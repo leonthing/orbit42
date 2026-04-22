@@ -4,6 +4,8 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { Menu } from "@/lib/menus";
 import { createMenu, updateMenu, deleteMenu } from "@/lib/menus";
+import { useToast } from "@/components/Toast";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 const INPUT =
   "w-full rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500/60 focus:outline-none focus:ring-1 focus:ring-red-500/40";
@@ -109,10 +111,11 @@ function NewMenuForm({
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState(0);
+  const toast = useToast();
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return alert("이름을 입력해주세요.");
+    if (!name.trim()) return toast.error("이름을 입력해주세요.");
     startTransition(async () => {
       const res = await createMenu({
         name,
@@ -120,7 +123,7 @@ function NewMenuForm({
         description: description || null,
         price_cents: Math.round(price) * 100,
       });
-      if (res.error) return alert(res.error);
+      if (res.error) return toast.error(res.error);
       onSaved();
     });
   };
@@ -203,6 +206,7 @@ function NewMenuForm({
 function MenuRow({ menu, onChanged }: { menu: Menu; onChanged: () => void }) {
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
+  const confirm = useConfirm();
 
   const toggleActive = () =>
     startTransition(async () => {
@@ -210,8 +214,13 @@ function MenuRow({ menu, onChanged }: { menu: Menu; onChanged: () => void }) {
       onChanged();
     });
 
-  const remove = () => {
-    if (!confirm("이 서비스를 삭제할까요?")) return;
+  const remove = async () => {
+    const ok = await confirm({
+      title: `"${menu.name}" 서비스를 삭제할까요?`,
+      confirmLabel: "삭제",
+      danger: true,
+    });
+    if (!ok) return;
     startTransition(async () => {
       await deleteMenu(menu.id);
       onChanged();
@@ -300,10 +309,11 @@ function EditMenuForm({
   const [category, setCategory] = useState(menu.category ?? "");
   const [description, setDescription] = useState(menu.description ?? "");
   const [price, setPrice] = useState(menu.price_cents / 100);
+  const toast = useToast();
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return alert("이름을 입력해주세요.");
+    if (!name.trim()) return toast.error("이름을 입력해주세요.");
     startTransition(async () => {
       const res = await updateMenu(menu.id, {
         name: name.trim(),
@@ -311,7 +321,7 @@ function EditMenuForm({
         description: description.trim() || null,
         price_cents: Math.round(price) * 100,
       });
-      if (res.error) return alert(res.error);
+      if (res.error) return toast.error(res.error);
       onSaved();
     });
   };

@@ -3,6 +3,7 @@
 import { useTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 import { follow, unfollow } from "@/lib/follows";
+import { useToast } from "@/components/Toast";
 
 export function FollowButton({
   targetUsername,
@@ -16,6 +17,7 @@ export function FollowButton({
   compact?: boolean;
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [following, setFollowing] = useState(initiallyFollowing);
   const [pending, startTransition] = useTransition();
 
@@ -39,7 +41,7 @@ export function FollowButton({
       const res = next ? await follow(targetUsername) : await unfollow(targetUsername);
       if (res.error) {
         setFollowing(!next);
-        alert(res.error);
+        toast.error(res.error);
         return;
       }
       router.refresh();

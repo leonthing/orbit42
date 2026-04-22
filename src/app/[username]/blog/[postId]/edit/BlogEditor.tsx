@@ -13,6 +13,7 @@ import {
   unpublishBlogPost,
 } from "../../actions";
 import { uploadBlogImage } from "@/lib/blog-media";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 type ToolbarAction = {
   icon: React.ReactNode;
@@ -316,8 +317,15 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
     });
   }
 
-  function handleDelete() {
-    if (!confirm("이 글을 삭제하시겠습니까?")) return;
+  const confirm = useConfirm();
+  async function handleDelete() {
+    const ok = await confirm({
+      title: "이 글을 삭제할까요?",
+      body: "삭제한 글은 되돌릴 수 없어요.",
+      confirmLabel: "삭제",
+      danger: true,
+    });
+    if (!ok) return;
     startTransition(async () => {
       await deleteBlogPost(post.id);
       router.push(`/${params.username}/blog`);

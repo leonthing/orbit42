@@ -4,6 +4,8 @@ import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { uploadAvatar, clearAvatar } from "@/lib/auth";
 import { Avatar } from "@/components/Avatar";
+import { useToast } from "@/components/Toast";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 export function AvatarUploader({
   initialUrl,
@@ -16,6 +18,8 @@ export function AvatarUploader({
   const inputRef = useRef<HTMLInputElement>(null);
   const [url, setUrl] = useState<string | null>(initialUrl);
   const [pending, startTransition] = useTransition();
+  const toast = useToast();
+  const confirm = useConfirm();
 
   const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -25,7 +29,7 @@ export function AvatarUploader({
     startTransition(async () => {
       const res = await uploadAvatar(fd);
       if (res.error) {
-        alert(res.error);
+        toast.error(res.error);
         return;
       }
       setUrl(res.url ?? null);
@@ -34,8 +38,13 @@ export function AvatarUploader({
     e.target.value = "";
   };
 
-  const onClear = () => {
-    if (!confirm("프로필 사진을 제거할까요?")) return;
+  const onClear = async () => {
+    const ok = await confirm({
+      title: "프로필 사진을 제거할까요?",
+      confirmLabel: "제거",
+      danger: true,
+    });
+    if (!ok) return;
     startTransition(async () => {
       await clearAvatar();
       setUrl(null);

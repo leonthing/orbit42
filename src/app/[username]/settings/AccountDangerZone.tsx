@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { deleteMyAccount, resendVerificationEmail } from "@/lib/account";
+import { useToast } from "@/components/Toast";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 export function VerifyEmailBanner({
   email,
@@ -11,15 +13,17 @@ export function VerifyEmailBanner({
 }) {
   const [sent, setSent] = useState(false);
   const [pending, startTransition] = useTransition();
+  const toast = useToast();
 
   const resend = () =>
     startTransition(async () => {
       const res = await resendVerificationEmail();
       if (res.error) {
-        alert(res.error);
+        toast.error(res.error);
         return;
       }
       setSent(true);
+      toast.success("확인 메일을 다시 보냈어요.");
     });
 
   return (
@@ -59,22 +63,25 @@ export function DeleteAccountSection({ username }: { username: string }) {
   const router = useRouter();
   const [confirmText, setConfirmText] = useState("");
   const [pending, startTransition] = useTransition();
+  const toast = useToast();
+  const confirm = useConfirm();
 
-  const remove = () => {
+  const remove = async () => {
     if (confirmText !== username) {
-      alert(`정확히 "${username}"을 입력해주세요.`);
+      toast.error(`정확히 "${username}"을 입력해주세요.`);
       return;
     }
-    if (
-      !confirm(
-        "정말 탈퇴할까요? 모든 슬롯, 예약, 게시글, 캘린더가 즉시 삭제되며 복구할 수 없어요.",
-      )
-    )
-      return;
+    const ok = await confirm({
+      title: "정말 탈퇴할까요?",
+      body: "모든 슬롯, 예약, 게시글, 캘린더가 즉시 삭제되며 복구할 수 없어요.",
+      confirmLabel: "탈퇴",
+      danger: true,
+    });
+    if (!ok) return;
     startTransition(async () => {
       const res = await deleteMyAccount();
       if (res.error) {
-        alert(res.error);
+        toast.error(res.error);
         return;
       }
       router.push("/");

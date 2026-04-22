@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { placeBid } from "@/lib/auctions";
+import { useToast } from "@/components/Toast";
 
 type SlotInfo = {
   id: string;
@@ -36,6 +37,7 @@ export default function AuctionPanel({
   isOwner: boolean;
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [pending, startTransition] = useTransition();
   const [bidInput, setBidInput] = useState("");
   const [now, setNow] = useState(() => new Date());
@@ -52,16 +54,17 @@ export default function AuctionPanel({
 
   const submit = () => {
     const won = Math.round(Number(bidInput));
-    if (!won || won <= 0) return alert("올바른 금액을 입력해주세요.");
+    if (!won || won <= 0) return toast.error("올바른 금액을 입력해주세요.");
     const cents = won * 100;
     if (cents < minNext)
-      return alert(
+      return toast.error(
         `최소 입찰가는 ₩${(minNext / 100).toLocaleString("ko-KR")}원입니다.`,
       );
     startTransition(async () => {
       const res = await placeBid(slot.id, cents);
-      if (res.error) return alert(res.error);
+      if (res.error) return toast.error(res.error);
       setBidInput("");
+      toast.success("입찰했어요.");
       router.refresh();
     });
   };

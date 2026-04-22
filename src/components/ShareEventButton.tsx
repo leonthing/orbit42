@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { shareEventToFeed } from "@/lib/feed-posts";
+import { useToast } from "@/components/Toast";
 
 export function ShareEventButton({
   eventId,
@@ -14,6 +15,7 @@ export function ShareEventButton({
   eventStart: string;
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [open, setOpen] = useState(false);
   const [body, setBody] = useState("");
   const [pending, startTransition] = useTransition();
@@ -33,7 +35,8 @@ export function ShareEventButton({
     const text = (body.trim() || defaultBody).slice(0, 1000);
     startTransition(async () => {
       const res = await shareEventToFeed({ event_id: eventId, body: text });
-      if (res.error) return alert(res.error);
+      if (res.error) return toast.error(res.error);
+      toast.success("피드에 공유했어요.");
       setOpen(false);
       setBody("");
       router.refresh();

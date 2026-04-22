@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { bookSlot, refreshBookableOptions } from "@/lib/slots";
 import type { BookableOption } from "@/lib/slots";
 import { SlotDatePicker } from "@/components/SlotDatePicker";
+import { useToast } from "@/components/Toast";
 
 type Stage = "form" | "payment" | "done";
 
@@ -40,6 +41,7 @@ export default function BookingForm({
   menus?: BookingMenu[];
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [pending, startTransition] = useTransition();
   const [stage, setStage] = useState<Stage>("form");
   const [options, setOptions] = useState<BookableOption[]>(initialOptions);
@@ -94,7 +96,7 @@ export default function BookingForm({
     e.preventDefault();
     if (!selectedOpt) return;
     if (!loggedIn && (!name.trim() || !email.trim())) {
-      alert("이름과 이메일을 입력하세요.");
+      toast.error("이름과 이메일을 입력하세요.");
       return;
     }
     setStage(isPaid ? "payment" : "form");
@@ -118,7 +120,7 @@ export default function BookingForm({
         selected_menu_ids: selectedMenus,
         selected_location: selectedLocation || undefined,
       });
-      if (res.error) return alert(res.error);
+      if (res.error) return toast.error(res.error);
       setStage("done");
       router.refresh();
     });

@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { disconnectExtraAccount } from "@/lib/google-accounts";
 import { disconnectGoogleCalendar } from "@/app/[username]/calendar/actions";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 type Account = {
   id: string;
@@ -22,22 +23,29 @@ export function GoogleAccountsSection({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const confirm = useConfirm();
 
-  const disconnect = (id: string) => {
-    if (!confirm("이 Google 계정 연결을 해제할까요?")) return;
+  const disconnect = async (id: string) => {
+    const ok = await confirm({
+      title: "이 Google 계정 연결을 해제할까요?",
+      confirmLabel: "해제",
+      danger: true,
+    });
+    if (!ok) return;
     startTransition(async () => {
       await disconnectExtraAccount(id);
       router.refresh();
     });
   };
 
-  const disconnectPrimary = () => {
-    if (
-      !confirm(
-        "기본 Google 계정 연결을 해제할까요? 이 계정에서 가져오던 캘린더 이벤트가 더 이상 표시되지 않아요.",
-      )
-    )
-      return;
+  const disconnectPrimary = async () => {
+    const ok = await confirm({
+      title: "기본 Google 계정을 해제할까요?",
+      body: "이 계정에서 가져오던 캘린더 이벤트가 더 이상 표시되지 않아요.",
+      confirmLabel: "해제",
+      danger: true,
+    });
+    if (!ok) return;
     startTransition(async () => {
       await disconnectGoogleCalendar();
       router.refresh();
