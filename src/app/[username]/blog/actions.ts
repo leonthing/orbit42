@@ -1,7 +1,7 @@
 "use server";
 
 import { getAdminClient } from "@/lib/supabase";
-import { requireUserId } from "@/lib/db";
+import { requireUserId, getUserId } from "@/lib/db";
 
 export interface BlogPost {
   id: string;
@@ -78,13 +78,19 @@ export async function getPublicPostBySlug(username: string, slug: string) {
   } catch {
     // keep as-is
   }
-  const { data: post } = await db
+
+  // Owner can view their own drafts in read mode; everyone else only
+  // sees published posts.
+  const viewerId = await getUserId().catch(() => null);
+  const isOwner = viewerId === user.id;
+
+  let q = db
     .from("blog_posts")
     .select("*")
     .eq("user_id", user.id)
-    .eq("slug", decoded)
-    .eq("published", true)
-    .maybeSingle();
+    .eq("slug", decoded);
+  if (!isOwner) q = q.eq("published", true);
+  const { data: post } = await q.maybeSingle();
   if (!post) return null;
   return {
     post: post as BlogPost,
@@ -92,6 +98,7 @@ export async function getPublicPostBySlug(username: string, slug: string) {
       username: user.username as string,
       display_name: user.display_name as string | null,
     },
+    isOwner,
   };
 }
 

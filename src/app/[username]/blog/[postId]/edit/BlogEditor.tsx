@@ -13,7 +13,6 @@ import {
   unpublishBlogPost,
 } from "../../actions";
 import { uploadBlogImage } from "@/lib/blog-media";
-import SocialSharePanel from "./SocialSharePanel";
 
 type ToolbarAction = {
   icon: React.ReactNode;
@@ -592,20 +591,6 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
         </div>
       )}
 
-      {/* Social Share - inline below editor */}
-      <SocialSharePanel
-        title={title}
-        content={content}
-        slug={slug}
-        postId={post.id}
-        username={params.username}
-        published={post.published}
-        initialSocial={{
-          x: post.social_x,
-          facebook: post.social_facebook,
-          linkedin: post.social_linkedin,
-        }}
-      />
     </div>
   );
 }

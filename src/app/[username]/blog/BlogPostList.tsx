@@ -172,7 +172,7 @@ export default function BlogPostList({ initialPosts }: { initialPosts: BlogPost[
           {filtered.map((post) => (
             <div
               key={post.id}
-              onClick={() => router.push(`/${params.username}/blog/${post.id}/edit`)}
+              onClick={() => router.push(`/${params.username}/blog/${post.slug}`)}
               className="group flex cursor-pointer items-start gap-4 px-5 py-4 transition-colors hover:bg-charcoal-800/30"
             >
               <div className="min-w-0 flex-1">
