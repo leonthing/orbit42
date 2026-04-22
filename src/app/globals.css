@@ -21,16 +21,17 @@
     --bg-elevated: 243 244 246;
   }
 
-  /* Dark mode — original charcoal scale */
+  /* Dark mode — brightened secondary/tertiary steps so charcoal-500/600
+     text passes WCAG AA against the near-black surface. */
   .dark {
     --c-50: 248 250 252;
     --c-100: 241 245 249;
     --c-200: 226 232 240;
     --c-300: 203 213 225;
-    --c-400: 148 163 184;
-    --c-500: 100 116 139;
-    --c-600: 71 85 105;
-    --c-700: 51 65 85;
+    --c-400: 175 189 210;
+    --c-500: 130 144 170;
+    --c-600: 95 109 132;
+    --c-700: 56 70 92;
     --c-800: 30 41 59;
     --c-900: 15 23 42;
     --c-950: 2 6 23;
