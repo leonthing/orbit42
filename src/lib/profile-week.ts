@@ -96,10 +96,14 @@ export async function getProfileWeek(
           while (i < opts.length) {
             const prevEnd = new Date(windowEnd).getTime();
             const nextStart = new Date(opts[i].start_at).getTime();
+            const nextEnd = new Date(opts[i].end_at).getTime();
             const sameDay = dayKey(new Date(opts[i].start_at)) === startDay;
-            // Merge if back-to-back and still on the same day.
-            if (sameDay && nextStart === prevEnd) {
-              windowEnd = opts[i].end_at;
+            // Merge if back-to-back OR overlapping and still on the same
+            // day. (Auto slots with slot_interval < duration generate
+            // overlapping candidates — collapse them into the bookable
+            // window instead of rendering each one.)
+            if (sameDay && nextStart <= prevEnd) {
+              if (nextEnd > prevEnd) windowEnd = opts[i].end_at;
               count++;
               i++;
             } else {
