@@ -7,6 +7,7 @@ import {
   listNotifications,
   markAllNotificationsRead,
   markNotificationRead,
+  unreadNotificationCount,
 } from "@/lib/notifications";
 import { Avatar } from "@/components/Avatar";
 
@@ -36,13 +37,43 @@ export function NotificationBell({ initialUnread }: { initialUnread: number }) {
     if (!open) return;
     let cancelled = false;
     (async () => {
-      const list = await listNotifications(20);
-      if (!cancelled) setItems(list);
+      const [list, count] = await Promise.all([
+        listNotifications(20),
+        unreadNotificationCount(),
+      ]);
+      if (cancelled) return;
+      setItems(list);
+      setUnread(count);
     })();
     return () => {
       cancelled = true;
     };
   }, [open]);
+
+  // Background refresh — the badge otherwise shows whatever value was
+  // server-rendered and never updates when a new notification arrives.
+  // Poll every 60s while the tab is visible, and refresh immediately
+  // when the user switches back to the tab.
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = async () => {
+      if (document.visibilityState !== "visible") return;
+      const count = await unreadNotificationCount().catch(() => null);
+      if (!cancelled && typeof count === "number") setUnread(count);
+    };
+    const interval = setInterval(refresh, 60_000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", refresh);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", refresh);
+    };
+  }, []);
 
   useEffect(() => {
     // Close on outside click.

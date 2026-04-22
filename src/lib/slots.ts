@@ -683,18 +683,44 @@ export async function bookSlot(args: {
 
   // Notify host (always) and guest (only if auto-confirmed — otherwise
   // they'll get a confirmation email later when the host approves).
+  // Each side-effect is wrapped independently so one failure (e.g. a
+  // Resend outage) doesn't drop the others.
+  const { data: host } = await db
+    .from("users")
+    .select("email, display_name, username")
+    .eq("id", slot.host_id)
+    .single();
+  const guestEmail = args.guest_email ?? (await getEmailForUser(guestId));
+  const guestLabel = args.guest_name ?? host?.display_name ?? "Guest";
+  const whenLabel = startAt.toLocaleString("ko-KR", {
+    timeZone: "Asia/Seoul",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  // In-app host notification — the bell/sidebar reads this.
   try {
-    const { sendBookingReceivedToHost, sendBookingConfirmedToGuest } =
-      await import("@/lib/email");
     const { createNotification } = await import("@/lib/notifications");
-    const { data: host } = await db
-      .from("users")
-      .select("email, display_name, username")
-      .eq("id", slot.host_id)
-      .single();
-    const guestEmail = args.guest_email ?? (await getEmailForUser(guestId));
-    const guestLabel = args.guest_name ?? host?.display_name ?? "Guest";
+    await createNotification({
+      userId: slot.host_id as string,
+      type: "booking_received",
+      title: autoApprove
+        ? `새 예약: ${slot.title}`
+        : `예약 요청: ${slot.title}`,
+      body: `${guestLabel} · ${whenLabel}`,
+      link: `/${host?.username}/bookings`,
+      actorId: guestId,
+    });
+  } catch (err) {
+    console.error("host booking_received notification", err);
+  }
+
+  // Email to host.
+  try {
     if (host?.email) {
+      const { sendBookingReceivedToHost } = await import("@/lib/email");
       await sendBookingReceivedToHost(host.email as string, {
         slotTitle: slot.title as string,
         when: startAt.toISOString(),
@@ -702,47 +728,47 @@ export async function bookSlot(args: {
         guestEmail: guestEmail ?? null,
         message: args.message ?? null,
         autoApprove,
-        manageUrl: `/${host.username}/bookings`,
-      });
-    }
-    // In-app notification for the host.
-    await createNotification({
-      userId: slot.host_id as string,
-      type: "booking_received",
-      title: autoApprove
-        ? `새 예약: ${slot.title}`
-        : `예약 요청: ${slot.title}`,
-      body: `${guestLabel} · ${startAt.toLocaleString("ko-KR", { timeZone: "Asia/Seoul", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}`,
-      link: `/${host?.username}/bookings`,
-      actorId: guestId,
-    });
-    if (autoApprove && guestEmail) {
-      await sendBookingConfirmedToGuest(guestEmail, {
-        slotTitle: slot.title as string,
-        when: startAt.toISOString(),
-        hostLabel: (host?.display_name || host?.username || "Host") as string,
-        location: (slot.location_detail as string | null) ?? null,
-      });
-    }
-    // If the guest is a registered user, notify them too on auto-confirm.
-    if (autoApprove && guestId) {
-      await createNotification({
-        userId: guestId,
-        type: "booking_confirmed",
-        title: `예약 확정: ${slot.title}`,
-        body: startAt.toLocaleString("ko-KR", {
-          timeZone: "Asia/Seoul",
-          month: "long",
-          day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        link: `/bookings`,
-        actorId: slot.host_id as string,
+        manageUrl: `/${host?.username}/bookings`,
       });
     }
   } catch (err) {
-    console.error("booking emails", err);
+    console.error("host booking_received email", err);
+  }
+
+  // Email to guest (only if auto-confirmed).
+  if (autoApprove) {
+    try {
+      if (guestEmail) {
+        const { sendBookingConfirmedToGuest } = await import("@/lib/email");
+        await sendBookingConfirmedToGuest(guestEmail, {
+          slotTitle: slot.title as string,
+          when: startAt.toISOString(),
+          hostLabel: (host?.display_name || host?.username || "Host") as string,
+          location:
+            (bookingLocation as string | null) ??
+            ((slot.location_detail as string | null) ?? null),
+        });
+      }
+    } catch (err) {
+      console.error("guest booking_confirmed email", err);
+    }
+
+    // Guest is a registered user — ping their bell too.
+    if (guestId) {
+      try {
+        const { createNotification } = await import("@/lib/notifications");
+        await createNotification({
+          userId: guestId,
+          type: "booking_confirmed",
+          title: `예약 확정: ${slot.title}`,
+          body: whenLabel,
+          link: `/bookings`,
+          actorId: slot.host_id as string,
+        });
+      } catch (err) {
+        console.error("guest booking_confirmed notification", err);
+      }
+    }
   }
 
   if (availabilityId) {
