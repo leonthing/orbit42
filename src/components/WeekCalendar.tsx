@@ -561,7 +561,6 @@ function position(items: WeekItem[], dayDate: Date): PositionedItem[] {
   // Compute start/end minutes within the given day.
   const dayStart = new Date(dayDate);
   dayStart.setHours(0, 0, 0, 0);
-  const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60_000);
 
   const rough = items.map((item) => {
     const s = new Date(item.start_at);
