@@ -582,16 +582,13 @@ function position(items: WeekItem[], dayDate: Date): PositionedItem[] {
         Math.round((e.getTime() - dayStart.getTime()) / 60_000),
       ),
     );
-    // Only events with a date-only timestamp (no "T" part) qualify as
-    // all-day. Timed events always render in the time grid, even if
-    // their upstream `all_day` flag is accidentally true.
+    // Trust the upstream `all_day` flag (Google sets it when the event
+    // has date-only start/end). We keep a timed-fallback guard using
+    // the raw string — if it somehow contains a clock component we
+    // still render it in the time grid.
     const hasTimeComponent = item.start_at.includes("T");
     const allDay =
-      item.kind === "event" &&
-      item.all_day &&
-      !hasTimeComponent &&
-      s <= dayStart &&
-      e >= dayEnd;
+      item.kind === "event" && !!item.all_day && !hasTimeComponent;
     return { item, startMin: allDay ? 0 : startMin, endMin: allDay ? 60 : endMin, allDay };
   });
 
