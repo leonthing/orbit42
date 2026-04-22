@@ -116,7 +116,7 @@ export async function computeAutoAvailability(
   const { data: existing } = await db
     .from("bookings")
     .select(
-      "scheduled_at, scheduled_end_at, status, slot:time_slots!bookings_slot_id_fkey(title, location_detail)",
+      "scheduled_at, scheduled_end_at, status, selected_location, slot:time_slots!bookings_slot_id_fkey(title, location_detail)",
     )
     .eq("host_id", hostId)
     .gte("scheduled_at", now.toISOString())
@@ -125,12 +125,13 @@ export async function computeAutoAvailability(
   const bookedBlocks: Block[] = ((existing ?? []) as unknown as Array<{
     scheduled_at: string;
     scheduled_end_at: string;
+    selected_location: string | null;
     slot: { title: string | null; location_detail: string | null } | null;
   }>).map((b) => ({
     start: new Date(b.scheduled_at),
     end: new Date(b.scheduled_end_at),
     title: b.slot?.title ?? null,
-    location: b.slot?.location_detail ?? null,
+    location: b.selected_location ?? b.slot?.location_detail ?? null,
   }));
 
   // 3. Pull host's native (in-app) calendar events — if the host creates

@@ -39,11 +39,13 @@ export default function SlotsManager({
   initial,
   myCalendars,
   myMenus,
+  locationPresets,
 }: {
   username: string;
   initial: Row[];
   myCalendars: Calendar[];
   myMenus: Menu[];
+  locationPresets: string[];
 }) {
   const router = useRouter();
   const [showNew, setShowNew] = useState(initial.length === 0);
@@ -73,6 +75,7 @@ export default function SlotsManager({
           username={username}
           myCalendars={myCalendars}
           myMenus={myMenus}
+          locationPresets={locationPresets}
           onCancel={() => setShowNew(false)}
           onSaved={() => {
             setShowNew(false);
@@ -113,6 +116,7 @@ export default function SlotsManager({
                   username={username}
                   myCalendars={myCalendars}
                   myMenus={myMenus}
+                  locationPresets={locationPresets}
                 />
               ))}
             </div>
@@ -131,12 +135,14 @@ function NewSlotForm({
   onCancel,
   myCalendars,
   myMenus,
+  locationPresets,
   username,
 }: {
   onSaved: () => void;
   onCancel: () => void;
   myCalendars: Calendar[];
   myMenus: Menu[];
+  locationPresets: string[];
   username: string;
 }) {
   const defaultCalendarId =
@@ -158,7 +164,7 @@ function NewSlotForm({
   const [price, setPrice] = useState(0);
   const [capacity, setCapacity] = useState(1);
   const [slotType, setSlotType] = useState<SlotType>("1on1");
-  const [locationDetail, setLocationDetail] = useState("");
+  const [locations, setLocations] = useState<string[]>([]);
   const [mode, setMode] = useState<SlotMode>("manual");
   const [pricingModel, setPricingModel] = useState<PricingModel>("fixed");
 
@@ -203,7 +209,8 @@ function NewSlotForm({
         price_cents: pricingModel === "auction" ? 0 : Math.round(price) * 100,
         capacity,
         slot_type: slotType,
-        location_detail: locationDetail.trim() || null,
+        location_detail: locations[0] ?? null,
+        locations,
         mode: pricingModel === "auction" ? "manual" : mode,
         pricing_model: pricingModel,
         calendar_id: calendarId || null,
@@ -390,18 +397,12 @@ function NewSlotForm({
               </select>
             </Field>
           </div>
-          <Field label="장소 (선택)">
-            <input
-              type="text"
-              value={locationDetail}
-              onChange={(e) => setLocationDetail(e.target.value)}
-              placeholder="예: 강남 / 성수동 / Zoom"
-              className={INPUT}
+          <Field label="장소 (여러 개 등록 가능)">
+            <LocationsInput
+              value={locations}
+              onChange={setLocations}
+              presets={locationPresets}
             />
-            <p className="mt-1 text-[11px] text-charcoal-500">
-              설정 → 장소별 이동시간 에 등록한 지역명이 들어가면 인접
-              일정과의 버퍼가 자동 최적화돼요.
-            </p>
           </Field>
         </Section>
 
@@ -930,16 +931,111 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+function LocationsInput({
+  value,
+  onChange,
+  presets,
+}: {
+  value: string[];
+  onChange: (next: string[]) => void;
+  presets: string[];
+}) {
+  const [typing, setTyping] = useState("");
+  const lower = (s: string) => s.trim().toLowerCase();
+  const add = (raw: string) => {
+    const v = raw.trim();
+    if (!v) return;
+    if (value.some((x) => lower(x) === lower(v))) return;
+    onChange([...value, v]);
+    setTyping("");
+  };
+  const remove = (i: number) => {
+    onChange(value.filter((_, idx) => idx !== i));
+  };
+  const suggested = presets.filter(
+    (p) => !value.some((x) => lower(x) === lower(p)),
+  );
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-2 py-1.5">
+        {value.map((v, i) => (
+          <span
+            key={`${v}-${i}`}
+            className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2.5 py-0.5 text-xs font-medium text-red-700 dark:text-red-300"
+          >
+            {v}
+            <button
+              type="button"
+              onClick={() => remove(i)}
+              className="text-red-400 hover:text-red-200"
+              aria-label={`${v} 제거`}
+            >
+              ×
+            </button>
+          </span>
+        ))}
+        <input
+          type="text"
+          value={typing}
+          onChange={(e) => setTyping(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === ",") {
+              e.preventDefault();
+              add(typing);
+            } else if (
+              e.key === "Backspace" &&
+              typing === "" &&
+              value.length > 0
+            ) {
+              remove(value.length - 1);
+            }
+          }}
+          onBlur={() => add(typing)}
+          placeholder={value.length === 0 ? "예: 강남 / 여의도 / Online" : ""}
+          className="min-w-[100px] flex-1 bg-transparent py-1 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:outline-none"
+        />
+      </div>
+
+      {suggested.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[10px] uppercase tracking-wider text-charcoal-500">
+            프리셋
+          </span>
+          {suggested.map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => add(p)}
+              className="rounded-full border border-charcoal-800/60 bg-charcoal-900/40 px-2.5 py-0.5 text-[11px] text-charcoal-300 hover:border-red-500/40 hover:text-red-300"
+            >
+              + {p}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <p className="text-[11px] text-charcoal-500">
+        게스트가 예약할 때 이 중에서 만날 장소를 골라요. 등록한 장소가 설정의{" "}
+        <b>장소별 이동시간</b> 프리셋과 매칭되면 인접 일정과의 버퍼가 자동
+        최적화돼요.
+      </p>
+    </div>
+  );
+}
+
 function SlotCard({
   row,
   username,
   myCalendars,
   myMenus,
+  locationPresets,
 }: {
   row: Row;
   username: string;
   myCalendars: Calendar[];
   myMenus: Menu[];
+  locationPresets: string[];
 }) {
   const cal = myCalendars.find((c) => c.id === row.slot.calendar_id);
   const attachedMenus = row.menuIds
@@ -1135,6 +1231,7 @@ function SlotCard({
             slot={row.slot}
             myCalendars={myCalendars}
             myMenus={myMenus}
+            locationPresets={locationPresets}
             initialMenuIds={row.menuIds}
             username={username}
             onDone={() => {
@@ -1221,6 +1318,7 @@ function EditSlotForm({
   slot,
   myCalendars,
   myMenus,
+  locationPresets,
   initialMenuIds,
   username,
   onDone,
@@ -1229,6 +1327,7 @@ function EditSlotForm({
   slot: TimeSlot;
   myCalendars: Calendar[];
   myMenus: Menu[];
+  locationPresets: string[];
   initialMenuIds: string[];
   username: string;
   onDone: () => void;
@@ -1241,7 +1340,14 @@ function EditSlotForm({
   const [price, setPrice] = useState(slot.price_cents / 100);
   const [capacity, setCapacity] = useState(slot.capacity);
   const [slotType, setSlotType] = useState<SlotType>(slot.slot_type);
-  const [locationDetail, setLocationDetail] = useState(slot.location_detail ?? "");
+  const [locations, setLocations] = useState<string[]>(() => {
+    const init = slot.locations && slot.locations.length > 0
+      ? slot.locations
+      : slot.location_detail
+        ? [slot.location_detail]
+        : [];
+    return init;
+  });
   const [calendarId, setCalendarId] = useState<string>(slot.calendar_id ?? "");
   const [selectedMenus, setSelectedMenus] = useState<string[]>(initialMenuIds);
   const [validPreset, setValidPreset] = useState<ValidPreset>(
@@ -1282,7 +1388,8 @@ function EditSlotForm({
         price_cents: isAuction ? 0 : Math.round(price) * 100,
         capacity,
         slot_type: slotType,
-        location_detail: locationDetail.trim() || null,
+        location_detail: locations[0] ?? null,
+        locations,
         calendar_id: calendarId || null,
         valid_from: vFrom,
         valid_until: vUntil,
@@ -1403,12 +1510,11 @@ function EditSlotForm({
           />
         </Field>
       )}
-      <Field label="장소 (선택)">
-        <input
-          type="text"
-          value={locationDetail}
-          onChange={(e) => setLocationDetail(e.target.value)}
-          className={INPUT}
+      <Field label="장소 (여러 개 등록 가능)">
+        <LocationsInput
+          value={locations}
+          onChange={setLocations}
+          presets={locationPresets}
         />
       </Field>
 

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { bookSlot } from "@/lib/slots";
+import { bookSlot, refreshBookableOptions } from "@/lib/slots";
 import type { BookableOption } from "@/lib/slots";
 import { SlotDatePicker } from "@/components/SlotDatePicker";
 
@@ -18,10 +18,11 @@ export type BookingMenu = {
 
 export default function BookingForm({
   slotId,
-  options,
+  options: initialOptions,
   loggedIn,
   priceCents,
   slotTitle,
+  locations = [],
   paymentMethod = "offline",
   menus = [],
 }: {
@@ -30,19 +31,51 @@ export default function BookingForm({
   loggedIn: boolean;
   priceCents: number;
   slotTitle: string;
+  locations?: string[];
   paymentMethod?: "online" | "offline";
   menus?: BookingMenu[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [stage, setStage] = useState<Stage>("form");
+  const [options, setOptions] = useState<BookableOption[]>(initialOptions);
+  const [selectedLocation, setSelectedLocation] = useState<string>(
+    locations[0] ?? "",
+  );
+  const [locPending, setLocPending] = useState(false);
   const [selectedKey, setSelectedKey] = useState<string>(() =>
-    options[0] ? keyOf(options[0]) : "",
+    initialOptions[0] ? keyOf(initialOptions[0]) : "",
   );
   const [message, setMessage] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [selectedMenus, setSelectedMenus] = useState<string[]>([]);
+
+  // When the guest switches location, re-request bookable options so
+  // the buffer math reflects the new target.
+  useEffect(() => {
+    if (locations.length <= 1) return;
+    if (!selectedLocation) return;
+    if (selectedLocation === (locations[0] ?? "")) {
+      // Initial value — initialOptions already matches this, skip refetch.
+      setOptions(initialOptions);
+      return;
+    }
+    let canceled = false;
+    setLocPending(true);
+    refreshBookableOptions(slotId, selectedLocation)
+      .then((next) => {
+        if (canceled) return;
+        setOptions(next);
+        setSelectedKey(next[0] ? keyOf(next[0]) : "");
+      })
+      .finally(() => {
+        if (!canceled) setLocPending(false);
+      });
+    return () => {
+      canceled = true;
+    };
+  }, [selectedLocation, slotId, locations, initialOptions]);
 
   const menuTotalCents = selectedMenus.reduce((sum, id) => {
     const m = menus.find((x) => x.id === id);
@@ -79,6 +112,7 @@ export default function BookingForm({
         guest_name: loggedIn ? undefined : name.trim() || undefined,
         guest_email: loggedIn ? undefined : email.trim() || undefined,
         selected_menu_ids: selectedMenus,
+        selected_location: selectedLocation || undefined,
       });
       if (res.error) return alert(res.error);
       setStage("done");
@@ -111,12 +145,58 @@ export default function BookingForm({
 
   return (
     <form onSubmit={proceed} className="space-y-5">
-      <SlotDatePicker
-        options={options}
-        selectedKey={selectedKey}
-        onSelect={setSelectedKey}
-        keyOf={keyOf}
-      />
+      {locations.length > 1 && (
+        <div className="rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 p-4">
+          <p className="mb-2 text-xs font-semibold text-charcoal-200">
+            어디서 만날까요?
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {locations.map((loc) => {
+              const active = selectedLocation === loc;
+              return (
+                <button
+                  key={loc}
+                  type="button"
+                  onClick={() => setSelectedLocation(loc)}
+                  disabled={locPending}
+                  className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                    active
+                      ? "border-red-500 bg-red-500/15 text-red-700 dark:text-red-300"
+                      : "border-charcoal-800/60 bg-charcoal-800/20 text-charcoal-300 hover:border-charcoal-700"
+                  }`}
+                >
+                  {loc}
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-2 text-[11px] text-charcoal-500">
+            호스트의 일정에 따라 선택한 위치에서 가능한 시간만 보여져요.
+            {locPending && " · 시간 다시 계산 중…"}
+          </p>
+        </div>
+      )}
+
+      {locations.length <= 1 && locations[0] && (
+        <p className="rounded-md bg-charcoal-800/30 px-3 py-2 text-xs text-charcoal-400">
+          📍 {locations[0]}
+        </p>
+      )}
+
+      {options.length === 0 ? (
+        <p className="rounded-lg border border-charcoal-800/60 bg-charcoal-900/30 px-4 py-6 text-center text-sm text-charcoal-500">
+          {selectedLocation
+            ? `${selectedLocation} 에서 만날 수 있는 시간이 없어요. 다른 위치를 골라보세요.`
+            : "예약 가능한 시간이 없어요."}
+        </p>
+      ) : (
+        <SlotDatePicker
+          options={options}
+          selectedKey={selectedKey}
+          onSelect={setSelectedKey}
+          keyOf={keyOf}
+        />
+      )}
 
       {menus.length > 0 && (
         <BookingMenuPicker

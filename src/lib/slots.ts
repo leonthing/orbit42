@@ -27,6 +27,10 @@ export type TimeSlot = {
   slot_type: SlotType;
   location_type: LocationType | null;
   location_detail: string | null;
+  /** Candidate meeting locations the guest can pick from. When
+   * singular the UI hides the picker and uses this location
+   * automatically for travel-buffer matching. */
+  locations: string[];
   active: boolean;
   mode: SlotMode;
   working_hours: WorkingHours;
@@ -66,6 +70,7 @@ export type SlotInput = {
   slot_type: SlotType;
   location_type?: LocationType | null;
   location_detail?: string | null;
+  locations?: string[];
   active?: boolean;
   mode?: SlotMode;
   working_hours?: WorkingHours;
@@ -86,6 +91,20 @@ export type SlotInput = {
   image_urls?: string[];
   show_on_feed?: boolean;
 };
+
+function normalizeLocationList(list: Array<string | null | undefined>): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of list) {
+    const v = (raw ?? "").trim();
+    if (!v) continue;
+    const key = v.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(v);
+  }
+  return out;
+}
 
 function safeDecode(s: string) {
   try {
@@ -169,7 +188,12 @@ export type BookableOption = {
   remaining: number;
 };
 
-export async function getBookableOptions(slot: TimeSlot): Promise<BookableOption[]> {
+export async function getBookableOptions(
+  slot: TimeSlot,
+  /** When the slot offers multiple locations, the guest's pick drives
+   * which times are bookable. Defaults to the slot's first location. */
+  pickedLocation?: string | null,
+): Promise<BookableOption[]> {
   const from = slot.valid_from ? new Date(slot.valid_from).getTime() : null;
   const until = slot.valid_until ? new Date(slot.valid_until).getTime() : null;
   const withinWindow = (iso: string) => {
@@ -187,6 +211,11 @@ export async function getBookableOptions(slot: TimeSlot): Promise<BookableOption
       const daysToEnd = Math.ceil((until - Date.now()) / 86_400_000);
       effectiveMaxDays = Math.max(effectiveMaxDays, Math.min(daysToEnd, 365));
     }
+    const resolvedLocation =
+      pickedLocation ??
+      (slot.locations && slot.locations.length > 0
+        ? slot.locations[0]
+        : slot.location_detail ?? null);
     const opts = await computeAutoAvailability(slot.host_id, {
       duration_min: slot.duration_min,
       slot_interval_min: slot.slot_interval_min,
@@ -195,7 +224,7 @@ export async function getBookableOptions(slot: TimeSlot): Promise<BookableOption
       max_advance_days: effectiveMaxDays,
       buffer_min: slot.buffer_min,
       slot_title: slot.title ?? null,
-      slot_location: slot.location_detail ?? null,
+      slot_location: resolvedLocation,
     });
     return opts
       .filter((o: AutoSlotOption) => withinWindow(o.start_at))
@@ -286,7 +315,14 @@ export async function createSlot(input: SlotInput) {
       capacity: input.capacity,
       slot_type: input.slot_type,
       location_type: input.location_type ?? null,
-      location_detail: input.location_detail ?? null,
+      location_detail:
+        input.location_detail ??
+        (input.locations && input.locations.length > 0
+          ? input.locations[0]
+          : null),
+      locations: normalizeLocationList(
+        input.locations ?? (input.location_detail ? [input.location_detail] : []),
+      ),
       active: input.active ?? true,
       mode: input.mode ?? "manual",
       working_hours: input.working_hours ?? {},
@@ -356,6 +392,14 @@ export async function updateSlot(id: string, patch: Partial<SlotInput>) {
   for (const f of fields) {
     if (patch[f] !== undefined) updateData[f] = patch[f];
   }
+  if (patch.locations !== undefined) {
+    const normalized = normalizeLocationList(patch.locations);
+    updateData.locations = normalized;
+    // Keep location_detail in sync (first element) for legacy display.
+    if (patch.location_detail === undefined) {
+      updateData.location_detail = normalized[0] ?? null;
+    }
+  }
   const { error } = await db
     .from("time_slots")
     .update(updateData)
@@ -393,6 +437,7 @@ export async function cloneSlot(id: string) {
       slot_type: src.slot_type,
       location_type: src.location_type,
       location_detail: src.location_detail,
+      locations: normalizeLocationList(src.locations ?? []),
       active: false, // clone starts inactive so user can review before publishing
       mode: src.mode,
       working_hours: src.working_hours ?? {},
@@ -416,6 +461,23 @@ export async function cloneSlot(id: string) {
   if (error || !created) return { error: "복제에 실패했어요." };
   revalidatePath("/", "layout");
   return { ok: true as const, id: created.id as string };
+}
+
+/** Client helper: re-compute bookable options for the current guest's
+ * chosen location. Lets the booking form filter times per location
+ * without a full page reload. */
+export async function refreshBookableOptions(
+  slotId: string,
+  pickedLocation: string | null,
+): Promise<BookableOption[]> {
+  const db = getAdminClient();
+  const { data: slot } = await db
+    .from("time_slots")
+    .select("*")
+    .eq("id", slotId)
+    .single();
+  if (!slot) return [];
+  return getBookableOptions(slot as TimeSlot, pickedLocation);
 }
 
 export async function deleteSlot(id: string) {
@@ -479,6 +541,8 @@ export async function bookSlot(args: {
   guest_email?: string;
   /** Selected add-on menu ids (must belong to the slot). */
   selected_menu_ids?: string[];
+  /** Guest's chosen location when the slot offers multiple. */
+  selected_location?: string | null;
 }) {
   const session = await getSession();
   const guestId = await getUserId();
@@ -492,7 +556,7 @@ export async function bookSlot(args: {
   const { data: slot } = await db
     .from("time_slots")
     .select(
-      "id, host_id, duration_min, active, mode, pricing_model, title, location_detail, working_hours, slot_interval_min, min_notice_hours, max_advance_days, buffer_min, capacity, calendar_id, valid_from, valid_until, auto_approve",
+      "id, host_id, duration_min, active, mode, pricing_model, title, location_detail, locations, working_hours, slot_interval_min, min_notice_hours, max_advance_days, buffer_min, capacity, calendar_id, valid_from, valid_until, auto_approve",
     )
     .eq("id", args.slotId)
     .single();
@@ -521,6 +585,19 @@ export async function bookSlot(args: {
       const d = Math.ceil((windowUntil - Date.now()) / 86_400_000);
       bookMaxDays = Math.max(bookMaxDays, Math.min(d, 365));
     }
+    const locList = ((slot.locations as string[] | null) ?? []).filter(
+      (s) => !!s,
+    );
+    const pickedLoc =
+      (args.selected_location ?? "").trim() ||
+      locList[0] ||
+      (slot.location_detail as string | null) ||
+      null;
+    if (locList.length > 1 && args.selected_location) {
+      if (!locList.some((l) => l.toLowerCase() === pickedLoc?.toLowerCase())) {
+        return { error: "이 슬롯에 허용된 위치가 아니에요." };
+      }
+    }
     const options = await computeAutoAvailability(slot.host_id as string, {
       duration_min: slot.duration_min as number,
       slot_interval_min: slot.slot_interval_min as number,
@@ -529,7 +606,7 @@ export async function bookSlot(args: {
       max_advance_days: bookMaxDays,
       buffer_min: slot.buffer_min as number,
       slot_title: (slot.title as string | null) ?? null,
-      slot_location: (slot.location_detail as string | null) ?? null,
+      slot_location: pickedLoc,
     });
     const ok = options.some(
       (o) => new Date(o.start_at).getTime() === startAt.getTime(),
@@ -580,6 +657,10 @@ export async function bookSlot(args: {
   const initialStatus = autoApprove ? "confirmed" : "pending";
 
   // Create the booking row first so we never lose it on a Google API failure.
+  const bookingLocation =
+    (args.selected_location ?? "").trim() ||
+    ((slot.locations as string[] | null)?.[0] ?? null) ||
+    (slot.location_detail as string | null);
   const { data: booking, error: bookErr } = await db
     .from("bookings")
     .insert({
@@ -594,6 +675,7 @@ export async function bookSlot(args: {
       scheduled_end_at: endAt.toISOString(),
       selected_menu_ids: validMenuIds,
       status: initialStatus,
+      selected_location: bookingLocation,
     })
     .select("id")
     .single();
