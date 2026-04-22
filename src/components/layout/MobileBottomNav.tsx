@@ -17,7 +17,7 @@ export function MobileBottomNav({
   const items = [
     {
       href: "/feed",
-      label: "Feed",
+      label: "피드",
       active: pathname === "/feed",
       icon: (
         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -27,7 +27,7 @@ export function MobileBottomNav({
     },
     {
       href: "/explore",
-      label: "Explore",
+      label: "탐색",
       active: pathname === "/explore",
       icon: (
         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -38,7 +38,7 @@ export function MobileBottomNav({
     },
     {
       href: `/${username}/calendar`,
-      label: "Calendar",
+      label: "캘린더",
       active: pathname.startsWith(`/${username}/calendar`),
       icon: (
         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -48,7 +48,7 @@ export function MobileBottomNav({
     },
     {
       href: "/messages",
-      label: "Chat",
+      label: "메시지",
       active: pathname === "/messages" || pathname.startsWith("/messages/"),
       badge: unreadMessages,
       icon: (
@@ -59,7 +59,7 @@ export function MobileBottomNav({
     },
     {
       href: `/${username}`,
-      label: "Me",
+      label: "나",
       active: pathname === `/${username}`,
       icon: (
         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">

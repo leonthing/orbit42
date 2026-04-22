@@ -29,7 +29,7 @@ export default function ServicesManager({ initial }: { initial: Menu[] }) {
     <div className="space-y-8">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-charcoal-100">Services</h1>
+          <h1 className="text-2xl font-bold text-charcoal-100">서비스</h1>
           <p className="mt-1 text-sm text-charcoal-500">
             슬롯에 연결할 수 있는 항목을 관리하세요. 예약할 때 게스트가 선택해요.
           </p>

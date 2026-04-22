@@ -7,7 +7,7 @@ import BlogPostList from "./BlogPostList";
 import { getReactionsForMany } from "@/lib/reactions";
 import { ReactionStrip } from "@/components/ReactionStrip";
 
-export const metadata: Metadata = { title: "Posts" };
+export const metadata: Metadata = { title: "글" };
 export const dynamic = "force-dynamic";
 
 export default async function BlogPage({

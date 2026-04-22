@@ -17,7 +17,7 @@ import {
   type PurposeGroup,
 } from "@/lib/calendar-settings-types";
 
-export const metadata: Metadata = { title: "Time insights" };
+export const metadata: Metadata = { title: "시간 인사이트" };
 export const dynamic = "force-dynamic";
 
 const TZ = "Asia/Seoul";

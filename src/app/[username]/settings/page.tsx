@@ -22,7 +22,7 @@ import {
 } from "./AccountDangerZone";
 import { SectionNav } from "./SectionNav";
 
-export const metadata: Metadata = { title: "Settings" };
+export const metadata: Metadata = { title: "설정" };
 export const dynamic = "force-dynamic";
 
 const SECTIONS = [
@@ -59,7 +59,7 @@ export default async function SettingsPage({
   return (
     <div className="mx-auto w-full min-w-0 max-w-5xl">
       <div className="mb-5">
-        <h1 className="text-2xl font-bold text-charcoal-100">Settings</h1>
+        <h1 className="text-2xl font-bold text-charcoal-100">설정</h1>
         <p className="mt-1 text-sm text-charcoal-500">계정 및 프로필 설정</p>
       </div>
 

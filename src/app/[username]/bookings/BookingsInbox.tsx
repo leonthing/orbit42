@@ -87,7 +87,7 @@ export default function BookingsInbox({
     <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-charcoal-100">Bookings</h1>
+          <h1 className="text-2xl font-bold text-charcoal-100">예약</h1>
           <p className="mt-1 text-sm text-charcoal-500">
             받은 예약과 내가 한 예약을 한곳에서 볼 수 있어요.
           </p>

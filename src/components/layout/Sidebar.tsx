@@ -155,7 +155,7 @@ export function Sidebar({
         {/* Social — what other people are doing */}
         <NavLink
           href="/feed"
-          label="Feed"
+          label="피드"
           icon={icons.home}
           active={pathname === "/feed"}
           collapsed={collapsed}
@@ -163,7 +163,7 @@ export function Sidebar({
         />
         <NavLink
           href="/explore"
-          label="Explore"
+          label="탐색"
           icon={icons.users}
           active={pathname === "/explore"}
           collapsed={collapsed}
@@ -171,7 +171,7 @@ export function Sidebar({
         />
         <NavLink
           href={`/${username}`}
-          label="My profile"
+          label="내 프로필"
           icon={icons.user}
           active={pathname === `/${username}`}
           collapsed={collapsed}
@@ -179,7 +179,7 @@ export function Sidebar({
         />
         <NavLink
           href="/messages"
-          label="Messages"
+          label="메시지"
           icon={icons.chat}
           active={pathname === "/messages" || pathname.startsWith("/messages/")}
           collapsed={collapsed}
@@ -190,7 +190,7 @@ export function Sidebar({
         <div className="my-3 border-t border-charcoal-800/40" />
         {!collapsed && (
           <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-charcoal-500">
-            Manage
+            관리
           </p>
         )}
 
@@ -222,7 +222,7 @@ export function Sidebar({
           <svg className={`h-5 w-5 transition-transform ${collapsed ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M18.75 19.5l-7.5-7.5 7.5-7.5m-6 15L5.25 12l7.5-7.5" />
           </svg>
-          {!collapsed && "Collapse"}
+          {!collapsed && "접기"}
         </button>
       </div>
     </>

@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth";
 import { listMyMenus } from "@/lib/menus";
 import ServicesManager from "./ServicesManager";
 
-export const metadata: Metadata = { title: "Services" };
+export const metadata: Metadata = { title: "서비스" };
 export const dynamic = "force-dynamic";
 
 export default async function MenusPage({

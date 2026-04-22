@@ -16,7 +16,7 @@ import { Avatar } from "@/components/Avatar";
 import { CommentSection } from "@/components/CommentSection";
 import { Markdown } from "@/components/Markdown";
 
-export const metadata: Metadata = { title: "Feed" };
+export const metadata: Metadata = { title: "피드" };
 export const dynamic = "force-dynamic";
 
 type Author = { username: string; display_name: string | null; avatar_url: string | null };
@@ -354,7 +354,7 @@ export default async function FeedPage() {
 function FeedHeader() {
   return (
     <header className="mb-6">
-      <h1 className="text-2xl font-bold text-charcoal-100">Feed</h1>
+      <h1 className="text-2xl font-bold text-charcoal-100">피드</h1>
     </header>
   );
 }

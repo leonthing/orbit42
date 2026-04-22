@@ -8,7 +8,7 @@ import { listMyCalendars } from "@/lib/calendars";
 import CalendarView from "./CalendarView";
 import { SlotPanelProvider } from "@/components/SlotPanel";
 
-export const metadata: Metadata = { title: "Calendar" };
+export const metadata: Metadata = { title: "캘린더" };
 export const dynamic = "force-dynamic";
 
 export default async function CalendarPage({

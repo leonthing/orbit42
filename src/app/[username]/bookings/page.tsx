@@ -3,7 +3,7 @@ import { listMyHostBookings, listMyGuestBookings } from "@/lib/slots";
 import type { BookingRow } from "@/lib/slots";
 import BookingsInbox from "./BookingsInbox";
 
-export const metadata: Metadata = { title: "Bookings" };
+export const metadata: Metadata = { title: "예약" };
 export const dynamic = "force-dynamic";
 
 export default async function BookingsPage({

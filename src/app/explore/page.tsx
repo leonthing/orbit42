@@ -9,7 +9,7 @@ import { Avatar } from "@/components/Avatar";
 import { FollowButton } from "@/app/[username]/FollowButton";
 import { ExploreSearchBar } from "./ExploreSearchBar";
 
-export const metadata: Metadata = { title: "Explore" };
+export const metadata: Metadata = { title: "탐색" };
 export const dynamic = "force-dynamic";
 
 export default async function ExplorePage() {
@@ -143,7 +143,7 @@ export default async function ExplorePage() {
     <>
       <header className="mb-8 space-y-4">
         <div>
-          <h1 className="text-2xl font-bold text-charcoal-100">Explore</h1>
+          <h1 className="text-2xl font-bold text-charcoal-100">탐색</h1>
           <p className="mt-1 text-sm text-charcoal-500">
             새로운 궤도를 발견해보세요.
           </p>

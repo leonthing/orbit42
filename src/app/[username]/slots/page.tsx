@@ -5,7 +5,7 @@ import { listMyMenus, listMenusForSlot } from "@/lib/menus";
 import { listLocationBuffers } from "@/lib/location-buffers";
 import SlotsManager from "./SlotsManager";
 
-export const metadata: Metadata = { title: "Timeslots" };
+export const metadata: Metadata = { title: "타임슬롯" };
 export const dynamic = "force-dynamic";
 
 export default async function SlotsPage({ params }: { params: { username: string } }) {

@@ -78,7 +78,7 @@ export default function SlotsManager({
     <div className="space-y-8">
       <header className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-charcoal-100">Timeslots</h1>
+          <h1 className="text-2xl font-bold text-charcoal-100">타임슬롯</h1>
           <p className="mt-1 text-sm text-charcoal-500">
             내 타임 슬롯을 공유하거나 판매하여 수익을 창출하세요.
           </p>

@@ -3,7 +3,7 @@ import { getContacts } from "./actions";
 import type { Contact } from "./actions";
 import ContactList from "./ContactList";
 
-export const metadata: Metadata = { title: "Network" };
+export const metadata: Metadata = { title: "네트워크" };
 
 export default async function NetworkPage({
   params,
