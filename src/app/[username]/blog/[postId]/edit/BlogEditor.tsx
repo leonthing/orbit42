@@ -4,6 +4,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useState, useTransition, useCallback, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkBreaks from "remark-breaks";
 import type { BlogPost } from "../../actions";
 import {
   updateBlogPost,
@@ -340,7 +341,7 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
     <div className="flex-1 overflow-auto rounded-xl border border-charcoal-700 bg-charcoal-800/50 p-5">
       {content ? (
         <div className={PROSE_CLASSES}>
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+          <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{content}</ReactMarkdown>
         </div>
       ) : (
         <p className="text-sm text-charcoal-600">내용이 없습니다</p>

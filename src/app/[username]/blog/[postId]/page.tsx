@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkBreaks from "remark-breaks";
 import { getPublicPostBySlug } from "../actions";
 import { getSession } from "@/lib/auth";
 import { getReactionsFor } from "@/lib/reactions";
@@ -70,7 +71,7 @@ export default async function PublicPostPage({
       </header>
 
       <div className="post-body text-[15px] leading-relaxed text-charcoal-100">
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.content}</ReactMarkdown>
+        <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{post.content}</ReactMarkdown>
       </div>
 
       <div className="border-t border-charcoal-800/40 pt-5">
