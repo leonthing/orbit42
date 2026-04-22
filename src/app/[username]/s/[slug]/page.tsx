@@ -8,6 +8,8 @@ import { getSession } from "@/lib/auth";
 import BookingForm from "./BookingForm";
 import AuctionPanel from "./AuctionPanel";
 import OwnerBookingPreview from "./OwnerBookingPreview";
+import { ShareMenu } from "@/components/ShareMenu";
+import { SITE } from "@/lib/constants";
 
 function formatWindow(from: string | null, until: string | null): string {
   const fmt = (iso: string) =>
@@ -130,6 +132,12 @@ export default async function SlotPage({
             >
               {isAuction ? "Auction" : slot.mode}
             </span>
+            <ShareMenu
+              url={`${SITE.url}/${params.username}/s/${slot.slug}`}
+              title={`${slot.title} · ${host.display_name || host.username}`}
+              text={`${slot.title} — Orbit42 에서 예약하세요`}
+              compact
+            />
           </div>
         </div>
         <p className="mt-2 text-sm text-charcoal-400">
