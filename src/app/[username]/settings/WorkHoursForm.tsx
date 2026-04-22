@@ -8,6 +8,7 @@ import {
   type WorkDay,
   type WorkHours,
 } from "@/lib/insights-types";
+import { PendingButton } from "@/components/PendingButton";
 
 const DAY_ORDER: WorkDay[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
@@ -67,14 +68,16 @@ export function WorkHoursForm({ initial }: Props) {
             </span>
           </p>
         </div>
-        <button
+        <PendingButton
           type="button"
           onClick={save}
-          disabled={pending}
-          className="shrink-0 whitespace-nowrap rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500 disabled:opacity-60"
+          pending={pending}
+          pendingLabel="저장 중…"
+          size="sm"
+          className="shrink-0 whitespace-nowrap"
         >
-          {pending ? "저장 중…" : savedAt ? "저장됨" : "저장"}
-        </button>
+          {savedAt ? "저장됨" : "저장"}
+        </PendingButton>
       </div>
       <ul className="divide-y divide-charcoal-800/40">
         {DAY_ORDER.map((d) => {

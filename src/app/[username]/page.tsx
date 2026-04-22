@@ -22,6 +22,7 @@ import { CommentSection } from "@/components/CommentSection";
 import { Markdown } from "@/components/Markdown";
 import { ComingUpCard } from "./ComingUpCard";
 import { InsightsCard } from "./InsightsCard";
+import { ProfileTabs } from "./ProfileTabs";
 import {
   fetchTimeBlocks,
   getWorkHours,
@@ -251,36 +252,6 @@ export default async function PublicProfile({
         <p className="max-w-2xl text-sm leading-relaxed text-charcoal-300">{profile.bio}</p>
       )}
 
-      {isOwner && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <ValueStat
-            label="누적 거래"
-            value={`${value.total_bookings + (value.highest_bid_cents ? 1 : 0)}`}
-          />
-          <ValueStat
-            label="누적 가치"
-            value={`₩${(value.total_revenue_cents / 100).toLocaleString("ko-KR")}`}
-            accent
-          />
-          <ValueStat
-            label="평균 단가"
-            value={
-              value.average_price_cents > 0
-                ? `₩${(value.average_price_cents / 100).toLocaleString("ko-KR")}`
-                : "—"
-            }
-          />
-          <ValueStat
-            label="최고 낙찰"
-            value={
-              value.highest_bid_cents
-                ? `₩${(value.highest_bid_cents / 100).toLocaleString("ko-KR")}`
-                : "—"
-            }
-          />
-        </div>
-      )}
-
       {interests.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {interests.map((tag) => (
@@ -294,34 +265,6 @@ export default async function PublicProfile({
         </div>
       )}
 
-      {isOwner && (
-        <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-3">
-          <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 [&::-webkit-scrollbar]:hidden">
-            <span className="shrink-0 px-2 text-[10px] font-semibold uppercase tracking-wider text-charcoal-500">
-              Quick add
-            </span>
-            <ActionPill href="/feed" label="Share status" />
-            <ActionPill href={`/${params.username}/slots`} label="Open slot" highlight />
-            <ActionPill href={`/${params.username}/calendar`} label="Add event" />
-            <ActionPill href={`/${params.username}/insights`} label="Time insights" />
-            <ActionPill href={`/${params.username}/book`} label="Share booking link" />
-            <ActionPill href={`/${params.username}/settings`} label="Visibility" />
-          </div>
-        </div>
-      )}
-
-      {isOwner && weekInsights && (
-        <InsightsCard username={params.username} insights={weekInsights} />
-      )}
-
-      {isOwner && upcomingEvents.length > 0 && (
-        <ComingUpCard
-          username={params.username}
-          events={upcomingEvents}
-          nowIso={now.toISOString()}
-        />
-      )}
-
       {!isOwner && totalSlotWindows > 0 && (
         <div className="flex justify-end">
           <Link
@@ -333,123 +276,180 @@ export default async function PublicProfile({
         </div>
       )}
 
-      {slots.length > 0 && (
-        <SlotPanelProvider username={params.username}>
-          <section className="space-y-3">
-            <div className="flex items-baseline justify-between">
-              <h2 className="text-lg font-semibold text-charcoal-100">All slots</h2>
-              <span className="text-xs text-charcoal-500">{slots.length}개</span>
-            </div>
-            <AllSlotsGrid
-              username={params.username}
-              slots={slots.map((s) => ({
-                id: s.id,
-                slug: s.slug,
-                title: s.title,
-                price_cents: s.price_cents,
-                duration_min: s.duration_min,
-                slot_type: s.slot_type,
-                location_detail: s.location_detail,
-                description: s.description,
-                pricing_model: s.pricing_model,
-                reserve_price_cents: s.reserve_price_cents,
-                current_high_bid_cents: s.current_high_bid_cents,
-                auction_ends_at: s.auction_ends_at,
-              }))}
-              reactionsBySlot={Array.from(slotReactions.entries())}
-              loggedIn={!!session}
-            />
-          </section>
-        </SlotPanelProvider>
-      )}
-
-      {myFeedPosts.length > 0 && (
-        <section className="space-y-3">
-          <div className="flex items-baseline justify-between">
-            <h2 className="text-lg font-semibold text-charcoal-100">
-              내가 쓴 글
-            </h2>
-            <span className="text-xs text-charcoal-500">
-              {myFeedPosts.length}
-            </span>
-          </div>
-          <ul className="space-y-2.5">
-            {myFeedPosts.map((p) => (
-              <li
-                key={p.id}
-                className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-4"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <time className="text-[11px] font-medium text-charcoal-500">
-                    {new Date(p.created_at).toLocaleString("ko-KR", { timeZone: "Asia/Seoul",
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </time>
-                  {isOwner && (
-                    <DeleteFeedPostButton id={p.id} />
-                  )}
-                </div>
-                {p.body && (
-                  <Markdown
-                    body={p.body}
-                    className="mt-2 break-words text-sm leading-relaxed text-charcoal-100"
-                  />
-                )}
-                {p.image_urls.length > 0 && (
-                  <div
-                    className={`mt-3 grid gap-2 ${
-                      p.image_urls.length === 1
-                        ? "grid-cols-1"
-                        : p.image_urls.length === 2
-                          ? "grid-cols-2"
-                          : "grid-cols-2 sm:grid-cols-3"
-                    }`}
-                  >
-                    {p.image_urls.map((url) => (
-                      <div
-                        key={url}
-                        className="relative aspect-video overflow-hidden rounded-lg bg-charcoal-800/40"
-                      >
-                        <Image
-                          src={url}
-                          alt=""
-                          fill
-                          sizes="(max-width: 768px) 50vw, 300px"
-                          className="object-cover"
-                          unoptimized
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {p.location_label && (
-                  <p className="mt-2 text-xs text-charcoal-500">
-                    📍 {p.location_label}
-                  </p>
-                )}
-                <div className="mt-3">
-                  <ReactionStrip
-                    target_type="feed_post"
-                    target_id={p.id}
-                    initial={feedPostReactions.get(p.id) ?? []}
-                    loggedIn={!!session}
-                    size="sm"
-                  />
-                </div>
-                <CommentSection
-                  targetType="feed_post"
-                  targetId={p.id}
-                  loggedIn={!!session}
-                  viewerId={null}
+      {isOwner ? (
+        <ProfileTabs
+          tabs={[
+            { key: "overview", label: "Overview" },
+            { key: "slots", label: "슬롯", count: slots.length },
+            { key: "posts", label: "글", count: myFeedPosts.length },
+          ]}
+          overview={
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <ValueStat
+                  label="누적 거래"
+                  value={`${value.total_bookings + (value.highest_bid_cents ? 1 : 0)}`}
                 />
-              </li>
-            ))}
-          </ul>
-        </section>
+                <ValueStat
+                  label="누적 가치"
+                  value={`₩${(value.total_revenue_cents / 100).toLocaleString("ko-KR")}`}
+                  accent
+                />
+                <ValueStat
+                  label="평균 단가"
+                  value={
+                    value.average_price_cents > 0
+                      ? `₩${(value.average_price_cents / 100).toLocaleString("ko-KR")}`
+                      : "—"
+                  }
+                />
+                <ValueStat
+                  label="최고 낙찰"
+                  value={
+                    value.highest_bid_cents
+                      ? `₩${(value.highest_bid_cents / 100).toLocaleString("ko-KR")}`
+                      : "—"
+                  }
+                />
+              </div>
+
+              <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-3">
+                <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 [&::-webkit-scrollbar]:hidden">
+                  <span className="shrink-0 px-2 text-[10px] font-semibold uppercase tracking-wider text-charcoal-500">
+                    바로가기
+                  </span>
+                  <ActionPill href="/feed" label="소식 공유" />
+                  <ActionPill href={`/${params.username}/slots`} label="슬롯 만들기" highlight />
+                  <ActionPill href={`/${params.username}/calendar`} label="일정 추가" />
+                  <ActionPill href={`/${params.username}/insights`} label="시간 인사이트" />
+                  <ActionPill href={`/${params.username}/book`} label="예약 링크" />
+                  <ActionPill href={`/${params.username}/settings`} label="설정" />
+                </div>
+              </div>
+
+              {weekInsights && (
+                <InsightsCard username={params.username} insights={weekInsights} />
+              )}
+
+              {upcomingEvents.length > 0 && (
+                <ComingUpCard
+                  username={params.username}
+                  events={upcomingEvents}
+                  nowIso={now.toISOString()}
+                />
+              )}
+            </div>
+          }
+          slots={
+            slots.length > 0 ? (
+              <SlotPanelProvider username={params.username}>
+                <section className="space-y-3">
+                  <div className="flex items-baseline justify-between">
+                    <h2 className="text-lg font-semibold text-charcoal-100">
+                      모든 슬롯
+                    </h2>
+                    <span className="text-xs text-charcoal-500">
+                      {slots.length}개
+                    </span>
+                  </div>
+                  <AllSlotsGrid
+                    username={params.username}
+                    slots={slots.map((s) => ({
+                      id: s.id,
+                      slug: s.slug,
+                      title: s.title,
+                      price_cents: s.price_cents,
+                      duration_min: s.duration_min,
+                      slot_type: s.slot_type,
+                      location_detail: s.location_detail,
+                      description: s.description,
+                      pricing_model: s.pricing_model,
+                      reserve_price_cents: s.reserve_price_cents,
+                      current_high_bid_cents: s.current_high_bid_cents,
+                      auction_ends_at: s.auction_ends_at,
+                    }))}
+                    reactionsBySlot={Array.from(slotReactions.entries())}
+                    loggedIn={!!session}
+                  />
+                </section>
+              </SlotPanelProvider>
+            ) : (
+              <p className="rounded-xl border border-dashed border-charcoal-800/60 bg-charcoal-900/20 px-6 py-12 text-center text-sm text-charcoal-500">
+                아직 만든 슬롯이 없어요.{" "}
+                <Link
+                  href={`/${params.username}/slots`}
+                  className="text-red-400 hover:underline"
+                >
+                  첫 슬롯 만들기 →
+                </Link>
+              </p>
+            )
+          }
+          posts={
+            myFeedPosts.length > 0 ? (
+              <PostsList
+                posts={myFeedPosts}
+                username={params.username}
+                isOwner={isOwner}
+                session={session}
+                feedPostReactions={feedPostReactions}
+              />
+            ) : (
+              <p className="rounded-xl border border-dashed border-charcoal-800/60 bg-charcoal-900/20 px-6 py-12 text-center text-sm text-charcoal-500">
+                아직 쓴 글이 없어요.{" "}
+                <Link href="/feed" className="text-red-400 hover:underline">
+                  피드에서 한 마디 남겨보기 →
+                </Link>
+              </p>
+            )
+          }
+        />
+      ) : (
+        <>
+          {slots.length > 0 && (
+            <SlotPanelProvider username={params.username}>
+              <section className="space-y-3">
+                <div className="flex items-baseline justify-between">
+                  <h2 className="text-lg font-semibold text-charcoal-100">
+                    모든 슬롯
+                  </h2>
+                  <span className="text-xs text-charcoal-500">
+                    {slots.length}개
+                  </span>
+                </div>
+                <AllSlotsGrid
+                  username={params.username}
+                  slots={slots.map((s) => ({
+                    id: s.id,
+                    slug: s.slug,
+                    title: s.title,
+                    price_cents: s.price_cents,
+                    duration_min: s.duration_min,
+                    slot_type: s.slot_type,
+                    location_detail: s.location_detail,
+                    description: s.description,
+                    pricing_model: s.pricing_model,
+                    reserve_price_cents: s.reserve_price_cents,
+                    current_high_bid_cents: s.current_high_bid_cents,
+                    auction_ends_at: s.auction_ends_at,
+                  }))}
+                  reactionsBySlot={Array.from(slotReactions.entries())}
+                  loggedIn={!!session}
+                />
+              </section>
+            </SlotPanelProvider>
+          )}
+
+          {myFeedPosts.length > 0 && (
+            <PostsList
+              posts={myFeedPosts}
+              username={params.username}
+              isOwner={isOwner}
+              session={session}
+              feedPostReactions={feedPostReactions}
+            />
+          )}
+        </>
       )}
 
       <div className="grid gap-3 md:grid-cols-2">
@@ -568,6 +568,115 @@ export default async function PublicProfile({
       )}
 
     </div>
+  );
+}
+
+type FeedPostItem = {
+  id: string;
+  body: string | null;
+  image_urls: string[];
+  location_label: string | null;
+  created_at: string;
+};
+
+function PostsList({
+  posts,
+  isOwner,
+  session,
+  feedPostReactions,
+}: {
+  posts: FeedPostItem[];
+  username: string;
+  isOwner: boolean;
+  session: { username: string } | null;
+  feedPostReactions: Map<string, unknown>;
+}) {
+  return (
+    <section className="space-y-3">
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-lg font-semibold text-charcoal-100">내가 쓴 글</h2>
+        <span className="text-xs text-charcoal-500">{posts.length}</span>
+      </div>
+      <ul className="space-y-2.5">
+        {posts.map((p) => (
+          <li
+            key={p.id}
+            className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-4"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <time className="text-[11px] font-medium text-charcoal-500">
+                {new Date(p.created_at).toLocaleString("ko-KR", {
+                  timeZone: "Asia/Seoul",
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </time>
+              {isOwner && <DeleteFeedPostButton id={p.id} />}
+            </div>
+            {p.body && (
+              <Markdown
+                body={p.body}
+                className="mt-2 break-words text-sm leading-relaxed text-charcoal-100"
+              />
+            )}
+            {p.image_urls.length > 0 && (
+              <div
+                className={`mt-3 grid gap-2 ${
+                  p.image_urls.length === 1
+                    ? "grid-cols-1"
+                    : p.image_urls.length === 2
+                      ? "grid-cols-2"
+                      : "grid-cols-2 sm:grid-cols-3"
+                }`}
+              >
+                {p.image_urls.map((url) => (
+                  <div
+                    key={url}
+                    className="relative aspect-video overflow-hidden rounded-lg bg-charcoal-800/40"
+                  >
+                    <Image
+                      src={url}
+                      alt=""
+                      fill
+                      sizes="(max-width: 768px) 50vw, 300px"
+                      className="object-cover"
+                      unoptimized
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+            {p.location_label && (
+              <p className="mt-2 text-xs text-charcoal-500">
+                📍 {p.location_label}
+              </p>
+            )}
+            <div className="mt-3">
+              <ReactionStrip
+                target_type="feed_post"
+                target_id={p.id}
+                initial={
+                  (feedPostReactions.get(p.id) as Parameters<
+                    typeof ReactionStrip
+                  >[0]["initial"]) ?? []
+                }
+                loggedIn={!!session}
+                size="sm"
+              />
+            </div>
+            <CommentSection
+              targetType="feed_post"
+              targetId={p.id}
+              loggedIn={!!session}
+              viewerId={null}
+            />
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
