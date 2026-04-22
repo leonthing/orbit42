@@ -11,6 +11,8 @@ import { GoogleAccountsSection } from "./GoogleAccountsSection";
 import { MyCalendars } from "./MyCalendars";
 import { WorkHoursForm } from "./WorkHoursForm";
 import { getWorkHours } from "@/lib/insights";
+import { LocationBuffersForm } from "./LocationBuffersForm";
+import { listLocationBuffers } from "@/lib/location-buffers";
 import { ReferralLink } from "./ReferralLink";
 import { NotificationPrefs } from "./NotificationPrefs";
 import { getMyPrefs } from "@/lib/notification-prefs";
@@ -31,13 +33,14 @@ export default async function SettingsPage({
   if (!profile) notFound();
 
   const userId = await getUserId();
-  const [googleConnected, myCalendars, extras, notifPrefs, workHours] =
+  const [googleConnected, myCalendars, extras, notifPrefs, workHours, locationBuffers] =
     await Promise.all([
       isGoogleCalendarConnected().catch(() => false),
       listMyCalendars().catch(() => []),
       userId ? listExtraGoogleAccounts(userId) : Promise.resolve([]),
       getMyPrefs().catch(() => ({})),
       userId ? getWorkHours(userId) : Promise.resolve({}),
+      listLocationBuffers(userId ?? undefined).catch(() => []),
     ]);
 
   return (
@@ -69,6 +72,8 @@ export default async function SettingsPage({
       <MyCalendars initial={myCalendars} googleConnected={googleConnected} />
 
       <WorkHoursForm initial={workHours} />
+
+      <LocationBuffersForm initial={locationBuffers} />
 
       <ReferralLink username={profile.username} />
 

@@ -1,5 +1,7 @@
 import { getAuthenticatedCalendar } from "@/lib/google";
 import { getAdminClient } from "@/lib/supabase";
+import { listLocationBuffers } from "@/lib/location-buffers";
+import { resolveBufferForEvent } from "@/lib/location-buffers-types";
 
 const TZ_OFFSET_MIN = 9 * 60; // Asia/Seoul
 const DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
@@ -19,6 +21,13 @@ type AutoSpec = {
   min_notice_hours: number;
   max_advance_days: number;
   buffer_min: number;
+};
+
+type Block = {
+  start: Date;
+  end: Date;
+  title: string | null;
+  location: string | null;
 };
 
 function parseHM(s: string): { h: number; m: number } | null {
@@ -53,25 +62,47 @@ export async function computeAutoAvailability(
   const earliest = new Date(now.getTime() + spec.min_notice_hours * 60 * 60_000);
   const horizon = new Date(now.getTime() + spec.max_advance_days * 24 * 60 * 60_000);
 
-  // 1. Pull Google busy windows for the entire horizon (best-effort).
-  let busy: { start: Date; end: Date }[] = [];
+  // Location presets drive per-event travel buffers (e.g. 강남 30m,
+  // 여의도 60m, 부산 180m). Falls back to spec.buffer_min.
+  const presets = await listLocationBuffers(hostId).catch(() => []);
+
+  // 1. Pull Google primary events — switched from freebusy.query so we
+  // also get title + location for per-event buffer matching.
+  let googleBlocks: Block[] = [];
   try {
     const calendar = await getAuthenticatedCalendar(hostId);
     if (calendar) {
-      const res = await calendar.freebusy.query({
-        requestBody: {
-          timeMin: now.toISOString(),
-          timeMax: horizon.toISOString(),
-          items: [{ id: "primary" }],
-        },
+      const res = await calendar.events.list({
+        calendarId: "primary",
+        timeMin: now.toISOString(),
+        timeMax: horizon.toISOString(),
+        singleEvents: true,
+        orderBy: "startTime",
+        maxResults: 500,
       });
-      busy = (res.data.calendars?.primary?.busy || []).map((b) => ({
-        start: new Date(b.start || ""),
-        end: new Date(b.end || ""),
-      }));
+      for (const it of res.data.items ?? []) {
+        if (it.status === "cancelled") continue;
+        const selfAttendee = (it.attendees ?? []).find((a) => a.self);
+        if (selfAttendee?.responseStatus === "declined") continue;
+        if (it.transparency === "transparent") continue; // "Available" events
+        const startIso = it.start?.dateTime || it.start?.date;
+        const endIso = it.end?.dateTime || it.end?.date;
+        if (!startIso || !endIso) continue;
+        // Skip all-day events — they would block the entire day.
+        if (it.start?.date && !it.start?.dateTime) continue;
+        const start = new Date(startIso);
+        const end = new Date(endIso);
+        if (end.getTime() <= start.getTime()) continue;
+        googleBlocks.push({
+          start,
+          end,
+          title: (it.summary as string | null) ?? null,
+          location: (it.location as string | null) ?? null,
+        });
+      }
     }
   } catch {
-    busy = [];
+    googleBlocks = [];
   }
 
   // 2. Pull existing bookings for this host so two guests don't double-book.
@@ -83,30 +114,44 @@ export async function computeAutoAvailability(
     .gte("scheduled_at", now.toISOString())
     .lte("scheduled_at", horizon.toISOString())
     .neq("status", "canceled");
-  const booked = (existing ?? []).map((b) => ({
+  const bookedBlocks: Block[] = (existing ?? []).map((b) => ({
     start: new Date(b.scheduled_at as string),
     end: new Date(b.scheduled_end_at as string),
+    title: null,
+    location: null,
   }));
 
   // 3. Pull host's native (in-app) calendar events — if the host creates
   // an event during a would-be-bookable window, the slot should close.
   const { data: nativeEvents } = await db
     .from("events")
-    .select("start_at, end_at, all_day")
+    .select("title, start_at, end_at, all_day")
     .eq("user_id", hostId)
     .gte("start_at", now.toISOString())
     .lte("start_at", horizon.toISOString());
-  const nativeBlocks = (nativeEvents ?? [])
+  const nativeBlocks: Block[] = (nativeEvents ?? [])
     .filter((e) => !e.all_day)
     .map((e) => ({
       start: new Date(e.start_at as string),
       end: new Date((e.end_at ?? e.start_at) as string),
+      title: (e.title as string | null) ?? null,
+      location: null,
     }))
     .filter((b) => b.end.getTime() > b.start.getTime());
 
-  const blocks = [...busy, ...booked, ...nativeBlocks];
+  // Precompute buffer per block once (resolve against location presets).
+  const blocks = [...googleBlocks, ...bookedBlocks, ...nativeBlocks].map(
+    (b) => {
+      const hit = resolveBufferForEvent(presets, {
+        location: b.location,
+        title: b.title,
+      });
+      const bufMin = hit ? hit.buffer_min : spec.buffer_min;
+      return { ...b, bufferMs: bufMin * 60_000 };
+    },
+  );
 
-  // 3. Generate candidate options day by day.
+  // 4. Generate candidate options day by day.
   const options: AutoSlotOption[] = [];
   const cursor = tzDayInfo(now);
   for (let dayOffset = 0; dayOffset <= spec.max_advance_days; dayOffset++) {
@@ -132,8 +177,8 @@ export async function computeAutoAvailability(
         const isPast = cur < earliest;
         const conflicts = blocks.some(
           (b) =>
-            cur.getTime() < b.end.getTime() + spec.buffer_min * 60_000 &&
-            end.getTime() + spec.buffer_min * 60_000 > b.start.getTime(),
+            cur.getTime() < b.end.getTime() + b.bufferMs &&
+            end.getTime() + b.bufferMs > b.start.getTime(),
         );
         if (!isPast && !conflicts) {
           options.push({ start_at: cur.toISOString(), end_at: end.toISOString() });
