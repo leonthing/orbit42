@@ -21,6 +21,10 @@ type AutoSpec = {
   min_notice_hours: number;
   max_advance_days: number;
   buffer_min: number;
+  /** The slot's own location/title — when the adjacent event shares
+   * the same location preset, the travel buffer is skipped. */
+  slot_title?: string | null;
+  slot_location?: string | null;
 };
 
 type Block = {
@@ -106,19 +110,27 @@ export async function computeAutoAvailability(
   }
 
   // 2. Pull existing bookings for this host so two guests don't double-book.
+  // Join the slot so each booking carries its own location/title — that
+  // way back-to-back bookings at the same location don't force a buffer.
   const db = getAdminClient();
   const { data: existing } = await db
     .from("bookings")
-    .select("scheduled_at, scheduled_end_at, status")
+    .select(
+      "scheduled_at, scheduled_end_at, status, slot:time_slots!bookings_slot_id_fkey(title, location_detail)",
+    )
     .eq("host_id", hostId)
     .gte("scheduled_at", now.toISOString())
     .lte("scheduled_at", horizon.toISOString())
     .neq("status", "canceled");
-  const bookedBlocks: Block[] = (existing ?? []).map((b) => ({
-    start: new Date(b.scheduled_at as string),
-    end: new Date(b.scheduled_end_at as string),
-    title: null,
-    location: null,
+  const bookedBlocks: Block[] = ((existing ?? []) as unknown as Array<{
+    scheduled_at: string;
+    scheduled_end_at: string;
+    slot: { title: string | null; location_detail: string | null } | null;
+  }>).map((b) => ({
+    start: new Date(b.scheduled_at),
+    end: new Date(b.scheduled_end_at),
+    title: b.slot?.title ?? null,
+    location: b.slot?.location_detail ?? null,
   }));
 
   // 3. Pull host's native (in-app) calendar events — if the host creates
@@ -139,6 +151,13 @@ export async function computeAutoAvailability(
     }))
     .filter((b) => b.end.getTime() > b.start.getTime());
 
+  // If the slot itself has a location that matches a preset, a block
+  // with the same preset needs no travel buffer — you're already there.
+  const slotPreset = resolveBufferForEvent(presets, {
+    location: spec.slot_location,
+    title: spec.slot_title,
+  });
+
   // Precompute buffer per block once (resolve against location presets).
   const blocks = [...googleBlocks, ...bookedBlocks, ...nativeBlocks].map(
     (b) => {
@@ -146,7 +165,12 @@ export async function computeAutoAvailability(
         location: b.location,
         title: b.title,
       });
-      const bufMin = hit ? hit.buffer_min : spec.buffer_min;
+      const sameAsSlot = slotPreset && hit && hit.id === slotPreset.id;
+      const bufMin = sameAsSlot
+        ? 0
+        : hit
+          ? hit.buffer_min
+          : spec.buffer_min;
       return { ...b, bufferMs: bufMin * 60_000 };
     },
   );

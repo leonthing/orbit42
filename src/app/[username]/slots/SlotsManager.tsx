@@ -395,9 +395,13 @@ function NewSlotForm({
               type="text"
               value={locationDetail}
               onChange={(e) => setLocationDetail(e.target.value)}
-              placeholder="예: 성수동 / Zoom"
+              placeholder="예: 강남 / 성수동 / Zoom"
               className={INPUT}
             />
+            <p className="mt-1 text-[11px] text-charcoal-500">
+              설정 → 장소별 이동시간 에 등록한 지역명이 들어가면 인접
+              일정과의 버퍼가 자동 최적화돼요.
+            </p>
           </Field>
         </Section>
 

@@ -194,6 +194,8 @@ export async function getBookableOptions(slot: TimeSlot): Promise<BookableOption
       min_notice_hours: slot.min_notice_hours,
       max_advance_days: effectiveMaxDays,
       buffer_min: slot.buffer_min,
+      slot_title: slot.title ?? null,
+      slot_location: slot.location_detail ?? null,
     });
     return opts
       .filter((o: AutoSlotOption) => withinWindow(o.start_at))
@@ -526,6 +528,8 @@ export async function bookSlot(args: {
       min_notice_hours: slot.min_notice_hours as number,
       max_advance_days: bookMaxDays,
       buffer_min: slot.buffer_min as number,
+      slot_title: (slot.title as string | null) ?? null,
+      slot_location: (slot.location_detail as string | null) ?? null,
     });
     const ok = options.some(
       (o) => new Date(o.start_at).getTime() === startAt.getTime(),
