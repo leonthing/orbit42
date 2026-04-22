@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/admin";
 import { listFeedback } from "@/lib/feedback";
 import { Avatar } from "@/components/Avatar";
 import { ResolveButton } from "./ResolveButton";
+import { EmptyState } from "@/components/EmptyState";
 
 export const metadata: Metadata = { title: "Feedback · Admin · Orbit42" };
 export const dynamic = "force-dynamic";
@@ -40,9 +41,27 @@ export default async function AdminFeedbackPage() {
         </div>
 
         {items.length === 0 ? (
-          <p className="mt-12 rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-10 text-center text-sm text-charcoal-500">
-            아직 피드백이 없어요.
-          </p>
+          <div className="mt-12">
+            <EmptyState
+              icon={
+                <svg
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z"
+                  />
+                </svg>
+              }
+              title="아직 피드백이 없어요"
+              body="사이드바의 '피드백 보내기' 로 사용자가 의견을 남기면 여기 쌓여요."
+            />
+          </div>
         ) : (
           <ul className="mt-6 space-y-3">
             {items.map((f) => {
