@@ -627,6 +627,30 @@ export default function CalendarView({
           <p className="mt-1 text-sm text-charcoal-500">일정 및 시간 관리</p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* View mode tabs — sit next to the calendar picker to save a row */}
+          <div className="flex overflow-x-auto rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 p-0.5">
+            {(
+              [
+                ["life", "Life"],
+                ["year", "연"],
+                ["quarter", "분기"],
+                ["month", "월"],
+                ["week", "주"],
+              ] as const
+            ).map(([mode, label]) => (
+              <button
+                key={mode}
+                onClick={() => switchView(mode)}
+                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                  viewMode === mode
+                    ? "bg-red-600 text-white"
+                    : "text-charcoal-400 hover:text-charcoal-200"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           {myCalendars.length > 0 ? (
             <div className="relative">
               <button
@@ -749,62 +773,34 @@ export default function CalendarView({
         </div>
       </div>
 
-      {/* View Tabs + Navigation */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        {/* View mode tabs */}
-        <div className="flex overflow-x-auto rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 p-0.5">
-          {(
-            [
-              ["life", "Life"],
-              ["year", "연"],
-              ["quarter", "분기"],
-              ["month", "월"],
-              ["week", "주"],
-            ] as const
-          ).map(([mode, label]) => (
+      {/* Navigation (hidden for Life view) */}
+      {viewMode !== "life" && (
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate(-1)}
+            className="rounded-lg px-3 py-1.5 text-sm text-charcoal-400 hover:bg-charcoal-800/50 hover:text-charcoal-200"
+          >
+            &larr;
+          </button>
+          <h2 className="min-w-[140px] text-center text-lg font-semibold text-charcoal-200">
+            {getHeaderLabel()}
+          </h2>
+          <button
+            onClick={() => navigate(1)}
+            className="rounded-lg px-3 py-1.5 text-sm text-charcoal-400 hover:bg-charcoal-800/50 hover:text-charcoal-200"
+          >
+            &rarr;
+          </button>
+          {!isViewCurrent() && (
             <button
-              key={mode}
-              onClick={() => switchView(mode)}
-              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                viewMode === mode
-                  ? "bg-red-600 text-white"
-                  : "text-charcoal-400 hover:text-charcoal-200"
-              }`}
+              onClick={goToToday}
+              className="rounded-md bg-charcoal-800/60 px-2.5 py-1 text-xs text-charcoal-400 hover:text-charcoal-200"
             >
-              {label}
+              오늘
             </button>
-          ))}
+          )}
         </div>
-
-        {/* Navigation (hidden for Life view) */}
-        {viewMode !== "life" && (
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate(-1)}
-              className="rounded-lg px-3 py-1.5 text-sm text-charcoal-400 hover:bg-charcoal-800/50 hover:text-charcoal-200"
-            >
-              &larr;
-            </button>
-            <h2 className="min-w-[140px] text-center text-lg font-semibold text-charcoal-200">
-              {getHeaderLabel()}
-            </h2>
-            <button
-              onClick={() => navigate(1)}
-              className="rounded-lg px-3 py-1.5 text-sm text-charcoal-400 hover:bg-charcoal-800/50 hover:text-charcoal-200"
-            >
-              &rarr;
-            </button>
-            {!isViewCurrent() && (
-              <button
-                onClick={goToToday}
-                className="rounded-md bg-charcoal-800/60 px-2.5 py-1 text-xs text-charcoal-400 hover:text-charcoal-200"
-              >
-                오늘
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Main content area */}
       {viewMode === "month" && (
