@@ -23,7 +23,7 @@ import type { WeekDay, WeekItem } from "@/lib/profile-week";
 import type { Calendar } from "@/lib/calendars-types";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 /** Parse a WeekItem event id back into its source+ids. */
 function parseWeekItemId(
@@ -156,6 +156,7 @@ export default function CalendarView({
   viewerIsOwner?: boolean;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const confirm = useConfirm();
   const toast = useToast();
   const [year, setYear] = useState(initialYear);
@@ -416,6 +417,30 @@ export default function CalendarView({
     },
     [year, month, today, selectedDay, fetchEvents, fetchMultiMonthEvents, refetchWeekDays],
   );
+
+  // ── URL `?d=YYYY-MM-DD` jump (from sidebar mini calendar) ──
+  useEffect(() => {
+    const d = searchParams?.get("d");
+    if (!d) return;
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
+    if (!m) return;
+    const y = Number(m[1]);
+    const mo = Number(m[2]) - 1;
+    const day = Number(m[3]);
+    if (Number.isNaN(y) || Number.isNaN(mo) || Number.isNaN(day)) return;
+    // Only act when the target differs from current state.
+    if (y === year && mo === month && selectedDay === day) return;
+    setYear(y);
+    setMonth(mo);
+    setSelectedDay(day);
+    setQuarter(getQuarterForMonth(mo));
+    if (viewMode === "year" || viewMode === "quarter" || viewMode === "life") {
+      setViewMode("week");
+    }
+    fetchEvents(y, mo);
+    refetchWeekDays(new Date(y, mo, day));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   // ── Helpers ──
 

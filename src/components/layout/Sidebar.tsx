@@ -6,6 +6,7 @@ import { NAV_ITEMS } from "@/lib/constants";
 import { useState } from "react";
 import { useMobileMenu } from "./MobileMenuContext";
 import { FeedbackBox } from "./FeedbackBox";
+import { MiniMonth } from "./MiniMonth";
 
 const icons: Record<string, React.ReactNode> = {
   home: (
@@ -150,8 +151,15 @@ export function Sidebar({
         )}
       </div>
 
+      {/* Mini month — desktop, uncollapsed only */}
+      {!collapsed && (
+        <div className="hidden border-b border-charcoal-800/40 pt-2 md:block">
+          <MiniMonth username={username} />
+        </div>
+      )}
+
       {/* Nav */}
-      <nav className="flex-1 space-y-1 px-2 py-3">
+      <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-3">
         {/* Social — what other people are doing */}
         <NavLink
           href="/feed"
