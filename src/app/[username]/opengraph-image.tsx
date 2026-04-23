@@ -92,11 +92,6 @@ export default async function Image({
             <div style={{ fontSize: 72, fontWeight: 800, letterSpacing: -1 }}>
               {name}
             </div>
-            {profile?.username && (
-              <div style={{ fontSize: 28, color: "#a3a3a3", marginTop: 6 }}>
-                @{profile.username}
-              </div>
-            )}
           </div>
         </div>
 

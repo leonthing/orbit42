@@ -44,7 +44,7 @@ export async function generateMetadata({
   const profile = await getProfile(params.username);
   if (!profile) return { title: "Not found" };
   const name = profile.display_name || profile.username;
-  const title = `${name} (@${profile.username})`;
+  const title = name;
   const description = profile.bio || `${name}'s orbit on Orbit42`;
   return {
     title,

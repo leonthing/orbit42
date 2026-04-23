@@ -14,7 +14,6 @@ export default async function Image({
   const data = await getSlotBySlug(params.username, params.slug);
   const title = data?.slot.title ?? "Orbit42 timeslot";
   const hostName = data?.host.display_name || data?.host.username || "Orbit42";
-  const handle = data?.host.username ?? "";
   const slot = data?.slot;
   const isAuction = slot?.pricing_model === "auction";
   const priceLabel = !slot
@@ -131,11 +130,6 @@ export default async function Image({
             <div style={{ fontSize: 28, fontWeight: 700, color: "#fff" }}>
               {hostName}
             </div>
-            {handle && (
-              <div style={{ fontSize: 20, color: "#a3a3a3", marginTop: 2 }}>
-                @{handle}
-              </div>
-            )}
           </div>
           <div
             style={{

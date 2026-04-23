@@ -36,7 +36,7 @@ export async function generateMetadata({
   if (!data) return { title: "Not found" };
   const { slot, host } = data;
   const hostName = host.display_name || host.username;
-  const title = `${slot.title} · ${hostName} (@${host.username})`;
+  const title = `${slot.title} · ${hostName}`;
   const isAuction = slot.pricing_model === "auction";
   const priceLabel = isAuction
     ? `경매 · 시작가 ₩${((slot.reserve_price_cents ?? 0) / 100).toLocaleString("ko-KR")}`
@@ -46,6 +46,10 @@ export async function generateMetadata({
   const description =
     slot.description?.slice(0, 140) ??
     `${slot.duration_min}분 · ${priceLabel} · Orbit42에서 예약하기`;
+  // Prefer the host-uploaded cover image for link previews; fall back to
+  // the auto-generated opengraph-image.tsx card when none exists.
+  const coverImage = slot.image_urls?.[0];
+  const images = coverImage ? [{ url: coverImage, alt: slot.title }] : undefined;
   return {
     title,
     description,
@@ -55,11 +59,13 @@ export async function generateMetadata({
       type: "website",
       siteName: "Orbit42",
       locale: "ko_KR",
+      ...(images ? { images } : {}),
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
+      ...(coverImage ? { images: [coverImage] } : {}),
     },
   };
 }
