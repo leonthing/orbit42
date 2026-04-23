@@ -5,6 +5,7 @@ import {
   getCompletedKeys,
   toggleEventCompletion,
 } from "@/lib/event-completions";
+import { normalizeEventKey } from "@/lib/event-key";
 import {
   type Event,
   type EventInput,
@@ -199,10 +200,10 @@ export default function CalendarView({
   // work in whichever view the user lands on.
   useEffect(() => {
     const keySet = new Set<string>();
-    for (const e of events) keySet.add(e.id);
+    for (const e of events) keySet.add(normalizeEventKey(e.id));
     for (const d of weekDays) {
       for (const it of d.items) {
-        if (it.kind === "event") keySet.add(it.id);
+        if (it.kind === "event") keySet.add(normalizeEventKey(it.id));
       }
     }
     const keys = Array.from(keySet);
@@ -221,21 +222,22 @@ export default function CalendarView({
   }, [events, weekDays]);
 
   const handleToggleComplete = useCallback(async (eventId: string) => {
-    const isDone = completed.has(eventId);
+    const key = normalizeEventKey(eventId);
+    const isDone = completed.has(key);
     // Optimistic update.
     setCompleted((prev) => {
       const next = new Set(prev);
-      if (isDone) next.delete(eventId);
-      else next.add(eventId);
+      if (isDone) next.delete(key);
+      else next.add(key);
       return next;
     });
-    const res = await toggleEventCompletion(eventId, !isDone);
+    const res = await toggleEventCompletion(key, !isDone);
     if ("error" in res) {
       // Roll back.
       setCompleted((prev) => {
         const next = new Set(prev);
-        if (isDone) next.add(eventId);
-        else next.delete(eventId);
+        if (isDone) next.add(key);
+        else next.delete(key);
         return next;
       });
     }
@@ -900,7 +902,7 @@ export default function CalendarView({
                             <div className="mt-1 flex min-h-0 flex-1 flex-col gap-[2px] overflow-hidden">
                               {dayEvents.slice(0, 3).map((ev) => {
                                 const color = getEventColor(ev);
-                                const isDone = completed.has(ev.id);
+                                const isDone = completed.has(normalizeEventKey(ev.id));
                                 return (
                                   <button
                                     key={ev.id}
@@ -1012,7 +1014,7 @@ export default function CalendarView({
       {detailEvent && (
         <EventDetailModal
           item={detailEvent}
-          isCompleted={completed.has(detailEvent.id)}
+          isCompleted={completed.has(normalizeEventKey(detailEvent.id))}
           canToggleComplete={!!viewerIsOwner}
           onToggleComplete={() => handleToggleComplete(detailEvent.id)}
           onEdit={() => {
@@ -1520,7 +1522,7 @@ function EventList({
   return (
     <ul className="space-y-3">
       {events.map((ev) => {
-        const isDone = completed.has(ev.id);
+        const isDone = completed.has(normalizeEventKey(ev.id));
         return (
         <li
           key={ev.id}
