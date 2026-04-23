@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef } from "react";
 import type { WeekDay, WeekItem } from "@/lib/profile-week";
 import { ShareEventButton } from "@/components/ShareEventButton";
 import { useSlotPanel } from "@/components/SlotPanel";
+import { normalizeEventKey } from "@/lib/event-key";
 
 // Visible window: 00:00 – 24:00 (full day, 24 one-hour rows).
 const START_HOUR = 0;
@@ -91,33 +92,10 @@ export function WeekCalendar({
           rest. Desktop fits all 7 days naturally. */}
       <div className="overflow-x-auto md:overflow-x-visible">
         <div className="w-[calc(44px+7*132px)] sm:w-[calc(44px+7*168px)] md:w-full">
-          {/* Day headers */}
-          <div className="grid grid-cols-[44px_repeat(7,minmax(0,1fr))] border-b border-charcoal-800/40 bg-charcoal-900/30">
-            <div className="border-r border-charcoal-800/40" />
-            {days.map((day) => (
-              <DayHeader key={day.date.toISOString()} day={day} />
-            ))}
-          </div>
-
-          {/* All-day lane */}
-          {positionedByDay.some((col) => col.some((i) => i.allDay)) && (
-            <div className="grid grid-cols-[44px_repeat(7,minmax(0,1fr))] border-b border-charcoal-800/40 bg-charcoal-900/20">
-              <div className="flex items-start justify-end border-r border-charcoal-800/40 px-1.5 pt-1.5 text-[10px] font-medium text-charcoal-500">
-                종일
-              </div>
-              {positionedByDay.map((items, idx) => (
-                <AllDayColumn
-                  key={`ad-${days[idx].date.toISOString()}`}
-                  items={items.filter((i) => i.allDay)}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* Time grid — scrollable so we can show all 24 hours without
-              the page becoming too tall. Starts scrolled to 06:00 by
-              default, which is where most events live. */}
-          <ScrollableTimeGrid
+          {/* Single vertical scroll container so header, all-day and
+              time grid all share the same width — no scrollbar-induced
+              column drift between rows. */}
+          <UnifiedScroll
             positionedByDay={positionedByDay}
             days={days}
             username={username}
@@ -228,7 +206,7 @@ function AllDayColumn({ items }: { items: PositionedItem[] }) {
   );
 }
 
-function ScrollableTimeGrid({
+function UnifiedScroll({
   positionedByDay,
   days,
   username,
@@ -247,14 +225,37 @@ function ScrollableTimeGrid({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   // Scroll to 06:00 on mount so the grid opens where most events live.
+  // Sticky headers stay pinned; the time-grid portion scrolls beneath.
   useEffect(() => {
     if (ref.current) ref.current.scrollTop = 6 * ROW_HEIGHT;
   }, []);
+  const hasAllDay = positionedByDay.some((col) => col.some((i) => i.allDay));
   return (
-    <div
-      ref={ref}
-      className="max-h-[600px] overflow-y-auto"
-    >
+    <div ref={ref} className="max-h-[680px] overflow-y-auto">
+      {/* Sticky header stack: day labels + (optionally) all-day lane. */}
+      <div className="sticky top-0 z-20 bg-[rgb(var(--bg-surface))]">
+        <div className="grid grid-cols-[44px_repeat(7,minmax(0,1fr))] border-b border-charcoal-800/40 bg-charcoal-900/60">
+          <div className="border-r border-charcoal-800/40" />
+          {days.map((day) => (
+            <DayHeader key={day.date.toISOString()} day={day} />
+          ))}
+        </div>
+        {hasAllDay && (
+          <div className="grid grid-cols-[44px_repeat(7,minmax(0,1fr))] border-b border-charcoal-800/40 bg-charcoal-900/40">
+            <div className="flex items-start justify-end border-r border-charcoal-800/40 px-1.5 pt-1.5 text-[10px] font-medium text-charcoal-500">
+              종일
+            </div>
+            {positionedByDay.map((items, idx) => (
+              <AllDayColumn
+                key={`ad-${days[idx].date.toISOString()}`}
+                items={items.filter((i) => i.allDay)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Time grid */}
       <div
         className="grid grid-cols-[44px_repeat(7,minmax(0,1fr))]"
         style={{ height: GRID_HEIGHT }}
@@ -327,7 +328,7 @@ function DayColumn({
           item={item}
           username={username}
           viewerIsOwner={viewerIsOwner}
-          completed={!!completedKeys?.has(item.id)}
+          completed={!!completedKeys?.has(normalizeEventKey(item.id))}
           onToggleComplete={onToggleComplete}
           onEventClick={onEventClick}
         />
