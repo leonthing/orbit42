@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { toggleReaction } from "@/lib/reactions";
 import {
@@ -26,6 +27,36 @@ export function ReactionStrip({
   const [pending, startTransition] = useTransition();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [optimistic, setOptimistic] = useState<ReactionSummary[]>(initial);
+  const addBtnRef = useRef<HTMLButtonElement>(null);
+  const [pickerPos, setPickerPos] = useState<{ left: number; top: number } | null>(null);
+
+  // Position the portalled picker below the "+" button, clamped to viewport.
+  useEffect(() => {
+    if (!pickerOpen) {
+      setPickerPos(null);
+      return;
+    }
+    const update = () => {
+      const el = addBtnRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const pickerWidth = 8 * 36 + 12; // rough: 6-8 emojis * 36px + padding
+      const pad = 8;
+      let left = rect.left;
+      if (left + pickerWidth + pad > window.innerWidth) {
+        left = Math.max(pad, window.innerWidth - pickerWidth - pad);
+      }
+      const top = rect.bottom + 4;
+      setPickerPos({ left, top });
+    };
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [pickerOpen]);
 
   const tap = (emoji: string) => {
     if (!loggedIn) {
@@ -76,6 +107,7 @@ export function ReactionStrip({
         </button>
       ))}
       <button
+        ref={addBtnRef}
         type="button"
         onClick={() => setPickerOpen((v) => !v)}
         className={`inline-flex items-center gap-1 rounded-full border border-dashed border-charcoal-800/60 ${
@@ -85,26 +117,36 @@ export function ReactionStrip({
         + 반응
       </button>
 
-      {pickerOpen && (
-        <>
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => setPickerOpen(false)}
-          />
-          <div className="absolute left-0 top-full z-50 mt-1 flex gap-1 rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] p-1.5 shadow-2xl">
-            {REACTION_EMOJIS.map((e) => (
-              <button
-                key={e}
-                type="button"
-                onClick={() => tap(e)}
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-base hover:bg-charcoal-800/60"
-              >
-                {e}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
+      {pickerOpen &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <>
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setPickerOpen(false)}
+            />
+            <div
+              className="fixed z-50 flex gap-1 rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] p-1.5 shadow-2xl"
+              style={{
+                left: pickerPos?.left ?? 0,
+                top: pickerPos?.top ?? 0,
+                visibility: pickerPos ? "visible" : "hidden",
+              }}
+            >
+              {REACTION_EMOJIS.map((e) => (
+                <button
+                  key={e}
+                  type="button"
+                  onClick={() => tap(e)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-base hover:bg-charcoal-800/60"
+                >
+                  {e}
+                </button>
+              ))}
+            </div>
+          </>,
+          document.body,
+        )}
     </div>
   );
 }
