@@ -120,7 +120,39 @@ export default async function LandingPage() {
           <DemoCalendar />
         </section>
 
-        {/* Feature 3: Orbits (community) */}
+        {/* Feature 3: Calendar + Todo */}
+        <section className="mt-20 md:mt-28">
+          <FeatureHeader
+            eyebrow="캘린더 + 할 일"
+            title="일정이 끝났으면 체크"
+            body="모든 일정 옆에 체크박스. 미팅이 끝나면 탭 한 번으로 완료 표시. 하루 끝에 내가 실제로 뭘 했는지 한눈에 보여요."
+          />
+          <div className="mt-8 grid gap-6 md:grid-cols-2 md:items-start">
+            <div className="space-y-4">
+              <ValueCard
+                title="캘린더가 곧 Todo"
+                body="별도 할 일 앱 안 열어도 돼요. 예정된 일정이 체크 가능한 할 일로 바로 바뀌어요."
+                icon={
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 0 1-1.043 3.296 3.745 3.745 0 0 1-3.296 1.043A3.745 3.745 0 0 1 12 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 0 1-3.296-1.043 3.745 3.745 0 0 1-1.043-3.296A3.745 3.745 0 0 1 3 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 0 1 1.043-3.296 3.746 3.746 0 0 1 3.296-1.043A3.746 3.746 0 0 1 12 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 0 1 3.296 1.043 3.746 3.746 0 0 1 1.043 3.296A3.745 3.745 0 0 1 21 12Z" />
+                  </svg>
+                }
+              />
+              <ValueCard
+                title="되돌아보기 쉬움"
+                body="완료 표시된 일정은 반투명 처리. 지난 한 주에 뭘 실제로 해냈는지 스크롤만 내려도 보여요."
+                icon={
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+                  </svg>
+                }
+              />
+            </div>
+            <DemoTodoDay />
+          </div>
+        </section>
+
+        {/* Feature 4: Orbits (community) */}
         <section className="mt-20 md:mt-28">
           <FeatureHeader
             eyebrow="Orbit"
@@ -362,6 +394,85 @@ function DemoBookingPage() {
         >
           ₩50,000 · 예약 진행
         </button>
+      </div>
+    </div>
+  );
+}
+
+function DemoTodoDay() {
+  const items = [
+    { time: "09:30", title: "팀 스탠드업", done: true },
+    { time: "11:00", title: "프로덕트 멘토링 · YJ", done: true },
+    { time: "13:00", title: "점심 — 박 대표", done: true },
+    { time: "15:00", title: "디자인 싱크", done: false, now: true },
+    { time: "17:00", title: "IR 피드백 정리", done: false },
+    { time: "19:30", title: "저녁 — 오렌지플래닛", done: false },
+  ];
+  const doneCount = items.filter((i) => i.done).length;
+  return (
+    <div className="overflow-hidden rounded-2xl border border-charcoal-800/60 bg-charcoal-900/40 shadow-2xl">
+      <div className="flex items-center justify-between border-b border-charcoal-800/50 px-5 py-3">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-charcoal-500">
+            Today
+          </p>
+          <p className="mt-0.5 text-sm font-semibold text-charcoal-200">
+            오늘의 일정 (예시)
+          </p>
+        </div>
+        <span className="text-[11px] text-charcoal-500">
+          <span className="font-semibold text-emerald-400">{doneCount}</span>
+          <span className="text-charcoal-600">/{items.length} 완료</span>
+        </span>
+      </div>
+      <ul className="divide-y divide-charcoal-800/40">
+        {items.map((it, i) => (
+          <li
+            key={i}
+            className={`flex items-center gap-3 px-5 py-3 transition-opacity ${
+              it.done ? "opacity-50" : ""
+            }`}
+          >
+            <span
+              aria-hidden
+              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border ${
+                it.done
+                  ? "border-red-500 bg-red-500 text-white"
+                  : "border-charcoal-600 bg-charcoal-900"
+              }`}
+            >
+              {it.done && (
+                <svg
+                  className="h-2.5 w-2.5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={4}
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                </svg>
+              )}
+            </span>
+            <span className="w-14 shrink-0 font-mono text-[11px] tabular-nums text-charcoal-500">
+              {it.time}
+            </span>
+            <span
+              className={`min-w-0 flex-1 truncate text-sm ${
+                it.done ? "text-charcoal-400 line-through" : "text-charcoal-100"
+              }`}
+            >
+              {it.title}
+            </span>
+            {it.now && (
+              <span className="shrink-0 rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-semibold text-red-400">
+                NOW
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+      <div className="border-t border-charcoal-800/40 bg-charcoal-900/50 px-5 py-2.5 text-[11px] text-charcoal-500">
+        체크박스를 탭해서 완료 표시 — 하루 끝에 한눈에 확인돼요
       </div>
     </div>
   );
