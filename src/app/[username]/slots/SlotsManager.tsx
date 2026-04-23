@@ -23,7 +23,6 @@ import type { WorkingHours } from "@/lib/slot-availability";
 import type { Calendar } from "@/lib/calendars-types";
 import type { Menu } from "@/lib/menus";
 import { setSlotMenus } from "@/lib/menus";
-import { ShareMenu } from "@/components/ShareMenu";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 
@@ -1296,12 +1295,6 @@ function SlotCard({
           >
             {copied ? "복사됨" : "링크"}
           </button>
-          <ShareMenu
-            url={publicUrl}
-            title={row.slot.title}
-            text={`${row.slot.title} — Orbit42 에서 예약하세요`}
-            compact
-          />
           <button
             type="button"
             onClick={() => setEditing((v) => !v)}
