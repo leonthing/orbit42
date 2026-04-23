@@ -161,6 +161,14 @@ export async function getEvents(
           ? googleCalIdsToFetch
           : ["primary"];
 
+      // Map google_calendar_id → native calendars.id for color/lookup.
+      const gcalToNative = new Map<string, string>();
+      for (const c of allCals) {
+        if (c.source === "google" && c.google_calendar_id) {
+          gcalToNative.set(c.google_calendar_id, c.id);
+        }
+      }
+
       const allItems = await Promise.all(
         ids.map(async (calId) => {
           try {
@@ -172,21 +180,21 @@ export async function getEvents(
               orderBy: "startTime",
               maxResults: 200,
             });
-            return res.data.items || [];
+            return (res.data.items || []).map((item) => ({ item, calId }));
           } catch {
             return [];
           }
         })
       );
 
-      googleEvents = allItems.flat().map((item) => ({
+      googleEvents = allItems.flat().map(({ item, calId }) => ({
         id: `gcal_${item.id}`,
         title: item.summary || "(제목 없음)",
         description: item.description || null,
         start_at: item.start?.dateTime || item.start?.date || "",
         end_at: item.end?.dateTime || item.end?.date || "",
         all_day: !!item.start?.date,
-        calendar_id: null,
+        calendar_id: gcalToNative.get(calId) ?? null,
         business_id: null,
         source: "google" as const,
         created_at: item.created || "",

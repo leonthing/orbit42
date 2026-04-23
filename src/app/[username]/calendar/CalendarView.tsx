@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useCallback, useMemo, useEffect } from "react";
+import { useState, useTransition, useCallback, useMemo, useEffect, useRef } from "react";
 import {
   getCompletedKeys,
   toggleEventCompletion,
@@ -166,6 +166,10 @@ export default function CalendarView({
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+  const [quickEdit, setQuickEdit] = useState<
+    | { event: Event; anchor: { x: number; y: number } }
+    | null
+  >(null);
   const defaultCalendarId = useMemo(
     () => myCalendars.find((c) => c.is_default)?.id ?? myCalendars[0]?.id ?? "",
     [myCalendars],
@@ -427,6 +431,23 @@ export default function CalendarView({
   const eventsForCurrentDay = (day: number) => eventsForDay(year, month, day);
 
   const selectedDayEvents = selectedDay ? eventsForCurrentDay(selectedDay) : [];
+
+  // Calendar color lookup: prefer the user's calendar color, fall back to
+  // a source-based default (red for local, blue for google).
+  const calendarColorMap = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const c of myCalendars) m.set(c.id, c.color);
+    return m;
+  }, [myCalendars]);
+  const getEventColor = useCallback(
+    (ev: Event): string => {
+      if (ev.calendar_id && calendarColorMap.has(ev.calendar_id)) {
+        return calendarColorMap.get(ev.calendar_id)!;
+      }
+      return ev.source === "google" ? "#4285f4" : "#ef4444";
+    },
+    [calendarColorMap],
+  );
 
   // ── Form ──
 
@@ -811,54 +832,96 @@ export default function CalendarView({
                         </span>
                       </div>
                     )}
-                    <button
+                    <div
                       key={i}
-                      disabled={!day}
-                      onClick={() => day && setSelectedDay(day === selectedDay ? null : day)}
-                      className={`flex h-14 flex-col items-start rounded-lg p-1 text-left text-sm transition-colors md:h-20 md:p-2 ${
-                      !day
-                        ? ""
-                        : isToday
-                          ? "bg-red-600/10"
-                          : isSelected
-                            ? "bg-charcoal-800/60"
-                            : "hover:bg-charcoal-800/50"
-                    } ${!day ? "cursor-default" : "cursor-pointer"}`}
-                  >
-                    {day && (
-                      <>
-                        <span
-                          className={`flex h-6 w-6 items-center justify-center text-xs font-medium ${
-                            isToday
-                              ? "rounded-full bg-red-600 text-white"
-                              : isSunday
-                                ? "text-red-400/70"
-                                : isSaturday
-                                  ? "text-blue-400/70"
-                                  : "text-charcoal-300"
-                          }`}
-                        >
-                          {day}
-                        </span>
-                        {dayEvents.length > 0 && (
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            {dayEvents.slice(0, 3).map((ev) => (
-                              <span
-                                key={ev.id}
-                                className={`h-1.5 w-1.5 rounded-full ${ev.source === "google" ? "bg-blue-400" : "bg-red-400"}`}
-                                title={ev.title}
-                              />
-                            ))}
-                            {dayEvents.length > 3 && (
-                              <span className="text-[10px] text-charcoal-500">
-                                +{dayEvents.length - 3}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </button>
+                      role={day ? "button" : undefined}
+                      tabIndex={day ? 0 : undefined}
+                      onClick={() =>
+                        day && setSelectedDay(day === selectedDay ? null : day)
+                      }
+                      onKeyDown={(e) => {
+                        if (!day) return;
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setSelectedDay(day === selectedDay ? null : day);
+                        }
+                      }}
+                      className={`flex h-20 flex-col items-stretch rounded-lg p-1 text-left text-sm transition-colors md:h-28 md:p-1.5 ${
+                        !day
+                          ? ""
+                          : isToday
+                            ? "bg-red-600/10"
+                            : isSelected
+                              ? "bg-charcoal-800/60"
+                              : "hover:bg-charcoal-800/50"
+                      } ${!day ? "cursor-default" : "cursor-pointer"}`}
+                    >
+                      {day && (
+                        <>
+                          <span
+                            className={`flex h-6 w-6 shrink-0 items-center justify-center text-xs font-medium ${
+                              isToday
+                                ? "rounded-full bg-red-600 text-white"
+                                : isSunday
+                                  ? "text-red-400/70"
+                                  : isSaturday
+                                    ? "text-blue-400/70"
+                                    : "text-charcoal-300"
+                            }`}
+                          >
+                            {day}
+                          </span>
+                          {dayEvents.length > 0 && (
+                            <div className="mt-1 flex min-h-0 flex-1 flex-col gap-[2px] overflow-hidden">
+                              {dayEvents.slice(0, 3).map((ev) => {
+                                const color = getEventColor(ev);
+                                const isDone = completed.has(ev.id);
+                                return (
+                                  <button
+                                    key={ev.id}
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (viewerIsOwner) {
+                                        setQuickEdit({
+                                          event: ev,
+                                          anchor: {
+                                            x: e.clientX,
+                                            y: e.clientY,
+                                          },
+                                        });
+                                      }
+                                    }}
+                                    className="flex min-w-0 items-center gap-1 truncate rounded-[3px] px-1 py-[1px] text-left text-[10px] leading-tight hover:bg-charcoal-800/60 md:text-[11px]"
+                                    title={ev.title}
+                                    style={{
+                                      color,
+                                    }}
+                                  >
+                                    <span
+                                      className="inline-block h-[8px] w-[2px] shrink-0 rounded-[1px]"
+                                      style={{ backgroundColor: color }}
+                                    />
+                                    <span
+                                      className={`min-w-0 flex-1 truncate font-medium ${
+                                        isDone ? "line-through opacity-60" : ""
+                                      }`}
+                                    >
+                                      {ev.title}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                              {dayEvents.length > 3 && (
+                                <span className="px-1 text-[10px] text-charcoal-500">
+                                  +{dayEvents.length - 3}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </>
                 );
               })}
@@ -1174,7 +1237,243 @@ export default function CalendarView({
           </div>
         </div>
       )}
+
+      {quickEdit && (
+        <QuickEditPopover
+          event={quickEdit.event}
+          anchor={quickEdit.anchor}
+          calendars={myCalendars}
+          color={getEventColor(quickEdit.event)}
+          onClose={() => setQuickEdit(null)}
+          onSaved={async () => {
+            setQuickEdit(null);
+            await fetchEvents(year, month);
+            router.refresh();
+          }}
+          onOpenFull={() => {
+            const ev = quickEdit.event;
+            setQuickEdit(null);
+            openEditForm(ev);
+          }}
+          onDeleted={async () => {
+            setQuickEdit(null);
+            await fetchEvents(year, month);
+            router.refresh();
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+// ─── Quick edit popover (month view) ───────────────────────
+
+function QuickEditPopover({
+  event,
+  anchor,
+  calendars,
+  color,
+  onClose,
+  onSaved,
+  onOpenFull,
+  onDeleted,
+}: {
+  event: Event;
+  anchor: { x: number; y: number };
+  calendars: Calendar[];
+  color: string;
+  onClose: () => void;
+  onSaved: () => void;
+  onOpenFull: () => void;
+  onDeleted: () => void;
+}) {
+  const confirm = useConfirm();
+  const toast = useToast();
+  const [title, setTitle] = useState(event.title);
+  const start = new Date(event.start_at);
+  const end = new Date(event.end_at);
+  const [pending, setPending] = useState(false);
+
+  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
+
+  // Position after mount so we can clamp to viewport.
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const w = el.offsetWidth || 280;
+    const h = el.offsetHeight || 200;
+    const pad = 12;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    let left = anchor.x + 8;
+    let top = anchor.y + 8;
+    if (left + w + pad > vw) left = Math.max(pad, vw - w - pad);
+    if (top + h + pad > vh) top = Math.max(pad, anchor.y - h - 8);
+    setPos({ left, top });
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [anchor, onClose]);
+
+  const isGoogle = event.source === "google";
+  const dateLabel = start.toLocaleDateString("ko-KR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    weekday: "short",
+  });
+  const timeLabel = event.all_day
+    ? "종일"
+    : `${start.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false })} – ${end.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false })}`;
+
+  async function handleSave() {
+    if (!title.trim() || title === event.title) {
+      onClose();
+      return;
+    }
+    setPending(true);
+    try {
+      if (isGoogle && event.id.startsWith("gcal_")) {
+        // The month-view event id is `gcal_${item.id}`. We need the
+        // google calendar id to patch — resolve via calendar_id.
+        const cal = calendars.find((c) => c.id === event.calendar_id);
+        const gcalId = cal?.google_calendar_id;
+        const eventId = event.id.slice("gcal_".length);
+        if (!gcalId) {
+          toast.error("이 Google 일정의 캘린더를 찾지 못했어요.");
+          setPending(false);
+          return;
+        }
+        const res = await updateGoogleEvent(gcalId, eventId, {
+          title: title.trim(),
+        });
+        if ("error" in res) {
+          toast.error(res.error);
+          setPending(false);
+          return;
+        }
+      } else {
+        await updateEvent(event.id, { title: title.trim() });
+      }
+      toast.success("저장했어요.");
+      onSaved();
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function handleDelete() {
+    const ok = await confirm({
+      title: "이 일정을 삭제할까요?",
+      body: isGoogle
+        ? `"${event.title}" 일정이 Google 캘린더에서도 삭제돼요.`
+        : `"${event.title}" 일정이 orbit42 에서 사라져요.`,
+      confirmLabel: "삭제",
+      danger: true,
+    });
+    if (!ok) return;
+    setPending(true);
+    try {
+      if (isGoogle) {
+        const cal = calendars.find((c) => c.id === event.calendar_id);
+        const gcalId = cal?.google_calendar_id;
+        const eventId = event.id.slice("gcal_".length);
+        if (!gcalId) {
+          toast.error("이 Google 일정의 캘린더를 찾지 못했어요.");
+          setPending(false);
+          return;
+        }
+        const res = await deleteGoogleEvent(gcalId, eventId);
+        if ("error" in res) {
+          toast.error(res.error);
+          setPending(false);
+          return;
+        }
+      } else {
+        await deleteEvent(event.id);
+      }
+      toast.success("삭제했어요.");
+      onDeleted();
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-40"
+        onClick={onClose}
+        aria-hidden
+      />
+      <div
+        ref={ref}
+        className="fixed z-50 w-[280px] rounded-xl border border-charcoal-800/70 bg-[rgb(var(--bg-base))] p-4 shadow-2xl"
+        style={{
+          left: pos?.left ?? anchor.x,
+          top: pos?.top ?? anchor.y,
+          visibility: pos ? "visible" : "hidden",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start gap-2">
+          <span
+            className="mt-[7px] inline-block h-3 w-[3px] shrink-0 rounded-sm"
+            style={{ backgroundColor: color }}
+          />
+          <input
+            autoFocus
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleSave();
+              }
+            }}
+            className="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-1.5 py-1 text-sm font-semibold text-charcoal-100 hover:border-charcoal-800 focus:border-charcoal-700 focus:outline-none"
+          />
+        </div>
+        <div className="mt-3 space-y-1 text-xs text-charcoal-400">
+          <p>{dateLabel}</p>
+          <p>{timeLabel}</p>
+          {isGoogle && (
+            <p className="text-[11px] text-blue-400/80">Google 캘린더</p>
+          )}
+        </div>
+        <div className="mt-4 flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={pending}
+            className="rounded-md px-2.5 py-1.5 text-xs text-charcoal-500 hover:bg-red-900/30 hover:text-red-400 disabled:opacity-50"
+          >
+            삭제
+          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={onOpenFull}
+              disabled={pending}
+              className="rounded-md px-2.5 py-1.5 text-xs text-charcoal-400 hover:bg-charcoal-800/60 hover:text-charcoal-200 disabled:opacity-50"
+            >
+              상세
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={pending || !title.trim()}
+              className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-500 disabled:opacity-50"
+            >
+              {pending ? "저장 중..." : "저장"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
 
