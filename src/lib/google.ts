@@ -5,7 +5,6 @@ const SCOPES = [
   "https://www.googleapis.com/auth/calendar.readonly",
   "https://www.googleapis.com/auth/calendar.events",
   "https://www.googleapis.com/auth/contacts.readonly",
-  "https://www.googleapis.com/auth/gmail.send",
   "https://www.googleapis.com/auth/userinfo.email",
 ];
 
@@ -294,41 +293,3 @@ export async function fetchGoogleEmail(tokens: {
   }
 }
 
-export async function getAuthenticatedGmail(userId: string) {
-  const client = await getAuthenticatedClient(userId);
-  if (!client) return null;
-  return google.gmail({ version: "v1", auth: client });
-}
-
-/**
- * Send a plain-text email from the authenticated user's Gmail account.
- * Best-effort: returns false if the account isn't connected, lacks the
- * gmail.send scope (older OAuth grants), or the API call fails.
- */
-export async function sendGmailFromUser(
-  userId: string,
-  args: { to: string; subject: string; body: string; replyTo?: string },
-): Promise<boolean> {
-  try {
-    const gmail = await getAuthenticatedGmail(userId);
-    if (!gmail) return false;
-    const headers = [
-      `To: ${args.to}`,
-      `Subject: =?UTF-8?B?${Buffer.from(args.subject, "utf-8").toString("base64")}?=`,
-      "Content-Type: text/plain; charset=UTF-8",
-      "MIME-Version: 1.0",
-      args.replyTo ? `Reply-To: ${args.replyTo}` : null,
-    ].filter(Boolean) as string[];
-    const message = headers.join("\r\n") + "\r\n\r\n" + args.body;
-    const raw = Buffer.from(message, "utf-8")
-      .toString("base64")
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/, "");
-    await gmail.users.messages.send({ userId: "me", requestBody: { raw } });
-    return true;
-  } catch (err) {
-    console.error("Gmail send failed:", err);
-    return false;
-  }
-}
