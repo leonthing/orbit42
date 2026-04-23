@@ -27,6 +27,10 @@ export const metadata: Metadata = {
     template: `%s | ${SITE.title}`,
   },
   description: SITE.description,
+  keywords: [...SITE.keywords],
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     title: SITE.title,
     description: SITE.description,
@@ -34,11 +38,23 @@ export const metadata: Metadata = {
     siteName: SITE.title,
     locale: "ko_KR",
     type: "website",
+    images: [{ url: "/icon-512.png", width: 512, height: 512, alt: SITE.title }],
   },
   twitter: {
     card: "summary_large_image",
     title: SITE.title,
     description: SITE.description,
+    images: ["/icon-512.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
   },
 };
 
