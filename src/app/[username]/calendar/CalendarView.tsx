@@ -618,39 +618,43 @@ export default function CalendarView({
 
   // ── Render ──
 
+  const viewTabs = (
+    <div className="flex shrink-0 overflow-x-auto rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 p-0.5">
+      {(
+        [
+          ["life", "Life"],
+          ["year", "연"],
+          ["quarter", "분기"],
+          ["month", "월"],
+          ["week", "주"],
+        ] as const
+      ).map(([mode, label]) => (
+        <button
+          key={mode}
+          onClick={() => switchView(mode)}
+          className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+            viewMode === mode
+              ? "bg-red-600 text-white"
+              : "text-charcoal-400 hover:text-charcoal-200"
+          }`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="space-y-4 sm:space-y-6">
+      {/* Header — desktop keeps tabs inline with the picker; mobile gets its
+          own row below the title so nothing wraps mid-word. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-charcoal-100">캘린더</h1>
           <p className="mt-1 text-sm text-charcoal-500">일정 및 시간 관리</p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* View mode tabs — sit next to the calendar picker to save a row */}
-          <div className="flex overflow-x-auto rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 p-0.5">
-            {(
-              [
-                ["life", "Life"],
-                ["year", "연"],
-                ["quarter", "분기"],
-                ["month", "월"],
-                ["week", "주"],
-              ] as const
-            ).map(([mode, label]) => (
-              <button
-                key={mode}
-                onClick={() => switchView(mode)}
-                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                  viewMode === mode
-                    ? "bg-red-600 text-white"
-                    : "text-charcoal-400 hover:text-charcoal-200"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          <div className="hidden sm:block">{viewTabs}</div>
           {myCalendars.length > 0 ? (
             <div className="relative">
               <button
@@ -772,6 +776,9 @@ export default function CalendarView({
           </button>
         </div>
       </div>
+
+      {/* Mobile-only tabs row — desktop renders them inline in the header */}
+      <div className="sm:hidden">{viewTabs}</div>
 
       {/* Navigation (hidden for Life view) */}
       {viewMode !== "life" && (
