@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { getEvents } from "@/app/[username]/calendar/actions";
 
 const DAYS_MON = ["월", "화", "수", "목", "금", "토", "일"];
+const DAYS_SUN_FIRST = ["일", "월", "화", "수", "목", "금", "토"];
 const STORAGE_KEY = "orbit42.miniMonth.collapsed";
 
 function getCalendarDays(year: number, month: number) {
@@ -116,7 +117,9 @@ export function MiniMonth({ username }: { username: string }) {
             <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
           </svg>
           <span className="flex-1 truncate">
-            {year}년 {month + 1}월
+            {isCurrentMonth
+              ? `${year}년 ${month + 1}월 ${todayDate}일 (${DAYS_SUN_FIRST[today.getDay()]})`
+              : `${year}년 ${month + 1}월`}
           </span>
         </button>
         {!collapsed && (

@@ -7,7 +7,6 @@ import { useState } from "react";
 import { useMobileMenu } from "./MobileMenuContext";
 import { FeedbackBox } from "./FeedbackBox";
 import { MiniMonth } from "./MiniMonth";
-import { SidebarClock } from "./SidebarClock";
 
 const icons: Record<string, React.ReactNode> = {
   home: (
@@ -152,10 +151,9 @@ export function Sidebar({
         )}
       </div>
 
-      {/* Live clock + mini month — desktop, uncollapsed only */}
+      {/* Mini month — desktop, uncollapsed only */}
       {!collapsed && (
-        <div className="hidden border-b border-charcoal-800/40 md:block">
-          <SidebarClock />
+        <div className="hidden border-b border-charcoal-800/40 pt-2 md:block">
           <MiniMonth username={username} />
         </div>
       )}
