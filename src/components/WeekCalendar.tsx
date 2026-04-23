@@ -47,15 +47,6 @@ export function WeekCalendar({
   onToggleComplete?: (eventId: string) => void;
   onEventClick?: (item: WeekItem) => void;
 }) {
-  const totalSlots = days.reduce(
-    (n, d) => n + d.items.filter((i) => i.kind === "slot").length,
-    0,
-  );
-  const totalEvents = days.reduce(
-    (n, d) => n + d.items.filter((i) => i.kind === "event").length,
-    0,
-  );
-
   const positionedByDay = useMemo(
     () => days.map((d) => position(d.items, d.date)),
     [days],
@@ -64,29 +55,6 @@ export function WeekCalendar({
 
   return (
     <div className="overflow-hidden rounded-2xl border border-charcoal-800/60 bg-charcoal-900/40">
-      <div className="flex items-center justify-between border-b border-charcoal-800/50 px-5 py-3">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-charcoal-500">
-            This week
-          </p>
-          <p className="mt-0.5 text-sm font-semibold text-charcoal-200">
-            {days[0]?.date.toLocaleDateString("ko-KR", { month: "long", day: "numeric" })}
-            {" – "}
-            {days[6]?.date.toLocaleDateString("ko-KR", { month: "long", day: "numeric" })}
-          </p>
-        </div>
-        <div className="flex items-center gap-3 text-xs text-charcoal-500">
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-charcoal-500" />
-            일정 {totalEvents}
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-red-400" />
-            예약가능 {totalSlots}
-          </span>
-        </div>
-      </div>
-
       {/* On mobile, horizontally scroll through 2-day chunks. 44px for
           the time axis + 2 day cols ≈ 360px viewport. Users swipe the
           rest. Desktop fits all 7 days naturally. */}
@@ -107,7 +75,7 @@ export function WeekCalendar({
         </div>
       </div>
 
-      {totalSlots === 0 && totalEvents === 0 && emptyMessage && (
+      {days.every((d) => d.items.length === 0) && emptyMessage && (
         <div className="border-t border-charcoal-800/50 px-5 py-4 text-center text-xs text-charcoal-500">
           {emptyMessage}
         </div>
@@ -496,21 +464,23 @@ function ItemBlock({
       ? `경매중 · ${relativeTimeTo(item.auction_ends_at)}`
       : "경매중";
   const accent = isAuction ? "#f59e0b" : "#ef4444"; // amber-500 / red-500
-  const tint = `color-mix(in srgb, ${accent} 10%, transparent)`;
-  const tintHover = `color-mix(in srgb, ${accent} 16%, transparent)`;
+  // Slots render as outlined "empty" boxes — the empty canvas represents
+  // time that isn't committed yet. On hover we nudge in a faint fill,
+  // hinting at what happens when the slot gets booked.
+  const tintHover = `color-mix(in srgb, ${accent} 10%, transparent)`;
   const className =
-    "group absolute overflow-hidden rounded-[3px] border-l-[3px] px-1.5 py-0.5 text-left transition-colors";
+    "group absolute overflow-hidden rounded-[3px] border border-dashed px-1.5 py-0.5 text-left transition-colors";
   const subStyle: React.CSSProperties = { color: accent, opacity: 0.75 };
   const slotStyle: React.CSSProperties = {
     ...style,
     borderColor: accent,
-    backgroundColor: tint,
+    backgroundColor: "transparent",
   };
   const onEnter = (e: React.MouseEvent<HTMLElement>) => {
     e.currentTarget.style.backgroundColor = tintHover;
   };
   const onLeave = (e: React.MouseEvent<HTMLElement>) => {
-    e.currentTarget.style.backgroundColor = tint;
+    e.currentTarget.style.backgroundColor = "transparent";
   };
   const inner = (
     <>
