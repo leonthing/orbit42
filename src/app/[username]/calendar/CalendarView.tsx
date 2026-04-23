@@ -19,6 +19,8 @@ import type { LifeMemory } from "./life-actions";
 import { WeekCalendar } from "@/components/WeekCalendar";
 import type { WeekDay, WeekItem } from "@/lib/profile-week";
 import type { Calendar } from "@/lib/calendars-types";
+import { useConfirm } from "@/components/ConfirmDialog";
+import { useRouter } from "next/navigation";
 
 // ─── Helpers ────────────────────────────────────────────────
 
@@ -131,6 +133,8 @@ export default function CalendarView({
   myCalendars?: Calendar[];
   viewerIsOwner?: boolean;
 }) {
+  const router = useRouter();
+  const confirm = useConfirm();
   const [year, setYear] = useState(initialYear);
   const [month, setMonth] = useState(initialMonth);
   const [events, setEvents] = useState<Event[]>(initialEvents);
@@ -882,6 +886,34 @@ export default function CalendarView({
           isCompleted={completed.has(detailEvent.id)}
           canToggleComplete={!!viewerIsOwner}
           onToggleComplete={() => handleToggleComplete(detailEvent.id)}
+          onEdit={() => {
+            // native: id === "native:<uuid>"
+            const nativeId = detailEvent.id.startsWith("native:")
+              ? detailEvent.id.slice("native:".length)
+              : null;
+            if (!nativeId) return;
+            const full = events.find((e) => e.id === nativeId);
+            if (!full) return;
+            setDetailEvent(null);
+            openEditForm(full);
+          }}
+          onDelete={async () => {
+            const nativeId = detailEvent.id.startsWith("native:")
+              ? detailEvent.id.slice("native:".length)
+              : null;
+            if (!nativeId) return;
+            const ok = await confirm({
+              title: "이 일정을 삭제할까요?",
+              body: `"${detailEvent.title}" 일정이 orbit42 에서 사라져요.`,
+              confirmLabel: "삭제",
+              danger: true,
+            });
+            if (!ok) return;
+            await deleteEvent(nativeId);
+            setDetailEvent(null);
+            fetchEvents(year, month);
+            router.refresh();
+          }}
           onClose={() => setDetailEvent(null)}
         />
       )}
@@ -1394,15 +1426,22 @@ function EventDetailModal({
   isCompleted,
   canToggleComplete,
   onToggleComplete,
+  onEdit,
+  onDelete,
   onClose,
 }: {
   item: WeekItem;
   isCompleted: boolean;
   canToggleComplete: boolean;
   onToggleComplete: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
   onClose: () => void;
 }) {
   if (item.kind !== "event") return null;
+  // Week items identify native vs google by id prefix.
+  // native: "native:<uuid>", google: "<gcal_id>::<event_id>"
+  const isNative = item.id.startsWith("native:");
   const fmt = (iso: string) =>
     new Date(iso).toLocaleString("ko-KR", {
       timeZone: "Asia/Seoul",
@@ -1451,27 +1490,48 @@ function EventDetailModal({
                     },
                   )}`}
             </p>
+            {!isNative && canToggleComplete && (
+              <p className="mt-2 text-[11px] text-charcoal-600">
+                Google 캘린더 일정은 orbit42 에서 직접 수정할 수 없어요. 수정·삭제는 Google 캘린더에서 진행해주세요.
+              </p>
+            )}
           </div>
         </div>
 
-        <div className="mt-5 flex items-center justify-between gap-2">
-          {canToggleComplete ? (
-            <button
-              type="button"
-              onClick={() => {
-                onToggleComplete();
-              }}
-              className={`rounded-lg px-3 py-2 text-sm font-medium ${
-                isCompleted
-                  ? "bg-charcoal-800 text-charcoal-300 hover:bg-charcoal-700"
-                  : "bg-red-600 text-white hover:bg-red-500"
-              }`}
-            >
-              {isCompleted ? "완료 취소" : "완료로 표시"}
-            </button>
-          ) : (
-            <span />
-          )}
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {canToggleComplete && (
+              <button
+                type="button"
+                onClick={onToggleComplete}
+                className={`rounded-lg px-3 py-2 text-sm font-medium ${
+                  isCompleted
+                    ? "bg-charcoal-800 text-charcoal-300 hover:bg-charcoal-700"
+                    : "bg-red-600 text-white hover:bg-red-500"
+                }`}
+              >
+                {isCompleted ? "완료 취소" : "완료로 표시"}
+              </button>
+            )}
+            {canToggleComplete && isNative && onEdit && (
+              <button
+                type="button"
+                onClick={onEdit}
+                className="rounded-lg border border-charcoal-700 px-3 py-2 text-sm text-charcoal-200 hover:border-charcoal-600 hover:bg-charcoal-800/60"
+              >
+                수정
+              </button>
+            )}
+            {canToggleComplete && isNative && onDelete && (
+              <button
+                type="button"
+                onClick={onDelete}
+                className="rounded-lg border border-red-500/40 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10"
+              >
+                삭제
+              </button>
+            )}
+          </div>
           <button
             type="button"
             onClick={onClose}
