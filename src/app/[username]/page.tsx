@@ -9,7 +9,7 @@ import { getReactionsForMany } from "@/lib/reactions";
 import { SlotPanelProvider } from "@/components/SlotPanel";
 import { AllSlotsGrid } from "@/components/AllSlotsGrid";
 import { getValueStats } from "@/lib/value-stats";
-import { Avatar } from "@/components/Avatar";
+import { ProfileAvatar } from "./ProfileAvatar";
 import { FollowButton } from "./FollowButton";
 import { MessageButton } from "./MessageButton";
 import { BlockMenu } from "./BlockMenu";
@@ -161,10 +161,11 @@ export default async function PublicProfile({
       {/* Identity row — compact */}
       <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between md:gap-6">
         <div className="flex min-w-0 items-start gap-3 sm:items-center sm:gap-4">
-          <Avatar
+          <ProfileAvatar
             url={(profile.avatar_url as string | null) ?? null}
             name={profile.display_name || profile.username}
             size={64}
+            editable={isOwner}
           />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -224,7 +225,7 @@ export default async function PublicProfile({
               href={`/${params.username}/slots`}
               className="whitespace-nowrap rounded-lg bg-red-600 px-4 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-red-500"
             >
-              Sell my time
+              시간 팔기
             </Link>
           </div>
         )}
