@@ -87,13 +87,6 @@ export default async function FeedPage() {
   const viewerId = viewerRow?.id as string | undefined;
 
   const authorMap = new Map<string, Author>();
-  if (viewerId && viewerProfile) {
-    authorMap.set(viewerId, {
-      username: viewerProfile.username,
-      display_name: viewerProfile.display_name,
-      avatar_url: (viewerProfile.avatar_url as string | null) ?? null,
-    });
-  }
   for (const u of following) {
     authorMap.set(u.id, {
       username: u.username,
@@ -102,7 +95,7 @@ export default async function FeedPage() {
     });
   }
 
-  // viewer + following IDs (so my own posts also appear)
+  // Feed shows only people I follow (exclude myself).
   const authorIds = Array.from(authorMap.keys());
 
   // Time windows
@@ -132,19 +125,7 @@ export default async function FeedPage() {
       .limit(40),
     listFeedPostsByAuthors(authorIds, 60),
     Promise.all(
-      [
-        // include viewer so own public-calendar events appear on feed
-        ...(viewerProfile
-          ? [
-              {
-                username: viewerProfile.username,
-                display_name: viewerProfile.display_name,
-                avatar_url: (viewerProfile.avatar_url as string | null) ?? null,
-              },
-            ]
-          : []),
-        ...following,
-      ]
+      following
         .slice(0, 26)
         .map(async (u) => {
           try {
@@ -295,7 +276,7 @@ export default async function FeedPage() {
         </div>
       )}
 
-      {following.length === 0 && items.length === 0 ? (
+      {following.length === 0 ? (
         <EmptyState
           title="아직 궤도가 비어있어요"
           body="관심 있는 사람을 팔로우(Orbit)하면 그들의 일정과 글이 여기에 흘러들어옵니다."
@@ -303,8 +284,9 @@ export default async function FeedPage() {
         />
       ) : items.length === 0 ? (
         <EmptyState
-          title="첫 글을 올려보세요"
-          body="위 입력창에서 지금 무엇을 하고 있는지 한 마디 남겨보세요."
+          title="조용한 하루네요"
+          body="팔로우하는 분들이 아직 최근 2주 안에 올린 소식이 없어요. 탐색에서 더 많은 궤도를 찾아볼까요?"
+          cta={{ href: "/explore", label: "더 찾아보기" }}
         />
       ) : (
         <DailyCalendar
