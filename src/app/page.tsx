@@ -2,6 +2,8 @@ import Link from "next/link";
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { AuthCard } from "@/components/AuthCard";
+import { JsonLd } from "@/components/JsonLd";
+import { SITE } from "@/lib/constants";
 
 export default async function LandingPage() {
   const session = await getSession();
@@ -9,8 +11,33 @@ export default async function LandingPage() {
     redirect("/feed");
   }
 
+  const websiteSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: SITE.title,
+    url: SITE.url,
+    description: SITE.description,
+    potentialAction: {
+      "@type": "SearchAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: `${SITE.url}/search?q={search_term_string}`,
+      },
+      "query-input": "required name=search_term_string",
+    },
+  };
+  const orgSchema = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: SITE.title,
+    url: SITE.url,
+    logo: `${SITE.url}/icon-512.png`,
+    sameAs: [] as string[],
+  };
+
   return (
     <div className="min-h-screen bg-[rgb(var(--bg-base))]">
+      <JsonLd data={[websiteSchema, orgSchema]} />
       <header className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6 md:px-10 md:py-5">
         <Link href="/" className="text-base font-semibold tracking-tight text-charcoal-100">
           Orbit42

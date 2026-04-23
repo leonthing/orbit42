@@ -5,6 +5,8 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 import { getPublishedPost } from "../../actions";
+import { JsonLd } from "@/components/JsonLd";
+import { SITE } from "@/lib/constants";
 
 export async function generateMetadata({
   params,
@@ -13,10 +15,29 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const result = await getPublishedPost(params.username, params.slug);
   if (!result) return { title: "Not Found" };
-
+  const description =
+    result.post.excerpt || result.post.content.slice(0, 160);
+  const url = `${SITE.url}/blog-public/${params.username}/${params.slug}`;
   return {
     title: result.post.title,
-    description: result.post.excerpt || result.post.content.slice(0, 160),
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title: result.post.title,
+      description,
+      url,
+      type: "article",
+      publishedTime: result.post.published_at,
+      authors: [result.author.display_name || result.author.username],
+      tags: result.post.tags,
+      siteName: SITE.title,
+      locale: "ko_KR",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: result.post.title,
+      description,
+    },
   };
 }
 
@@ -38,9 +59,36 @@ export default async function BlogPostPage({
 
   const { author, post } = result;
   const name = author.display_name || author.username;
+  const postUrl = `${SITE.url}/blog-public/${params.username}/${params.slug}`;
+  const articleSchema = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: post.title,
+    description: post.excerpt || post.content.slice(0, 160),
+    datePublished: post.published_at,
+    author: {
+      "@type": "Person",
+      name,
+      url: `${SITE.url}/${author.username}`,
+    },
+    publisher: {
+      "@type": "Organization",
+      name: SITE.title,
+      logo: {
+        "@type": "ImageObject",
+        url: `${SITE.url}/icon-512.png`,
+      },
+    },
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": postUrl,
+    },
+    keywords: post.tags.join(", ") || undefined,
+  };
 
   return (
     <>
+      <JsonLd data={articleSchema} />
       {/* Back link */}
       <Link
         href={`/${params.username}`}

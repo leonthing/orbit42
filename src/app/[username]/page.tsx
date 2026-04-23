@@ -23,6 +23,8 @@ import { Markdown } from "@/components/Markdown";
 import { ComingUpCard } from "./ComingUpCard";
 import { InsightsCard } from "./InsightsCard";
 import { ProfileTabs } from "./ProfileTabs";
+import { JsonLd } from "@/components/JsonLd";
+import { SITE } from "@/lib/constants";
 import {
   fetchTimeBlocks,
   getWorkHours,
@@ -156,8 +158,37 @@ export default async function PublicProfile({
   const interests = (profile.interests || []) as string[];
   const totalSlotWindows = slots.length;
 
+  const sameAs = Object.values(socialLinks).filter(
+    (v): v is string => typeof v === "string" && !!v,
+  );
+  const profileUrl = `${SITE.url}/${profile.username}`;
+  const personSchema = {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    name: profile.display_name || profile.username,
+    alternateName: profile.username,
+    url: profileUrl,
+    description: profile.bio || undefined,
+    image: profile.avatar_url || undefined,
+    sameAs: sameAs.length > 0 ? sameAs : undefined,
+  };
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "홈", item: SITE.url },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: profile.display_name || profile.username,
+        item: profileUrl,
+      },
+    ],
+  };
+
   return (
     <div className="space-y-8">
+      <JsonLd data={[personSchema, breadcrumbSchema]} />
       {/* Identity row — compact */}
       <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between md:gap-6">
         <div className="flex min-w-0 items-start gap-3 sm:items-center sm:gap-4">

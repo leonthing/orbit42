@@ -10,6 +10,7 @@ import AuctionPanel from "./AuctionPanel";
 import OwnerBookingPreview from "./OwnerBookingPreview";
 import { ShareMenu } from "@/components/ShareMenu";
 import { SITE } from "@/lib/constants";
+import { JsonLd } from "@/components/JsonLd";
 
 function formatWindow(from: string | null, until: string | null): string {
   const fmt = (iso: string) =>
@@ -77,8 +78,46 @@ export default async function SlotPage({
   const isAuction = slot.pricing_model === "auction";
   const attachedMenus = await listMenusForSlot(slot.id);
 
+  const slotUrl = `${SITE.url}/${params.username}/s/${slot.slug}`;
+  const productSchema = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: slot.title,
+    description:
+      slot.description ||
+      `${slot.duration_min}분 · ${host.display_name || host.username}의 타임슬롯`,
+    url: slotUrl,
+    category: slot.slot_type || "TimeSlot",
+    brand: {
+      "@type": "Person",
+      name: host.display_name || host.username,
+      url: `${SITE.url}/${host.username}`,
+    },
+    offers: isAuction
+      ? {
+          "@type": "AggregateOffer",
+          priceCurrency: "KRW",
+          lowPrice: ((slot.reserve_price_cents ?? 0) / 100).toString(),
+          offerCount: 1,
+          availability: slot.active
+            ? "https://schema.org/InStock"
+            : "https://schema.org/OutOfStock",
+          url: slotUrl,
+        }
+      : {
+          "@type": "Offer",
+          priceCurrency: "KRW",
+          price: (slot.price_cents / 100).toString(),
+          availability: slot.active
+            ? "https://schema.org/InStock"
+            : "https://schema.org/OutOfStock",
+          url: slotUrl,
+        },
+  };
+
   return (
     <div className="mx-auto max-w-2xl space-y-6">
+      <JsonLd data={productSchema} />
       <Link
         href={
           isOwner
