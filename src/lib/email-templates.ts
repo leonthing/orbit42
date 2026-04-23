@@ -68,7 +68,7 @@ export function welcomeBody(args: {
       </p>
       <p style="margin:24px 0 0;color:#888;font-size:13px">
         궁금한 점이 있으면 이 메일에 답장해주세요 —<br/>
-        또는 <a href="mailto:connect@nthing.net" style="color:#888">connect@nthing.net</a>.
+        또는 <a href="mailto:orbit42@nthing.net" style="color:#888">orbit42@nthing.net</a>.
       </p>
     </div>
   `;

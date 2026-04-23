@@ -208,7 +208,7 @@ export async function sendFeedbackEmail(args: {
   };
   path: string | null;
 }) {
-  const to = process.env.FEEDBACK_EMAIL || "connect@nthing.net";
+  const to = process.env.FEEDBACK_EMAIL || "orbit42@nthing.net";
   const label = args.from.displayName || args.from.username || "익명";
   const suffix = args.from.username ? ` (@${args.from.username})` : "";
   const emailLine = args.from.email

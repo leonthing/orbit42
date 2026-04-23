@@ -206,11 +206,11 @@ export default function TermsPage() {
               <li>서비스명: 오르빗42 (orbit42)</li>
               <li>사이트: https://orbit42.org</li>
               <li>
-                고객 지원: <a href="mailto:connect@nthing.net" className="text-red-500 hover:underline">connect@nthing.net</a>
+                고객 지원: <a href="mailto:orbit42@nthing.net" className="text-red-500 hover:underline">orbit42@nthing.net</a>
               </li>
               <li>
                 개인정보 담당:{" "}
-                <a href="mailto:connect@nthing.net" className="text-red-500 hover:underline">connect@nthing.net</a>
+                <a href="mailto:orbit42@nthing.net" className="text-red-500 hover:underline">orbit42@nthing.net</a>
               </li>
             </List>
           </Section>
