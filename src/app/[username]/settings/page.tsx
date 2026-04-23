@@ -69,7 +69,7 @@ export default async function SettingsPage({
         </div>
       )}
 
-      <div className="flex gap-8">
+      <div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
         <SectionNav items={SECTIONS} />
 
         <div className="min-w-0 flex-1 space-y-6">

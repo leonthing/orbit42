@@ -58,8 +58,8 @@ export function SectionNav({ items }: { items: Item[] }) {
       </nav>
 
       {/* Mobile / tablet chip row */}
-      <div className="sticky top-0 z-10 -mx-4 mb-4 bg-[rgb(var(--bg-base))]/95 px-4 py-2 backdrop-blur lg:hidden">
-        <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 [&::-webkit-scrollbar]:hidden">
+      <div className="sticky top-0 z-10 w-full bg-[rgb(var(--bg-base))]/95 py-2 backdrop-blur lg:hidden">
+        <div className="flex gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden">
           {items.map((item) => (
             <a
               key={item.id}
