@@ -810,7 +810,7 @@ export default function CalendarView({
           {/* Month Calendar Grid */}
           <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 p-3 md:p-5">
             {/* Day headers with week number column */}
-            <div className="grid grid-cols-[1.5rem_repeat(7,1fr)] gap-0.5 md:grid-cols-[2rem_repeat(7,1fr)] md:gap-1">
+            <div className="grid grid-cols-[1.5rem_repeat(7,minmax(0,1fr))] gap-0.5 md:grid-cols-[2rem_repeat(7,minmax(0,1fr))] md:gap-1">
               <div className="py-2 text-center text-[10px] font-medium text-charcoal-600">W</div>
               {DAYS_MON.map((d, i) => (
                 <div
@@ -825,7 +825,7 @@ export default function CalendarView({
             </div>
 
             {/* Date cells with week numbers */}
-            <div className="grid grid-cols-[1.5rem_repeat(7,1fr)] gap-0.5 md:grid-cols-[2rem_repeat(7,1fr)] md:gap-1">
+            <div className="grid grid-cols-[1.5rem_repeat(7,minmax(0,1fr))] gap-0.5 md:grid-cols-[2rem_repeat(7,minmax(0,1fr))] md:gap-1">
               {days.map((day, i) => {
                 const isToday = isCurrentMonth && day === today.getDate();
                 const isSelected = day === selectedDay;
