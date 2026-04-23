@@ -19,7 +19,7 @@ export default async function ConversationPage({
   await markRead(params.id);
 
   return (
-    <div className="mx-auto flex h-[calc(100vh-5rem)] max-w-2xl flex-col">
+    <div className="flex h-[calc(100vh-5rem)] max-w-2xl flex-col">
       <header className="flex items-center gap-3 border-b border-charcoal-800/40 pb-3">
         <Link
           href="/messages"

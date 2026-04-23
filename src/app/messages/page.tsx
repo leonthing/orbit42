@@ -31,7 +31,7 @@ export default async function MessagesPage() {
   const conversations = await listConversations();
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="max-w-2xl">
       <h1 className="mb-4 text-xl font-semibold text-charcoal-100">Messages</h1>
 
       {conversations.length === 0 ? (
