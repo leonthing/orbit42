@@ -250,16 +250,6 @@ export default async function PublicProfile({
             </div>
           </div>
         </div>
-        {isOwner && (
-          <div className="flex shrink-0 items-center gap-2">
-            <Link
-              href={`/${params.username}/slots`}
-              className="whitespace-nowrap rounded-lg bg-red-600 px-4 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-red-500"
-            >
-              타임슬롯
-            </Link>
-          </div>
-        )}
       </header>
 
       {Object.values(socialLinks).some(Boolean) && (

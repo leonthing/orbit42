@@ -5,11 +5,9 @@ import { usePathname } from "next/navigation";
 
 export function MobileBottomNav({
   username,
-  unreadMessages = 0,
   unreadNotifications = 0,
 }: {
   username: string;
-  unreadMessages?: number;
   unreadNotifications?: number;
 }) {
   const pathname = usePathname();
@@ -47,13 +45,12 @@ export function MobileBottomNav({
       ),
     },
     {
-      href: "/messages",
-      label: "메시지",
-      active: pathname === "/messages" || pathname.startsWith("/messages/"),
-      badge: unreadMessages,
+      href: `/${username}/slots`,
+      label: "타임슬롯",
+      active: pathname.startsWith(`/${username}/slots`),
       icon: (
         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 20.25c4.97 0 9-3.694 9-8.25s-4.03-8.25-9-8.25S3 7.444 3 12c0 2.104.859 4.023 2.273 5.48.432.447.74 1.04.586 1.641a4.483 4.483 0 0 1-.923 1.785A5.969 5.969 0 0 0 6 21c1.282 0 2.47-.402 3.445-1.087.81.22 1.668.337 2.555.337Z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
         </svg>
       ),
     },
@@ -69,8 +66,7 @@ export function MobileBottomNav({
     },
   ];
 
-  const totalUnread = unreadMessages + unreadNotifications;
-  void totalUnread;
+  void unreadNotifications;
 
   return (
     <nav
@@ -91,11 +87,6 @@ export function MobileBottomNav({
         >
           <span className="relative">
             <span className="[&>svg]:h-6 [&>svg]:w-6">{it.icon}</span>
-            {it.badge && it.badge > 0 ? (
-              <span className="absolute -right-1.5 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-600 px-1 text-[9px] font-bold text-white">
-                {it.badge > 99 ? "99+" : it.badge}
-              </span>
-            ) : null}
           </span>
           <span>{it.label}</span>
         </Link>

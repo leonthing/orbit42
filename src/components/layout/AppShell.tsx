@@ -49,7 +49,6 @@ export function AppShell({
         </div>
         <MobileBottomNav
           username={viewerUsername}
-          unreadMessages={unreadMessages}
           unreadNotifications={unreadNotifications}
         />
       </div>
