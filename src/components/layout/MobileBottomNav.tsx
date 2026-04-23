@@ -74,19 +74,23 @@ export function MobileBottomNav({
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 flex h-14 items-stretch border-t border-charcoal-800/60 bg-[rgb(var(--bg-surface))]/95 backdrop-blur md:hidden"
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      className="fixed inset-x-0 bottom-0 z-40 flex items-stretch border-t border-charcoal-800/60 bg-[rgb(var(--bg-surface))]/95 backdrop-blur md:hidden"
+      style={{
+        // 실제 탭 영역 64px + iPhone 홈 인디케이터만큼 추가 하단 여유
+        height: "calc(4rem + env(safe-area-inset-bottom))",
+        paddingBottom: "env(safe-area-inset-bottom)",
+      }}
     >
       {items.map((it) => (
         <Link
           key={it.href}
           href={it.href}
-          className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-medium ${
+          className={`relative flex flex-1 flex-col items-center justify-center gap-1 text-[11px] font-medium ${
             it.active ? "text-red-400" : "text-charcoal-500"
           }`}
         >
           <span className="relative">
-            {it.icon}
+            <span className="[&>svg]:h-6 [&>svg]:w-6">{it.icon}</span>
             {it.badge && it.badge > 0 ? (
               <span className="absolute -right-1.5 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-600 px-1 text-[9px] font-bold text-white">
                 {it.badge > 99 ? "99+" : it.badge}

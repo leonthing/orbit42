@@ -34,7 +34,14 @@ export function AppShell({
             avatarUrl={viewerAvatarUrl}
             unreadNotifications={unreadNotifications}
           />
-          <main className="flex-1 overflow-y-auto pb-16 md:pb-0">
+          <main
+            className="flex-1 overflow-y-auto pb-[var(--mobile-nav-pb)] md:!pb-0"
+            style={
+              {
+                "--mobile-nav-pb": "calc(4rem + env(safe-area-inset-bottom))",
+              } as React.CSSProperties
+            }
+          >
             <div className="w-full px-4 py-4 sm:px-5 md:px-6 md:py-5">
               {children}
             </div>
