@@ -3,24 +3,10 @@
 import Link from "next/link";
 import { logout } from "@/lib/auth";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMobileMenu } from "./MobileMenuContext";
 import { Avatar } from "@/components/Avatar";
 import { NotificationBell } from "./NotificationBell";
-
-function formatNow(d: Date) {
-  return d.toLocaleString("ko-KR", {
-    timeZone: "Asia/Seoul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    weekday: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  });
-}
 
 export function TopBar({
   username,
@@ -36,13 +22,6 @@ export function TopBar({
   const router = useRouter();
   const [showMenu, setShowMenu] = useState(false);
   const { toggle } = useMobileMenu();
-  const [now, setNow] = useState<string>("");
-
-  useEffect(() => {
-    setNow(formatNow(new Date()));
-    const id = setInterval(() => setNow(formatNow(new Date())), 1000);
-    return () => clearInterval(id);
-  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -51,7 +30,7 @@ export function TopBar({
 
   return (
     <header className="flex h-12 shrink-0 items-center justify-between border-b border-charcoal-800/40 px-4 md:px-6">
-      {/* Left: Hamburger (mobile) + live clock */}
+      {/* Left: Hamburger (mobile only — desktop clock lives in the sidebar) */}
       <div className="flex items-center gap-3">
         <button
           onClick={toggle}
@@ -62,12 +41,6 @@ export function TopBar({
             <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
           </svg>
         </button>
-        <span
-          className="hidden font-mono text-xs tabular-nums text-charcoal-500 sm:inline"
-          suppressHydrationWarning
-        >
-          {now}
-        </span>
       </div>
 
       {/* Right: Bell + User */}
