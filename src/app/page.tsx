@@ -90,37 +90,7 @@ export default async function LandingPage() {
           </div>
         </section>
 
-        {/* Feature 2: Monetize free time */}
-        <section className="mt-20 md:mt-28">
-          <FeatureHeader
-            eyebrow="Google Calendar 연동"
-            title="남는 시간을 수익으로"
-            body="구글 캘린더의 빈 시간을 자동으로 읽어서, 그 안에서만 예약 가능하게 만들어줘요. 이미 일정 있는 시간은 자동으로 제외."
-          />
-          <div className="mt-8 grid gap-4 sm:grid-cols-2">
-            <ValueCard
-              title="자동 가용시간"
-              body="근무 시간만 정하면 Google Calendar를 보고 알아서 빈 시간을 뽑아줘요. 수동으로 하나씩 열 필요 없음."
-              icon={
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
-                </svg>
-              }
-            />
-            <ValueCard
-              title="무료부터 경매까지"
-              body="0원 커피챗, 5만원 멘토링, 그리고 경매로 열리는 프리미엄 저녁. 같은 캘린더 안에서 자유롭게."
-              icon={
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" />
-                </svg>
-              }
-            />
-          </div>
-          <DemoCalendar />
-        </section>
-
-        {/* Feature 3: Calendar + Todo */}
+        {/* Feature 2: Calendar + Todo */}
         <section className="mt-20 md:mt-28">
           <FeatureHeader
             eyebrow="캘린더 + 할 일"
@@ -150,6 +120,36 @@ export default async function LandingPage() {
             </div>
             <DemoTodoDay />
           </div>
+        </section>
+
+        {/* Feature 3: Monetize free time */}
+        <section className="mt-20 md:mt-28">
+          <FeatureHeader
+            eyebrow="Google Calendar 연동"
+            title="남는 시간을 수익으로"
+            body="구글 캘린더의 빈 시간을 자동으로 읽어서, 그 안에서만 예약 가능하게 만들어줘요. 이미 일정 있는 시간은 자동으로 제외."
+          />
+          <div className="mt-8 grid gap-4 sm:grid-cols-2">
+            <ValueCard
+              title="자동 가용시간"
+              body="근무 시간만 정하면 Google Calendar를 보고 알아서 빈 시간을 뽑아줘요. 수동으로 하나씩 열 필요 없음."
+              icon={
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+                </svg>
+              }
+            />
+            <ValueCard
+              title="무료부터 경매까지"
+              body="0원 커피챗, 5만원 멘토링, 그리고 경매로 열리는 프리미엄 저녁. 같은 캘린더 안에서 자유롭게."
+              icon={
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" />
+                </svg>
+              }
+            />
+          </div>
+          <DemoCalendar />
         </section>
 
         {/* Feature 4: Orbits (community) */}
