@@ -385,6 +385,8 @@ function ItemBlock({
   if (item.kind === "event") {
     const canToggle = !!(viewerIsOwner && onToggleComplete);
     const clickable = !!onEventClick;
+    const tint = `color-mix(in srgb, ${item.color} 10%, transparent)`;
+    const tintHover = `color-mix(in srgb, ${item.color} 16%, transparent)`;
     return (
       <div
         role={clickable ? "button" : undefined}
@@ -400,10 +402,20 @@ function ItemBlock({
               }
             : undefined
         }
-        className={`group absolute overflow-hidden rounded-md border-l-[3px] px-1.5 py-1 shadow-sm transition-opacity ${
-          clickable ? "cursor-pointer hover:ring-1 hover:ring-charcoal-500" : ""
-        } ${completed ? "bg-charcoal-800/50 opacity-50" : "bg-charcoal-800"}`}
-        style={{ ...style, borderColor: item.color }}
+        onMouseEnter={
+          clickable
+            ? (e) => { e.currentTarget.style.backgroundColor = tintHover; }
+            : undefined
+        }
+        onMouseLeave={
+          clickable
+            ? (e) => { e.currentTarget.style.backgroundColor = tint; }
+            : undefined
+        }
+        className={`group absolute overflow-hidden rounded-[3px] border-l-[3px] px-1.5 py-0.5 transition-colors ${
+          clickable ? "cursor-pointer" : ""
+        } ${completed ? "opacity-50" : ""}`}
+        style={{ ...style, borderColor: item.color, backgroundColor: tint }}
       >
         <div className="flex items-start gap-1">
           {canToggle && (
@@ -414,11 +426,12 @@ function ItemBlock({
                 onToggleComplete?.(item.id);
               }}
               aria-label={completed ? "미완료로 표시" : "완료로 표시"}
-              className={`mt-[1px] flex h-3 w-3 shrink-0 items-center justify-center rounded-sm border ${
-                completed
-                  ? "border-red-400 bg-red-500 text-white"
-                  : "border-charcoal-500 bg-charcoal-900/40 hover:border-charcoal-300"
-              }`}
+              className="mt-[2px] flex h-3 w-3 shrink-0 items-center justify-center rounded-[2px] border"
+              style={{
+                borderColor: item.color,
+                backgroundColor: completed ? item.color : "transparent",
+                color: "#fff",
+              }}
             >
               {completed && (
                 <svg
@@ -435,14 +448,18 @@ function ItemBlock({
           )}
           <p
             className={`min-w-0 flex-1 truncate text-[11px] font-semibold leading-tight ${
-              completed ? "text-charcoal-400 line-through" : "text-charcoal-50"
+              completed ? "line-through" : ""
             }`}
+            style={{ color: item.color }}
           >
             {item.title}
           </p>
         </div>
         {!item.allDay && height >= 32 && (
-          <p className="truncate text-[10px] leading-tight text-charcoal-300">
+          <p
+            className="truncate text-[10px] leading-tight opacity-70"
+            style={{ color: item.color }}
+          >
             {minToHM(item.startMin)}
           </p>
         )}
@@ -477,35 +494,50 @@ function ItemBlock({
     : item.auction_ends_at
       ? `경매중 · ${relativeTimeTo(item.auction_ends_at)}`
       : "경매중";
-  const className = isAuction
-    ? "group absolute overflow-hidden rounded-md border border-amber-500 bg-amber-100 px-1.5 py-1 text-left transition-colors hover:bg-amber-200"
-    : "group absolute overflow-hidden rounded-md border border-red-500 bg-red-100 px-1.5 py-1 text-left transition-colors hover:bg-red-200";
-  const textMain = isAuction ? "text-amber-900" : "text-red-900";
-  const textSub = isAuction ? "text-amber-800" : "text-red-800";
+  const accent = isAuction ? "#f59e0b" : "#ef4444"; // amber-500 / red-500
+  const tint = `color-mix(in srgb, ${accent} 10%, transparent)`;
+  const tintHover = `color-mix(in srgb, ${accent} 16%, transparent)`;
+  const className =
+    "group absolute overflow-hidden rounded-[3px] border-l-[3px] px-1.5 py-0.5 text-left transition-colors";
+  const subStyle: React.CSSProperties = { color: accent, opacity: 0.75 };
+  const slotStyle: React.CSSProperties = {
+    ...style,
+    borderColor: accent,
+    backgroundColor: tint,
+  };
+  const onEnter = (e: React.MouseEvent<HTMLElement>) => {
+    e.currentTarget.style.backgroundColor = tintHover;
+  };
+  const onLeave = (e: React.MouseEvent<HTMLElement>) => {
+    e.currentTarget.style.backgroundColor = tint;
+  };
   const inner = (
     <>
       <div className="flex items-baseline justify-between gap-1">
-        <p className={`truncate text-[11px] font-semibold leading-tight ${textMain}`}>
+        <p
+          className="truncate text-[11px] font-semibold leading-tight"
+          style={{ color: accent }}
+        >
           {item.title}
         </p>
-        <span className={`shrink-0 text-[10px] font-bold ${textMain}`}>
+        <span className="shrink-0 text-[10px] font-bold" style={{ color: accent }}>
           {priceLabel}
         </span>
       </div>
       {isAuction && height >= 34 && (
-        <p className={`truncate text-[10px] leading-tight ${textSub}`}>
+        <p className="truncate text-[10px] leading-tight" style={subStyle}>
           <span className="font-semibold">{auctionLabel}</span>
           {item.bid_count > 0 && <span className="ml-1">· 입찰 {item.bid_count}</span>}
         </p>
       )}
       {!isAuction && height >= 34 && (
-        <p className={`truncate text-[10px] leading-tight ${textSub}`}>
+        <p className="truncate text-[10px] leading-tight" style={subStyle}>
           {minToHM(item.startMin)}–{minToHM(item.endMin)}
           {multi && <span className="ml-1 font-semibold">· {item.option_count}자리</span>}
         </p>
       )}
       {height >= 56 && (
-        <p className={`truncate text-[10px] leading-tight ${textSub}`}>
+        <p className="truncate text-[10px] leading-tight" style={subStyle}>
           {item.duration_min}분
         </p>
       )}
@@ -519,7 +551,9 @@ function ItemBlock({
           panel.open({ slug: item.slot_slug, startAt: item.start_at })
         }
         className={className}
-        style={style}
+        style={slotStyle}
+        onMouseEnter={onEnter}
+        onMouseLeave={onLeave}
       >
         {inner}
       </button>
@@ -529,7 +563,9 @@ function ItemBlock({
     <Link
       href={`/${username}/s/${item.slot_slug}?t=${encodeURIComponent(item.start_at)}`}
       className={className}
-      style={style}
+      style={slotStyle}
+      onMouseEnter={onEnter}
+      onMouseLeave={onLeave}
     >
       {inner}
     </Link>
