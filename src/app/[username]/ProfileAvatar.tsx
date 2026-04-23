@@ -53,8 +53,8 @@ export function ProfileAvatar({
     });
   };
 
-  // Badge size scales with avatar — ~25% but with a floor.
-  const badge = Math.max(20, Math.round(size * 0.3));
+  // Fixed-size badge — scaling with avatar made it look chunky on 64px.
+  const badge = 22;
 
   return (
     <span className="relative inline-block">
@@ -67,21 +67,21 @@ export function ProfileAvatar({
       >
         <Avatar url={url} name={name} size={size} />
         <span
-          className={`pointer-events-none absolute flex items-center justify-center rounded-full border-2 border-[rgb(var(--bg-base))] bg-red-600 text-white shadow transition-transform group-hover:scale-110 ${
+          className={`pointer-events-none absolute flex items-center justify-center rounded-full bg-[rgb(var(--bg-base))] text-red-500 shadow-sm ring-1 ring-charcoal-800/50 transition-colors group-hover:text-red-400 ${
             pending ? "opacity-60" : ""
           }`}
           style={{
             width: badge,
             height: badge,
-            right: -2,
-            bottom: -2,
+            right: 0,
+            bottom: 0,
           }}
         >
           {pending ? (
             <svg
               className="animate-spin"
-              width={badge * 0.55}
-              height={badge * 0.55}
+              width={12}
+              height={12}
               viewBox="0 0 24 24"
               fill="none"
             >
@@ -90,11 +90,11 @@ export function ProfileAvatar({
             </svg>
           ) : (
             <svg
-              width={badge * 0.6}
-              height={badge * 0.6}
+              width={12}
+              height={12}
               viewBox="0 0 24 24"
               fill="none"
-              strokeWidth={3}
+              strokeWidth={2.5}
               stroke="currentColor"
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
