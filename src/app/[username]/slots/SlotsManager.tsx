@@ -1966,9 +1966,15 @@ function SlotImagePicker({
     if (!files || files.length === 0) return;
     setUploading(true);
     try {
+      const { resizeImageToJpeg } = await import("@/lib/image-resize");
       const { uploadSlotImages } = await import("@/lib/slot-media");
+      const resized = await Promise.all(
+        Array.from(files).map((f) =>
+          resizeImageToJpeg(f, { maxDimension: 1600, quality: 0.85 }),
+        ),
+      );
       const fd = new FormData();
-      Array.from(files).forEach((f) => fd.append("files", f));
+      resized.forEach((f) => fd.append("files", f));
       const res = await uploadSlotImages(fd);
       if ("error" in res) {
         toast.error(res.error);

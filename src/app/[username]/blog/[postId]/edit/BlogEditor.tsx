@@ -208,8 +208,13 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
     setUploadError(null);
     setUploading(true);
     try {
-      for (const f of Array.from(files)) {
-        if (!f.type.startsWith("image/")) continue;
+      const { resizeImageToJpeg } = await import("@/lib/image-resize");
+      for (const raw of Array.from(files)) {
+        if (!raw.type.startsWith("image/")) continue;
+        const f = await resizeImageToJpeg(raw, {
+          maxDimension: 1800,
+          quality: 0.85,
+        });
         const fd = new FormData();
         fd.append("file", f);
         const res = await uploadBlogImage(fd);

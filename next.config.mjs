@@ -1,5 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    // Raised from the 1 MB default so that image uploads (avatars, blog,
+    // feed, slot photos) don't blow up before reaching the server action.
+    // Client-side resizing keeps most payloads well under 1 MB anyway —
+    // this is defense-in-depth.
+    serverActions: { bodySizeLimit: "8mb" },
+  },
   async headers() {
     return [
       {

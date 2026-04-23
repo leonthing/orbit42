@@ -6,6 +6,7 @@ import { uploadAvatar, clearAvatar } from "@/lib/auth";
 import { Avatar } from "@/components/Avatar";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
+import { resizeImageToJpeg } from "@/lib/image-resize";
 
 export function AvatarUploader({
   initialUrl,
@@ -24,9 +25,16 @@ export function AvatarUploader({
   const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
-    const fd = new FormData();
-    fd.set("avatar", f);
+    e.target.value = "";
     startTransition(async () => {
+      // Downscale on the client so phone photos don't blow past the
+      // server-action body limit — user never sees a "file too big" error.
+      const resized = await resizeImageToJpeg(f, {
+        maxDimension: 768,
+        quality: 0.85,
+      });
+      const fd = new FormData();
+      fd.set("avatar", resized);
       const res = await uploadAvatar(fd);
       if (res.error) {
         toast.error(res.error);
@@ -35,7 +43,6 @@ export function AvatarUploader({
       setUrl(res.url ?? null);
       router.refresh();
     });
-    e.target.value = "";
   };
 
   const onClear = async () => {
@@ -80,7 +87,9 @@ export function AvatarUploader({
               </button>
             )}
           </div>
-          <p className="text-xs text-charcoal-500">JPG / PNG, 3MB 이하</p>
+          <p className="text-xs text-charcoal-500">
+            JPG, PNG, WEBP — 업로드 시 자동으로 줄여드려요.
+          </p>
         </div>
         <input
           ref={inputRef}

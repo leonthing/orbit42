@@ -65,14 +65,18 @@ export function ComposeBox({
     });
   };
 
-  const onPickFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onPickFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const picked = Array.from(e.target.files ?? []).slice(0, 4 - files.length);
+    e.target.value = "";
     if (picked.length === 0) return;
-    const next = [...files, ...picked].slice(0, 4);
+    const { resizeImageToJpeg } = await import("@/lib/image-resize");
+    const resized = await Promise.all(
+      picked.map((f) => resizeImageToJpeg(f, { maxDimension: 1600, quality: 0.85 })),
+    );
+    const next = [...files, ...resized].slice(0, 4);
     setFiles(next);
     previews.forEach((u) => URL.revokeObjectURL(u));
     setPreviews(next.map((f) => URL.createObjectURL(f)));
-    e.target.value = "";
   };
 
   const removeFile = (i: number) => {
