@@ -343,6 +343,59 @@ export async function deleteEvent(id: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+/**
+ * Update a Google-owned event. We don't mirror Google events in our DB;
+ * we just push the changes through the Calendar API.
+ */
+export async function updateGoogleEvent(
+  gcalId: string,
+  eventId: string,
+  input: Partial<EventInput>,
+): Promise<{ ok: true } | { error: string }> {
+  const userId = await requireUserId();
+  const calendar = await getAuthenticatedCalendar(userId);
+  if (!calendar) return { error: "Google 캘린더 연결이 필요해요." };
+  const body: Record<string, unknown> = {};
+  if (input.title !== undefined) body.summary = input.title;
+  if (input.description !== undefined) body.description = input.description ?? "";
+  if (input.start_at !== undefined && input.end_at !== undefined) {
+    if (input.all_day) {
+      body.start = { date: input.start_at.split("T")[0] };
+      body.end = { date: input.end_at.split("T")[0] };
+    } else {
+      body.start = { dateTime: input.start_at, timeZone: "Asia/Seoul" };
+      body.end = { dateTime: input.end_at, timeZone: "Asia/Seoul" };
+    }
+  }
+  try {
+    await calendar.events.patch({
+      calendarId: gcalId,
+      eventId,
+      requestBody: body,
+    });
+    return { ok: true };
+  } catch (err) {
+    console.error("updateGoogleEvent", err);
+    return { error: "Google 일정 수정에 실패했어요. 권한이 있는지 확인해주세요." };
+  }
+}
+
+export async function deleteGoogleEvent(
+  gcalId: string,
+  eventId: string,
+): Promise<{ ok: true } | { error: string }> {
+  const userId = await requireUserId();
+  const calendar = await getAuthenticatedCalendar(userId);
+  if (!calendar) return { error: "Google 캘린더 연결이 필요해요." };
+  try {
+    await calendar.events.delete({ calendarId: gcalId, eventId });
+    return { ok: true };
+  } catch (err) {
+    console.error("deleteGoogleEvent", err);
+    return { error: "Google 일정 삭제에 실패했어요. 권한이 있는지 확인해주세요." };
+  }
+}
+
 export async function fetchWeekDays(
   username: string,
   weekStartIso: string,

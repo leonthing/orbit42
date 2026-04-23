@@ -12,6 +12,8 @@ import {
   createEvent,
   updateEvent,
   deleteEvent,
+  updateGoogleEvent,
+  deleteGoogleEvent,
   fetchWeekDays,
 } from "./actions";
 import LifeCalendarViewExternal from "./LifeCalendarView";
@@ -20,7 +22,27 @@ import { WeekCalendar } from "@/components/WeekCalendar";
 import type { WeekDay, WeekItem } from "@/lib/profile-week";
 import type { Calendar } from "@/lib/calendars-types";
 import { useConfirm } from "@/components/ConfirmDialog";
+import { useToast } from "@/components/Toast";
 import { useRouter } from "next/navigation";
+
+/** Parse a WeekItem event id back into its source+ids. */
+function parseWeekItemId(
+  id: string,
+):
+  | { kind: "native"; id: string }
+  | { kind: "google"; gcalId: string; eventId: string }
+  | null {
+  if (id.startsWith("native:")) return { kind: "native", id: id.slice(7) };
+  const idx = id.indexOf("::");
+  if (idx > 0) {
+    return {
+      kind: "google",
+      gcalId: id.slice(0, idx),
+      eventId: id.slice(idx + 2),
+    };
+  }
+  return null;
+}
 
 // ─── Helpers ────────────────────────────────────────────────
 
@@ -135,6 +157,7 @@ export default function CalendarView({
 }) {
   const router = useRouter();
   const confirm = useConfirm();
+  const toast = useToast();
   const [year, setYear] = useState(initialYear);
   const [month, setMonth] = useState(initialMonth);
   const [events, setEvents] = useState<Event[]>(initialEvents);
@@ -465,12 +488,30 @@ export default function CalendarView({
 
     startTransition(async () => {
       if (editingEvent) {
-        await updateEvent(editingEvent.id, input);
+        // Route to Google or native based on the synthetic id prefix.
+        if (editingEvent.source === "google" && editingEvent.id.startsWith("gcal:")) {
+          const rest = editingEvent.id.slice("gcal:".length);
+          const idx = rest.indexOf("::");
+          if (idx > 0) {
+            const gcalId = rest.slice(0, idx);
+            const eventId = rest.slice(idx + 2);
+            const res = await updateGoogleEvent(gcalId, eventId, input);
+            if ("error" in res) {
+              toast.error(res.error);
+              return;
+            }
+            toast.success("수정됐어요.");
+          }
+        } else {
+          await updateEvent(editingEvent.id, input);
+        }
       } else {
         await createEvent(input);
       }
       const data = await getEvents(year, month, selectedCalendars);
       setEvents(data);
+      // Also refresh week view data so the detail modal reflects latest.
+      router.refresh();
       closeForm();
     });
   };
@@ -887,31 +928,62 @@ export default function CalendarView({
           canToggleComplete={!!viewerIsOwner}
           onToggleComplete={() => handleToggleComplete(detailEvent.id)}
           onEdit={() => {
-            // native: id === "native:<uuid>"
-            const nativeId = detailEvent.id.startsWith("native:")
-              ? detailEvent.id.slice("native:".length)
-              : null;
-            if (!nativeId) return;
-            const full = events.find((e) => e.id === nativeId);
-            if (!full) return;
+            if (detailEvent.kind !== "event") return;
+            const parsed = parseWeekItemId(detailEvent.id);
+            if (!parsed) return;
+            if (parsed.kind === "native") {
+              const full = events.find((e) => e.id === parsed.id);
+              if (!full) return;
+              setDetailEvent(null);
+              openEditForm(full);
+              return;
+            }
+            // Google — synthesize an Event-shaped object for the form.
+            const nativeCal = myCalendars.find(
+              (c) => c.source === "google" && c.google_calendar_id === parsed.gcalId,
+            );
+            const synthetic: Event = {
+              id: `gcal:${parsed.gcalId}::${parsed.eventId}`,
+              title: detailEvent.title,
+              description: null,
+              start_at: detailEvent.start_at,
+              end_at: detailEvent.end_at,
+              all_day: detailEvent.all_day,
+              business_id: null,
+              calendar_id: nativeCal?.id ?? null,
+              source: "google",
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            };
             setDetailEvent(null);
-            openEditForm(full);
+            openEditForm(synthetic);
           }}
           onDelete={async () => {
-            const nativeId = detailEvent.id.startsWith("native:")
-              ? detailEvent.id.slice("native:".length)
-              : null;
-            if (!nativeId) return;
+            if (detailEvent.kind !== "event") return;
+            const parsed = parseWeekItemId(detailEvent.id);
+            if (!parsed) return;
             const ok = await confirm({
               title: "이 일정을 삭제할까요?",
-              body: `"${detailEvent.title}" 일정이 orbit42 에서 사라져요.`,
+              body:
+                parsed.kind === "google"
+                  ? `"${detailEvent.title}" 일정이 Google 캘린더에서도 삭제돼요.`
+                  : `"${detailEvent.title}" 일정이 orbit42 에서 사라져요.`,
               confirmLabel: "삭제",
               danger: true,
             });
             if (!ok) return;
-            await deleteEvent(nativeId);
+            if (parsed.kind === "native") {
+              await deleteEvent(parsed.id);
+            } else {
+              const res = await deleteGoogleEvent(parsed.gcalId, parsed.eventId);
+              if ("error" in res) {
+                toast.error(res.error);
+                return;
+              }
+            }
+            toast.success("삭제했어요.");
             setDetailEvent(null);
-            fetchEvents(year, month);
+            await fetchEvents(year, month);
             router.refresh();
           }}
           onClose={() => setDetailEvent(null)}
@@ -1492,7 +1564,7 @@ function EventDetailModal({
             </p>
             {!isNative && canToggleComplete && (
               <p className="mt-2 text-[11px] text-charcoal-600">
-                Google 캘린더 일정은 orbit42 에서 직접 수정할 수 없어요. 수정·삭제는 Google 캘린더에서 진행해주세요.
+                Google 캘린더 일정 — 여기서 수정하면 Google 쪽에도 함께 반영돼요.
               </p>
             )}
           </div>
@@ -1513,7 +1585,7 @@ function EventDetailModal({
                 {isCompleted ? "완료 취소" : "완료로 표시"}
               </button>
             )}
-            {canToggleComplete && isNative && onEdit && (
+            {canToggleComplete && onEdit && (
               <button
                 type="button"
                 onClick={onEdit}
@@ -1522,7 +1594,7 @@ function EventDetailModal({
                 수정
               </button>
             )}
-            {canToggleComplete && isNative && onDelete && (
+            {canToggleComplete && onDelete && (
               <button
                 type="button"
                 onClick={onDelete}
