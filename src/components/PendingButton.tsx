@@ -1,43 +1,62 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 
-type Variant = "primary" | "secondary" | "danger" | "ghost";
-type Size = "sm" | "md";
+export type ButtonVariant = "primary" | "secondary" | "danger" | "ghost";
+export type ButtonSize = "sm" | "md" | "lg";
 
-const VARIANT_CLASS: Record<Variant, string> = {
+const VARIANT_CLASS: Record<ButtonVariant, string> = {
   primary:
     "bg-red-600 text-white hover:bg-red-500 disabled:bg-charcoal-800 disabled:text-charcoal-500",
   secondary:
-    "border border-charcoal-800/60 bg-charcoal-900/40 text-charcoal-200 hover:border-charcoal-700 hover:text-white disabled:opacity-50",
+    "border border-charcoal-700/60 bg-charcoal-800/40 text-charcoal-200 hover:border-charcoal-600 hover:bg-charcoal-800 hover:text-white disabled:opacity-50",
   danger:
     "border border-red-500/50 bg-red-500/10 text-red-300 hover:bg-red-500/20 disabled:opacity-50",
   ghost:
     "text-charcoal-300 hover:bg-charcoal-800/50 hover:text-white disabled:opacity-50",
 };
 
-const SIZE_CLASS: Record<Size, string> = {
-  sm: "rounded-md px-2.5 py-1 text-xs font-medium",
-  md: "rounded-lg px-4 py-2 text-sm font-semibold",
+const SIZE_CLASS: Record<ButtonSize, string> = {
+  sm: "h-8 rounded-lg px-3 text-xs font-medium",
+  md: "h-9 rounded-lg px-4 text-sm font-semibold",
+  lg: "h-11 rounded-lg px-5 text-sm font-semibold",
 };
+
+const ICON_SIZE_CLASS: Record<ButtonSize, string> = {
+  sm: "h-8 w-8 rounded-lg",
+  md: "h-9 w-9 rounded-lg",
+  lg: "h-11 w-11 rounded-lg",
+};
+
+const BASE_CLASS =
+  "inline-flex shrink-0 items-center justify-center gap-1.5 transition-colors disabled:cursor-not-allowed";
+
+export function buttonClasses({
+  variant = "primary",
+  size = "md",
+  iconOnly = false,
+}: {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  iconOnly?: boolean;
+} = {}) {
+  const sizeClass = iconOnly ? ICON_SIZE_CLASS[size] : SIZE_CLASS[size];
+  return `${BASE_CLASS} ${sizeClass} ${VARIANT_CLASS[variant]}`;
+}
 
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
   pending?: boolean;
   pendingLabel?: string;
-  variant?: Variant;
-  size?: Size;
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  iconOnly?: boolean;
   leading?: ReactNode;
 };
 
-/**
- * Unified form/action button. Shows a spinner + `pendingLabel` while
- * `pending` is true, and stays disabled. Variants cover the common
- * primary / secondary / danger / ghost patterns so callers stop
- * hand-rolling Tailwind strings.
- */
 export function PendingButton({
   pending = false,
   pendingLabel,
   variant = "primary",
   size = "md",
+  iconOnly = false,
   leading,
   children,
   disabled,
@@ -50,14 +69,16 @@ export function PendingButton({
       {...rest}
       disabled={isDisabled}
       aria-busy={pending || undefined}
-      className={`inline-flex items-center justify-center gap-1.5 transition-colors disabled:cursor-not-allowed ${SIZE_CLASS[size]} ${VARIANT_CLASS[variant]} ${className}`}
+      className={`${buttonClasses({ variant, size, iconOnly })} ${className}`}
     >
       {pending ? (
         <Spinner />
       ) : leading ? (
         <span className="shrink-0">{leading}</span>
       ) : null}
-      <span>{pending && pendingLabel ? pendingLabel : children}</span>
+      {iconOnly ? null : (
+        <span>{pending && pendingLabel ? pendingLabel : children}</span>
+      )}
     </button>
   );
 }

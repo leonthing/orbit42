@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { blockUser, unblockUser } from "@/lib/blocks";
 import { useConfirm } from "@/components/ConfirmDialog";
+import { buttonClasses } from "@/components/PendingButton";
 
 export function BlockMenu({
   targetUsername,
@@ -49,7 +50,7 @@ export function BlockMenu({
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-label="더보기"
-        className="flex h-8 w-8 items-center justify-center rounded-full border border-charcoal-700/60 bg-charcoal-800/40 text-charcoal-400 hover:border-charcoal-600 hover:text-charcoal-100"
+        className={buttonClasses({ variant: "secondary", size: "md", iconOnly: true })}
       >
         <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
           <circle cx="5" cy="12" r="1.5" />

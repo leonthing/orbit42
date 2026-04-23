@@ -4,6 +4,7 @@ import { useTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 import { follow, unfollow } from "@/lib/follows";
 import { useToast } from "@/components/Toast";
+import { buttonClasses, type ButtonSize } from "@/components/PendingButton";
 
 export function FollowButton({
   targetUsername,
@@ -21,14 +22,11 @@ export function FollowButton({
   const [following, setFollowing] = useState(initiallyFollowing);
   const [pending, startTransition] = useTransition();
 
-  const sizeClass = compact ? "px-2.5 py-1 text-xs" : "px-4 py-2 text-sm";
+  const size: ButtonSize = compact ? "sm" : "md";
 
   if (!loggedIn) {
     return (
-      <a
-        href="/login"
-        className={`shrink-0 rounded-md bg-red-600 font-semibold text-white hover:bg-red-500 ${sizeClass}`}
-      >
+      <a href="/login" className={buttonClasses({ variant: "primary", size })}>
         {compact ? "Orbit" : "Sign in to orbit"}
       </a>
     );
@@ -53,11 +51,7 @@ export function FollowButton({
       type="button"
       onClick={handle}
       disabled={pending}
-      className={`shrink-0 rounded-md font-semibold ${sizeClass} ${
-        following
-          ? "border border-charcoal-700 text-charcoal-700 hover:border-red-500/60 hover:text-red-500 dark:text-charcoal-200 dark:hover:text-red-400"
-          : "bg-red-600 text-white hover:bg-red-500 disabled:opacity-60"
-      }`}
+      className={buttonClasses({ variant: following ? "secondary" : "primary", size })}
     >
       {following ? "Orbiting" : "Orbit"}
     </button>

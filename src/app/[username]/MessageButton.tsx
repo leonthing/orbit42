@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { startConversation } from "@/lib/messages";
 import { useToast } from "@/components/Toast";
+import { buttonClasses } from "@/components/PendingButton";
 
 export function MessageButton({
   targetUsername,
@@ -36,7 +37,7 @@ export function MessageButton({
       type="button"
       onClick={onClick}
       disabled={pending}
-      className="rounded-full border border-charcoal-700/60 bg-charcoal-800/40 px-3 py-1 text-xs font-medium text-charcoal-200 hover:border-charcoal-600 hover:bg-charcoal-800 disabled:opacity-60"
+      className={buttonClasses({ variant: "secondary", size: "md" })}
     >
       {pending ? "여는 중…" : "메시지"}
     </button>
