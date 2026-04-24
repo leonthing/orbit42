@@ -25,6 +25,7 @@ import type { Menu } from "@/lib/menus";
 import { setSlotMenus } from "@/lib/menus";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
+import { buttonClasses } from "@/components/PendingButton";
 
 type Row = { slot: TimeSlot; availabilities: Availability[]; menuIds: string[] };
 const DAYS = [
@@ -86,7 +87,7 @@ export default function SlotsManager({
           <button
             type="button"
             onClick={() => setPresetPicker((v) => !v)}
-            className="rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2 text-xs font-medium text-charcoal-200 hover:border-charcoal-700 hover:text-white"
+            className={buttonClasses({ variant: "secondary", size: "md" })}
           >
             {presetPicker ? "닫기" : "+ 템플릿에서"}
           </button>
@@ -94,7 +95,7 @@ export default function SlotsManager({
             <button
               type="button"
               onClick={() => setShowNew(true)}
-              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
+              className={buttonClasses({ variant: "primary", size: "md" })}
             >
               새 슬롯 만들기
             </button>
@@ -162,7 +163,7 @@ export default function SlotsManager({
           <button
             type="button"
             onClick={() => setShowNew(true)}
-            className="mt-5 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
+            className={`mt-5 ${buttonClasses({ variant: "primary", size: "md" })}`}
           >
             새 슬롯 만들기
           </button>
@@ -655,7 +656,7 @@ function NewSlotForm({
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-lg border border-charcoal-700 px-4 py-2 text-sm text-charcoal-300 hover:border-charcoal-600 hover:text-charcoal-100"
+          className={buttonClasses({ variant: "secondary", size: "md" })}
         >
           취소
         </button>
@@ -669,7 +670,7 @@ function NewSlotForm({
             <button
               type="submit"
               disabled={pending || blocked}
-              className="rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-50"
+              className={buttonClasses({ variant: "primary", size: "md" })}
               title={blocked ? "유료 슬롯은 공개 캘린더가 필요해요." : undefined}
             >
               {pending ? "저장 중…" : "슬롯 만들기"}
@@ -812,7 +813,7 @@ function ManualWindows({
             setWindows((w) => [...w, newWindow]);
             setNewWindow("");
           }}
-          className="shrink-0 rounded-lg border border-charcoal-700 px-4 py-2 text-sm font-medium text-charcoal-200 hover:border-charcoal-600 hover:text-charcoal-100"
+          className={buttonClasses({ variant: "secondary", size: "md" })}
         >
           추가
         </button>
@@ -1693,14 +1694,14 @@ function EditSlotForm({
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-lg border border-charcoal-700 px-4 py-2 text-sm text-charcoal-300 hover:border-charcoal-600 hover:text-charcoal-100"
+          className={buttonClasses({ variant: "secondary", size: "md" })}
         >
           취소
         </button>
         <button
           type="submit"
           disabled={pending || violating}
-          className="rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-50"
+          className={buttonClasses({ variant: "primary", size: "md" })}
         >
           {pending ? "저장 중…" : "저장"}
         </button>
