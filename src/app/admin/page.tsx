@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/admin";
 import { getAdminClient } from "@/lib/supabase";
 import { Avatar } from "@/components/Avatar";
 import { DeleteUserButton } from "./DeleteUserButton";
+import { buttonClasses } from "@/components/PendingButton";
 
 export const metadata: Metadata = { title: "Admin · Orbit42" };
 export const dynamic = "force-dynamic";
@@ -50,22 +51,22 @@ export default async function AdminPage() {
             </p>
             <h1 className="mt-1 text-2xl font-bold text-charcoal-100">대시보드</h1>
           </div>
-          <div className="flex items-center gap-3 text-xs">
+          <div className="flex items-center gap-2">
             <Link
               href="/admin/feedback"
-              className="rounded-md border border-charcoal-800/60 px-2.5 py-1 text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
+              className={buttonClasses({ variant: "secondary", size: "sm" })}
             >
               피드백
             </Link>
             <Link
               href="/admin/email-preview"
-              className="rounded-md border border-charcoal-800/60 px-2.5 py-1 text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
+              className={buttonClasses({ variant: "secondary", size: "sm" })}
             >
               이메일 미리보기
             </Link>
             <Link
               href="/feed"
-              className="text-charcoal-500 hover:text-charcoal-200"
+              className="text-xs text-charcoal-500 hover:text-charcoal-200"
             >
               ← 돌아가기
             </Link>

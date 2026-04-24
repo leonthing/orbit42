@@ -4,6 +4,7 @@ import { useState } from "react";
 import { updateProfile, changePassword } from "@/lib/auth";
 import type { SocialLinks, Education, Experience } from "@/lib/auth";
 import { useTheme } from "@/components/ThemeProvider";
+import { buttonClasses } from "@/components/PendingButton";
 
 const SOCIAL_FIELDS: { key: keyof SocialLinks; label: string; placeholder: string; icon: React.ReactNode }[] = [
   {
@@ -279,7 +280,7 @@ export function SettingsForm({
           <button
             type="submit"
             disabled={profileLoading || !hasChanges}
-            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-40 disabled:cursor-not-allowed"
+            className={buttonClasses({ variant: "primary", size: "md" })}
           >
             {profileLoading ? "저장 중..." : "저장"}
           </button>
@@ -471,7 +472,7 @@ export function SettingsForm({
             <button
               type="button"
               onClick={addInterest}
-              className="shrink-0 rounded-lg bg-charcoal-800 px-3 py-2 text-sm text-charcoal-300 hover:bg-charcoal-700"
+              className={buttonClasses({ variant: "secondary", size: "md" })}
             >
               추가
             </button>
@@ -558,7 +559,7 @@ export function SettingsForm({
           <button
             type="submit"
             disabled={pwLoading || !currentPw || !newPw || !confirmPw}
-            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-40 disabled:cursor-not-allowed"
+            className={buttonClasses({ variant: "primary", size: "md" })}
           >
             {pwLoading ? "변경 중..." : "비밀번호 변경"}
           </button>
