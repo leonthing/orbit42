@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { buttonClasses } from "@/components/PendingButton";
 
 export const metadata = { title: "접근 권한 없음" };
 
@@ -24,16 +25,10 @@ export default function ForbiddenPage() {
           돌아가주세요.
         </p>
         <div className="mt-7 flex flex-col gap-2 sm:flex-row sm:justify-center">
-          <Link
-            href="/"
-            className="rounded-lg bg-red-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-red-500"
-          >
+          <Link href="/" className={buttonClasses({ variant: "primary", size: "lg" })}>
             홈으로
           </Link>
-          <Link
-            href="/feed"
-            className="rounded-lg border border-charcoal-700 bg-charcoal-900/30 px-5 py-2.5 text-sm font-medium text-charcoal-100 hover:border-charcoal-600 hover:bg-charcoal-900/60"
-          >
+          <Link href="/feed" className={buttonClasses({ variant: "secondary", size: "lg" })}>
             피드 보기
           </Link>
         </div>
