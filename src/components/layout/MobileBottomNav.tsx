@@ -3,13 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-export function MobileBottomNav({
-  username,
-  unreadNotifications = 0,
-}: {
-  username: string;
-  unreadNotifications?: number;
-}) {
+export function MobileBottomNav({ username }: { username: string }) {
   const pathname = usePathname();
 
   const items = [
@@ -65,8 +59,6 @@ export function MobileBottomNav({
       ),
     },
   ];
-
-  void unreadNotifications;
 
   return (
     <nav

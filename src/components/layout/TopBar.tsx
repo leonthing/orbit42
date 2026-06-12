@@ -13,11 +13,13 @@ export function TopBar({
   displayName,
   avatarUrl = null,
   unreadNotifications = 0,
+  unreadMessages = 0,
 }: {
   username: string;
   displayName: string;
   avatarUrl?: string | null;
   unreadNotifications?: number;
+  unreadMessages?: number;
 }) {
   const router = useRouter();
   const [showMenu, setShowMenu] = useState(false);
@@ -34,12 +36,18 @@ export function TopBar({
       <div className="flex items-center gap-3">
         <button
           onClick={toggle}
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-charcoal-400 hover:bg-charcoal-800/50 hover:text-charcoal-200 md:hidden"
+          className="relative flex h-9 w-9 items-center justify-center rounded-lg text-charcoal-400 hover:bg-charcoal-800/50 hover:text-charcoal-200 md:hidden"
           aria-label="메뉴 열기"
         >
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
           </svg>
+          {unreadMessages > 0 && (
+            <span
+              className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500"
+              aria-label={`안 읽은 메시지 ${unreadMessages}개`}
+            />
+          )}
         </button>
       </div>
 

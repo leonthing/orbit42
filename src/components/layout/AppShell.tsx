@@ -33,6 +33,7 @@ export function AppShell({
             displayName={viewerDisplayName}
             avatarUrl={viewerAvatarUrl}
             unreadNotifications={unreadNotifications}
+            unreadMessages={unreadMessages}
           />
           <main
             className="flex-1 overflow-y-auto pb-[var(--mobile-nav-pb)] md:!pb-0"
@@ -47,10 +48,7 @@ export function AppShell({
             </div>
           </main>
         </div>
-        <MobileBottomNav
-          username={viewerUsername}
-          unreadNotifications={unreadNotifications}
-        />
+        <MobileBottomNav username={viewerUsername} />
       </div>
     </MobileMenuProvider>
   );
