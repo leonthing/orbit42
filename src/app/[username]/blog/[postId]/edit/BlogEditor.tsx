@@ -5,6 +5,7 @@ import { useState, useTransition, useCallback, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
+import rehypeHighlight from "rehype-highlight";
 import type { BlogPost } from "../../actions";
 import {
   updateBlogPost,
@@ -95,6 +96,7 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
   const [content, setContent] = useState(initialPost.content);
   const [slug, setSlug] = useState(initialPost.slug);
   const [excerpt, setExcerpt] = useState(initialPost.excerpt || "");
+  const [coverImage, setCoverImage] = useState(initialPost.cover_image);
   const [tagsInput, setTagsInput] = useState(initialPost.tags.join(", "));
   const [saved, setSaved] = useState(true);
   const [isPending, startTransition] = useTransition();
@@ -103,6 +105,7 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
@@ -117,6 +120,7 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
     content !== post.content ||
     slug !== post.slug ||
     excerpt !== (post.excerpt || "") ||
+    coverImage !== post.cover_image ||
     tagsInput !== post.tags.join(", ");
 
   const scheduleSave = useCallback(() => {
@@ -129,20 +133,21 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
           content,
           slug,
           excerpt: excerpt || null,
+          cover_image: coverImage,
           tags: parseTags(tagsInput),
         });
         setPost(updated);
         setSaved(true);
       });
     }, 1500);
-  }, [post.id, title, content, slug, excerpt, tagsInput]);
+  }, [post.id, title, content, slug, excerpt, coverImage, tagsInput]);
 
   useEffect(() => {
     if (hasChanges) scheduleSave();
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
-  }, [title, content, slug, excerpt, tagsInput, hasChanges, scheduleSave]);
+  }, [title, content, slug, excerpt, coverImage, tagsInput, hasChanges, scheduleSave]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -315,11 +320,36 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
         content,
         slug,
         excerpt: excerpt || null,
+        cover_image: coverImage,
         tags: parseTags(tagsInput),
       });
       setPost(updated);
       setSaved(true);
     });
+  }
+
+  async function handleCoverUpload(files: FileList | null) {
+    const raw = files?.[0];
+    if (!raw || !raw.type.startsWith("image/")) return;
+    setUploadError(null);
+    setUploading(true);
+    try {
+      const { resizeImageToJpeg } = await import("@/lib/image-resize");
+      const f = await resizeImageToJpeg(raw, {
+        maxDimension: 1600,
+        quality: 0.85,
+      });
+      const fd = new FormData();
+      fd.append("file", f);
+      const res = await uploadBlogImage(fd);
+      if ("error" in res) {
+        setUploadError(res.error);
+        return;
+      }
+      setCoverImage(res.url);
+    } finally {
+      setUploading(false);
+    }
   }
 
   const confirm = useConfirm();
@@ -353,7 +383,12 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
     <div className="flex-1 overflow-auto rounded-xl border border-charcoal-700 bg-charcoal-800/50 p-5">
       {content ? (
         <div className={PROSE_CLASSES}>
-          <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{content}</ReactMarkdown>
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm, remarkBreaks]}
+            rehypePlugins={[rehypeHighlight]}
+          >
+            {content}
+          </ReactMarkdown>
         </div>
       ) : (
         <p className="text-sm text-charcoal-600">내용이 없습니다</p>
@@ -474,6 +509,60 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
       {/* Settings Panel */}
       {showSettings && (
         <div className="mb-3 space-y-3 rounded-xl border border-charcoal-700 bg-charcoal-800/30 p-4">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-charcoal-400">
+              커버 이미지
+            </label>
+            {coverImage ? (
+              <div className="space-y-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={coverImage}
+                  alt="커버 이미지"
+                  className="max-h-40 w-full rounded-lg border border-charcoal-700 object-cover"
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => coverInputRef.current?.click()}
+                    disabled={uploading}
+                    className="rounded-lg border border-charcoal-700 px-3 py-1.5 text-xs text-charcoal-300 hover:border-charcoal-600 disabled:opacity-50"
+                  >
+                    교체
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCoverImage(null)}
+                    className="rounded-lg border border-charcoal-700 px-3 py-1.5 text-xs text-red-400 hover:border-red-500/50 hover:bg-red-500/10"
+                  >
+                    제거
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => coverInputRef.current?.click()}
+                disabled={uploading}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-charcoal-700 py-4 text-xs text-charcoal-500 hover:border-charcoal-600 hover:text-charcoal-300 disabled:opacity-50"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0 0 22.5 18.75V5.25A2.25 2.25 0 0 0 20.25 3H3.75A2.25 2.25 0 0 0 1.5 5.25v13.5A2.25 2.25 0 0 0 3.75 21Z" />
+                </svg>
+                {uploading ? "업로드 중…" : "커버 이미지 업로드 (소셜 공유 카드에도 사용돼요)"}
+              </button>
+            )}
+            <input
+              ref={coverInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                handleCoverUpload(e.target.files);
+                if (e.target) e.target.value = "";
+              }}
+            />
+          </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-charcoal-400">Slug (URL)</label>
             <div className="flex items-center gap-2">

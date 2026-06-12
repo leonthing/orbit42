@@ -10,6 +10,7 @@ export interface BlogPost {
   title: string;
   content: string;
   excerpt: string | null;
+  cover_image: string | null;
   published: boolean;
   published_at: string | null;
   tags: string[];
@@ -162,10 +163,30 @@ export async function createBlogPost(data?: { title?: string }) {
 
 export async function updateBlogPost(
   id: string,
-  data: Partial<Pick<BlogPost, "title" | "content" | "excerpt" | "slug" | "tags">>
+  data: Partial<
+    Pick<
+      BlogPost,
+      "title" | "content" | "excerpt" | "slug" | "tags" | "cover_image"
+    >
+  >
 ) {
   const userId = await requireUserId();
   const db = getAdminClient();
+
+  // Renaming the slug? Remember the old one so existing links 301 to
+  // the new URL instead of 404ing.
+  let oldSlug: string | null = null;
+  if (data.slug) {
+    const { data: current } = await db
+      .from("blog_posts")
+      .select("slug")
+      .eq("id", id)
+      .eq("user_id", userId)
+      .single();
+    if (current?.slug && current.slug !== data.slug) {
+      oldSlug = current.slug as string;
+    }
+  }
 
   const { data: post, error } = await db
     .from("blog_posts")
@@ -176,6 +197,22 @@ export async function updateBlogPost(
     .single();
 
   if (error) throw new Error(error.message);
+
+  if (oldSlug && data.slug) {
+    await db
+      .from("blog_post_slugs")
+      .upsert(
+        { user_id: userId, slug: oldSlug, post_id: id },
+        { onConflict: "user_id,slug" },
+      );
+    // The new slug is live again — drop any stale redirect entry for it.
+    await db
+      .from("blog_post_slugs")
+      .delete()
+      .eq("user_id", userId)
+      .eq("slug", data.slug);
+  }
+
   return post as BlogPost;
 }
 

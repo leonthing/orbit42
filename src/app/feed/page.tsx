@@ -40,6 +40,7 @@ type FeedItem =
       title: string;
       slug: string;
       excerpt: string | null;
+      cover_image: string | null;
     }
   | {
       kind: "slot";
@@ -106,7 +107,7 @@ export default async function FeedPage() {
   const [postsRes, slotsRes, feedPostsRes, eventLists] = await Promise.all([
     db
       .from("blog_posts")
-      .select("id, slug, title, excerpt, published_at, user_id")
+      .select("id, slug, title, excerpt, cover_image, published_at, user_id")
       .eq("published", true)
       .in("user_id", authorIds)
       .gte("published_at", recentSince.toISOString())
@@ -164,6 +165,7 @@ export default async function FeedPage() {
       title: (p.title as string) || "(제목 없음)",
       slug: p.slug as string,
       excerpt: (p.excerpt as string | null) ?? null,
+      cover_image: (p.cover_image as string | null) ?? null,
     });
   }
   const slotRows = slotsRes.data ?? [];
@@ -550,6 +552,18 @@ function EntryBody({
 
       {item.kind === "post" && (
         <Link href={`/${author.username}/blog/${item.slug}`} className="mt-3 block">
+          {item.cover_image && (
+            <div className="relative mb-2 aspect-video overflow-hidden rounded-xl border border-charcoal-800/60 bg-charcoal-800/30">
+              <Image
+                src={item.cover_image}
+                alt=""
+                fill
+                sizes="(max-width: 768px) 100vw, 50vw"
+                className="object-cover"
+                unoptimized
+              />
+            </div>
+          )}
           <p className="text-base font-semibold text-charcoal-100 hover:text-red-300">
             {item.title}
           </p>

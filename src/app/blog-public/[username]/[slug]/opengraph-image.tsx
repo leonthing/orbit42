@@ -29,6 +29,8 @@ export default async function Image({
       })
     : "";
 
+  const coverImage = (result?.post.cover_image as string | null) || null;
+
   return new ImageResponse(
     (
       <div
@@ -42,8 +44,25 @@ export default async function Image({
           color: "#fff",
           padding: "72px 80px",
           fontFamily: "system-ui, -apple-system, Segoe UI, sans-serif",
+          position: "relative",
         }}
       >
+        {coverImage && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={coverImage}
+            alt=""
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: 1200,
+              height: 630,
+              objectFit: "cover",
+              opacity: 0.35,
+            }}
+          />
+        )}
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <div
             style={{

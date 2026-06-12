@@ -1,10 +1,11 @@
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
-import { getPublishedPost } from "../../actions";
+import rehypeHighlight from "rehype-highlight";
+import { getPublishedPost, resolveRenamedSlug } from "../../actions";
 import { JsonLd } from "@/components/JsonLd";
 import { SITE } from "@/lib/constants";
 import { getSession } from "@/lib/auth";
@@ -37,6 +38,9 @@ export async function generateMetadata({
       tags: result.post.tags,
       siteName: SITE.title,
       locale: "ko_KR",
+      ...(result.post.cover_image
+        ? { images: [{ url: result.post.cover_image, width: 1200 }] }
+        : {}),
     },
     twitter: {
       card: "summary_large_image",
@@ -60,7 +64,16 @@ export default async function BlogPostPage({
   params: { username: string; slug: string };
 }) {
   const result = await getPublishedPost(params.username, params.slug);
-  if (!result) notFound();
+  if (!result) {
+    // The slug may have been renamed — follow the redirect trail.
+    const currentSlug = await resolveRenamedSlug(params.username, params.slug);
+    if (currentSlug) {
+      permanentRedirect(
+        `/blog-public/${params.username}/${encodeURIComponent(currentSlug)}`,
+      );
+    }
+    notFound();
+  }
 
   const { author, post } = result;
   const name = author.display_name || author.username;
@@ -141,9 +154,24 @@ export default async function BlogPostPage({
           )}
         </div>
 
+        {/* Cover */}
+        {post.cover_image && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={post.cover_image}
+            alt=""
+            className="mt-8 w-full rounded-xl border border-charcoal-800/60 object-cover"
+          />
+        )}
+
         {/* Content */}
         <div className="mt-8 prose prose-invert prose-base max-w-none prose-headings:text-charcoal-100 prose-p:text-charcoal-300 prose-strong:text-charcoal-200 prose-a:text-red-400 prose-code:text-emerald-400 prose-code:bg-charcoal-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-pre:bg-charcoal-800 prose-pre:border prose-pre:border-charcoal-700 prose-blockquote:border-red-500 prose-blockquote:text-charcoal-400 prose-li:text-charcoal-300 prose-hr:border-charcoal-700 prose-th:text-charcoal-200 prose-td:text-charcoal-300 prose-img:rounded-lg">
-          <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{post.content}</ReactMarkdown>
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm, remarkBreaks]}
+            rehypePlugins={[rehypeHighlight]}
+          >
+            {post.content}
+          </ReactMarkdown>
         </div>
 
         <div className="mt-10 border-t border-charcoal-800/40 pt-5">

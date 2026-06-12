@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
+import rehypeHighlight from "rehype-highlight";
 import { getPublicPostBySlug } from "../actions";
+import { resolveRenamedSlug } from "@/app/blog-public/actions";
 import { getSession } from "@/lib/auth";
 import { getReactionsFor } from "@/lib/reactions";
 import { ReactionStrip } from "@/components/ReactionStrip";
@@ -34,7 +36,15 @@ export default async function PublicPostPage({
   params: { username: string; postId: string };
 }) {
   const data = await getPublicPostBySlug(params.username, params.postId);
-  if (!data) notFound();
+  if (!data) {
+    const currentSlug = await resolveRenamedSlug(params.username, params.postId);
+    if (currentSlug) {
+      permanentRedirect(
+        `/${params.username}/blog/${encodeURIComponent(currentSlug)}`,
+      );
+    }
+    notFound();
+  }
   const { post, author, isOwner } = data;
 
   const [session, reactions] = await Promise.all([
@@ -103,8 +113,22 @@ export default async function PublicPostPage({
         </h1>
       </header>
 
+      {post.cover_image && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={post.cover_image}
+          alt=""
+          className="w-full rounded-xl border border-charcoal-800/60 object-cover"
+        />
+      )}
+
       <div className="post-body text-[15px] leading-relaxed text-charcoal-100">
-        <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{post.content}</ReactMarkdown>
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm, remarkBreaks]}
+          rehypePlugins={[rehypeHighlight]}
+        >
+          {post.content}
+        </ReactMarkdown>
       </div>
 
       <div className="border-t border-charcoal-800/40 pt-5">

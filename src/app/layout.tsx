@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { ToastProvider } from "@/components/Toast";
 import { ConfirmProvider } from "@/components/ConfirmDialog";
 import "./globals.css";
+import "highlight.js/styles/github-dark.css";
 
 const pretendard = localFont({
   src: "../fonts/PretendardVariable.woff2",
