@@ -124,6 +124,45 @@ export async function sendBookingConfirmedToGuest(
   return send(to, `[Orbit42] 예약 확정: ${args.slotTitle}`, html);
 }
 
+export async function sendBookingReminderEmail(
+  to: string,
+  args: {
+    role: "host" | "guest";
+    slotTitle: string;
+    when: string;
+    otherLabel: string;
+    location: string | null;
+    manageUrl: string;
+  },
+) {
+  const whenStr = new Date(args.when).toLocaleString("ko-KR", { timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const withLine =
+    args.role === "host"
+      ? `게스트: ${escapeHtml(args.otherLabel)}`
+      : `호스트: ${escapeHtml(args.otherLabel)}`;
+  const html = `
+    <div style="font-family:ui-sans-serif,system-ui,-apple-system;line-height:1.55;color:#111">
+      <h2 style="margin:0 0 12px">내일 예약이 있어요</h2>
+      <p style="margin:0 0 6px"><b>${escapeHtml(args.slotTitle)}</b></p>
+      <p style="margin:0 0 4px;color:#555">${whenStr}</p>
+      <p style="margin:0 0 4px;color:#555">${withLine}</p>
+      ${args.location ? `<p style="margin:0 0 4px;color:#555">📍 ${escapeHtml(args.location)}</p>` : ""}
+      <p style="margin:16px 0">
+        <a href="${siteUrl(args.manageUrl)}" style="display:inline-block;padding:10px 18px;border-radius:8px;background:#dc2626;color:#fff;text-decoration:none;font-weight:600">예약 확인하기</a>
+      </p>
+      <p style="color:#888;font-size:12px">일정 변경이 필요하면 미리 상대방에게 알려주세요.</p>
+    </div>
+  `;
+  return send(to, `[Orbit42] 내일 예약: ${args.slotTitle}`, html);
+}
+
 export async function sendBookingCanceledToGuest(
   to: string,
   args: { slotTitle: string; when: string; hostLabel: string },
@@ -250,6 +289,43 @@ export async function sendFeedbackEmail(args: {
     console.error("resend feedback", err);
     return { ok: false };
   }
+}
+
+export async function sendWeeklyDigestEmail(
+  to: string,
+  args: {
+    name: string;
+    username: string;
+    lines: string[];
+    unreadMessages: number;
+    upcomingBookings: number;
+  },
+) {
+  const listItems = args.lines
+    .map((l) => `<li style="margin:4px 0">${escapeHtml(l)}</li>`)
+    .join("");
+  const extras: string[] = [];
+  if (args.unreadMessages > 0) {
+    extras.push(`안 읽은 메시지가 ${args.unreadMessages}개 있어요.`);
+  }
+  if (args.upcomingBookings > 0) {
+    extras.push(`다가오는 예약이 ${args.upcomingBookings}건 있어요.`);
+  }
+  const extraHtml = extras
+    .map((l) => `<p style="margin:4px 0;color:#555">${escapeHtml(l)}</p>`)
+    .join("");
+  const html = `
+    <div style="font-family:ui-sans-serif,system-ui,-apple-system;line-height:1.55;color:#111">
+      <h2 style="margin:0 0 12px">${escapeHtml(args.name)}님, 지난 한 주 소식이에요</h2>
+      ${listItems ? `<ul style="margin:12px 0;padding-left:20px;color:#333">${listItems}</ul>` : ""}
+      ${extraHtml}
+      <p style="margin:20px 0">
+        <a href="${siteUrl("/feed")}" style="display:inline-block;padding:10px 18px;border-radius:8px;background:#dc2626;color:#fff;text-decoration:none;font-weight:600">Orbit42 열기</a>
+      </p>
+      <p style="color:#888;font-size:12px">주간 요약은 <a href="${siteUrl(`/${args.username}/settings`)}" style="color:#888">설정</a>에서 끌 수 있어요.</p>
+    </div>
+  `;
+  return send(to, "[Orbit42] 주간 요약", html);
 }
 
 export async function sendPasswordResetEmail(to: string, token: string) {

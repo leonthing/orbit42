@@ -15,6 +15,7 @@ import { DeleteFeedPostButton } from "@/components/DeleteFeedPostButton";
 import { Avatar } from "@/components/Avatar";
 import { CommentSection } from "@/components/CommentSection";
 import { Markdown } from "@/components/Markdown";
+import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 
 export const metadata: Metadata = { title: "피드" };
 export const dynamic = "force-dynamic";
@@ -86,6 +87,57 @@ export default async function FeedPage() {
     .eq("username", session.username)
     .single();
   const viewerId = viewerRow?.id as string | undefined;
+
+  // Onboarding progress (cheap head-counts; card hides itself once done).
+  const [slotCountRes, blogCountRes, feedPostCountRes] = viewerId
+    ? await Promise.all([
+        db
+          .from("time_slots")
+          .select("id", { count: "exact", head: true })
+          .eq("host_id", viewerId),
+        db
+          .from("blog_posts")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", viewerId),
+        db
+          .from("feed_posts")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", viewerId),
+      ])
+    : [null, null, null];
+  const onboardingSteps = [
+    {
+      key: "profile",
+      label: "프로필 사진과 소개 채우기",
+      href: `/${session.username}/settings`,
+      done: !!viewerProfile?.avatar_url && !!viewerProfile?.bio,
+    },
+    {
+      key: "google",
+      label: "구글 캘린더 연결하기",
+      href: `/${session.username}/settings`,
+      done: googleConnected,
+    },
+    {
+      key: "follow",
+      label: "관심 있는 사람 팔로우하기",
+      href: "/explore",
+      done: following.length > 0,
+    },
+    {
+      key: "slot",
+      label: "첫 타임슬롯 열기",
+      href: `/${session.username}/slots`,
+      done: (slotCountRes?.count ?? 0) > 0,
+    },
+    {
+      key: "write",
+      label: "첫 소식이나 글 남기기",
+      href: `/${session.username}/blog`,
+      done:
+        (blogCountRes?.count ?? 0) > 0 || (feedPostCountRes?.count ?? 0) > 0,
+    },
+  ];
 
   const authorMap = new Map<string, Author>();
   for (const u of following) {
@@ -266,6 +318,8 @@ export default async function FeedPage() {
   return (
     <>
       <FeedHeader />
+
+      <OnboardingChecklist steps={onboardingSteps} />
 
       {viewerProfile && (
         <div className="mb-6">
