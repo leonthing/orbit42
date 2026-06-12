@@ -15,11 +15,65 @@ export const dynamic = "force-dynamic";
 export default async function ExplorePage() {
   const session = await getSession();
 
-  const followingUsernames = session
-    ? new Set((await listFollowing(session.username)).map((u) => u.username))
-    : new Set<string>();
+  const following = session ? await listFollowing(session.username) : [];
+  const followingUsernames = new Set(following.map((u) => u.username));
 
   const db = getAdminClient();
+
+  // Friends-of-friends: people my follows are orbiting that I'm not,
+  // ranked by how many of my follows know them.
+  type Suggested = {
+    username: string;
+    display_name: string | null;
+    bio: string | null;
+    avatar_url: string | null;
+    mutuals: number;
+  };
+  let suggested: Suggested[] = [];
+  if (session && following.length > 0) {
+    const followingIds = following.map((u) => u.id);
+    const { data: secondDegree } = await db
+      .from("follows")
+      .select("following_id")
+      .in("follower_id", followingIds)
+      .limit(2000);
+    const counts = new Map<string, number>();
+    for (const row of secondDegree ?? []) {
+      const id = row.following_id as string;
+      counts.set(id, (counts.get(id) ?? 0) + 1);
+    }
+    const followingIdSet = new Set(followingIds);
+    const candidates = Array.from(counts.entries())
+      .filter(([id]) => !followingIdSet.has(id))
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 12);
+    if (candidates.length > 0) {
+      const { data: candidateUsers } = await db
+        .from("users")
+        .select("id, username, display_name, bio, avatar_url")
+        .in(
+          "id",
+          candidates.map(([id]) => id),
+        );
+      const byId = new Map(
+        (candidateUsers ?? []).map((u) => [u.id as string, u]),
+      );
+      suggested = candidates
+        .map(([id, mutuals]) => {
+          const u = byId.get(id);
+          if (!u || u.username === session.username) return null;
+          return {
+            username: u.username as string,
+            display_name: (u.display_name as string | null) ?? null,
+            bio: (u.bio as string | null) ?? null,
+            avatar_url: (u.avatar_url as string | null) ?? null,
+            mutuals,
+          };
+        })
+        .filter((u): u is Suggested => !!u)
+        .slice(0, 6);
+    }
+  }
   const recentSince = new Date(Date.now() - 30 * 24 * 60 * 60_000).toISOString();
 
   // Active people: anyone who posted or opened a slot in the last 30 days,
@@ -150,6 +204,29 @@ export default async function ExplorePage() {
         </div>
         <ExploreSearchBar />
       </header>
+
+      {suggested.length > 0 && (
+        <section className="mb-10">
+          <SectionTitle
+            title="함께 아는 사람"
+            hint="내가 팔로우하는 사람들의 궤도"
+          />
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {suggested.map((p) => (
+              <PersonCard
+                key={p.username}
+                username={p.username}
+                displayName={p.display_name}
+                bio={p.bio}
+                avatarUrl={p.avatar_url}
+                badge={`함께 아는 사람 ${p.mutuals}명`}
+                isFollowing={false}
+                loggedIn={!!session}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="mb-10">
         <SectionTitle title="People you might orbit" hint="최근 활동한 사람들" />

@@ -1,10 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { updateBookingStatus, cancelMyBooking } from "@/lib/slots";
-import type { BookingRow, GuestBookingRow } from "@/lib/slots";
+import {
+  updateBookingStatus,
+  cancelMyBooking,
+  rescheduleMyBooking,
+  refreshBookableOptions,
+} from "@/lib/slots";
+import type { BookingRow, GuestBookingRow, BookableOption } from "@/lib/slots";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 
@@ -412,6 +417,7 @@ function GuestSection({
   muted?: boolean;
   emptyHint: string;
 }) {
+  const [reschedulingId, setReschedulingId] = useState<string | null>(null);
   return (
     <section className="space-y-3">
       <SectionHeader title={title} count={rows.length} />
@@ -476,22 +482,133 @@ function GuestSection({
                       </Link>
                     )}
                     {b.status !== "canceled" && b.status !== "completed" && (
-                      <button
-                        type="button"
-                        onClick={() => onCancel(b.id)}
-                        disabled={pending}
-                        className="rounded-md border border-charcoal-800 px-2.5 py-1 text-xs text-charcoal-400 hover:border-red-500/60 hover:text-red-500 disabled:opacity-50"
-                      >
-                        취소
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setReschedulingId((cur) =>
+                              cur === b.id ? null : b.id,
+                            )
+                          }
+                          disabled={pending}
+                          className="rounded-md border border-charcoal-800 px-2.5 py-1 text-xs text-charcoal-400 hover:border-charcoal-600 hover:text-charcoal-100 disabled:opacity-50"
+                        >
+                          시간 변경
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onCancel(b.id)}
+                          disabled={pending}
+                          className="rounded-md border border-charcoal-800 px-2.5 py-1 text-xs text-charcoal-400 hover:border-red-500/60 hover:text-red-500 disabled:opacity-50"
+                        >
+                          취소
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
+                {reschedulingId === b.id && (
+                  <ReschedulePanel
+                    booking={b}
+                    onDone={() => setReschedulingId(null)}
+                  />
+                )}
               </li>
             );
           })}
         </ul>
       )}
     </section>
+  );
+}
+
+function ReschedulePanel({
+  booking,
+  onDone,
+}: {
+  booking: GuestBookingRow;
+  onDone: () => void;
+}) {
+  const router = useRouter();
+  const toast = useToast();
+  const [options, setOptions] = useState<BookableOption[] | null>(null);
+  const [picked, setPicked] = useState("");
+  const [saving, startSaving] = useTransition();
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const opts = await refreshBookableOptions(booking.slot.id, null).catch(
+        () => [],
+      );
+      if (!cancelled) setOptions(opts.slice(0, 120));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [booking.slot.id]);
+
+  const submit = () => {
+    const opt = (options ?? []).find((o) => o.start_at === picked);
+    if (!opt) return;
+    startSaving(async () => {
+      const res = await rescheduleMyBooking(booking.id, {
+        startAt: opt.availability_id ? undefined : opt.start_at,
+        availabilityId: opt.availability_id ?? undefined,
+      });
+      if ("error" in res && res.error) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success(
+        "status" in res && res.status === "pending"
+          ? "시간을 변경했어요. 호스트 승인을 기다려주세요."
+          : "예약 시간을 변경했어요.",
+      );
+      onDone();
+      router.refresh();
+    });
+  };
+
+  return (
+    <div className="mt-3 rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 p-3">
+      {options === null ? (
+        <p className="text-xs text-charcoal-500">가능한 시간을 불러오는 중…</p>
+      ) : options.length === 0 ? (
+        <p className="text-xs text-charcoal-500">
+          지금은 옮길 수 있는 시간이 없어요. 호스트에게 메시지로 문의해보세요.
+        </p>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={picked}
+            onChange={(e) => setPicked(e.target.value)}
+            className="min-w-0 flex-1 rounded-lg border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] px-3 py-1.5 text-xs text-charcoal-100 focus:border-charcoal-600 focus:outline-none"
+          >
+            <option value="">새 시간 선택…</option>
+            {options.map((o) => (
+              <option key={o.start_at} value={o.start_at}>
+                {new Date(o.start_at).toLocaleString("ko-KR", {
+                  timeZone: "Asia/Seoul",
+                  month: "long",
+                  day: "numeric",
+                  weekday: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={!picked || saving}
+            className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {saving ? "변경 중…" : "변경"}
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

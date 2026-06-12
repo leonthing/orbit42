@@ -109,8 +109,9 @@ export function NotificationBell({ initialUnread }: { initialUnread: number }) {
 
   // Background refresh — the badge otherwise shows whatever value was
   // server-rendered and never updates when a new notification arrives.
-  // Poll every 60s while the tab is visible, and refresh immediately
-  // when the user switches back to the tab.
+  // Poll every 20s while the tab is visible, and refresh immediately
+  // when the user switches back to the tab. (True push needs Supabase
+  // Auth-backed realtime, which this custom-session app can't use yet.)
   useEffect(() => {
     let cancelled = false;
     const refresh = async () => {
@@ -118,7 +119,7 @@ export function NotificationBell({ initialUnread }: { initialUnread: number }) {
       const count = await unreadNotificationCount().catch(() => null);
       if (!cancelled && typeof count === "number") setUnread(count);
     };
-    const interval = setInterval(refresh, 60_000);
+    const interval = setInterval(refresh, 20_000);
     const onVisible = () => {
       if (document.visibilityState === "visible") refresh();
     };

@@ -12,6 +12,8 @@ export type WorkingHours = Partial<Record<Day, { start: string; end: string }[]>
 export type AutoSlotOption = {
   start_at: string;
   end_at: string;
+  /** Seats left at this time (capacity minus same-slot bookings). */
+  remaining: number;
 };
 
 type AutoSpec = {
@@ -25,6 +27,11 @@ type AutoSpec = {
    * the same location preset, the travel buffer is skipped. */
   slot_title?: string | null;
   slot_location?: string | null;
+  /** When set with capacity > 1, bookings of THIS slot at the exact
+   * same time consume seats instead of closing the time entirely
+   * (group sessions). */
+  slot_id?: string | null;
+  capacity?: number;
 };
 
 type Block = {
@@ -116,23 +123,42 @@ export async function computeAutoAvailability(
   const { data: existing } = await db
     .from("bookings")
     .select(
-      "scheduled_at, scheduled_end_at, status, selected_location, slot:time_slots!bookings_slot_id_fkey(title, location_detail)",
+      "slot_id, scheduled_at, scheduled_end_at, status, selected_location, slot:time_slots!bookings_slot_id_fkey(title, location_detail)",
     )
     .eq("host_id", hostId)
     .gte("scheduled_at", now.toISOString())
     .lte("scheduled_at", horizon.toISOString())
     .neq("status", "canceled");
-  const bookedBlocks: Block[] = ((existing ?? []) as unknown as Array<{
+  const existingRows = (existing ?? []) as unknown as Array<{
+    slot_id: string;
     scheduled_at: string;
     scheduled_end_at: string;
     selected_location: string | null;
     slot: { title: string | null; location_detail: string | null } | null;
-  }>).map((b) => ({
-    start: new Date(b.scheduled_at),
-    end: new Date(b.scheduled_end_at),
-    title: b.slot?.title ?? null,
-    location: b.selected_location ?? b.slot?.location_detail ?? null,
-  }));
+  }>;
+
+  // Group slots: bookings of this same slot at the same start time
+  // share the seat count instead of blocking each other.
+  const capacity = Math.max(1, spec.capacity ?? 1);
+  const groupable = !!spec.slot_id && capacity > 1;
+  const sameSlotStartCounts = new Map<string, number>();
+  const sameSlotBlocks: { start: Date; end: Date }[] = [];
+  const bookedBlocks: Block[] = [];
+  for (const b of existingRows) {
+    if (groupable && b.slot_id === spec.slot_id) {
+      const start = new Date(b.scheduled_at);
+      const key = start.toISOString();
+      sameSlotStartCounts.set(key, (sameSlotStartCounts.get(key) ?? 0) + 1);
+      sameSlotBlocks.push({ start, end: new Date(b.scheduled_end_at) });
+      continue;
+    }
+    bookedBlocks.push({
+      start: new Date(b.scheduled_at),
+      end: new Date(b.scheduled_end_at),
+      title: b.slot?.title ?? null,
+      location: b.selected_location ?? b.slot?.location_detail ?? null,
+    });
+  }
 
   // 3. Pull host's native (in-app) calendar events — if the host creates
   // an event during a would-be-bookable window, the slot should close.
@@ -205,8 +231,23 @@ export async function computeAutoAvailability(
             cur.getTime() < b.end.getTime() + b.bufferMs &&
             end.getTime() + b.bufferMs > b.start.getTime(),
         );
-        if (!isPast && !conflicts) {
-          options.push({ start_at: cur.toISOString(), end_at: end.toISOString() });
+        // Group slots: an existing session of this slot at the exact
+        // same time consumes seats; at any other overlapping time it
+        // blocks like a normal busy block.
+        const seatsTaken = sameSlotStartCounts.get(cur.toISOString()) ?? 0;
+        const groupOverlap = sameSlotBlocks.some(
+          (b) =>
+            b.start.getTime() !== cur.getTime() &&
+            cur.getTime() < b.end.getTime() &&
+            end.getTime() > b.start.getTime(),
+        );
+        const full = seatsTaken >= capacity;
+        if (!isPast && !conflicts && !groupOverlap && !full) {
+          options.push({
+            start_at: cur.toISOString(),
+            end_at: end.toISOString(),
+            remaining: capacity - seatsTaken,
+          });
         }
         cur = new Date(cur.getTime() + spec.slot_interval_min * 60_000);
       }
