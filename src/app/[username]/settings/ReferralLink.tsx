@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { buttonClasses } from "@/components/PendingButton";
 
 export function ReferralLink({ username }: { username: string }) {
   const [copied, setCopied] = useState(false);
@@ -29,7 +30,7 @@ export function ReferralLink({ username }: { username: string }) {
         <button
           type="button"
           onClick={copy}
-          className="shrink-0 rounded-md bg-red-600 px-3 py-1 text-xs font-semibold text-white hover:bg-red-500"
+          className={buttonClasses({ size: "sm" })}
         >
           {copied ? "복사됨" : "복사"}
         </button>

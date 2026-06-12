@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { verifyEmail } from "@/lib/account";
+import { buttonClasses } from "@/components/PendingButton";
 
 export const dynamic = "force-dynamic";
 
@@ -32,10 +33,7 @@ export default async function VerifyEmailPage({
         <p className="mt-1.5 text-sm text-charcoal-500">
           {ok ? "이제 모든 기능을 사용할 수 있어요." : "error" in result ? result.error : ""}
         </p>
-        <Link
-          href={ok ? "/feed" : "/"}
-          className="mt-6 inline-flex rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
-        >
+        <Link href={ok ? "/feed" : "/"} className={`mt-6 ${buttonClasses()}`}>
           {ok ? "피드로 이동" : "홈으로"}
         </Link>
       </div>

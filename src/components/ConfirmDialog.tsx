@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useState } from "react";
+import { buttonClasses } from "@/components/PendingButton";
 
 type Options = {
   title: string;
@@ -75,7 +76,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
               <button
                 type="button"
                 onClick={() => resolve(false)}
-                className="rounded-lg border border-charcoal-700 px-4 py-2 text-sm text-charcoal-300 hover:border-charcoal-600"
+                className={buttonClasses({ variant: "secondary" })}
               >
                 {pending.opts.cancelLabel ?? "취소"}
               </button>
@@ -83,11 +84,9 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
                 type="button"
                 autoFocus
                 onClick={() => resolve(true)}
-                className={`rounded-lg px-4 py-2 text-sm font-semibold text-white ${
-                  pending.opts.danger
-                    ? "bg-red-600 hover:bg-red-500"
-                    : "bg-red-600 hover:bg-red-500"
-                }`}
+                className={buttonClasses({
+                  variant: pending.opts.danger ? "danger" : "primary",
+                })}
               >
                 {pending.opts.confirmLabel ?? "확인"}
               </button>

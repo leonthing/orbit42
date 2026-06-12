@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { usePathname } from "next/navigation";
 import { submitFeedback } from "@/lib/feedback";
+import { PendingButton } from "@/components/PendingButton";
 
 type Props = {
   collapsed: boolean;
@@ -131,13 +132,14 @@ export function FeedbackBox({ collapsed, loggedIn }: Props) {
                   <span className="text-[11px] text-charcoal-600">
                     {body.length} / 4000
                   </span>
-                  <button
+                  <PendingButton
                     type="submit"
-                    disabled={pending || !body.trim()}
-                    className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+                    pending={pending}
+                    pendingLabel="보내는 중…"
+                    disabled={!body.trim()}
                   >
-                    {pending ? "보내는 중…" : "보내기"}
-                  </button>
+                    보내기
+                  </PendingButton>
                 </div>
               </form>
             )}

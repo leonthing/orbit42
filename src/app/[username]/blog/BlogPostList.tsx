@@ -5,6 +5,7 @@ import { useState, useMemo, useTransition } from "react";
 import type { BlogPost } from "./actions";
 import { createBlogPost, deleteBlogPost, publishBlogPost, unpublishBlogPost } from "./actions";
 import { useConfirm } from "@/components/ConfirmDialog";
+import { PendingButton } from "@/components/PendingButton";
 
 type Filter = "all" | "published" | "draft";
 
@@ -107,13 +108,9 @@ export default function BlogPostList({ initialPosts }: { initialPosts: BlogPost[
             {posts.length}개의 글
           </p>
         </div>
-        <button
-          onClick={handleCreate}
-          disabled={isPending}
-          className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-50"
-        >
+        <PendingButton onClick={handleCreate} pending={isPending}>
           + 새 글
-        </button>
+        </PendingButton>
       </div>
 
       {/* Search */}
@@ -172,8 +169,19 @@ export default function BlogPostList({ initialPosts }: { initialPosts: BlogPost[
             {search ? "검색 결과가 없습니다" : "작성된 글이 없습니다"}
           </p>
           <p className="mt-1 text-xs text-charcoal-600">
-            {search ? "다른 키워드로 검색해보세요" : "첫 번째 글을 작성해보세요"}
+            {search
+              ? "다른 키워드로 검색해보세요"
+              : "생각을 기록하면 프로필과 피드에 함께 보여요"}
           </p>
+          {!search && (
+            <PendingButton
+              onClick={handleCreate}
+              pending={isPending}
+              className="mt-5"
+            >
+              첫 글 쓰기
+            </PendingButton>
+          )}
         </div>
       ) : (
         <div className="divide-y divide-charcoal-800/40 rounded-xl border border-charcoal-800/60 bg-charcoal-900/40">

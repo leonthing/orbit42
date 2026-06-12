@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { resetPassword } from "@/lib/account";
+import { PendingButton } from "@/components/PendingButton";
 
 export default function ResetPasswordPage() {
   return (
@@ -67,13 +68,15 @@ function ResetPasswordInner() {
             className="w-full rounded-md border border-charcoal-700 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-500 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500/40"
           />
           {err && <p className="text-xs text-red-500">{err}</p>}
-          <button
+          <PendingButton
             type="submit"
-            disabled={loading || !pw || !confirm}
-            className="w-full rounded-md bg-red-600 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:bg-charcoal-800 disabled:text-charcoal-500"
+            pending={loading}
+            pendingLabel="변경 중…"
+            disabled={!pw || !confirm}
+            className="w-full"
           >
-            {loading ? "변경 중…" : "비밀번호 변경"}
-          </button>
+            비밀번호 변경
+          </PendingButton>
         </form>
       )}
 

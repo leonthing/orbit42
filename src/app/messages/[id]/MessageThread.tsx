@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Message } from "@/lib/messages-types";
 import { sendMessage, markRead } from "@/lib/messages";
+import { PendingButton } from "@/components/PendingButton";
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString("ko-KR", {
@@ -175,13 +176,13 @@ export function MessageThread({
             className="flex-1 resize-none rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] px-3 py-2 text-sm text-charcoal-100 placeholder-charcoal-600 focus:border-charcoal-600 focus:outline-none"
             style={{ maxHeight: 120 }}
           />
-          <button
+          <PendingButton
             type="submit"
-            disabled={!text.trim() || sending}
-            className="shrink-0 rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-40"
+            pending={sending}
+            disabled={!text.trim()}
           >
             전송
-          </button>
+          </PendingButton>
         </div>
       </form>
     </>

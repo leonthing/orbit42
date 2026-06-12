@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getProfile } from "@/lib/auth";
+import { getProfile, getSession } from "@/lib/auth";
 import { listFollowers } from "@/lib/follows";
 import { Avatar } from "@/components/Avatar";
+import { CopyLinkButton } from "@/components/CopyLinkButton";
+import { SITE } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +30,11 @@ export default async function FollowersPage({
   const profile = await getProfile(params.username);
   if (!profile) notFound();
 
-  const followers = await listFollowers(params.username);
+  const [followers, session] = await Promise.all([
+    listFollowers(params.username),
+    getSession(),
+  ]);
+  const isOwner = session?.username === params.username;
 
   return (
     <PeopleList
@@ -37,7 +43,18 @@ export default async function FollowersPage({
       title="Orbiters"
       hint="내 궤도를 따르는 사람들"
       people={followers}
-      emptyBody="아직 이 사람을 팔로우하는 사람이 없어요."
+      emptyBody={
+        isOwner
+          ? "아직 팔로워가 없어요. 프로필 링크를 공유해 사람들을 초대해보세요."
+          : "아직 이 사람을 팔로우하는 사람이 없어요."
+      }
+      emptyExtra={
+        isOwner ? (
+          <div className="mt-4 flex justify-center">
+            <CopyLinkButton url={`${SITE.url}/${params.username}`} />
+          </div>
+        ) : null
+      }
     />
   );
 }
@@ -49,6 +66,7 @@ function PeopleList({
   hint,
   people,
   emptyBody,
+  emptyExtra,
 }: {
   username: string;
   displayName: string;
@@ -56,6 +74,7 @@ function PeopleList({
   hint: string;
   people: { id: string; username: string; display_name: string | null; avatar_url?: string | null }[];
   emptyBody: string;
+  emptyExtra?: React.ReactNode;
 }) {
   return (
     <div className="space-y-6">
@@ -75,6 +94,7 @@ function PeopleList({
       {people.length === 0 ? (
         <div className="rounded-xl border border-dashed border-charcoal-800/60 p-8 text-center text-sm text-charcoal-500">
           {emptyBody}
+          {emptyExtra}
         </div>
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2">

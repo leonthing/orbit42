@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { buttonClasses } from "@/components/PendingButton";
 
 type Props = {
   icon?: ReactNode;
@@ -27,10 +28,7 @@ export function EmptyState({ icon, title, body, cta }: Props) {
         </p>
       )}
       {cta && (
-        <Link
-          href={cta.href}
-          className="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
-        >
+        <Link href={cta.href} className={`mt-5 ${buttonClasses()}`}>
           {cta.label}
         </Link>
       )}

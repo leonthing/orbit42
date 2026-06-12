@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { buttonClasses } from "@/components/PendingButton";
 
 export function CopyShareLink({ username }: { username: string }) {
   const [copied, setCopied] = useState(false);
@@ -21,7 +22,7 @@ export function CopyShareLink({ username }: { username: string }) {
     <button
       type="button"
       onClick={copy}
-      className="shrink-0 rounded-md bg-red-500 px-3 py-1 text-xs font-semibold text-charcoal-950 hover:bg-red-400"
+      className={buttonClasses({ size: "sm" })}
     >
       {copied ? "복사됨!" : "링크 복사"}
     </button>

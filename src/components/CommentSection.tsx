@@ -9,6 +9,7 @@ import { getReactionsForMany } from "@/lib/reactions";
 import type { ReactionSummary } from "@/lib/reactions-types";
 import { Avatar } from "@/components/Avatar";
 import { useConfirm } from "@/components/ConfirmDialog";
+import { buttonClasses } from "@/components/PendingButton";
 
 function relTime(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
@@ -216,7 +217,7 @@ function CommentForm({
         <button
           type="submit"
           disabled={!body.trim() || pending}
-          className="rounded-md bg-red-600 px-3 py-1 text-xs font-semibold text-white hover:bg-red-500 disabled:opacity-40"
+          className={buttonClasses({ size: "sm" })}
         >
           {pending ? "…" : parentId ? "답글" : "등록"}
         </button>

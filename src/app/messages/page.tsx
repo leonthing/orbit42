@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
+import { EmptyState } from "@/components/EmptyState";
 import { listConversations } from "@/lib/messages";
 
 export const dynamic = "force-dynamic";
@@ -35,11 +36,11 @@ export default async function MessagesPage() {
       <h1 className="mb-4 text-xl font-semibold text-charcoal-100">Messages</h1>
 
       {conversations.length === 0 ? (
-        <div className="rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] p-8 text-center text-sm text-charcoal-500">
-          아직 주고받은 메시지가 없어요.
-          <br />
-          다른 사람 프로필에서 <span className="text-charcoal-300">메시지</span> 버튼을 눌러 대화를 시작해보세요.
-        </div>
+        <EmptyState
+          title="아직 주고받은 메시지가 없어요"
+          body="다른 사람 프로필에서 메시지 버튼을 눌러 대화를 시작해보세요."
+          cta={{ label: "사람 둘러보기", href: "/explore" }}
+        />
       ) : (
         <ul className="divide-y divide-charcoal-800/40 overflow-hidden rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))]">
           {conversations.map((c) => (

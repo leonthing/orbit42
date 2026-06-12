@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signup } from "@/lib/auth";
+import { PendingButton } from "@/components/PendingButton";
 
 export function SignupForm({ initialRef }: { initialRef: string }) {
   const router = useRouter();
@@ -135,13 +136,15 @@ export function SignupForm({ initialRef }: { initialRef: string }) {
 
         {error && <p className="text-xs text-red-400">{error}</p>}
 
-        <button
+        <PendingButton
           type="submit"
-          disabled={loading || !username || !password}
-          className="!mt-3 w-full rounded-lg bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-40"
+          pending={loading}
+          pendingLabel="가입 중…"
+          disabled={!username || !password}
+          className="!mt-3 w-full"
         >
-          {loading ? "가입 중…" : "가입하기"}
-        </button>
+          가입하기
+        </PendingButton>
       </form>
     </>
   );

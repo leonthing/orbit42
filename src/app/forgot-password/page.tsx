@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { requestPasswordReset } from "@/lib/account";
+import { PendingButton } from "@/components/PendingButton";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -40,13 +41,15 @@ export default function ForgotPasswordPage() {
               required
               className="w-full rounded-md border border-charcoal-700 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-500 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500/40"
             />
-            <button
+            <PendingButton
               type="submit"
-              disabled={loading || !email}
-              className="w-full rounded-md bg-red-600 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:bg-charcoal-800 disabled:text-charcoal-500"
+              pending={loading}
+              pendingLabel="보내는 중…"
+              disabled={!email}
+              className="w-full"
             >
-              {loading ? "보내는 중…" : "재설정 링크 받기"}
-            </button>
+              재설정 링크 받기
+            </PendingButton>
           </form>
         )}
 

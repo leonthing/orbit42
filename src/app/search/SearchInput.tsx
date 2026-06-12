@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { buttonClasses } from "@/components/PendingButton";
 
 export function SearchInput({ initialQuery }: { initialQuery: string }) {
   const router = useRouter();
@@ -35,10 +36,7 @@ export function SearchInput({ initialQuery }: { initialQuery: string }) {
           className="w-full rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] py-2.5 pl-9 pr-3 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-charcoal-700 focus:outline-none"
         />
       </div>
-      <button
-        type="submit"
-        className="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-500"
-      >
+      <button type="submit" className={buttonClasses({ size: "lg" })}>
         검색
       </button>
     </form>
