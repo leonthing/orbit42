@@ -7,6 +7,11 @@ import remarkBreaks from "remark-breaks";
 import { getPublishedPost } from "../../actions";
 import { JsonLd } from "@/components/JsonLd";
 import { SITE } from "@/lib/constants";
+import { getSession } from "@/lib/auth";
+import { getReactionsFor } from "@/lib/reactions";
+import { ReactionStrip } from "@/components/ReactionStrip";
+import { CommentSection } from "@/components/CommentSection";
+import { getAdminClient } from "@/lib/supabase";
 
 export async function generateMetadata({
   params,
@@ -59,6 +64,21 @@ export default async function BlogPostPage({
 
   const { author, post } = result;
   const name = author.display_name || author.username;
+
+  const [session, reactions] = await Promise.all([
+    getSession(),
+    getReactionsFor("post", post.id),
+  ]);
+  let viewerId: string | null = null;
+  if (session) {
+    const { data: viewer } = await getAdminClient()
+      .from("users")
+      .select("id")
+      .eq("username", session.username)
+      .single();
+    viewerId = (viewer?.id as string | undefined) ?? null;
+  }
+
   const postUrl = `${SITE.url}/blog-public/${params.username}/${params.slug}`;
   const articleSchema = {
     "@context": "https://schema.org",
@@ -124,6 +144,21 @@ export default async function BlogPostPage({
         {/* Content */}
         <div className="mt-8 prose prose-invert prose-base max-w-none prose-headings:text-charcoal-100 prose-p:text-charcoal-300 prose-strong:text-charcoal-200 prose-a:text-red-400 prose-code:text-emerald-400 prose-code:bg-charcoal-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-pre:bg-charcoal-800 prose-pre:border prose-pre:border-charcoal-700 prose-blockquote:border-red-500 prose-blockquote:text-charcoal-400 prose-li:text-charcoal-300 prose-hr:border-charcoal-700 prose-th:text-charcoal-200 prose-td:text-charcoal-300 prose-img:rounded-lg">
           <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{post.content}</ReactMarkdown>
+        </div>
+
+        <div className="mt-10 border-t border-charcoal-800/40 pt-5">
+          <ReactionStrip
+            target_type="post"
+            target_id={post.id}
+            initial={reactions}
+            loggedIn={!!session}
+          />
+          <CommentSection
+            targetType="blog_post"
+            targetId={post.id}
+            loggedIn={!!session}
+            viewerId={viewerId}
+          />
         </div>
       </article>
     </>

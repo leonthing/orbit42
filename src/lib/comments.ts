@@ -136,11 +136,41 @@ export async function addComment(
       (actor?.username as string) ||
       "누군가";
 
+    // Where the notification should land. Blog comments link to the post
+    // itself; feed comments to the feed.
+    let postAuthorId: string | null = null;
+    let link: string | null = targetType === "feed_post" ? "/feed" : null;
+    if (targetType === "feed_post") {
+      const { data: p } = await db
+        .from("feed_posts")
+        .select("author_id")
+        .eq("id", targetId)
+        .single();
+      postAuthorId = (p?.author_id as string | undefined) ?? null;
+    } else {
+      const { data: p } = await db
+        .from("blog_posts")
+        .select("user_id, slug")
+        .eq("id", targetId)
+        .maybeSingle();
+      postAuthorId = (p?.user_id as string | undefined) ?? null;
+      if (postAuthorId) {
+        const { data: postAuthor } = await db
+          .from("users")
+          .select("username")
+          .eq("id", postAuthorId)
+          .single();
+        if (postAuthor?.username && p?.slug) {
+          link = `/${postAuthor.username}/blog/${p.slug}`;
+        }
+      }
+    }
+
     if (parentId) {
       // Reply: notify parent comment's author.
       const { data: parent } = await db
         .from("post_comments")
-        .select("author_id, target_type, target_id")
+        .select("author_id")
         .eq("id", parentId)
         .single();
       if (parent?.author_id && parent.author_id !== me) {
@@ -149,38 +179,20 @@ export async function addComment(
           type: "reply_received",
           title: `${actorLabel}님이 답글을 남겼어요`,
           body: preview,
-          link: targetType === "feed_post" ? "/feed" : null,
+          link,
           actorId: me,
         });
       }
-    } else {
+    } else if (postAuthorId && postAuthorId !== me) {
       // Root comment: notify the post's author.
-      let authorId: string | null = null;
-      if (targetType === "feed_post") {
-        const { data: p } = await db
-          .from("feed_posts")
-          .select("author_id")
-          .eq("id", targetId)
-          .single();
-        authorId = (p?.author_id as string | undefined) ?? null;
-      } else {
-        const { data: p } = await db
-          .from("blog_posts")
-          .select("author_id")
-          .eq("slug", targetId)
-          .maybeSingle();
-        authorId = (p?.author_id as string | undefined) ?? null;
-      }
-      if (authorId && authorId !== me) {
-        await createNotification({
-          userId: authorId,
-          type: "comment_received",
-          title: `${actorLabel}님이 댓글을 남겼어요`,
-          body: preview,
-          link: targetType === "feed_post" ? "/feed" : null,
-          actorId: me,
-        });
-      }
+      await createNotification({
+        userId: postAuthorId,
+        type: "comment_received",
+        title: `${actorLabel}님이 댓글을 남겼어요`,
+        body: preview,
+        link,
+        actorId: me,
+      });
     }
   } catch (err) {
     console.error("comment notification", err);

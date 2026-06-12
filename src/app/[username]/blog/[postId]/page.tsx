@@ -8,6 +8,8 @@ import { getPublicPostBySlug } from "../actions";
 import { getSession } from "@/lib/auth";
 import { getReactionsFor } from "@/lib/reactions";
 import { ReactionStrip } from "@/components/ReactionStrip";
+import { CommentSection } from "@/components/CommentSection";
+import { getAdminClient } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +41,16 @@ export default async function PublicPostPage({
     getSession(),
     getReactionsFor("post", post.id),
   ]);
+
+  let viewerId: string | null = null;
+  if (session) {
+    const { data: viewer } = await getAdminClient()
+      .from("users")
+      .select("id")
+      .eq("username", session.username)
+      .single();
+    viewerId = (viewer?.id as string | undefined) ?? null;
+  }
 
   return (
     <article className="max-w-3xl space-y-6">
@@ -101,6 +113,12 @@ export default async function PublicPostPage({
           target_id={post.id}
           initial={reactions}
           loggedIn={!!session}
+        />
+        <CommentSection
+          targetType="blog_post"
+          targetId={post.id}
+          loggedIn={!!session}
+          viewerId={viewerId}
         />
       </div>
     </article>
