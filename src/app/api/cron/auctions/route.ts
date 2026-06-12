@@ -5,6 +5,7 @@ import {
   sendBookingConfirmedToGuest,
   sendBookingReceivedToHost,
 } from "@/lib/email";
+import { emailAllowed } from "@/lib/notification-prefs";
 
 /**
  * Finalize auctions whose `auction_ends_at` has passed. Converts the
@@ -109,7 +110,10 @@ export async function GET(request: NextRequest) {
           .eq("id", highBidder)
           .single(),
       ]);
-      if (host?.email) {
+      if (
+        host?.email &&
+        (await emailAllowed(slot.host_id as string, "booking_received"))
+      ) {
         await sendBookingReceivedToHost(host.email as string, {
           slotTitle: slot.title as string,
           when: startAt.toISOString(),
@@ -122,7 +126,10 @@ export async function GET(request: NextRequest) {
           manageUrl: `/${host.username}/bookings`,
         });
       }
-      if (guest?.email) {
+      if (
+        guest?.email &&
+        (await emailAllowed(highBidder, "booking_confirmed"))
+      ) {
         await sendBookingConfirmedToGuest(guest.email as string, {
           slotTitle: slot.title as string,
           when: startAt.toISOString(),

@@ -267,7 +267,12 @@ export async function sendMessage(conversationId: string, body: string) {
       .eq("id", otherId)
       .single();
 
-    if (other?.email && other?.email_verified) {
+    const { emailAllowed } = await import("@/lib/notification-prefs");
+    if (
+      other?.email &&
+      other?.email_verified &&
+      (await emailAllowed(otherId, "new_message"))
+    ) {
       await sendNewMessageEmail(other.email as string, {
         fromLabel:
           (sender?.display_name as string | null) ||

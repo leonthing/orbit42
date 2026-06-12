@@ -56,6 +56,19 @@ export async function getPrefFor(
   };
 }
 
+/**
+ * Whether an email for this notification type may be sent to the user.
+ * Anonymous recipients (no user id) have no prefs — always allowed.
+ */
+export async function emailAllowed(
+  userId: string | null | undefined,
+  type: string,
+): Promise<boolean> {
+  if (!userId) return true;
+  const pref = await getPrefFor(userId, type);
+  return pref.email;
+}
+
 export async function setPref(
   type: string,
   channel: "in_app" | "email",

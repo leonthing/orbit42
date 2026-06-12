@@ -844,7 +844,8 @@ export async function bookSlot(args: {
 
   // Email to host.
   try {
-    if (host?.email) {
+    const { emailAllowed } = await import("@/lib/notification-prefs");
+    if (host?.email && (await emailAllowed(slot.host_id as string, "booking_received"))) {
       const { sendBookingReceivedToHost } = await import("@/lib/email");
       await sendBookingReceivedToHost(host.email as string, {
         slotTitle: slot.title as string,
@@ -863,7 +864,8 @@ export async function bookSlot(args: {
   // Email to guest (only if auto-confirmed).
   if (autoApprove) {
     try {
-      if (guestEmail) {
+      const { emailAllowed } = await import("@/lib/notification-prefs");
+      if (guestEmail && (await emailAllowed(guestId, "booking_confirmed"))) {
         const { sendBookingConfirmedToGuest } = await import("@/lib/email");
         await sendBookingConfirmedToGuest(guestEmail, {
           slotTitle: slot.title as string,
@@ -1096,7 +1098,12 @@ export async function updateBookingStatus(
     const guestEmail =
       (booking.guest_email as string | null) ??
       (await getEmailForUser(booking.guest_id as string | null));
-    if (guestEmail) {
+    const { emailAllowed } = await import("@/lib/notification-prefs");
+    const guestWantsEmail = await emailAllowed(
+      booking.guest_id as string | null,
+      status === "confirmed" ? "booking_confirmed" : "booking_canceled",
+    );
+    if (guestEmail && guestWantsEmail) {
       try {
         const { data: host } = await db
           .from("users")
@@ -1196,12 +1203,27 @@ export async function cancelMyBooking(bookingId: string) {
       .select("email, display_name, username")
       .eq("id", userId)
       .single();
-    if (host?.email) {
+    const guestLabel = (guest?.display_name || guest?.username || "게스트") as string;
+    try {
+      const { createNotification } = await import("@/lib/notifications");
+      await createNotification({
+        userId: booking.host_id as string,
+        type: "booking_canceled",
+        title: `예약 취소: ${slotInfo?.title ?? "예약"}`,
+        body: `${guestLabel}님이 예약을 취소했어요.`,
+        link: `/${host?.username}/bookings`,
+        actorId: userId,
+      });
+    } catch (err) {
+      console.error("cancelMyBooking notification", err);
+    }
+    const { emailAllowed } = await import("@/lib/notification-prefs");
+    if (host?.email && (await emailAllowed(booking.host_id as string, "booking_canceled"))) {
       const { sendBookingReceivedToHost } = await import("@/lib/email");
       await sendBookingReceivedToHost(host.email as string, {
         slotTitle: slotInfo?.title ?? "예약",
         when: booking.scheduled_at as string,
-        guestLabel: (guest?.display_name || guest?.username || "게스트") as string,
+        guestLabel,
         guestEmail: (guest?.email as string | null) ?? null,
         message: "게스트가 예약을 취소했어요.",
         autoApprove: true,

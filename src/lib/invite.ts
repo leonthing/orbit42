@@ -127,7 +127,12 @@ export async function applyReferralIfPresent(
       link: inviteeUsername ? `/${inviteeUsername}` : null,
       actorId: newUserId,
     });
-    if (inviter.email && inviter.email_verified) {
+    const { emailAllowed } = await import("@/lib/notification-prefs");
+    if (
+      inviter.email &&
+      inviter.email_verified &&
+      (await emailAllowed(inviterId, "invite_used"))
+    ) {
       const { sendInviteUsedEmail } = await import("@/lib/email");
       await sendInviteUsedEmail(inviter.email as string, {
         inviteeLabel,
