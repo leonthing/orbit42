@@ -26,14 +26,23 @@ function ymd(year: number, month: number, day: number) {
 }
 
 export function MiniMonth({ username }: { username: string }) {
+  // "Today" must come from the browser clock, never the SSR pass — the
+  // server runs in UTC, so between midnight and 9am KST its date differs
+  // from the client's and hydration blows up (React #423). Render an
+  // empty shell until mounted, then compute dates client-side only.
+  const [mounted, setMounted] = useState(false);
   const today = useMemo(() => new Date(), []);
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
   const [collapsed, setCollapsed] = useState(false);
   const [eventDates, setEventDates] = useState<Set<string>>(new Set());
 
-  // Load persisted collapse state.
+  // Load persisted collapse state (+ flip the mounted gate).
   useEffect(() => {
+    setMounted(true);
+    const now = new Date();
+    setYear(now.getFullYear());
+    setMonth(now.getMonth());
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved === "1") setCollapsed(true);
@@ -97,6 +106,11 @@ export function MiniMonth({ username }: { username: string }) {
   const isCurrentMonth =
     year === today.getFullYear() && month === today.getMonth();
   const todayDate = today.getDate();
+
+  if (!mounted) {
+    // Static shell — must match the SSR output exactly.
+    return <div className="px-2 pb-2" />;
+  }
 
   return (
     <div className="px-2 pb-2">

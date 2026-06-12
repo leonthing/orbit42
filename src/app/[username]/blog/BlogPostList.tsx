@@ -103,7 +103,7 @@ export default function BlogPostList({ initialPosts }: { initialPosts: BlogPost[
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-charcoal-100">글</h1>
+          <h1 className="text-2xl font-bold text-charcoal-100">블로그</h1>
           <p className="mt-1 text-sm text-charcoal-500">
             {posts.length}개의 글
           </p>

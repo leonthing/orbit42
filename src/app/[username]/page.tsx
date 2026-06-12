@@ -192,7 +192,7 @@ export default async function PublicProfile({
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <JsonLd data={[personSchema, breadcrumbSchema]} />
       {/* Identity row — compact */}
       <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between md:gap-6">
@@ -272,39 +272,45 @@ export default async function PublicProfile({
         </div>
       </header>
 
-      {Object.values(socialLinks).some(Boolean) && (
-        <section className="flex flex-wrap gap-2">
-          {Object.entries(socialLinks)
-            .filter(([, v]) => !!v)
-            .map(([k, v]) => (
-              <a
-                key={k}
-                href={v as string}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-lg border border-charcoal-800/60 bg-charcoal-800/20 px-3 py-1.5 text-xs font-medium text-charcoal-700 hover:border-charcoal-600 hover:text-charcoal-900 dark:text-charcoal-300 dark:hover:text-charcoal-100"
-              >
-                {k}
-              </a>
-            ))}
+      {(profile.bio ||
+        interests.length > 0 ||
+        Object.values(socialLinks).some(Boolean)) && (
+        <section className="space-y-3">
+          {profile.bio && (
+            <p className="max-w-2xl text-sm leading-relaxed text-charcoal-300">
+              {profile.bio}
+            </p>
+          )}
+          {interests.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {interests.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full bg-red-500/15 px-2.5 py-0.5 text-xs font-medium text-red-800 ring-1 ring-red-500/30 dark:text-red-200 dark:ring-0"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+          {Object.values(socialLinks).some(Boolean) && (
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(socialLinks)
+                .filter(([, v]) => !!v)
+                .map(([k, v]) => (
+                  <a
+                    key={k}
+                    href={v as string}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-lg border border-charcoal-800/60 bg-charcoal-800/20 px-3 py-1 text-xs font-medium text-charcoal-700 hover:border-charcoal-600 hover:text-charcoal-900 dark:text-charcoal-300 dark:hover:text-charcoal-100"
+                  >
+                    {k}
+                  </a>
+                ))}
+            </div>
+          )}
         </section>
-      )}
-
-      {profile.bio && (
-        <p className="max-w-2xl text-sm leading-relaxed text-charcoal-300">{profile.bio}</p>
-      )}
-
-      {interests.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {interests.map((tag) => (
-            <span
-              key={tag}
-              className="rounded-full bg-red-500/15 px-3 py-1 text-xs font-medium text-red-800 ring-1 ring-red-500/30 dark:text-red-200 dark:ring-0"
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
       )}
 
       {!isOwner && totalSlotWindows > 0 && (
@@ -321,53 +327,61 @@ export default async function PublicProfile({
       {isOwner ? (
         <ProfileTabs
           tabs={[
-            { key: "overview", label: "Overview" },
+            { key: "overview", label: "홈" },
             { key: "slots", label: "슬롯", count: slots.length },
-            { key: "posts", label: "글", count: myFeedPosts.length },
+            { key: "posts", label: "포스트", count: myFeedPosts.length },
           ]}
           overview={
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <ValueStat
-                  label="누적 거래"
-                  value={`${value.total_bookings + (value.highest_bid_cents ? 1 : 0)}`}
-                />
-                <ValueStat
-                  label="누적 가치"
-                  value={`₩${(value.total_revenue_cents / 100).toLocaleString("ko-KR")}`}
-                  accent
-                />
-                <ValueStat
-                  label="평균 단가"
-                  value={
-                    value.average_price_cents > 0
-                      ? `₩${(value.average_price_cents / 100).toLocaleString("ko-KR")}`
-                      : "—"
-                  }
-                />
-                <ValueStat
-                  label="최고 낙찰"
-                  value={
-                    value.highest_bid_cents
-                      ? `₩${(value.highest_bid_cents / 100).toLocaleString("ko-KR")}`
-                      : "—"
-                  }
-                />
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+                <ActionTile href={`/${params.username}/slots`} label="슬롯 만들기" highlight />
+                <ActionTile href="/feed" label="소식 공유" />
+                <ActionTile href={`/${params.username}/calendar`} label="일정 추가" />
+                <ActionTile href={`/${params.username}/book`} label="예약 링크" />
+                <ActionTile href={`/${params.username}/insights`} label="인사이트" />
+                <ActionTile href={`/${params.username}/settings`} label="설정" />
               </div>
 
-              <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-3">
-                <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 [&::-webkit-scrollbar]:hidden">
-                  <span className="shrink-0 px-2 text-[10px] font-semibold uppercase tracking-wider text-charcoal-500">
-                    바로가기
-                  </span>
-                  <ActionPill href="/feed" label="소식 공유" />
-                  <ActionPill href={`/${params.username}/slots`} label="슬롯 만들기" highlight />
-                  <ActionPill href={`/${params.username}/calendar`} label="일정 추가" />
-                  <ActionPill href={`/${params.username}/insights`} label="시간 인사이트" />
-                  <ActionPill href={`/${params.username}/book`} label="예약 링크" />
-                  <ActionPill href={`/${params.username}/settings`} label="설정" />
+              {(value.total_bookings > 0 || value.total_revenue_cents > 0) && (
+                <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-4">
+                  <div className="flex items-baseline justify-between">
+                    <h2 className="text-xs font-semibold uppercase tracking-wider text-charcoal-500">
+                      시간 자산
+                    </h2>
+                    <Link
+                      href={`/${params.username}/insights`}
+                      className="text-[11px] text-red-400 hover:text-red-300"
+                    >
+                      자세히 →
+                    </Link>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
+                    <ValueStat
+                      label="거래"
+                      value={`${value.total_bookings + (value.highest_bid_cents ? 1 : 0)}건`}
+                    />
+                    {value.total_revenue_cents > 0 && (
+                      <ValueStat
+                        label="누적 가치"
+                        value={`₩${(value.total_revenue_cents / 100).toLocaleString("ko-KR")}`}
+                        accent
+                      />
+                    )}
+                    {value.hourly_rate_cents != null && (
+                      <ValueStat
+                        label="시간당"
+                        value={`₩${(value.hourly_rate_cents / 100).toLocaleString("ko-KR")}`}
+                      />
+                    )}
+                    {value.highest_bid_cents != null && (
+                      <ValueStat
+                        label="최고 낙찰"
+                        value={`₩${(value.highest_bid_cents / 100).toLocaleString("ko-KR")}`}
+                      />
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {weekInsights && (
                 <InsightsCard username={params.username} insights={weekInsights} />
@@ -732,12 +746,10 @@ function ValueStat({
   accent?: boolean;
 }) {
   return (
-    <div className="min-w-0 rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-3 sm:p-4">
-      <p className="truncate text-[10px] font-semibold uppercase tracking-wider text-charcoal-500">
-        {label}
-      </p>
+    <div className="min-w-0">
+      <p className="text-[10px] font-medium text-charcoal-500">{label}</p>
       <p
-        className={`mt-1 truncate text-base font-bold sm:text-lg ${
+        className={`truncate text-sm font-bold ${
           accent ? "text-red-700 dark:text-red-300" : "text-charcoal-100"
         }`}
         title={value}
@@ -748,7 +760,7 @@ function ValueStat({
   );
 }
 
-function ActionPill({
+function ActionTile({
   href,
   label,
   highlight,
@@ -760,10 +772,10 @@ function ActionPill({
   return (
     <Link
       href={href}
-      className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+      className={`flex items-center justify-center rounded-lg border px-2 py-2.5 text-center text-xs font-medium transition-colors ${
         highlight
-          ? "bg-red-500/15 text-red-700 hover:bg-red-500/25 dark:text-red-300"
-          : "bg-charcoal-800/40 text-charcoal-700 hover:bg-charcoal-800/70 hover:text-charcoal-100 dark:text-charcoal-300"
+          ? "border-red-500/40 bg-red-500/10 text-red-700 hover:bg-red-500/20 dark:text-red-300"
+          : "border-charcoal-800/60 bg-charcoal-900/30 text-charcoal-700 hover:border-charcoal-700 hover:text-charcoal-100 dark:text-charcoal-300"
       }`}
     >
       {label}
