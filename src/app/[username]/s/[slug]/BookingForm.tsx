@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { bookSlot, refreshBookableOptions } from "@/lib/slots";
 import type { BookableOption } from "@/lib/slots";
+import { findMyConflicts } from "@/lib/mutual-availability";
 import { SlotDatePicker } from "@/components/SlotDatePicker";
 import { useToast } from "@/components/Toast";
 
@@ -56,6 +57,50 @@ export default function BookingForm({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [selectedMenus, setSelectedMenus] = useState<string[]>([]);
+  // Mutual free-time: viewer's own busy times, fetched on demand.
+  const [onlyMyFree, setOnlyMyFree] = useState(false);
+  const [myConflicts, setMyConflicts] = useState<Set<string> | null>(null);
+  const [conflictsLoading, setConflictsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!onlyMyFree || myConflicts !== null) return;
+    let canceled = false;
+    setConflictsLoading(true);
+    findMyConflicts(
+      options.map((o) => ({ start_at: o.start_at, end_at: o.end_at })),
+    )
+      .then((list) => {
+        if (canceled) return;
+        setMyConflicts(new Set(list ?? []));
+      })
+      .finally(() => {
+        if (!canceled) setConflictsLoading(false);
+      });
+    return () => {
+      canceled = true;
+    };
+  }, [onlyMyFree, myConflicts, options]);
+
+  // Location change recomputes options — stale conflicts must refetch.
+  useEffect(() => {
+    setMyConflicts(null);
+  }, [selectedLocation]);
+
+  const visibleOptions =
+    onlyMyFree && myConflicts
+      ? options.filter((o) => !myConflicts.has(o.start_at))
+      : options;
+
+  // If the filter hides the currently selected time, move to the first
+  // visible one so the submit button never points at a hidden option.
+  useEffect(() => {
+    if (!onlyMyFree || !myConflicts) return;
+    const cur = options.find((o) => keyOf(o) === selectedKey);
+    if (cur && myConflicts.has(cur.start_at)) {
+      const next = options.find((o) => !myConflicts.has(o.start_at));
+      setSelectedKey(next ? keyOf(next) : "");
+    }
+  }, [onlyMyFree, myConflicts, options, selectedKey]);
 
   // When the guest switches location, re-request bookable options so
   // the buffer math reflects the new target.
@@ -258,15 +303,39 @@ export default function BookingForm({
         </div>
       )}
 
+      {loggedIn && options.length > 0 && (
+        <label className="flex w-fit cursor-pointer items-center gap-2 text-xs text-charcoal-400">
+          <input
+            type="checkbox"
+            checked={onlyMyFree}
+            onChange={(e) => setOnlyMyFree(e.target.checked)}
+            className="h-3.5 w-3.5 accent-red-500"
+          />
+          내가 비는 시간만 보기
+          {conflictsLoading && (
+            <span className="text-charcoal-600">· 내 캘린더 확인 중…</span>
+          )}
+          {onlyMyFree && myConflicts && !conflictsLoading && (
+            <span className="text-charcoal-600">
+              · 둘 다 가능한 시간 {visibleOptions.length}개
+            </span>
+          )}
+        </label>
+      )}
+
       {options.length === 0 ? (
         <p className="rounded-lg border border-charcoal-800/60 bg-charcoal-900/30 px-4 py-6 text-center text-sm text-charcoal-500">
           {selectedLocation
             ? `${selectedLocation} 에서 만날 수 있는 시간이 없어요. 다른 위치를 골라보세요.`
             : "예약 가능한 시간이 없어요."}
         </p>
+      ) : visibleOptions.length === 0 ? (
+        <p className="rounded-lg border border-charcoal-800/60 bg-charcoal-900/30 px-4 py-6 text-center text-sm text-charcoal-500">
+          겹치는 빈 시간이 없네요. 필터를 끄거나 호스트에게 시간을 요청해보세요.
+        </p>
       ) : (
         <SlotDatePicker
-          options={options}
+          options={visibleOptions}
           selectedKey={selectedKey}
           onSelect={setSelectedKey}
           keyOf={keyOf}

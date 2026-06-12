@@ -24,7 +24,14 @@ export default async function Image({
         ? "무료"
         : `₩${(slot.price_cents / 100).toLocaleString("ko-KR")}`;
   const duration = slot?.duration_min ? `${slot.duration_min}분` : "";
-  const meta = [duration, priceLabel].filter(Boolean).join(" · ");
+  const locations =
+    slot?.locations && slot.locations.length > 0
+      ? slot.locations.join(" / ")
+      : slot?.location_detail || "";
+  const meta = [duration, priceLabel, locations && `📍 ${locations}`]
+    .filter(Boolean)
+    .join(" · ");
+  const photo = slot?.image_urls?.[0] || null;
 
   return new ImageResponse(
     (
@@ -39,8 +46,25 @@ export default async function Image({
           color: "#fff",
           padding: "72px 80px",
           fontFamily: "system-ui, -apple-system, Segoe UI, sans-serif",
+          position: "relative",
         }}
       >
+        {photo && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={photo}
+            alt=""
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: 1200,
+              height: 630,
+              objectFit: "cover",
+              opacity: 0.3,
+            }}
+          />
+        )}
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <div
             style={{

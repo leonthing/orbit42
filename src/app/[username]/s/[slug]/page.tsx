@@ -9,6 +9,9 @@ import BookingForm from "./BookingForm";
 import AuctionPanel from "./AuctionPanel";
 import OwnerBookingPreview from "./OwnerBookingPreview";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
+import { PoweredByCta } from "@/components/PoweredByCta";
+import { getHostRating, listHostReviews } from "@/lib/reviews";
+import { Avatar } from "@/components/Avatar";
 import { SITE } from "@/lib/constants";
 import { JsonLd } from "@/components/JsonLd";
 
@@ -82,7 +85,11 @@ export default async function SlotPage({
   const session = await getSession();
   const isOwner = session?.username === params.username;
   const isAuction = slot.pricing_model === "auction";
-  const attachedMenus = await listMenusForSlot(slot.id);
+  const [attachedMenus, hostRating, hostReviews] = await Promise.all([
+    listMenusForSlot(slot.id),
+    getHostRating(slot.host_id),
+    listHostReviews(slot.host_id, 3),
+  ]);
 
   const slotUrl = `${SITE.url}/${params.username}/s/${slot.slug}`;
   const productSchema = {
@@ -180,6 +187,15 @@ export default async function SlotPage({
             <CopyLinkButton url={`${SITE.url}/${params.username}/s/${slot.slug}`} />
           </div>
         </div>
+        {hostRating && (
+          <p className="mt-2 flex items-center gap-1 text-xs text-charcoal-400">
+            <span className="text-amber-400">★</span>
+            <span className="font-semibold text-charcoal-200">
+              {hostRating.average.toFixed(1)}
+            </span>
+            <span className="text-charcoal-500">후기 {hostRating.count}개</span>
+          </p>
+        )}
         <p className="mt-2 text-sm text-charcoal-400">
           {slot.duration_min}분 ·{" "}
           {isAuction
@@ -250,6 +266,60 @@ export default async function SlotPage({
           isOwner={isOwner}
         />
       )}
+
+      {hostReviews.length > 0 && (
+        <section className="rounded-2xl border border-charcoal-800/60 bg-charcoal-900/30 p-6">
+          <h2 className="text-sm font-semibold text-charcoal-200">
+            후기
+            {hostRating && (
+              <span className="ml-2 text-xs font-normal text-charcoal-500">
+                <span className="text-amber-400">★</span>{" "}
+                {hostRating.average.toFixed(1)} · {hostRating.count}개
+              </span>
+            )}
+          </h2>
+          <ul className="mt-4 space-y-4">
+            {hostReviews.map((r) => (
+              <li key={r.id} className="flex items-start gap-3">
+                <Link
+                  href={r.reviewer ? `/${r.reviewer.username}` : "#"}
+                  className="shrink-0"
+                >
+                  <Avatar
+                    url={r.reviewer?.avatar_url ?? null}
+                    name={
+                      r.reviewer?.display_name || r.reviewer?.username || "익명"
+                    }
+                    size={32}
+                  />
+                </Link>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                    <span className="text-xs font-semibold text-charcoal-100">
+                      {r.reviewer?.display_name || r.reviewer?.username || "익명"}
+                    </span>
+                    <span className="text-xs text-amber-400">
+                      {"★".repeat(r.rating)}
+                    </span>
+                    {r.slot_title && (
+                      <span className="text-[11px] text-charcoal-600">
+                        {r.slot_title}
+                      </span>
+                    )}
+                  </div>
+                  {r.body && (
+                    <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-charcoal-300">
+                      {r.body}
+                    </p>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {!session && <PoweredByCta hostUsername={params.username} />}
     </div>
   );
 }

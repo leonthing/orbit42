@@ -10,6 +10,7 @@ import {
   refreshBookableOptions,
 } from "@/lib/slots";
 import type { BookingRow, GuestBookingRow, BookableOption } from "@/lib/slots";
+import { addBookingReview } from "@/lib/reviews";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 
@@ -33,11 +34,13 @@ export default function BookingsInbox({
   username,
   hostBookings,
   guestBookings,
+  reviewedBookingIds = [],
   isMock = false,
 }: {
   username: string;
   hostBookings: BookingRow[];
   guestBookings: GuestBookingRow[];
+  reviewedBookingIds?: string[];
   isMock?: boolean;
 }) {
   const router = useRouter();
@@ -147,6 +150,7 @@ export default function BookingsInbox({
             username={username}
             onCancel={cancelSelf}
             pending={pending}
+            reviewedBookingIds={reviewedBookingIds}
             emptyHint="아직 예정된 예약이 없어요. 오르빗을 둘러보고 시간을 잡아보세요."
           />
           <GuestSection
@@ -155,6 +159,7 @@ export default function BookingsInbox({
             username={username}
             onCancel={cancelSelf}
             pending={pending}
+            reviewedBookingIds={reviewedBookingIds}
             muted
             emptyHint="지난 예약이 없어요."
           />
@@ -408,6 +413,7 @@ function GuestSection({
   pending,
   muted,
   emptyHint,
+  reviewedBookingIds = [],
 }: {
   title: string;
   rows: GuestBookingRow[];
@@ -416,8 +422,12 @@ function GuestSection({
   pending: boolean;
   muted?: boolean;
   emptyHint: string;
+  reviewedBookingIds?: string[];
 }) {
   const [reschedulingId, setReschedulingId] = useState<string | null>(null);
+  const [reviewingId, setReviewingId] = useState<string | null>(null);
+  const [reviewedLocal, setReviewedLocal] = useState<string[]>([]);
+  const reviewed = new Set([...reviewedBookingIds, ...reviewedLocal]);
   return (
     <section className="space-y-3">
       <SectionHeader title={title} count={rows.length} />
@@ -481,29 +491,51 @@ function GuestSection({
                         슬롯
                       </Link>
                     )}
-                    {b.status !== "canceled" && b.status !== "completed" && (
-                      <>
+                    {b.status !== "canceled" &&
+                      b.status !== "completed" &&
+                      end >= new Date() && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setReschedulingId((cur) =>
+                                cur === b.id ? null : b.id,
+                              )
+                            }
+                            disabled={pending}
+                            className="rounded-md border border-charcoal-800 px-2.5 py-1 text-xs text-charcoal-400 hover:border-charcoal-600 hover:text-charcoal-100 disabled:opacity-50"
+                          >
+                            시간 변경
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onCancel(b.id)}
+                            disabled={pending}
+                            className="rounded-md border border-charcoal-800 px-2.5 py-1 text-xs text-charcoal-400 hover:border-red-500/60 hover:text-red-500 disabled:opacity-50"
+                          >
+                            취소
+                          </button>
+                        </>
+                      )}
+                    {(b.status === "completed" ||
+                      (b.status === "confirmed" && end < new Date())) &&
+                      !reviewed.has(b.id) && (
                         <button
                           type="button"
                           onClick={() =>
-                            setReschedulingId((cur) =>
+                            setReviewingId((cur) =>
                               cur === b.id ? null : b.id,
                             )
                           }
-                          disabled={pending}
-                          className="rounded-md border border-charcoal-800 px-2.5 py-1 text-xs text-charcoal-400 hover:border-charcoal-600 hover:text-charcoal-100 disabled:opacity-50"
+                          className="rounded-md bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-500/40 hover:bg-amber-500/25 dark:text-amber-200 dark:ring-0"
                         >
-                          시간 변경
+                          후기 남기기
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => onCancel(b.id)}
-                          disabled={pending}
-                          className="rounded-md border border-charcoal-800 px-2.5 py-1 text-xs text-charcoal-400 hover:border-red-500/60 hover:text-red-500 disabled:opacity-50"
-                        >
-                          취소
-                        </button>
-                      </>
+                      )}
+                    {reviewed.has(b.id) && (
+                      <span className="px-2.5 py-1 text-center text-[11px] text-charcoal-600">
+                        후기 완료
+                      </span>
                     )}
                   </div>
                 </div>
@@ -513,12 +545,88 @@ function GuestSection({
                     onDone={() => setReschedulingId(null)}
                   />
                 )}
+                {reviewingId === b.id && (
+                  <ReviewPanel
+                    booking={b}
+                    onDone={() => {
+                      setReviewedLocal((prev) => [...prev, b.id]);
+                      setReviewingId(null);
+                    }}
+                  />
+                )}
               </li>
             );
           })}
         </ul>
       )}
     </section>
+  );
+}
+
+function ReviewPanel({
+  booking,
+  onDone,
+}: {
+  booking: GuestBookingRow;
+  onDone: () => void;
+}) {
+  const toast = useToast();
+  const [rating, setRating] = useState(0);
+  const [body, setBody] = useState("");
+  const [saving, startSaving] = useTransition();
+
+  const submit = () => {
+    if (rating === 0) return;
+    startSaving(async () => {
+      const res = await addBookingReview(booking.id, rating, body);
+      if ("error" in res && res.error) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success("후기를 남겼어요. 감사합니다!");
+      onDone();
+    });
+  };
+
+  return (
+    <div className="mt-3 space-y-2 rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 p-3">
+      <div className="flex items-center gap-1">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button
+            key={n}
+            type="button"
+            onClick={() => setRating(n)}
+            aria-label={`${n}점`}
+            className={`text-xl transition-colors ${
+              n <= rating ? "text-amber-400" : "text-charcoal-700 hover:text-charcoal-500"
+            }`}
+          >
+            ★
+          </button>
+        ))}
+        {rating > 0 && (
+          <span className="ml-1 text-xs text-charcoal-500">{rating}점</span>
+        )}
+      </div>
+      <textarea
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        placeholder={`${booking.slot.title} 어떠셨나요? (선택)`}
+        rows={2}
+        maxLength={2000}
+        className="w-full resize-none rounded-lg border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] px-3 py-2 text-xs text-charcoal-100 placeholder:text-charcoal-600 focus:border-charcoal-600 focus:outline-none"
+      />
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={submit}
+          disabled={rating === 0 || saving}
+          className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {saving ? "등록 중…" : "후기 등록"}
+        </button>
+      </div>
+    </div>
   );
 }
 

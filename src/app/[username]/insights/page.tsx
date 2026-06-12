@@ -16,6 +16,9 @@ import {
   PURPOSE_GROUP_LABEL,
   type PurposeGroup,
 } from "@/lib/calendar-settings-types";
+import { getValueStats } from "@/lib/value-stats";
+import { getProfile } from "@/lib/auth";
+import { TimeAssetCard } from "./TimeAssetCard";
 
 export const metadata: Metadata = { title: "시간 인사이트" };
 export const dynamic = "force-dynamic";
@@ -77,9 +80,11 @@ export default async function InsightsPage({
   const isCurrent = weekKey(weekStart) === weekKey(thisWeek);
 
   const workHours = await getWorkHours(userId);
-  const [insights, trend] = await Promise.all([
+  const [insights, trend, valueStats, profile] = await Promise.all([
     getWeekInsights(userId, weekStart, workHours),
     getWeeklyTrend(userId, 4, workHours, new Date()),
+    getValueStats(params.username),
+    getProfile(params.username),
   ]);
 
   const hasWorkingHours = insights.working_hours_total > 0;
@@ -130,6 +135,16 @@ export default async function InsightsPage({
           />
         </div>
       </header>
+
+      {(valueStats.total_bookings > 0 ||
+        valueStats.total_revenue_cents > 0) && (
+        <TimeAssetCard
+          displayName={
+            (profile?.display_name as string | null) || params.username
+          }
+          stats={valueStats}
+        />
+      )}
 
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="총 일정" value={fmtHours(insights.scheduled_hours)} />

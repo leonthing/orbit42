@@ -9,9 +9,11 @@ import { getReactionsForMany } from "@/lib/reactions";
 import { SlotPanelProvider } from "@/components/SlotPanel";
 import { AllSlotsGrid } from "@/components/AllSlotsGrid";
 import { getValueStats } from "@/lib/value-stats";
+import { getHostRating } from "@/lib/reviews";
 import { ProfileAvatar } from "./ProfileAvatar";
 import { FollowButton } from "./FollowButton";
 import { MessageButton } from "./MessageButton";
+import { TimeRequestButton } from "./TimeRequestButton";
 import { BlockMenu } from "./BlockMenu";
 import { isBlocked } from "@/lib/blocks";
 import { listFeedPostsByAuthors } from "@/lib/feed-posts";
@@ -93,9 +95,12 @@ export default async function PublicProfile({
     .eq("username", params.username)
     .single();
   const authorId = (userRow?.id as string | undefined) ?? null;
-  const myFeedPosts = authorId
-    ? await listFeedPostsByAuthors([authorId], 20)
-    : [];
+  const [myFeedPosts, hostRating] = authorId
+    ? await Promise.all([
+        listFeedPostsByAuthors([authorId], 20),
+        getHostRating(authorId),
+      ])
+    : [[], null];
   const feedPostReactions = await getReactionsForMany(
     "feed_post",
     myFeedPosts.map((p) => p.id),
@@ -214,6 +219,10 @@ export default async function PublicProfile({
                     targetUsername={params.username}
                     loggedIn={!!session}
                   />
+                  <TimeRequestButton
+                    targetUsername={params.username}
+                    loggedIn={!!session}
+                  />
                   {session && (
                     <BlockMenu
                       targetUsername={params.username}
@@ -245,6 +254,17 @@ export default async function PublicProfile({
                 <span>
                   <strong className="text-red-700 dark:text-red-300">{totalSlotWindows}</strong>{" "}
                   <span className="text-charcoal-500">예약가능</span>
+                </span>
+              )}
+              {hostRating && (
+                <span>
+                  <span className="text-amber-400">★</span>{" "}
+                  <strong className="text-charcoal-100">
+                    {hostRating.average.toFixed(1)}
+                  </strong>{" "}
+                  <span className="text-charcoal-500">
+                    후기 {hostRating.count}
+                  </span>
                 </span>
               )}
             </div>

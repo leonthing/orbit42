@@ -291,6 +291,40 @@ export async function sendFeedbackEmail(args: {
   }
 }
 
+export async function sendTimeRequestEmail(
+  to: string,
+  args: {
+    requesterLabel: string;
+    message: string;
+    durationMin: number;
+    budgetCents: number | null;
+    preferredTimes: string | null;
+    manageUrl: string;
+  },
+) {
+  const budgetLine =
+    args.budgetCents && args.budgetCents > 0
+      ? `<p style="margin:0 0 4px;color:#555">제안 금액: ₩${(args.budgetCents / 100).toLocaleString("ko-KR")}</p>`
+      : "";
+  const timesLine = args.preferredTimes
+    ? `<p style="margin:0 0 4px;color:#555">희망 시간대: ${escapeHtml(args.preferredTimes)}</p>`
+    : "";
+  const html = `
+    <div style="font-family:ui-sans-serif,system-ui,-apple-system;line-height:1.55;color:#111">
+      <h2 style="margin:0 0 12px">${escapeHtml(args.requesterLabel)}님이 시간을 요청했어요</h2>
+      <p style="margin:0 0 4px;color:#555">${args.durationMin}분</p>
+      ${budgetLine}
+      ${timesLine}
+      <blockquote style="margin:12px 0;padding:10px 14px;border-left:3px solid #e5e5e5;color:#444">${escapeHtml(args.message)}</blockquote>
+      <p style="margin:16px 0">
+        <a href="${siteUrl(args.manageUrl)}" style="display:inline-block;padding:10px 18px;border-radius:8px;background:#dc2626;color:#fff;text-decoration:none;font-weight:600">요청 확인하기</a>
+      </p>
+      <p style="color:#888;font-size:12px">수락하면 시간이 자동으로 예약돼요.</p>
+    </div>
+  `;
+  return send(to, `[Orbit42] 시간 요청: ${args.requesterLabel}`, html);
+}
+
 export async function sendWeeklyDigestEmail(
   to: string,
   args: {

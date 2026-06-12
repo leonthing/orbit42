@@ -8,6 +8,8 @@ export const NOTIFICATION_TYPES = [
   { key: "comment_received", label: "댓글" },
   { key: "reply_received", label: "답글" },
   { key: "reaction", label: "반응(좋아요)" },
+  { key: "review_received", label: "후기" },
+  { key: "time_request", label: "시간 요청" },
   { key: "invite_used", label: "내 추천으로 가입됨" },
   { key: "weekly_digest", label: "주간 요약 이메일" },
 ] as const;

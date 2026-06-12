@@ -5,6 +5,10 @@ export type ValueStats = {
   total_revenue_cents: number;
   average_price_cents: number;
   highest_bid_cents: number | null;
+  /** Hours actually traded through bookings (confirmed/completed). */
+  total_booked_hours: number;
+  /** Implied price of one hour of this host's time, in cents. */
+  hourly_rate_cents: number | null;
 };
 
 /**
@@ -27,6 +31,8 @@ export async function getValueStats(username: string): Promise<ValueStats> {
       total_revenue_cents: 0,
       average_price_cents: 0,
       highest_bid_cents: null,
+      total_booked_hours: 0,
+      hourly_rate_cents: null,
     };
   }
 
@@ -35,7 +41,7 @@ export async function getValueStats(username: string): Promise<ValueStats> {
   const [bookingsRes, slotsRes] = await Promise.all([
     db
       .from("bookings")
-      .select("id, slot_id, status")
+      .select("id, slot_id, status, scheduled_at, scheduled_end_at")
       .eq("host_id", hostId)
       .in("status", ["confirmed", "completed"]),
     db
@@ -57,11 +63,16 @@ export async function getValueStats(username: string): Promise<ValueStats> {
   }
 
   let bookingRevenue = 0;
+  let bookedMs = 0;
   const totalBookings = (bookingsRes.data ?? []).length;
   for (const b of bookingsRes.data ?? []) {
     const meta = slotById.get(b.slot_id as string);
     if (meta && meta.pricing_model === "fixed") bookingRevenue += meta.price_cents;
+    const s = new Date(b.scheduled_at as string).getTime();
+    const e = new Date(b.scheduled_end_at as string).getTime();
+    if (e > s) bookedMs += e - s;
   }
+  const bookedHours = bookedMs / 3_600_000;
 
   // Auction revenue: sum of winning bids on slots that have a high bid.
   let auctionRevenue = 0;
@@ -86,5 +97,10 @@ export async function getValueStats(username: string): Promise<ValueStats> {
     total_revenue_cents: totalRevenue,
     average_price_cents: avg,
     highest_bid_cents: highestBid,
+    total_booked_hours: Math.round(bookedHours * 10) / 10,
+    hourly_rate_cents:
+      totalRevenue > 0 && bookedHours > 0
+        ? Math.round(totalRevenue / bookedHours)
+        : null,
   };
 }

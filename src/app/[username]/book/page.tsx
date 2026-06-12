@@ -6,6 +6,7 @@ import { listPublicSlotsByUsername, getBookableOptions } from "@/lib/slots";
 import { Avatar } from "@/components/Avatar";
 import { BookingCalendar, type BookSlot } from "./BookingCalendar";
 import { CopyShareLink } from "./CopyShareLink";
+import { PoweredByCta } from "@/components/PoweredByCta";
 
 export const dynamic = "force-dynamic";
 
@@ -92,6 +93,8 @@ export default async function BookingSharePage({
         hostName={hostName}
         loggedIn={!!session}
       />
+
+      {!session && <PoweredByCta hostUsername={params.username} />}
 
       <p className="pt-2 text-center text-xs text-charcoal-600">
         <Link href={`/${params.username}`} className="hover:text-charcoal-400">

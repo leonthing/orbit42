@@ -78,7 +78,7 @@ export default async function ExplorePage() {
 
   // Active people: anyone who posted or opened a slot in the last 30 days,
   // plus the most recently joined users as a fallback.
-  const [recentPostUsers, recentSlotUsers, latestUsers, openSlots] = await Promise.all([
+  const [recentPostUsers, recentSlotUsers, latestUsers, openSlots, liveAuctions] = await Promise.all([
     db
       .from("blog_posts")
       .select("user_id, published_at, user:users!blog_posts_user_id_fkey(username, display_name, bio, avatar_url)")
@@ -106,6 +106,16 @@ export default async function ExplorePage() {
       .eq("active", true)
       .order("created_at", { ascending: false })
       .limit(12),
+    db
+      .from("time_slots")
+      .select(
+        "id, slug, title, duration_min, reserve_price_cents, current_high_bid_cents, auction_ends_at, host:users!time_slots_host_id_fkey(username, display_name)",
+      )
+      .eq("active", true)
+      .eq("pricing_model", "auction")
+      .gt("auction_ends_at", new Date().toISOString())
+      .order("auction_ends_at", { ascending: true })
+      .limit(6),
   ]);
 
   // Aggregate active users
@@ -204,6 +214,54 @@ export default async function ExplorePage() {
         </div>
         <ExploreSearchBar />
       </header>
+
+      {(liveAuctions.data ?? []).length > 0 && (
+        <section className="mb-10">
+          <SectionTitle title="진행 중인 시간 경매" hint="마감 임박순" />
+          <div className="grid gap-3 sm:grid-cols-2">
+            {(liveAuctions.data ?? []).map((a) => {
+              const host = a.host as unknown as {
+                username: string;
+                display_name: string | null;
+              };
+              const high = (a.current_high_bid_cents as number | null) ?? 0;
+              const reserve = (a.reserve_price_cents as number | null) ?? 0;
+              const endsAt = new Date(a.auction_ends_at as string);
+              const hoursLeft = Math.max(
+                0,
+                Math.round((endsAt.getTime() - Date.now()) / 3_600_000),
+              );
+              return (
+                <Link
+                  key={a.id as string}
+                  href={`/${host.username}/s/${a.slug}`}
+                  className="rounded-xl border border-red-500/30 bg-red-500/5 p-5 transition-colors hover:border-red-500/60"
+                >
+                  <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wider">
+                    <span className="text-red-400">Auction</span>
+                    <span className="text-charcoal-500">
+                      {hoursLeft >= 48
+                        ? `${Math.round(hoursLeft / 24)}일 남음`
+                        : `${hoursLeft}시간 남음`}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm font-semibold text-charcoal-100">
+                    {a.title as string}
+                  </p>
+                  <p className="mt-1 text-xs text-charcoal-500">
+                    {host.display_name || host.username} · {a.duration_min as number}분
+                  </p>
+                  <p className="mt-2 text-sm font-bold text-red-700 dark:text-red-300">
+                    {high > 0
+                      ? `현재가 ₩${(high / 100).toLocaleString("ko-KR")}`
+                      : `시작가 ₩${(reserve / 100).toLocaleString("ko-KR")}`}
+                  </p>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {suggested.length > 0 && (
         <section className="mb-10">
