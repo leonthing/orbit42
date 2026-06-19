@@ -69,11 +69,18 @@ export async function getPublicEvents(
 
   const calendar = await getAuthenticatedCalendar(host.id as string);
 
-  // Owner fallback: when a connected Google calendar hasn't been saved
-  // into `calendars` yet, still show events from it. This is the only
+  // Owner fallback: when the user's PRIMARY Google calendar hasn't been
+  // saved into `calendars` yet, still show events from it. This is the only
   // reason we need to hit Google's `calendarList.list()` — skip the
   // roundtrip entirely when not applicable (e.g. explicit calendar filter,
   // public feed render, non-owner viewer).
+  //
+  // We intentionally restrict this to the primary calendar. Secondary /
+  // subscribed calendars (project feeds, shared/holiday calendars, etc.)
+  // are owned at the `accessRole` level but must be opted into manually via
+  // Settings — otherwise every calendar the user owns leaks into their
+  // public profile. Mirrors the "primary only" policy in
+  // syncGoogleCalendarsToDb().
   const ownerFallbackCals: Array<{
     id: string;
     google_calendar_id: string;
@@ -89,7 +96,7 @@ export async function getPublicEvents(
       );
       for (const item of list.data.items ?? []) {
         if (!item.id) continue;
-        if (item.accessRole !== "owner") continue;
+        if (item.primary !== true) continue;
         if (linkedIds.has(item.id)) continue;
         ownerFallbackCals.push({
           id: `gfallback:${item.id}`,

@@ -5,6 +5,12 @@ import { getProfile, getSession } from "@/lib/auth";
 import { getPublicEvents } from "@/lib/public-calendar";
 import { getReactionsForMany } from "@/lib/reactions";
 import { ReactionStrip } from "@/components/ReactionStrip";
+import { ScrollToToday } from "./ScrollToToday";
+
+/** Stable per-day id in Seoul time, e.g. "2026-06-19" (en-CA → YYYY-MM-DD). */
+function seoulDateKey(d: Date) {
+  return d.toLocaleDateString("en-CA", { timeZone: "Asia/Seoul" });
+}
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +51,7 @@ export default async function PublicCalendarPage({
 
   const prev = monthShift(year, month, -1);
   const next = monthShift(year, month, 1);
+  const todayKey = seoulDateKey(now);
 
   return (
     <div className="space-y-6">
@@ -92,7 +99,15 @@ export default async function PublicCalendarPage({
           </p>
         </div>
       ) : (
-        <Agenda events={events} reactions={reactions} loggedIn={!!session} />
+        <>
+          <Agenda
+            events={events}
+            reactions={reactions}
+            loggedIn={!!session}
+            todayKey={todayKey}
+          />
+          <ScrollToToday targetId={`day-${todayKey}`} />
+        </>
       )}
     </div>
   );
@@ -102,29 +117,39 @@ function Agenda({
   events,
   reactions,
   loggedIn,
+  todayKey,
 }: {
   events: Awaited<ReturnType<typeof getPublicEvents>>;
   reactions: Map<string, import("@/lib/reactions-types").ReactionSummary[]>;
   loggedIn: boolean;
+  todayKey: string;
 }) {
-  // Group by date string
-  const groups: Record<string, typeof events> = {};
+  // Group by day, keyed by a stable Seoul date (preserves chronological order
+  // since events arrive pre-sorted), with a localized label for display.
+  const groups: Record<string, { label: string; evs: typeof events }> = {};
   for (const e of events) {
-    const key = new Date(e.start_at).toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul",
+    const d = new Date(e.start_at);
+    const key = seoulDateKey(d);
+    const label = d.toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul",
       year: "numeric",
       month: "long",
       day: "numeric",
       weekday: "short",
     });
-    (groups[key] ||= []).push(e);
+    (groups[key] ||= { label, evs: [] }).evs.push(e);
   }
 
   return (
     <div className="space-y-6">
-      {Object.entries(groups).map(([day, evs]) => (
-        <section key={day}>
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-charcoal-500">
-            {day}
+      {Object.entries(groups).map(([key, { label, evs }]) => (
+        <section key={key} id={`day-${key}`} className="scroll-mt-24">
+          <h2
+            className={`mb-2 text-xs font-semibold uppercase tracking-wider ${
+              key === todayKey ? "text-rose-400" : "text-charcoal-500"
+            }`}
+          >
+            {label}
+            {key === todayKey && <span className="ml-2 normal-case">· 오늘</span>}
           </h2>
           <ul className="space-y-1.5">
             {evs.map((e) => (
