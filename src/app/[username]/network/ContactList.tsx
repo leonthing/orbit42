@@ -1,98 +1,53 @@
 "use client";
 
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { Contact, ContactInput } from "./actions";
-import { createContact, syncGoogleContacts, scanBusinessCard } from "./actions";
-import type { ScannedCardFields } from "@/lib/card-ocr-types";
-import { resizeImageToJpeg } from "@/lib/image-resize";
+import { createContact, syncGoogleContacts } from "./actions";
+import ContactPanel from "./ContactPanel";
 import { useToast } from "@/components/Toast";
 
-function fileToBase64(file: File): Promise<{ data: string; mediaType: string }> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string; // data:image/jpeg;base64,XXXX
-      const comma = result.indexOf(",");
-      const mediaType = result.slice(5, result.indexOf(";")) || "image/jpeg";
-      resolve({ data: result.slice(comma + 1), mediaType });
-    };
-    reader.onerror = () => reject(new Error("read failed"));
-    reader.readAsDataURL(file);
-  });
-}
+const PAGE_SIZE = 12;
 
-export default function ContactList({
-  contacts: initialContacts,
-  username,
-}: {
-  contacts: Contact[];
-  username: string;
-}) {
+export default function ContactList({ contacts }: { contacts: Contact[] }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
-  const [scanning, setScanning] = useState(false);
-  const [prefill, setPrefill] = useState<ScannedCardFields | null>(null);
-  const [duplicate, setDuplicate] = useState<{ id: string; name: string } | null>(null);
-  const [formKey, setFormKey] = useState(0);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const toast = useToast();
 
-  function openManualModal() {
-    setPrefill(null);
-    setDuplicate(null);
-    setFormKey((k) => k + 1);
-    setShowModal(true);
-  }
-
-  async function handleScanFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = ""; // allow re-selecting the same file
-    if (!file) return;
-
-    setScanning(true);
-    try {
-      const resized = await resizeImageToJpeg(file, { maxDimension: 1600, quality: 0.9 });
-      const { data, mediaType } = await fileToBase64(resized);
-      const result = await scanBusinessCard(data, mediaType);
-
-      if (result.error === "no_api_key") {
-        toast.error("명함 인식이 설정되지 않았습니다.");
-        return;
-      }
-      if (!result.fields) {
-        toast.error("명함에서 정보를 읽지 못했습니다. 더 선명한 사진으로 시도해보세요.");
-        return;
-      }
-
-      setPrefill(result.fields);
-      setDuplicate(
-        result.duplicateId && result.duplicateName
-          ? { id: result.duplicateId, name: result.duplicateName }
-          : null,
-      );
-      setFormKey((k) => k + 1);
-      setShowModal(true);
-    } catch {
-      toast.error("명함 인식에 실패했습니다.");
-    } finally {
-      setScanning(false);
-    }
-  }
-
   const filtered = useMemo(() => {
-    if (!search.trim()) return initialContacts;
+    if (!search.trim()) return contacts;
     const q = search.toLowerCase();
-    return initialContacts.filter(
+    return contacts.filter(
       (c) =>
         c.name.toLowerCase().includes(q) ||
         c.company?.toLowerCase().includes(q) ||
-        c.tags?.some((t) => t.toLowerCase().includes(q))
+        c.role?.toLowerCase().includes(q) ||
+        c.tags?.some((t) => t.toLowerCase().includes(q)),
     );
-  }, [initialContacts, search]);
+  }, [contacts, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pageItems = filtered.slice(
+    (safePage - 1) * PAGE_SIZE,
+    safePage * PAGE_SIZE,
+  );
+
+  // Reset to first page when the search query changes.
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
+
+  // The selected contact, re-derived from the (possibly refreshed) list.
+  const selected = useMemo(
+    () => contacts.find((c) => c.id === selectedId) ?? null,
+    [contacts, selectedId],
+  );
 
   async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -113,8 +68,6 @@ export default function ContactList({
       };
       await createContact(input);
       setShowModal(false);
-      setPrefill(null);
-      setDuplicate(null);
       router.refresh();
     } catch {
       toast.error("저장에 실패했습니다.");
@@ -124,12 +77,14 @@ export default function ContactList({
   }
 
   return (
-    <>
+    <div className="space-y-5">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-charcoal-100">네트워크</h1>
-          <p className="mt-1 text-sm text-charcoal-500">인적 네트워크 관리</p>
+          <p className="mt-1 text-sm text-charcoal-500">
+            인적 네트워크 관리 · {contacts.length}명
+          </p>
         </div>
         <div className="flex gap-2">
           <button
@@ -156,27 +111,8 @@ export default function ContactList({
           >
             {syncing ? "동기화 중..." : "Google 연락처 가져오기"}
           </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={handleScanFile}
-            className="hidden"
-          />
           <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={scanning}
-            className="flex items-center gap-1.5 rounded-lg border border-charcoal-700 px-4 py-2 text-sm font-medium text-charcoal-300 hover:bg-charcoal-800 disabled:opacity-50"
-          >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0Z" />
-            </svg>
-            {scanning ? "인식 중..." : "명함 스캔"}
-          </button>
-          <button
-            onClick={openManualModal}
+            onClick={() => setShowModal(true)}
             className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500"
           >
             + 연락처 추가
@@ -203,28 +139,14 @@ export default function ContactList({
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="이름, 회사, 태그로 검색..."
+          placeholder="이름, 회사, 직책, 태그로 검색..."
           className="w-full rounded-lg border border-charcoal-800 bg-charcoal-900/40 py-2.5 pl-10 pr-4 text-sm text-charcoal-200 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500/50"
         />
       </div>
 
-      {/* Contact Grid */}
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-charcoal-700 py-20">
-          <svg
-            className="h-12 w-12 text-charcoal-700"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1}
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"
-            />
-          </svg>
-          <p className="mt-4 text-sm text-charcoal-500">
+          <p className="text-sm text-charcoal-500">
             {search ? "검색 결과가 없습니다" : "등록된 연락처가 없습니다"}
           </p>
           <p className="mt-1 text-xs text-charcoal-600">
@@ -232,58 +154,104 @@ export default function ContactList({
           </p>
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((contact) => (
-            <button
-              key={contact.id}
-              onClick={() =>
-                router.push(`/${username}/network/${contact.id}`)
-              }
-              className="flex items-start gap-3 rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 p-4 text-left transition-colors hover:border-charcoal-700 hover:bg-charcoal-800/30"
-            >
-              {/* Avatar */}
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-600/20 text-sm font-semibold text-red-400">
-                {contact.name.charAt(0).toUpperCase()}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="flex items-center gap-1.5 font-medium text-charcoal-100">
-                  <span className="truncate">{contact.name}</span>
-                  {contact.linked_user_id && (
-                    <span
-                      title="orbit42 회원"
-                      className="shrink-0 rounded-full bg-red-600/20 px-1.5 py-0.5 text-[9px] font-semibold text-red-400"
-                    >
-                      회원
-                    </span>
-                  )}
-                </p>
-                {(contact.company || contact.role) && (
-                  <p className="mt-0.5 truncate text-xs text-charcoal-500">
-                    {[contact.role, contact.company]
-                      .filter(Boolean)
-                      .join(" @ ")}
-                  </p>
-                )}
-                {contact.tags && contact.tags.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {contact.tags.slice(0, 3).map((tag) => (
-                      <span
-                        key={tag}
-                        className="rounded-full bg-red-600/15 px-2 py-0.5 text-[10px] font-medium text-red-400"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                    {contact.tags.length > 3 && (
-                      <span className="text-[10px] text-charcoal-600">
-                        +{contact.tags.length - 3}
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_400px]">
+          {/* List + pagination */}
+          <div>
+            <div className="overflow-hidden rounded-xl border border-charcoal-800/60">
+              {pageItems.map((contact, i) => {
+                const active = contact.id === selectedId;
+                return (
+                  <button
+                    key={contact.id}
+                    onClick={() => setSelectedId(contact.id)}
+                    className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors ${
+                      i > 0 ? "border-t border-charcoal-800/50" : ""
+                    } ${
+                      active
+                        ? "bg-red-600/10"
+                        : "hover:bg-charcoal-800/30"
+                    }`}
+                  >
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-600/20 text-sm font-semibold text-red-400">
+                      {contact.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="flex items-center gap-1.5 text-sm font-medium text-charcoal-100">
+                        <span className="truncate">{contact.name}</span>
+                        {contact.linked_user_id && (
+                          <span
+                            title="orbit42 회원"
+                            className="shrink-0 rounded-full bg-red-600/20 px-1.5 py-0.5 text-[9px] font-semibold text-red-400"
+                          >
+                            회원
+                          </span>
+                        )}
+                      </p>
+                      {(contact.company || contact.role) && (
+                        <p className="mt-0.5 truncate text-xs text-charcoal-500">
+                          {[contact.role, contact.company]
+                            .filter(Boolean)
+                            .join(" @ ")}
+                        </p>
+                      )}
+                    </div>
+                    {contact.tags && contact.tags.length > 0 && (
+                      <span className="hidden shrink-0 rounded-full bg-red-600/15 px-2 py-0.5 text-[10px] font-medium text-red-400 sm:inline">
+                        {contact.tags[0]}
+                        {contact.tags.length > 1 ? ` +${contact.tags.length - 1}` : ""}
                       </span>
                     )}
-                  </div>
-                )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="mt-4 flex items-center justify-between gap-2">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={safePage <= 1}
+                  className="rounded-lg border border-charcoal-800 px-3 py-1.5 text-sm text-charcoal-300 hover:bg-charcoal-800/40 disabled:opacity-40"
+                >
+                  이전
+                </button>
+                <span className="text-xs text-charcoal-500">
+                  {safePage} / {totalPages} 페이지 · 총 {filtered.length}명
+                </span>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={safePage >= totalPages}
+                  className="rounded-lg border border-charcoal-800 px-3 py-1.5 text-sm text-charcoal-300 hover:bg-charcoal-800/40 disabled:opacity-40"
+                >
+                  다음
+                </button>
               </div>
-            </button>
-          ))}
+            )}
+          </div>
+
+          {/* Detail panel — inline on lg, shown when selected on smaller screens */}
+          <div
+            className={`lg:sticky lg:top-4 lg:self-start ${
+              selected ? "" : "hidden lg:block"
+            }`}
+          >
+            {selected ? (
+              <ContactPanel
+                contact={selected}
+                onChanged={() => router.refresh()}
+                onClose={() => setSelectedId(null)}
+              />
+            ) : (
+              <div className="flex h-full min-h-[300px] flex-col items-center justify-center rounded-2xl border border-dashed border-charcoal-800/60 p-8 text-center">
+                <svg className="h-10 w-10 text-charcoal-700" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Zm6-10.125a1.875 1.875 0 1 1-3.75 0 1.875 1.875 0 0 1 3.75 0Zm1.294 6.336a6.721 6.721 0 0 1-3.17.789 6.721 6.721 0 0 1-3.168-.789 3.376 3.376 0 0 1 6.338 0Z" />
+                </svg>
+                <p className="mt-3 text-sm text-charcoal-500">
+                  연락처를 선택하면 여기에 자세히 표시돼요
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -291,47 +259,23 @@ export default function ContactList({
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="w-full max-w-md rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-base))] p-6">
-            <h2 className="text-lg font-semibold text-charcoal-100">
-              {prefill ? "명함 인식 결과 확인" : "연락처 추가"}
-            </h2>
-            {prefill && (
-              <p className="mt-1 text-xs text-charcoal-500">
-                인식된 정보를 확인하고 수정한 뒤 저장하세요.
-              </p>
-            )}
-            {duplicate && (
-              <div className="mt-3 flex items-center justify-between gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2">
-                <p className="text-xs text-amber-300">
-                  이미 <span className="font-semibold">{duplicate.name}</span> 연락처가 있습니다.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => router.push(`/${username}/network/${duplicate.id}`)}
-                  className="shrink-0 rounded-md border border-amber-500/40 px-2 py-1 text-[11px] font-medium text-amber-300 hover:bg-amber-500/15"
-                >
-                  기존 연락처 열기
-                </button>
-              </div>
-            )}
-            <form key={formKey} onSubmit={handleCreate} className="mt-4 space-y-3">
+            <h2 className="text-lg font-semibold text-charcoal-100">연락처 추가</h2>
+            <form onSubmit={handleCreate} className="mt-4 space-y-3">
               <input
                 name="name"
                 required
                 placeholder="이름 *"
-                defaultValue={prefill?.name ?? ""}
                 className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none"
               />
               <div className="grid gap-3 sm:grid-cols-2">
                 <input
                   name="company"
                   placeholder="회사"
-                  defaultValue={prefill?.company ?? ""}
                   className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none"
                 />
                 <input
                   name="role"
                   placeholder="직책"
-                  defaultValue={prefill?.role ?? ""}
                   className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none"
                 />
               </div>
@@ -340,30 +284,23 @@ export default function ContactList({
                   name="email"
                   type="email"
                   placeholder="이메일"
-                  defaultValue={prefill?.email ?? ""}
                   className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none"
                 />
                 <input
                   name="phone"
                   placeholder="전화번호"
-                  defaultValue={prefill?.phone ?? ""}
                   className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none"
                 />
               </div>
               <input
                 name="tags"
                 placeholder="태그 (쉼표로 구분)"
-                defaultValue={prefill ? "명함" : ""}
                 className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none"
               />
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowModal(false);
-                    setPrefill(null);
-                    setDuplicate(null);
-                  }}
+                  onClick={() => setShowModal(false)}
                   className="rounded-lg px-4 py-2 text-sm text-charcoal-400 hover:text-charcoal-200"
                 >
                   취소
@@ -380,7 +317,6 @@ export default function ContactList({
           </div>
         </div>
       )}
-
-    </>
+    </div>
   );
 }

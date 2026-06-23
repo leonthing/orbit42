@@ -5,11 +5,7 @@ import ContactList from "./ContactList";
 
 export const metadata: Metadata = { title: "네트워크" };
 
-export default async function NetworkPage({
-  params,
-}: {
-  params: { username: string };
-}) {
+export default async function NetworkPage() {
   let contacts: Contact[];
   try {
     contacts = await getContacts();
@@ -19,7 +15,7 @@ export default async function NetworkPage({
 
   return (
     <div className="space-y-6">
-      <ContactList contacts={contacts} username={params.username} />
+      <ContactList contacts={contacts} />
     </div>
   );
 }
