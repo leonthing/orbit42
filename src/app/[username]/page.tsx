@@ -304,9 +304,9 @@ export default async function PublicProfile({
                     href={v as string}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded-lg border border-charcoal-800/60 bg-charcoal-800/20 px-3 py-1 text-xs font-medium text-charcoal-700 hover:border-charcoal-600 hover:text-charcoal-900 dark:text-charcoal-300 dark:hover:text-charcoal-100"
+                    className="rounded-lg border border-charcoal-300 bg-charcoal-800/20 px-3 py-1.5 text-xs font-semibold text-charcoal-200 transition-colors hover:border-red-400/70 hover:text-red-500 dark:border-charcoal-700 dark:hover:text-red-300"
                   >
-                    {k}
+                    {k.charAt(0).toUpperCase() + k.slice(1)}
                   </a>
                 ))}
             </div>
