@@ -940,6 +940,10 @@ export async function bookSlot(args: {
     const endIso = endAt.toISOString();
 
     // ── Host side ──────────────────────────────────────────────────────
+    // Prefer the host's real Google calendar when connected so bookings land
+    // where they actually schedule. The slot's Google calendar wins if set;
+    // otherwise the primary. A native calendar is used only as a fallback
+    // when Google isn't linked.
     const slotCalendarId = (slot.calendar_id as string | null) ?? null;
     let targetGoogleCalId: string | null = null;
     let nativeCalendarId: string | null = null;
@@ -954,38 +958,40 @@ export async function bookSlot(args: {
       } else if (cal?.source === "native") {
         nativeCalendarId = slotCalendarId;
       }
-    } else {
-      // Fall back to primary Google calendar for legacy slots
-      targetGoogleCalId = "primary";
     }
 
     const guestEmail = args.guest_email ?? (await getEmailForUser(guestId));
+    const hostCalendar = await getAuthenticatedCalendar(slot.host_id as string);
+    // No explicit Google target but the host has Google linked → use primary,
+    // and skip the native mirror so the booking isn't duplicated in-app.
+    if (!targetGoogleCalId && hostCalendar) {
+      targetGoogleCalId = "primary";
+      nativeCalendarId = null;
+    }
+
     let hostMirrored = false;
 
-    if (targetGoogleCalId) {
-      const calendar = await getAuthenticatedCalendar(slot.host_id as string);
-      if (calendar) {
-        const ev = await calendar.events.insert({
-          calendarId: targetGoogleCalId,
-          sendUpdates: guestEmail ? "all" : "none",
-          requestBody: {
-            summary: hostEventTitle,
-            description: baseDescription,
-            status: tentative ? "tentative" : "confirmed",
-            start: { dateTime: startIso, timeZone: "Asia/Seoul" },
-            end: { dateTime: endIso, timeZone: "Asia/Seoul" },
-            location: (slot.location_detail as string | null) ?? undefined,
-            attendees: guestEmail ? [{ email: guestEmail, displayName: guestLabel }] : undefined,
-          },
-        });
-        if (ev.data.id) {
-          await db
-            .from("bookings")
-            .update({ google_event_id: ev.data.id })
-            .eq("id", booking.id);
-        }
-        hostMirrored = true;
+    if (targetGoogleCalId && hostCalendar) {
+      const ev = await hostCalendar.events.insert({
+        calendarId: targetGoogleCalId,
+        sendUpdates: guestEmail ? "all" : "none",
+        requestBody: {
+          summary: hostEventTitle,
+          description: baseDescription,
+          status: tentative ? "tentative" : "confirmed",
+          start: { dateTime: startIso, timeZone: "Asia/Seoul" },
+          end: { dateTime: endIso, timeZone: "Asia/Seoul" },
+          location: (slot.location_detail as string | null) ?? undefined,
+          attendees: guestEmail ? [{ email: guestEmail, displayName: guestLabel }] : undefined,
+        },
+      });
+      if (ev.data.id) {
+        await db
+          .from("bookings")
+          .update({ google_event_id: ev.data.id })
+          .eq("id", booking.id);
       }
+      hostMirrored = true;
     } else if (nativeCalendarId) {
       await db.from("events").insert({
         user_id: slot.host_id,
@@ -1066,6 +1072,9 @@ async function removeBookingCalendarEvent(bookingId: string) {
     const slotInfo = booking.slot as unknown as {
       calendar_id: string | null;
     } | null;
+    // We only get here when a Google event exists (eventId set). It lives on
+    // the slot's Google calendar if one is set, otherwise the host's primary
+    // (native-calendar slots are mirrored to primary when Google is linked).
     let calendarId = "primary";
     if (slotInfo?.calendar_id) {
       const { data: cal } = await db
@@ -1075,8 +1084,6 @@ async function removeBookingCalendarEvent(bookingId: string) {
         .single();
       if (cal?.source === "google" && cal.google_calendar_id) {
         calendarId = cal.google_calendar_id as string;
-      } else if (cal?.source === "native") {
-        return; // native events aren't linked back to the booking
       }
     }
 
@@ -1233,7 +1240,7 @@ export async function updateBookingStatus(
   const { data: booking } = await db
     .from("bookings")
     .select(
-      "guest_id, guest_email, guest_name, scheduled_at, host_id, slot:time_slots!bookings_slot_id_fkey(title, location_detail)",
+      "guest_id, guest_email, guest_name, scheduled_at, host_id, google_event_id, slot:time_slots!bookings_slot_id_fkey(title, location_detail, calendar_id)",
     )
     .eq("id", id)
     .eq("host_id", userId)
@@ -1257,6 +1264,36 @@ export async function updateBookingStatus(
       .from("events")
       .update({ tentative: false, updated_at: new Date().toISOString() })
       .eq("booking_id", id);
+    // Flip the host's Google event from tentative → confirmed too.
+    const gid = booking?.google_event_id as string | null | undefined;
+    if (gid) {
+      try {
+        const slotInfo2 = booking!.slot as unknown as {
+          calendar_id: string | null;
+        } | null;
+        let calendarId = "primary";
+        if (slotInfo2?.calendar_id) {
+          const { data: cal } = await db
+            .from("calendars")
+            .select("source, google_calendar_id")
+            .eq("id", slotInfo2.calendar_id)
+            .single();
+          if (cal?.source === "google" && cal.google_calendar_id) {
+            calendarId = cal.google_calendar_id as string;
+          }
+        }
+        const calendar = await getAuthenticatedCalendar(booking!.host_id as string);
+        if (calendar) {
+          await calendar.events.patch({
+            calendarId,
+            eventId: gid,
+            requestBody: { status: "confirmed" },
+          });
+        }
+      } catch (err) {
+        console.error("confirm google status patch", err);
+      }
+    }
   }
 
   // Notify the guest via Resend whenever a decision is made.
@@ -1442,9 +1479,8 @@ export async function rescheduleMyBooking(
           .single();
         if (cal?.source === "google" && cal.google_calendar_id) {
           calendarId = cal.google_calendar_id as string;
-        } else if (cal?.source === "native") {
-          calendarId = "";
         }
+        // native/unknown → event lives on the host's primary calendar
       }
       if (calendarId) {
         const calendar = await getAuthenticatedCalendar(
