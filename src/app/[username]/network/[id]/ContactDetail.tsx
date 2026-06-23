@@ -2,17 +2,22 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Contact } from "../actions";
+import type { Contact, LinkedMember } from "../actions";
 import { updateContact, deleteContact } from "../actions";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
+import MemberLinkCard from "./MemberLinkCard";
 
 export default function ContactDetail({
   contact,
   username,
+  member,
+  initialFollowing,
 }: {
   contact: Contact;
   username: string;
+  member: LinkedMember | null;
+  initialFollowing: boolean;
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -202,6 +207,14 @@ export default function ContactDetail({
           </div>
         </div>
       </div>
+
+      {/* orbit42 member link */}
+      <MemberLinkCard
+        contactId={contact.id}
+        member={member}
+        hasEmail={!!email}
+        initialFollowing={initialFollowing}
+      />
 
       {/* Contact info */}
       <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 p-6">

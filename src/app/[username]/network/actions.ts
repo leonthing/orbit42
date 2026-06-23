@@ -3,6 +3,8 @@
 import { getAdminClient } from "@/lib/supabase";
 import { requireUserId } from "@/lib/db";
 import { getAuthenticatedPeopleApi } from "@/lib/google";
+import { extractCardFields } from "@/lib/card-ocr";
+import type { ScanCardResult } from "@/lib/card-ocr-types";
 
 export interface Contact {
   id: string;
@@ -16,8 +18,34 @@ export interface Contact {
   memo: string | null;
   last_contact_at: string | null;
   business_id: string | null;
+  linked_user_id: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface LinkedMember {
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+}
+
+// Find an orbit42 member by email (case-insensitive; users.email is stored
+// lowercased with a unique index). Never links a contact back to the owner.
+async function findMemberByEmail(
+  email: string,
+  excludeUserId: string,
+): Promise<LinkedMember | null> {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) return null;
+  const db = getAdminClient();
+  const { data } = await db
+    .from("users")
+    .select("id, username, display_name, avatar_url")
+    .ilike("email", normalized)
+    .maybeSingle();
+  if (!data || data.id === excludeUserId) return null;
+  return data as LinkedMember;
 }
 
 export type ContactInput = {
@@ -71,6 +99,11 @@ export async function createContact(input: ContactInput): Promise<Contact> {
   const userId = await requireUserId();
   const db = getAdminClient();
 
+  // Auto-link to an orbit42 member if the email matches one.
+  const linkedUserId = input.email
+    ? (await findMemberByEmail(input.email, userId))?.id ?? null
+    : null;
+
   const now = new Date().toISOString();
   const { data, error } = await db
     .from("contacts")
@@ -85,6 +118,7 @@ export async function createContact(input: ContactInput): Promise<Contact> {
       memo: input.memo || null,
       last_contact_at: input.last_contact_at || null,
       business_id: input.business_id || null,
+      linked_user_id: linkedUserId,
       created_at: now,
       updated_at: now,
     })
@@ -230,4 +264,114 @@ export async function syncGoogleContacts(): Promise<{ created: number; updated: 
   }
 
   return { created, updated };
+}
+
+const onlyDigits = (v: string) => v.replace(/\D/g, "");
+
+/**
+ * Scan a business-card photo (base64) and return extracted fields plus any
+ * existing contact that matches by email or phone. Does NOT save — the client
+ * shows the result in the contact form for the user to review and confirm.
+ */
+export async function scanBusinessCard(
+  base64Data: string,
+  mediaType: string,
+): Promise<ScanCardResult> {
+  const userId = await requireUserId();
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return { fields: null, duplicateId: null, duplicateName: null, error: "no_api_key" };
+  }
+
+  let fields;
+  try {
+    fields = await extractCardFields(base64Data, mediaType);
+  } catch (e) {
+    console.error("Business card scan failed:", e);
+    return { fields: null, duplicateId: null, duplicateName: null, error: "extract_failed" };
+  }
+
+  if (!fields) {
+    return { fields: null, duplicateId: null, duplicateName: null, error: "no_text" };
+  }
+
+  // Dedup against existing contacts by normalized email / phone.
+  let duplicateId: string | null = null;
+  let duplicateName: string | null = null;
+
+  if (fields.email || fields.phone) {
+    const db = getAdminClient();
+    const { data: existing } = await db
+      .from("contacts")
+      .select("id, name, email, phone")
+      .eq("user_id", userId);
+
+    const email = fields.email?.toLowerCase().trim() ?? null;
+    const phone = fields.phone ? onlyDigits(fields.phone) : null;
+
+    const match = (existing ?? []).find((c) => {
+      const ce = c.email?.toLowerCase().trim();
+      const cp = c.phone ? onlyDigits(c.phone) : "";
+      return (email && ce === email) || (phone && phone.length >= 9 && cp === phone);
+    });
+
+    if (match) {
+      duplicateId = match.id;
+      duplicateName = match.name;
+    }
+  }
+
+  return { fields, duplicateId, duplicateName };
+}
+
+/** Resolve a linked member's public profile (for rendering the member card). */
+export async function getLinkedMember(memberId: string): Promise<LinkedMember | null> {
+  await requireUserId();
+  const db = getAdminClient();
+  const { data } = await db
+    .from("users")
+    .select("id, username, display_name, avatar_url")
+    .eq("id", memberId)
+    .maybeSingle();
+  return (data as LinkedMember) ?? null;
+}
+
+/**
+ * Re-run member matching for an existing contact (e.g. a Google-synced one)
+ * using its current email, and persist the result. Returns the matched member.
+ */
+export async function matchContactByEmail(
+  contactId: string,
+): Promise<{ member: LinkedMember | null }> {
+  const userId = await requireUserId();
+  const db = getAdminClient();
+
+  const { data: contact } = await db
+    .from("contacts")
+    .select("id, email")
+    .eq("id", contactId)
+    .eq("user_id", userId)
+    .single();
+
+  if (!contact?.email) return { member: null };
+
+  const member = await findMemberByEmail(contact.email, userId);
+  await db
+    .from("contacts")
+    .update({ linked_user_id: member?.id ?? null, updated_at: new Date().toISOString() })
+    .eq("id", contactId)
+    .eq("user_id", userId);
+
+  return { member };
+}
+
+/** Remove a contact's member link (keeps the contact itself). */
+export async function unlinkContactMember(contactId: string): Promise<void> {
+  const userId = await requireUserId();
+  const db = getAdminClient();
+  await db
+    .from("contacts")
+    .update({ linked_user_id: null, updated_at: new Date().toISOString() })
+    .eq("id", contactId)
+    .eq("user_id", userId);
 }

@@ -1,10 +1,26 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import type { Contact, ContactInput } from "./actions";
-import { createContact, syncGoogleContacts } from "./actions";
+import { createContact, syncGoogleContacts, scanBusinessCard } from "./actions";
+import type { ScannedCardFields } from "@/lib/card-ocr-types";
+import { resizeImageToJpeg } from "@/lib/image-resize";
 import { useToast } from "@/components/Toast";
+
+function fileToBase64(file: File): Promise<{ data: string; mediaType: string }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string; // data:image/jpeg;base64,XXXX
+      const comma = result.indexOf(",");
+      const mediaType = result.slice(5, result.indexOf(";")) || "image/jpeg";
+      resolve({ data: result.slice(comma + 1), mediaType });
+    };
+    reader.onerror = () => reject(new Error("read failed"));
+    reader.readAsDataURL(file);
+  });
+}
 
 export default function ContactList({
   contacts: initialContacts,
@@ -18,7 +34,54 @@ export default function ContactList({
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [prefill, setPrefill] = useState<ScannedCardFields | null>(null);
+  const [duplicate, setDuplicate] = useState<{ id: string; name: string } | null>(null);
+  const [formKey, setFormKey] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const toast = useToast();
+
+  function openManualModal() {
+    setPrefill(null);
+    setDuplicate(null);
+    setFormKey((k) => k + 1);
+    setShowModal(true);
+  }
+
+  async function handleScanFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file
+    if (!file) return;
+
+    setScanning(true);
+    try {
+      const resized = await resizeImageToJpeg(file, { maxDimension: 1600, quality: 0.9 });
+      const { data, mediaType } = await fileToBase64(resized);
+      const result = await scanBusinessCard(data, mediaType);
+
+      if (result.error === "no_api_key") {
+        toast.error("명함 인식이 설정되지 않았습니다.");
+        return;
+      }
+      if (!result.fields) {
+        toast.error("명함에서 정보를 읽지 못했습니다. 더 선명한 사진으로 시도해보세요.");
+        return;
+      }
+
+      setPrefill(result.fields);
+      setDuplicate(
+        result.duplicateId && result.duplicateName
+          ? { id: result.duplicateId, name: result.duplicateName }
+          : null,
+      );
+      setFormKey((k) => k + 1);
+      setShowModal(true);
+    } catch {
+      toast.error("명함 인식에 실패했습니다.");
+    } finally {
+      setScanning(false);
+    }
+  }
 
   const filtered = useMemo(() => {
     if (!search.trim()) return initialContacts;
@@ -50,6 +113,8 @@ export default function ContactList({
       };
       await createContact(input);
       setShowModal(false);
+      setPrefill(null);
+      setDuplicate(null);
       router.refresh();
     } catch {
       toast.error("저장에 실패했습니다.");
@@ -91,8 +156,27 @@ export default function ContactList({
           >
             {syncing ? "동기화 중..." : "Google 연락처 가져오기"}
           </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleScanFile}
+            className="hidden"
+          />
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => fileInputRef.current?.click()}
+            disabled={scanning}
+            className="flex items-center gap-1.5 rounded-lg border border-charcoal-700 px-4 py-2 text-sm font-medium text-charcoal-300 hover:bg-charcoal-800 disabled:opacity-50"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0Z" />
+            </svg>
+            {scanning ? "인식 중..." : "명함 스캔"}
+          </button>
+          <button
+            onClick={openManualModal}
             className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500"
           >
             + 연락처 추가
@@ -162,8 +246,16 @@ export default function ContactList({
                 {contact.name.charAt(0).toUpperCase()}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate font-medium text-charcoal-100">
-                  {contact.name}
+                <p className="flex items-center gap-1.5 font-medium text-charcoal-100">
+                  <span className="truncate">{contact.name}</span>
+                  {contact.linked_user_id && (
+                    <span
+                      title="orbit42 회원"
+                      className="shrink-0 rounded-full bg-red-600/20 px-1.5 py-0.5 text-[9px] font-semibold text-red-400"
+                    >
+                      회원
+                    </span>
+                  )}
                 </p>
                 {(contact.company || contact.role) && (
                   <p className="mt-0.5 truncate text-xs text-charcoal-500">
@@ -200,24 +292,46 @@ export default function ContactList({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="w-full max-w-md rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-base))] p-6">
             <h2 className="text-lg font-semibold text-charcoal-100">
-              연락처 추가
+              {prefill ? "명함 인식 결과 확인" : "연락처 추가"}
             </h2>
-            <form onSubmit={handleCreate} className="mt-4 space-y-3">
+            {prefill && (
+              <p className="mt-1 text-xs text-charcoal-500">
+                인식된 정보를 확인하고 수정한 뒤 저장하세요.
+              </p>
+            )}
+            {duplicate && (
+              <div className="mt-3 flex items-center justify-between gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2">
+                <p className="text-xs text-amber-300">
+                  이미 <span className="font-semibold">{duplicate.name}</span> 연락처가 있습니다.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => router.push(`/${username}/network/${duplicate.id}`)}
+                  className="shrink-0 rounded-md border border-amber-500/40 px-2 py-1 text-[11px] font-medium text-amber-300 hover:bg-amber-500/15"
+                >
+                  기존 연락처 열기
+                </button>
+              </div>
+            )}
+            <form key={formKey} onSubmit={handleCreate} className="mt-4 space-y-3">
               <input
                 name="name"
                 required
                 placeholder="이름 *"
+                defaultValue={prefill?.name ?? ""}
                 className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none"
               />
               <div className="grid gap-3 sm:grid-cols-2">
                 <input
                   name="company"
                   placeholder="회사"
+                  defaultValue={prefill?.company ?? ""}
                   className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none"
                 />
                 <input
                   name="role"
                   placeholder="직책"
+                  defaultValue={prefill?.role ?? ""}
                   className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none"
                 />
               </div>
@@ -226,23 +340,30 @@ export default function ContactList({
                   name="email"
                   type="email"
                   placeholder="이메일"
+                  defaultValue={prefill?.email ?? ""}
                   className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none"
                 />
                 <input
                   name="phone"
                   placeholder="전화번호"
+                  defaultValue={prefill?.phone ?? ""}
                   className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none"
                 />
               </div>
               <input
                 name="tags"
                 placeholder="태그 (쉼표로 구분)"
+                defaultValue={prefill ? "명함" : ""}
                 className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none"
               />
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
+                  onClick={() => {
+                    setShowModal(false);
+                    setPrefill(null);
+                    setDuplicate(null);
+                  }}
                   className="rounded-lg px-4 py-2 text-sm text-charcoal-400 hover:text-charcoal-200"
                 >
                   취소
