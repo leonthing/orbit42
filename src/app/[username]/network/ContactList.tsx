@@ -1,23 +1,65 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import type { Contact, ContactInput } from "./actions";
-import { createContact, syncGoogleContacts } from "./actions";
+import { createContact, purgeSyncedContacts } from "./actions";
 import ContactPanel from "./ContactPanel";
+import FriendFinder from "./FriendFinder";
 import { useToast } from "@/components/Toast";
 
-const PAGE_SIZE = 12;
+// Index order: Korean leading consonants, then Latin A–Z, then "#" (etc).
+const KO = ["ㄱ", "ㄴ", "ㄷ", "ㄹ", "ㅁ", "ㅂ", "ㅅ", "ㅇ", "ㅈ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"];
+const LATIN = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+const ORDER = [...KO, ...LATIN, "#"];
+const ORDER_INDEX = new Map(ORDER.map((c, i) => [c, i]));
+
+// 19 leading consonants (초성); double consonants fold into their base.
+const CHO = ["ㄱ", "ㄲ", "ㄴ", "ㄷ", "ㄸ", "ㄹ", "ㅁ", "ㅂ", "ㅃ", "ㅅ", "ㅆ", "ㅇ", "ㅈ", "ㅉ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"];
+const CHO_BASE: Record<string, string> = { "ㄲ": "ㄱ", "ㄸ": "ㄷ", "ㅃ": "ㅂ", "ㅆ": "ㅅ", "ㅉ": "ㅈ" };
+
+function initialOf(name: string): string {
+  const ch = (name || "").trim().charAt(0);
+  if (!ch) return "#";
+  const code = ch.charCodeAt(0);
+  if (code >= 0xac00 && code <= 0xd7a3) {
+    const cho = CHO[Math.floor((code - 0xac00) / 588)];
+    return CHO_BASE[cho] ?? cho;
+  }
+  if (ch >= "a" && ch <= "z") return ch.toUpperCase();
+  if (ch >= "A" && ch <= "Z") return ch;
+  return "#";
+}
 
 export default function ContactList({ contacts }: { contacts: Contact[] }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [syncing, setSyncing] = useState(false);
+  const [showFinder, setShowFinder] = useState(false);
+  const [purging, setPurging] = useState(false);
   const toast = useToast();
+  const groupRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  const syncedCount = useMemo(
+    () => contacts.filter((c) => c.google_contact_id).length,
+    [contacts],
+  );
+
+  async function handlePurge() {
+    setPurging(true);
+    try {
+      const { deleted } = await purgeSyncedContacts();
+      toast.success(`가져온 연락처 ${deleted}건을 정리했어요.`);
+      setSelectedId(null);
+      router.refresh();
+    } catch {
+      toast.error("정리에 실패했습니다.");
+    } finally {
+      setPurging(false);
+    }
+  }
 
   const filtered = useMemo(() => {
     if (!search.trim()) return contacts;
@@ -31,19 +73,33 @@ export default function ContactList({ contacts }: { contacts: Contact[] }) {
     );
   }, [contacts, search]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const pageItems = filtered.slice(
-    (safePage - 1) * PAGE_SIZE,
-    safePage * PAGE_SIZE,
+  // Sorted, grouped by initial (가나다 / ABC).
+  const groups = useMemo(() => {
+    const withInit = filtered.map((c) => ({ c, init: initialOf(c.name) }));
+    withInit.sort((a, b) => {
+      const oa = ORDER_INDEX.get(a.init) ?? 999;
+      const ob = ORDER_INDEX.get(b.init) ?? 999;
+      if (oa !== ob) return oa - ob;
+      return a.c.name.localeCompare(b.c.name, "ko");
+    });
+    const out: { init: string; items: Contact[] }[] = [];
+    for (const { c, init } of withInit) {
+      const last = out[out.length - 1];
+      if (last && last.init === init) last.items.push(c);
+      else out.push({ init, items: [c] });
+    }
+    return out;
+  }, [filtered]);
+
+  const activeInitials = useMemo(
+    () => new Set(groups.map((g) => g.init)),
+    [groups],
   );
 
-  // Reset to first page when the search query changes.
-  useEffect(() => {
-    setPage(1);
-  }, [search]);
+  function jumpTo(init: string) {
+    groupRefs.current[init]?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
-  // The selected contact, re-derived from the (possibly refreshed) list.
   const selected = useMemo(
     () => contacts.find((c) => c.id === selectedId) ?? null,
     [contacts, selectedId],
@@ -88,28 +144,13 @@ export default function ContactList({ contacts }: { contacts: Contact[] }) {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={async () => {
-              setSyncing(true);
-              try {
-                const result = await syncGoogleContacts();
-                if (result.error === "google_not_connected") {
-                  window.location.href = "/api/google?return=network";
-                  return;
-                }
-                toast.success(
-                  `동기화 완료: ${result.created}건 추가, ${result.updated}건 업데이트`,
-                );
-                router.refresh();
-              } catch {
-                toast.error("동기화에 실패했습니다.");
-              } finally {
-                setSyncing(false);
-              }
-            }}
-            disabled={syncing}
-            className="rounded-lg border border-charcoal-700 px-4 py-2 text-sm font-medium text-charcoal-300 hover:bg-charcoal-800 disabled:opacity-50"
+            onClick={() => setShowFinder(true)}
+            className="flex items-center gap-1.5 rounded-lg border border-charcoal-700 px-4 py-2 text-sm font-medium text-charcoal-300 hover:bg-charcoal-800"
           >
-            {syncing ? "동기화 중..." : "Google 연락처 가져오기"}
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+            </svg>
+            연락처로 친구 찾기
           </button>
           <button
             onClick={() => setShowModal(true)}
@@ -119,6 +160,25 @@ export default function ContactList({ contacts }: { contacts: Contact[] }) {
           </button>
         </div>
       </div>
+
+      {/* Cleanup banner for previously bulk-imported contacts */}
+      {syncedCount > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] px-4 py-3">
+          <p className="text-xs leading-relaxed text-amber-300/90">
+            예전에 가져온 Google 연락처{" "}
+            <span className="font-semibold">{syncedCount.toLocaleString("ko-KR")}건</span>이
+            저장돼 있어요. 이제 연락처는 직접 저장한 것만 관리하고, 지인 찾기는
+            저장 없이 매칭해요.
+          </p>
+          <button
+            onClick={handlePurge}
+            disabled={purging}
+            className="shrink-0 rounded-lg border border-amber-500/40 px-3 py-1.5 text-xs font-medium text-amber-200 hover:bg-amber-500/15 disabled:opacity-50"
+          >
+            {purging ? "정리 중..." : "가져온 연락처 정리"}
+          </button>
+        </div>
+      )}
 
       {/* Search */}
       <div className="relative">
@@ -155,81 +215,93 @@ export default function ContactList({ contacts }: { contacts: Contact[] }) {
         </div>
       ) : (
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_400px]">
-          {/* List + pagination */}
-          <div>
-            <div className="overflow-hidden rounded-xl border border-charcoal-800/60">
-              {pageItems.map((contact, i) => {
-                const active = contact.id === selectedId;
+          {/* List with A–Z / 가나다 index */}
+          <div className="flex gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="rounded-xl border border-charcoal-800/60">
+                {groups.map((g) => (
+                  <div
+                    key={g.init}
+                    ref={(el) => {
+                      groupRefs.current[g.init] = el;
+                    }}
+                    className="scroll-mt-24"
+                  >
+                    <div className="sticky top-0 z-10 border-b border-charcoal-800/50 bg-[rgb(var(--bg-base))]/90 px-4 py-1.5 text-xs font-bold text-charcoal-400 backdrop-blur">
+                      {g.init}
+                    </div>
+                    {g.items.map((contact) => {
+                      const active = contact.id === selectedId;
+                      return (
+                        <button
+                          key={contact.id}
+                          onClick={() => setSelectedId(contact.id)}
+                          className={`flex w-full items-center gap-3 border-t border-charcoal-800/40 px-4 py-3 text-left transition-colors first:border-t-0 ${
+                            active ? "bg-red-600/10" : "hover:bg-charcoal-800/30"
+                          }`}
+                        >
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-600/20 text-sm font-semibold text-red-400">
+                            {contact.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="flex items-center gap-1.5 text-sm font-medium text-charcoal-100">
+                              <span className="truncate">{contact.name}</span>
+                              {contact.linked_user_id && (
+                                <span
+                                  title="orbit42 회원"
+                                  className="shrink-0 rounded-full bg-red-600/20 px-1.5 py-0.5 text-[9px] font-semibold text-red-400"
+                                >
+                                  회원
+                                </span>
+                              )}
+                            </p>
+                            {(contact.company || contact.role) && (
+                              <p className="mt-0.5 truncate text-xs text-charcoal-500">
+                                {[contact.role, contact.company]
+                                  .filter(Boolean)
+                                  .join(" @ ")}
+                              </p>
+                            )}
+                          </div>
+                          {contact.tags && contact.tags.length > 0 && (
+                            <span className="hidden shrink-0 rounded-full bg-red-600/15 px-2 py-0.5 text-[10px] font-medium text-red-400 sm:inline">
+                              {contact.tags[0]}
+                              {contact.tags.length > 1
+                                ? ` +${contact.tags.length - 1}`
+                                : ""}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Jump index */}
+            <div className="sticky top-4 hidden h-fit flex-col items-center gap-0.5 self-start py-1 sm:flex">
+              {ORDER.map((init) => {
+                const has = activeInitials.has(init);
                 return (
                   <button
-                    key={contact.id}
-                    onClick={() => setSelectedId(contact.id)}
-                    className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors ${
-                      i > 0 ? "border-t border-charcoal-800/50" : ""
-                    } ${
-                      active
-                        ? "bg-red-600/10"
-                        : "hover:bg-charcoal-800/30"
+                    key={init}
+                    onClick={() => has && jumpTo(init)}
+                    disabled={!has}
+                    className={`text-[10px] leading-tight transition-colors ${
+                      has
+                        ? "font-semibold text-charcoal-400 hover:text-red-400"
+                        : "text-charcoal-700"
                     }`}
                   >
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-600/20 text-sm font-semibold text-red-400">
-                      {contact.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="flex items-center gap-1.5 text-sm font-medium text-charcoal-100">
-                        <span className="truncate">{contact.name}</span>
-                        {contact.linked_user_id && (
-                          <span
-                            title="orbit42 회원"
-                            className="shrink-0 rounded-full bg-red-600/20 px-1.5 py-0.5 text-[9px] font-semibold text-red-400"
-                          >
-                            회원
-                          </span>
-                        )}
-                      </p>
-                      {(contact.company || contact.role) && (
-                        <p className="mt-0.5 truncate text-xs text-charcoal-500">
-                          {[contact.role, contact.company]
-                            .filter(Boolean)
-                            .join(" @ ")}
-                        </p>
-                      )}
-                    </div>
-                    {contact.tags && contact.tags.length > 0 && (
-                      <span className="hidden shrink-0 rounded-full bg-red-600/15 px-2 py-0.5 text-[10px] font-medium text-red-400 sm:inline">
-                        {contact.tags[0]}
-                        {contact.tags.length > 1 ? ` +${contact.tags.length - 1}` : ""}
-                      </span>
-                    )}
+                    {init}
                   </button>
                 );
               })}
             </div>
-
-            {totalPages > 1 && (
-              <div className="mt-4 flex items-center justify-between gap-2">
-                <button
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={safePage <= 1}
-                  className="rounded-lg border border-charcoal-800 px-3 py-1.5 text-sm text-charcoal-300 hover:bg-charcoal-800/40 disabled:opacity-40"
-                >
-                  이전
-                </button>
-                <span className="text-xs text-charcoal-500">
-                  {safePage} / {totalPages} 페이지 · 총 {filtered.length}명
-                </span>
-                <button
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={safePage >= totalPages}
-                  className="rounded-lg border border-charcoal-800 px-3 py-1.5 text-sm text-charcoal-300 hover:bg-charcoal-800/40 disabled:opacity-40"
-                >
-                  다음
-                </button>
-              </div>
-            )}
           </div>
 
-          {/* Detail panel — inline on lg, shown when selected on smaller screens */}
+          {/* Detail panel */}
           <div
             className={`lg:sticky lg:top-4 lg:self-start ${
               selected ? "" : "hidden lg:block"
@@ -317,6 +389,8 @@ export default function ContactList({ contacts }: { contacts: Contact[] }) {
           </div>
         </div>
       )}
+
+      {showFinder && <FriendFinder onClose={() => setShowFinder(false)} />}
     </div>
   );
 }

@@ -19,6 +19,7 @@ export interface Contact {
   last_contact_at: string | null;
   business_id: string | null;
   linked_user_id: string | null;
+  google_contact_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -164,106 +165,127 @@ export async function deleteContact(id: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
-export async function syncGoogleContacts(): Promise<{ created: number; updated: number; error?: string }> {
+export interface ContactMatch {
+  member: LinkedMember;
+  /** How this person is saved in the user's Google contacts. */
+  contactName: string | null;
+  isFollowing: boolean;
+}
+
+/**
+ * Privacy-first "find friends": read the user's Google contacts transiently,
+ * match their emails against existing orbit42 members, and return ONLY the
+ * matches. The raw address book is never written to our database — everything
+ * that isn't already an orbit42 user is discarded.
+ */
+export async function findMembersFromContacts(): Promise<{
+  matches: ContactMatch[];
+  scanned: number;
+  error?: string;
+}> {
   const userId = await requireUserId();
 
   let people;
   try {
     people = await getAuthenticatedPeopleApi(userId);
   } catch {
-    return { created: 0, updated: 0, error: "google_not_connected" };
+    return { matches: [], scanned: 0, error: "google_not_connected" };
+  }
+  if (!people) return { matches: [], scanned: 0, error: "google_not_connected" };
+
+  // Collect contact emails (with a display name for context). Not persisted.
+  const nameByEmail = new Map<string, string>();
+  let nextPageToken: string | undefined;
+  try {
+    do {
+      const res = await people.people.connections.list({
+        resourceName: "people/me",
+        pageSize: 1000,
+        personFields: "names,emailAddresses",
+        pageToken: nextPageToken,
+      });
+      for (const person of res.data.connections ?? []) {
+        const nm = person.names?.[0]?.displayName ?? "";
+        for (const e of person.emailAddresses ?? []) {
+          const v = e.value?.toLowerCase().trim();
+          if (v && !nameByEmail.has(v)) nameByEmail.set(v, nm);
+        }
+      }
+      nextPageToken = res.data.nextPageToken ?? undefined;
+    } while (nextPageToken);
+  } catch {
+    return { matches: [], scanned: 0, error: "google_not_connected" };
   }
 
-  if (!people) {
-    return { created: 0, updated: 0, error: "google_not_connected" };
-  }
+  const emails = Array.from(nameByEmail.keys());
+  const scanned = emails.length;
+  if (scanned === 0) return { matches: [], scanned: 0 };
 
   const db = getAdminClient();
-  let created = 0;
-  let updated = 0;
-  let nextPageToken: string | undefined;
 
-  try {
-    // Test API access — catches missing contacts scope
-    await people.people.connections.list({
-      resourceName: "people/me",
-      pageSize: 1,
-      personFields: "names",
-    });
-  } catch {
-    return { created: 0, updated: 0, error: "google_not_connected" };
-  }
-
-  // Fetch all Google contacts first
-  const allContacts: { googleContactId: string; name: string; email: string | null; phone: string | null; company: string | null; role: string | null }[] = [];
-
-  do {
-    const res = await people.people.connections.list({
-      resourceName: "people/me",
-      pageSize: 1000,
-      personFields: "names,emailAddresses,phoneNumbers,organizations",
-      pageToken: nextPageToken,
-    });
-
-    for (const person of res.data.connections ?? []) {
-      const name = person.names?.[0]?.displayName;
-      if (!name || !person.resourceName) continue;
-      const org = person.organizations?.[0];
-      allContacts.push({
-        googleContactId: person.resourceName,
-        name,
-        email: person.emailAddresses?.[0]?.value ?? null,
-        phone: person.phoneNumbers?.[0]?.value ?? null,
-        company: org?.name ?? null,
-        role: org?.title ?? null,
+  // Match emails → orbit42 users in chunks. Only matched users are kept.
+  const foundById = new Map<string, { user: LinkedMember; email: string }>();
+  for (let i = 0; i < emails.length; i += 300) {
+    const chunk = emails.slice(i, i + 300);
+    const { data } = await db
+      .from("users")
+      .select("id, username, display_name, avatar_url, email")
+      .in("email", chunk);
+    for (const u of (data ?? []) as Array<LinkedMember & { email: string | null }>) {
+      if (u.id === userId || foundById.has(u.id)) continue;
+      foundById.set(u.id, {
+        user: {
+          id: u.id,
+          username: u.username,
+          display_name: u.display_name,
+          avatar_url: u.avatar_url,
+        },
+        email: (u.email ?? "").toLowerCase(),
       });
     }
-    nextPageToken = res.data.nextPageToken ?? undefined;
-  } while (nextPageToken);
+  }
+  if (foundById.size === 0) return { matches: [], scanned };
 
-  if (allContacts.length === 0) return { created: 0, updated: 0 };
+  // Mark who the user already follows.
+  const { data: myFollows } = await db
+    .from("follows")
+    .select("following_id")
+    .eq("follower_id", userId);
+  const followingSet = new Set(
+    (myFollows ?? []).map((f) => f.following_id as string),
+  );
 
-  // Fetch all existing synced contacts in one query
-  const { data: existing } = await db
+  const matches: ContactMatch[] = Array.from(foundById.values()).map(
+    ({ user, email }) => ({
+      member: user,
+      contactName: nameByEmail.get(email) || null,
+      isFollowing: followingSet.has(user.id),
+    }),
+  );
+
+  // Not-yet-followed first, then alphabetical.
+  matches.sort((a, b) => {
+    if (a.isFollowing !== b.isFollowing) return a.isFollowing ? 1 : -1;
+    return (a.member.display_name || a.member.username).localeCompare(
+      b.member.display_name || b.member.username,
+      "ko",
+    );
+  });
+
+  return { matches, scanned };
+}
+
+/** Delete contacts that were bulk-imported from Google (google_contact_id set). */
+export async function purgeSyncedContacts(): Promise<{ deleted: number }> {
+  const userId = await requireUserId();
+  const db = getAdminClient();
+  const { data } = await db
     .from("contacts")
-    .select("id, google_contact_id")
+    .delete()
     .eq("user_id", userId)
-    .not("google_contact_id", "is", null);
-
-  const existingMap = new Map((existing ?? []).map((c) => [c.google_contact_id, c.id]));
-  const now = new Date().toISOString();
-
-  const toInsert: Record<string, unknown>[] = [];
-  const toUpdate: { id: string; data: Record<string, unknown> }[] = [];
-
-  for (const c of allContacts) {
-    const existingId = existingMap.get(c.googleContactId);
-    if (existingId) {
-      toUpdate.push({ id: existingId, data: { name: c.name, email: c.email, phone: c.phone, company: c.company, role: c.role, updated_at: now } });
-    } else {
-      toInsert.push({ user_id: userId, google_contact_id: c.googleContactId, name: c.name, email: c.email, phone: c.phone, company: c.company, role: c.role, tags: [], created_at: now, updated_at: now });
-    }
-  }
-
-  // Batch insert
-  if (toInsert.length > 0) {
-    const { error } = await db.from("contacts").insert(toInsert);
-    if (!error) created = toInsert.length;
-  }
-
-  // Batch update (supabase doesn't support bulk update, so batch in parallel)
-  if (toUpdate.length > 0) {
-    const chunks = [];
-    for (let i = 0; i < toUpdate.length; i += 50) {
-      chunks.push(toUpdate.slice(i, i + 50));
-    }
-    for (const chunk of chunks) {
-      await Promise.all(chunk.map((u) => db.from("contacts").update(u.data).eq("id", u.id)));
-    }
-    updated = toUpdate.length;
-  }
-
-  return { created, updated };
+    .not("google_contact_id", "is", null)
+    .select("id");
+  return { deleted: data?.length ?? 0 };
 }
 
 const onlyDigits = (v: string) => v.replace(/\D/g, "");
