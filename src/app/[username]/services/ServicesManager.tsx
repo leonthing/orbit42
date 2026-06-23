@@ -175,6 +175,7 @@ function NewMenuForm({
           />
         </Field>
       </div>
+      {price > 0 && <PaymentNote />}
       <Field label="설명 (선택)">
         <textarea
           rows={2}
@@ -357,6 +358,7 @@ function EditMenuForm({
           />
         </Field>
       </div>
+      {price > 0 && <PaymentNote />}
       <Field label="설명 (선택)">
         <textarea
           rows={2}
@@ -399,5 +401,21 @@ function Field({
       </span>
       {children}
     </label>
+  );
+}
+
+function PaymentNote() {
+  return (
+    <div className="flex items-start gap-2 rounded-lg border border-charcoal-800/60 bg-charcoal-800/30 px-3 py-2.5 text-xs leading-relaxed text-charcoal-400">
+      <svg className="mt-0.5 h-4 w-4 shrink-0 text-charcoal-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="5" width="20" height="14" rx="2" />
+        <path d="M2 10h20" />
+      </svg>
+      <span>
+        유료 서비스는 예약 시 <b className="text-charcoal-200">호스트에게 직접 결제</b>로
+        진행돼요. 예약을 먼저 확정하고 만난 자리에서 결제받으시면 됩니다.
+        <span className="text-charcoal-600"> (온라인 결제는 준비 중)</span>
+      </span>
+    </div>
   );
 }
