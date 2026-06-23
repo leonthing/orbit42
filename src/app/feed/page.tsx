@@ -148,7 +148,15 @@ export default async function FeedPage() {
     });
   }
 
-  // Feed shows only people I follow (exclude myself).
+  // Include my own posts in my feed (like every other social feed).
+  if (viewerId) {
+    authorMap.set(viewerId, {
+      username: session.username,
+      display_name: (viewerProfile?.display_name as string | null) ?? null,
+      avatar_url: (viewerProfile?.avatar_url as string | null) ?? null,
+    });
+  }
+
   const authorIds = Array.from(authorMap.keys());
 
   // Time windows
