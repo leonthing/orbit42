@@ -42,6 +42,7 @@ export default async function BookingSharePage({
       id: s.id,
       slug: s.slug,
       title: s.title,
+      description: s.description ?? null,
       duration_min: s.duration_min,
       price_cents: s.price_cents,
       slot_type: s.slot_type,

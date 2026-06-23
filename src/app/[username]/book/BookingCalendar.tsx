@@ -9,11 +9,25 @@ export type BookSlot = {
   id: string;
   slug: string;
   title: string;
+  description: string | null;
   duration_min: number;
   price_cents: number;
   slot_type: string;
   location_detail: string | null;
   options: Array<{ availability_id: string | null; start_at: string; end_at: string }>;
+};
+
+type Pick = { slot: BookSlot; start_at: string; availability_id: string | null };
+
+const priceLabel = (cents: number) =>
+  cents === 0 ? "FREE" : `₩${(cents / 100).toLocaleString("ko-KR")}`;
+
+const firstDayOf = (slot: BookSlot): Date | null => {
+  if (slot.options.length === 0) return null;
+  const earliest = slot.options.reduce((a, b) =>
+    new Date(a.start_at) < new Date(b.start_at) ? a : b,
+  );
+  return atDayStart(new Date(earliest.start_at));
 };
 
 export function BookingCalendar({
@@ -25,70 +39,62 @@ export function BookingCalendar({
   hostName: string;
   loggedIn: boolean;
 }) {
-  // Flatten options with their slot metadata for filtering
-  const flat = useMemo(() => {
-    const out: Array<{
-      slot: BookSlot;
-      start_at: string;
-      availability_id: string | null;
-    }> = [];
-    for (const s of slots) {
-      for (const o of s.options) {
-        out.push({ slot: s, start_at: o.start_at, availability_id: o.availability_id });
-      }
-    }
-    return out.sort(
+  // Only slots that actually have bookable times.
+  const activeSlots = useMemo(
+    () => slots.filter((s) => s.options.length > 0),
+    [slots],
+  );
+
+  // Step 1: which service? Auto-pick when there's only one.
+  const [selectedSlotId, setSelectedSlotId] = useState<string | null>(() =>
+    activeSlots.length === 1 ? activeSlots[0].id : null,
+  );
+  const selectedSlot = useMemo(
+    () => activeSlots.find((s) => s.id === selectedSlotId) ?? null,
+    [activeSlots, selectedSlotId],
+  );
+
+  // Step 2: the selected slot's days/times.
+  const byDay = useMemo(() => {
+    const map = new Map<string, Pick[]>();
+    if (!selectedSlot) return map;
+    const sorted = [...selectedSlot.options].sort(
       (a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime(),
     );
-  }, [slots]);
-
-  const durations = useMemo(() => {
-    const set = new Set<number>();
-    for (const s of slots) if (s.options.length > 0) set.add(s.duration_min);
-    return Array.from(set).sort((a, b) => a - b);
-  }, [slots]);
-
-  const slotTypes = useMemo(() => {
-    const set = new Set<string>();
-    for (const s of slots) if (s.options.length > 0) set.add(s.slot_type);
-    return Array.from(set);
-  }, [slots]);
-
-  // Map of day-key → options for fast lookup
-  const byDay = useMemo(() => {
-    const map = new Map<string, typeof flat>();
-    for (const o of flat) {
-      const d = new Date(o.start_at);
-      const k = dayKey(d);
+    for (const o of sorted) {
+      const k = dayKey(new Date(o.start_at));
       if (!map.has(k)) map.set(k, []);
-      map.get(k)!.push(o);
+      map.get(k)!.push({
+        slot: selectedSlot,
+        start_at: o.start_at,
+        availability_id: o.availability_id,
+      });
     }
     return map;
-  }, [flat]);
+  }, [selectedSlot]);
 
-  // Default: first day with options
-  const firstDate = flat[0] ? atDayStart(new Date(flat[0].start_at)) : null;
-  const [monthAnchor, setMonthAnchor] = useState<Date>(() => firstDate ?? atDayStart(new Date()));
-  const [selectedDate, setSelectedDate] = useState<Date | null>(firstDate);
-  const [duration, setDuration] = useState<number | null>(null);
-  const [slotType, setSlotType] = useState<string | null>(null);
+  const initialDate = selectedSlot ? firstDayOf(selectedSlot) : null;
+  const [monthAnchor, setMonthAnchor] = useState<Date>(
+    () => initialDate ?? atDayStart(new Date()),
+  );
+  const [selectedDate, setSelectedDate] = useState<Date | null>(initialDate);
+  const [picked, setPicked] = useState<Pick | null>(null);
 
-  // Filtered options for selected day
+  function chooseSlot(id: string) {
+    const slot = activeSlots.find((s) => s.id === id) ?? null;
+    setSelectedSlotId(id);
+    setPicked(null);
+    const fd = slot ? firstDayOf(slot) : null;
+    setSelectedDate(fd);
+    if (fd) setMonthAnchor(fd);
+  }
+
   const optionsForDay = useMemo(() => {
     if (!selectedDate) return [];
-    const k = dayKey(selectedDate);
-    let list = byDay.get(k) ?? [];
-    if (duration) list = list.filter((o) => o.slot.duration_min === duration);
-    if (slotType) list = list.filter((o) => o.slot.slot_type === slotType);
-    return list;
-  }, [byDay, selectedDate, duration, slotType]);
+    return byDay.get(dayKey(selectedDate)) ?? [];
+  }, [byDay, selectedDate]);
 
-  const [picked, setPicked] = useState<
-    | { slot: BookSlot; start_at: string; availability_id: string | null }
-    | null
-  >(null);
-
-  if (flat.length === 0) {
+  if (activeSlots.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-charcoal-800/60 p-10 text-center">
         <p className="text-sm font-semibold text-charcoal-200">
@@ -102,137 +108,157 @@ export function BookingCalendar({
   }
 
   return (
-    <div className="grid gap-5 md:grid-cols-[300px_minmax(0,1fr)] md:gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
-      <MonthCalendar
-        anchor={monthAnchor}
-        onAnchorChange={setMonthAnchor}
-        selected={selectedDate}
-        onSelect={(d) => {
-          setSelectedDate(d);
-          setPicked(null);
-        }}
-        byDay={byDay}
+    <div className="space-y-5">
+      {/* Step 1 — choose a service */}
+      <SlotChooser
+        slots={activeSlots}
+        selectedId={selectedSlotId}
+        onSelect={chooseSlot}
       />
 
-      <div className="space-y-5">
-        <section className="rounded-2xl border border-charcoal-800/60 bg-charcoal-900/30 p-5">
-          <div className="flex items-baseline justify-between gap-4">
-            <h2 className="text-base font-semibold text-charcoal-100">
-              {selectedDate
-                ? selectedDate.toLocaleDateString("ko-KR", {
-                    month: "long",
-                    day: "numeric",
-                    weekday: "long",
-                  })
-                : "날짜를 선택하세요"}
-            </h2>
-            <p className="text-xs text-charcoal-500">
-              {selectedDate ? `${optionsForDay.length}개의 시간` : ""}
-            </p>
-          </div>
+      {/* Step 2 — pick a time for the chosen service */}
+      {selectedSlot ? (
+        <div className="grid gap-5 md:grid-cols-[300px_minmax(0,1fr)] md:gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+          <MonthCalendar
+            anchor={monthAnchor}
+            onAnchorChange={setMonthAnchor}
+            selected={selectedDate}
+            onSelect={(d) => {
+              setSelectedDate(d);
+              setPicked(null);
+            }}
+            byDay={byDay}
+          />
 
-          {/* Filters */}
-          {(durations.length > 1 || slotTypes.length > 1) && (
-            <div className="mt-4 space-y-3">
-              {durations.length > 1 && (
-                <FilterRow label="시간">
-                  <Chip
-                    active={duration === null}
-                    onClick={() => setDuration(null)}
-                    label="전체"
-                  />
-                  {durations.map((d) => (
-                    <Chip
-                      key={d}
-                      active={duration === d}
-                      onClick={() => setDuration(d)}
-                      label={`${d}분`}
-                    />
-                  ))}
-                </FilterRow>
-              )}
-              {slotTypes.length > 1 && (
-                <FilterRow label="종류">
-                  <Chip
-                    active={slotType === null}
-                    onClick={() => setSlotType(null)}
-                    label="전체"
-                  />
-                  {slotTypes.map((t) => (
-                    <Chip
-                      key={t}
-                      active={slotType === t}
-                      onClick={() => setSlotType(t)}
-                      label={
-                        t === "1on1"
-                          ? "1:1"
-                          : t === "companion"
-                            ? "동행"
-                            : t === "group"
-                              ? "그룹"
-                              : t
-                      }
-                    />
-                  ))}
-                </FilterRow>
-              )}
-            </div>
-          )}
-
-          {/* Time chips */}
-          {selectedDate && (
-            <div className="mt-5">
-              {optionsForDay.length === 0 ? (
-                <p className="text-sm text-charcoal-500">
-                  이 조건에 맞는 시간이 없어요.
+          <div className="space-y-5">
+            <section className="rounded-2xl border border-charcoal-800/60 bg-charcoal-900/30 p-5">
+              <div className="flex items-baseline justify-between gap-4">
+                <h2 className="text-base font-semibold text-charcoal-100">
+                  {selectedDate
+                    ? selectedDate.toLocaleDateString("ko-KR", {
+                        month: "long",
+                        day: "numeric",
+                        weekday: "long",
+                      })
+                    : "날짜를 선택하세요"}
+                </h2>
+                <p className="text-xs text-charcoal-500">
+                  {selectedDate ? `${optionsForDay.length}개의 시간` : ""}
                 </p>
-              ) : (
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {optionsForDay.map((o) => {
-                    const key = `${o.slot.id}_${o.start_at}`;
-                    const active = picked
-                      ? picked.slot.id === o.slot.id && picked.start_at === o.start_at
-                      : false;
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => setPicked(o)}
-                        className={`rounded-lg border px-3 py-2 text-left transition-colors ${
-                          active
-                            ? "border-red-500 bg-red-500/20 text-charcoal-100"
-                            : "border-charcoal-800/60 bg-charcoal-800/30 text-charcoal-200 hover:border-red-500/60 hover:bg-red-500/10"
-                        }`}
-                      >
-                        <p className="text-sm font-semibold tabular-nums">
-                          {new Date(o.start_at).toLocaleTimeString("ko-KR", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </p>
-                        <p className="mt-0.5 truncate text-[11px] text-charcoal-400">
-                          {o.slot.title}
-                        </p>
-                        <p className="text-[10px] text-charcoal-500">
-                          {o.slot.duration_min}분 ·{" "}
-                          {o.slot.price_cents === 0
-                            ? "FREE"
-                            : `₩${(o.slot.price_cents / 100).toLocaleString("ko-KR")}`}
-                        </p>
-                      </button>
-                    );
-                  })}
+              </div>
+
+              {selectedDate && (
+                <div className="mt-5">
+                  {optionsForDay.length === 0 ? (
+                    <p className="text-sm text-charcoal-500">
+                      이 날은 예약 가능한 시간이 없어요.
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {optionsForDay.map((o) => {
+                        const active = picked
+                          ? picked.start_at === o.start_at
+                          : false;
+                        return (
+                          <button
+                            key={o.start_at}
+                            type="button"
+                            onClick={() => setPicked(o)}
+                            className={`rounded-lg border px-3 py-2.5 text-center transition-colors ${
+                              active
+                                ? "border-red-500 bg-red-500/20 text-charcoal-100"
+                                : "border-charcoal-800/60 bg-charcoal-800/30 text-charcoal-200 hover:border-red-500/60 hover:bg-red-500/10"
+                            }`}
+                          >
+                            <p className="text-sm font-semibold tabular-nums">
+                              {new Date(o.start_at).toLocaleTimeString("ko-KR", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
-          )}
-        </section>
+            </section>
 
-        {picked && (
-          <ConfirmBook picked={picked} hostName={hostName} loggedIn={loggedIn} />
-        )}
-      </div>
+            {picked && (
+              <ConfirmBook picked={picked} hostName={hostName} loggedIn={loggedIn} />
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-dashed border-charcoal-800/60 p-10 text-center">
+          <p className="text-sm font-semibold text-charcoal-200">
+            예약할 항목을 먼저 선택하세요
+          </p>
+          <p className="mt-2 text-sm text-charcoal-500">
+            위에서 원하는 미팅을 고르면 가능한 날짜와 시간이 나와요.
+          </p>
+        </div>
+      )}
     </div>
+  );
+}
+
+function SlotChooser({
+  slots,
+  selectedId,
+  onSelect,
+}: {
+  slots: BookSlot[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <section className="rounded-2xl border border-charcoal-800/60 bg-charcoal-900/30 p-5">
+      <h2 className="text-base font-semibold text-charcoal-100">
+        무엇을 예약할까요?
+      </h2>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        {slots.map((s) => {
+          const active = s.id === selectedId;
+          return (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => onSelect(s.id)}
+              aria-pressed={active}
+              className={`rounded-xl border p-4 text-left transition-colors ${
+                active
+                  ? "border-red-500 bg-red-500/10"
+                  : "border-charcoal-800/60 bg-charcoal-800/20 hover:border-red-500/50 hover:bg-red-500/5"
+              }`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-semibold text-charcoal-100">{s.title}</p>
+                <span
+                  className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                    s.price_cents === 0
+                      ? "bg-charcoal-700/50 text-charcoal-300"
+                      : "bg-red-500/20 text-red-300"
+                  }`}
+                >
+                  {priceLabel(s.price_cents)}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-charcoal-500">
+                {s.duration_min}분
+                {s.location_detail ? ` · ${s.location_detail}` : ""}
+              </p>
+              {s.description && (
+                <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-charcoal-400">
+                  {s.description}
+                </p>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -327,47 +353,6 @@ function MonthCalendar({
         })}
       </div>
     </section>
-  );
-}
-
-function FilterRow({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <span className="text-[10px] font-semibold uppercase tracking-wider text-charcoal-500">
-        {label}
-      </span>
-      {children}
-    </div>
-  );
-}
-
-function Chip({
-  active,
-  onClick,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-full px-3 py-1 text-xs transition-colors ${
-        active
-          ? "bg-red-500/25 text-red-200"
-          : "bg-charcoal-800/50 text-charcoal-300 hover:bg-charcoal-800/80"
-      }`}
-    >
-      {label}
-    </button>
   );
 }
 
