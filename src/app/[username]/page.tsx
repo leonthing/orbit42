@@ -317,7 +317,7 @@ export default async function PublicProfile({
       {!isOwner && totalSlotWindows > 0 && (
         <div className="flex justify-end">
           <Link
-            href={`/${params.username}/calendar`}
+            href={`/${params.username}/book`}
             className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-charcoal-950 hover:bg-red-400"
           >
             예약하기 ({totalSlotWindows})
