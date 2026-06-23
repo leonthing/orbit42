@@ -922,15 +922,21 @@ export default function CalendarView({
                                         });
                                       }
                                     }}
-                                    className="flex min-w-0 items-center gap-1 truncate rounded-[3px] px-1 py-[1px] text-left text-[10px] leading-tight hover:bg-charcoal-800/60 md:text-[11px]"
-                                    title={ev.title}
+                                    className={`flex min-w-0 items-center gap-1 truncate rounded-[3px] px-1 py-[1px] text-left text-[10px] leading-tight hover:bg-charcoal-800/60 md:text-[11px] ${
+                                      ev.tentative ? "border border-dashed" : ""
+                                    }`}
+                                    title={ev.tentative ? `${ev.title} · 확정 대기` : ev.title}
                                     style={{
                                       color,
+                                      borderColor: ev.tentative ? color : undefined,
                                     }}
                                   >
                                     <span
                                       className="inline-block h-[8px] w-[2px] shrink-0 rounded-[1px]"
-                                      style={{ backgroundColor: color }}
+                                      style={{
+                                        backgroundColor: ev.tentative ? "transparent" : color,
+                                        boxShadow: ev.tentative ? `inset 0 0 0 1px ${color}` : undefined,
+                                      }}
                                     />
                                     <span
                                       className={`min-w-0 flex-1 truncate font-medium ${
@@ -1045,6 +1051,7 @@ export default function CalendarView({
               business_id: null,
               calendar_id: nativeCal?.id ?? null,
               source: "google",
+              tentative: false,
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             };
@@ -1565,6 +1572,9 @@ function EventList({
                 </p>
                 {ev.source === "google" && (
                   <span className="shrink-0 rounded bg-blue-500/10 px-1 py-0.5 text-[10px] text-blue-400">G</span>
+                )}
+                {ev.tentative && (
+                  <span className="shrink-0 rounded border border-dashed border-amber-500/50 px-1 py-0.5 text-[10px] text-amber-400">예정</span>
                 )}
               </div>
               <p className="mt-0.5 text-xs text-charcoal-500">

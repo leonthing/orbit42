@@ -141,6 +141,7 @@ export default async function PublicProfile({
             all_day: b.all_day,
             calendar_color: b.calendar_color,
             calendar_label: b.calendar_name,
+            tentative: false,
           }));
         return { upcomingEvents: upcoming, weekInsights: insights };
       })()

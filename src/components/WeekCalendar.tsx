@@ -381,10 +381,15 @@ function ItemBlock({
             ? (e) => { e.currentTarget.style.backgroundColor = tint; }
             : undefined
         }
-        className={`group absolute overflow-hidden rounded-[3px] border-l-[3px] px-1.5 py-0.5 transition-colors ${
-          clickable ? "cursor-pointer" : ""
-        } ${completed ? "opacity-50" : ""}`}
-        style={{ ...style, borderColor: item.color, backgroundColor: tint }}
+        className={`group absolute overflow-hidden rounded-[3px] px-1.5 py-0.5 transition-colors ${
+          item.tentative ? "border border-dashed" : "border-l-[3px]"
+        } ${clickable ? "cursor-pointer" : ""} ${completed ? "opacity-50" : ""}`}
+        style={{
+          ...style,
+          borderColor: item.color,
+          backgroundColor: item.tentative ? "transparent" : tint,
+        }}
+        title={item.tentative ? "확정 대기 중인 예약" : undefined}
       >
         <div className="flex items-start gap-1">
           {canToggle && (

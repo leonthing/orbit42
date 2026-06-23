@@ -12,6 +12,7 @@ export type NativeEvent = {
   start_at: string;
   end_at: string | null;
   all_day: boolean;
+  tentative: boolean;
 };
 
 export type NativeEventWithCalendar = NativeEvent & {
@@ -82,7 +83,7 @@ export async function listNativeEventsInCalendars(
       "events",
     )
     .select(
-      "id, calendar_id, title, description, start_at, end_at, all_day, calendar:calendars!events_calendar_id_fkey(name, color)",
+      "id, calendar_id, title, description, start_at, end_at, all_day, tentative, calendar:calendars!events_calendar_id_fkey(name, color)",
     )
     .in("calendar_id", calendarIds)
     .gte("start_at", rangeStart.toISOString())
@@ -97,6 +98,7 @@ export async function listNativeEventsInCalendars(
     start_at: string;
     end_at: string | null;
     all_day: boolean;
+    tentative: boolean | null;
     calendar: { name: string; color: string } | null;
   }>).map((r) => ({
     id: r.id,
@@ -106,6 +108,7 @@ export async function listNativeEventsInCalendars(
     start_at: r.start_at,
     end_at: r.end_at ?? r.start_at,
     all_day: r.all_day,
+    tentative: r.tentative ?? false,
     calendar_color: r.calendar?.color ?? "#6366f1",
     calendar_label: r.calendar?.name ?? "내 캘린더",
   }));

@@ -12,6 +12,7 @@ export type PublicEvent = {
   all_day: boolean;
   calendar_color: string;
   calendar_label: string;
+  tentative: boolean;
 };
 
 /**
@@ -140,6 +141,7 @@ export async function getPublicEvents(
               all_day: !!it.start?.date,
               calendar_color: cs.color,
               calendar_label: cs.name,
+              tentative: it.status === "tentative",
             })) as PublicEvent[];
           } catch {
             return [] as PublicEvent[];
@@ -170,6 +172,7 @@ export async function getPublicEvents(
     all_day: e.all_day,
     calendar_color: e.calendar_color,
     calendar_label: e.calendar_label,
+    tentative: e.tentative,
   }));
 
   return [...googleEvents, ...nativeEvents].sort(

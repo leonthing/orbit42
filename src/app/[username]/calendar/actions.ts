@@ -18,6 +18,7 @@ export type Event = {
   business_id: string | null;
   calendar_id: string | null;
   source: "local" | "google";
+  tentative: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -197,6 +198,7 @@ export async function getEvents(
         calendar_id: gcalToNative.get(calId) ?? null,
         business_id: null,
         source: "google" as const,
+        tentative: item.status === "tentative",
         created_at: item.created || "",
         updated_at: item.updated || "",
       }));

@@ -10,6 +10,7 @@ export type WeekItem =
       all_day: boolean;
       title: string;
       color: string;
+      tentative: boolean;
     }
   | {
       kind: "slot";
@@ -113,6 +114,7 @@ export async function getProfileWeek(
     all_day: e.all_day,
     title: e.title,
     color: e.calendar_color,
+    tentative: e.tentative,
   }));
 
   const all = [...eventItems, ...slotItems].sort(

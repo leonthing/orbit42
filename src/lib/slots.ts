@@ -909,10 +909,37 @@ export async function bookSlot(args: {
       .eq("id", availabilityId);
   }
 
-  // Best-effort: mirror to the slot's calendar.
-  // - Google-backed calendar → create a Google event on that calendar.
-  // - Native calendar → insert a native event row.
+  // Best-effort: mirror the booking to calendars so BOTH sides can see it.
+  // - Host → the slot's calendar (Google or native), falling back to the
+  //   host's default native calendar so it's always visible in-app.
+  // - Guest (registered users only) → their default native calendar.
+  // Pending bookings are marked `tentative` (rendered dashed) until the host
+  // confirms; `booking_id` links the event so we can flip/remove it later.
   try {
+    const tentative = initialStatus === "pending";
+
+    // Host's event shows who's coming; the guest's event shows who they're
+    // meeting. Resolve a human label for the guest (registered or anonymous).
+    let guestDisplay = args.guest_name ?? null;
+    if (!guestDisplay && guestId) {
+      const { data: g } = await db
+        .from("users")
+        .select("display_name, username")
+        .eq("id", guestId)
+        .maybeSingle();
+      guestDisplay = (g?.display_name as string | null) || (g?.username as string | null) || null;
+    }
+    const guestLabel = guestDisplay ?? "게스트";
+    const hostLabel = (host?.display_name || host?.username || "호스트") as string;
+    const baseDescription =
+      (args.message ? `${args.message}\n\n` : "") +
+      `Booked via orbit42 · slot: ${slot.title}`;
+    const hostEventTitle = `[Orbit42] ${slot.title} — ${guestLabel}`;
+    const guestEventTitle = `[Orbit42] ${slot.title} — ${hostLabel}`;
+    const startIso = startAt.toISOString();
+    const endIso = endAt.toISOString();
+
+    // ── Host side ──────────────────────────────────────────────────────
     const slotCalendarId = (slot.calendar_id as string | null) ?? null;
     let targetGoogleCalId: string | null = null;
     let nativeCalendarId: string | null = null;
@@ -932,9 +959,8 @@ export async function bookSlot(args: {
       targetGoogleCalId = "primary";
     }
 
-    const guestEmail =
-      args.guest_email ?? (await getEmailForUser(guestId));
-    const guestLabel = args.guest_name ?? (guestId ? "Guest" : "Guest");
+    const guestEmail = args.guest_email ?? (await getEmailForUser(guestId));
+    let hostMirrored = false;
 
     if (targetGoogleCalId) {
       const calendar = await getAuthenticatedCalendar(slot.host_id as string);
@@ -943,12 +969,11 @@ export async function bookSlot(args: {
           calendarId: targetGoogleCalId,
           sendUpdates: guestEmail ? "all" : "none",
           requestBody: {
-            summary: `[Orbit42] ${slot.title} — ${guestLabel}`,
-            description:
-              (args.message ? `${args.message}\n\n` : "") +
-              `Booked via orbit42 · slot: ${slot.title}`,
-            start: { dateTime: startAt.toISOString(), timeZone: "Asia/Seoul" },
-            end: { dateTime: endAt.toISOString(), timeZone: "Asia/Seoul" },
+            summary: hostEventTitle,
+            description: baseDescription,
+            status: tentative ? "tentative" : "confirmed",
+            start: { dateTime: startIso, timeZone: "Asia/Seoul" },
+            end: { dateTime: endIso, timeZone: "Asia/Seoul" },
             location: (slot.location_detail as string | null) ?? undefined,
             attendees: guestEmail ? [{ email: guestEmail, displayName: guestLabel }] : undefined,
           },
@@ -959,19 +984,59 @@ export async function bookSlot(args: {
             .update({ google_event_id: ev.data.id })
             .eq("id", booking.id);
         }
+        hostMirrored = true;
       }
     } else if (nativeCalendarId) {
       await db.from("events").insert({
         user_id: slot.host_id,
         calendar_id: nativeCalendarId,
-        title: `[Orbit42] ${slot.title} — ${guestLabel}`,
-        description:
-          (args.message ? `${args.message}\n\n` : "") +
-          `Booked via orbit42 · slot: ${slot.title}`,
-        start_at: startAt.toISOString(),
-        end_at: endAt.toISOString(),
+        booking_id: booking.id,
+        title: hostEventTitle,
+        description: baseDescription,
+        start_at: startIso,
+        end_at: endIso,
         all_day: false,
+        tentative,
       });
+      hostMirrored = true;
+    }
+
+    // Guaranteed in-app fallback for the host when nothing landed above.
+    if (!hostMirrored) {
+      const fallbackCalId = await defaultNativeCalendarId(slot.host_id as string);
+      if (fallbackCalId) {
+        await db.from("events").insert({
+          user_id: slot.host_id,
+          calendar_id: fallbackCalId,
+          booking_id: booking.id,
+          title: hostEventTitle,
+          description: baseDescription,
+          start_at: startIso,
+          end_at: endIso,
+          all_day: false,
+          tentative,
+        });
+      }
+    }
+
+    // ── Guest side (registered users) ──────────────────────────────────
+    // Mirror into the guest's own orbit42 calendar so a booking they made
+    // shows up for them too — tentative/dashed until the host confirms.
+    if (guestId) {
+      const guestCalId = await defaultNativeCalendarId(guestId);
+      if (guestCalId) {
+        await db.from("events").insert({
+          user_id: guestId,
+          calendar_id: guestCalId,
+          booking_id: booking.id,
+          title: guestEventTitle,
+          description: baseDescription,
+          start_at: startIso,
+          end_at: endIso,
+          all_day: false,
+          tentative,
+        });
+      }
     }
   } catch (err) {
     console.error("Calendar mirror for booking failed:", err);
@@ -1040,6 +1105,40 @@ async function getEmailForUser(userId: string | null): Promise<string | null> {
     .eq("id", userId)
     .maybeSingle();
   return (data?.email as string | null) ?? null;
+}
+
+/**
+ * Resolve a user's default native calendar id, creating one if somehow
+ * missing. Used to guarantee a booking lands in both the host's and the
+ * guest's orbit42 calendar even when Google isn't connected.
+ */
+async function defaultNativeCalendarId(userId: string): Promise<string | null> {
+  const db = getAdminClient();
+  const { data: existing } = await db
+    .from("calendars")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("source", "native")
+    .order("is_default", { ascending: false })
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (existing?.id) return existing.id as string;
+
+  const { data: created } = await db
+    .from("calendars")
+    .insert({
+      user_id: userId,
+      name: "내 캘린더",
+      purpose: "personal",
+      color: "#dc2626",
+      visibility: "private",
+      source: "native",
+      is_default: true,
+    })
+    .select("id")
+    .maybeSingle();
+  return (created?.id as string | null) ?? null;
 }
 
 export type BookingRow = {
@@ -1147,9 +1246,17 @@ export async function updateBookingStatus(
     .eq("host_id", userId);
   if (error) return { error: "변경 실패" };
 
-  // Canceled → pull the mirrored event off the host's Google calendar.
+  // Keep the mirrored calendar events (host + guest) in sync with the decision:
+  // - canceled → remove the Google event and delete the native mirrors.
+  // - confirmed → flip the native mirrors from tentative (dashed) to solid.
   if (status === "canceled") {
     await removeBookingCalendarEvent(id);
+    await db.from("events").delete().eq("booking_id", id);
+  } else if (status === "confirmed") {
+    await db
+      .from("events")
+      .update({ tentative: false, updated_at: new Date().toISOString() })
+      .eq("booking_id", id);
   }
 
   // Notify the guest via Resend whenever a decision is made.
@@ -1360,6 +1467,18 @@ export async function rescheduleMyBooking(
     }
   }
 
+  // Move the native mirrors (host + guest) to the new time and reset their
+  // tentative state to match the new approval status.
+  await db
+    .from("events")
+    .update({
+      start_at: newStart.toISOString(),
+      end_at: newEnd.toISOString(),
+      tentative: newStatus === "pending",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("booking_id", bookingId);
+
   // Tell the host.
   try {
     const [{ data: host }, { data: guest }] = await Promise.all([
@@ -1441,6 +1560,7 @@ export async function cancelMyBooking(bookingId: string) {
   if (error) return { error: "취소에 실패했어요." };
 
   await removeBookingCalendarEvent(bookingId);
+  await db.from("events").delete().eq("booking_id", bookingId);
 
   // Notify host.
   try {
