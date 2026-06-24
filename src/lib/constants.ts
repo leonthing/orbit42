@@ -25,7 +25,6 @@ export const NAV_ITEMS = [
   { href: "/services", label: "서비스", icon: "ticket" },
   { href: "/bookings", label: "예약", icon: "schedule" },
   { href: "/insights", label: "인사이트", icon: "chart" },
-  { href: "/network", label: "네트워크", icon: "users" },
   { href: "/blog", label: "블로그", icon: "blog" },
   { href: "/settings", label: "설정", icon: "cog" },
 ] as const;

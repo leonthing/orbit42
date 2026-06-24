@@ -57,8 +57,10 @@ export default function PrivacyPage() {
                 다루며, 서비스가 저장하는 토큰은 암호화되어 관리됩니다.
               </li>
               <li>
-                Gmail 발송 권한(선택): 예약 확인 메일 등을 이용자 본인 계정으로
-                보낼 때만 사용됩니다.
+                Google 연락처(읽기 전용) 연동 시: 이용자의 연락처에 포함된
+                이메일 주소를 Orbit42에 이미 가입한 지인을 찾는 용도로만
+                사용합니다. 연락처 정보는 매칭에 한해 일시적으로 처리되며,
+                가입자가 아닌 사람의 연락처는 저장하지 않습니다.
               </li>
             </List>
           </Section>
@@ -143,7 +145,7 @@ export default function PrivacyPage() {
                   </tr>
                   <tr>
                     <Td>Google LLC</Td>
-                    <Td>OAuth 로그인, Calendar/Gmail API 연동</Td>
+                    <Td>OAuth 로그인, Calendar/Contacts API 연동</Td>
                     <Td>미국</Td>
                   </tr>
                 </tbody>
