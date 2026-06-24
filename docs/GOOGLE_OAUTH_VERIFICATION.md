@@ -17,11 +17,14 @@
 | `openid` / `userinfo.email` / `userinfo.profile` | 비민감 | Google 로그인/가입 |
 | `https://www.googleapis.com/auth/calendar.readonly` | 민감 | 캘린더 목록·이벤트 읽어 주간 뷰 표시 |
 | `https://www.googleapis.com/auth/calendar.events` | 민감 | 예약 확정 시 사용자 Google 캘린더에 이벤트 생성/수정/삭제 |
-| `https://www.googleapis.com/auth/contacts.readonly` | 민감 | 연락처 이메일을 기존 Orbit42 가입자와 매칭해 친구찾기 |
 
-> 제출 전 확인: Google Cloud Console의 "Data access(스코프)" 목록에 위 4개만
-> 등록돼 있고, **Gmail/Drive 스코프는 없어야** 한다(우리는 안 씀). 개인정보
-> 처리방침에서도 Gmail 언급을 제거했고 Contacts 고지를 추가했다.
+> `contacts.readonly`는 네트워크/친구찾기 기능을 보류하면서 요청 스코프에서
+> 제외했다. 기능이 돌아오면 `src/lib/google.ts`의 SCOPES, `/privacy` 고지,
+> 이 문서를 함께 복원할 것.
+
+> 제출 전 확인: Google Cloud Console의 "Data access(스코프)" 목록에 위
+> 캘린더 2개 + 로그인 스코프만 등록돼 있고, **Gmail/Drive/Contacts 스코프는
+> 없어야** 한다(우리는 안 씀). 개인정보 처리방침에서도 Gmail 언급을 제거했다.
 
 ---
 
@@ -73,18 +76,6 @@
 > or delete that specific event. Write access is used only to reflect the
 > user's own bookings; we never modify the user's unrelated events.
 
-### contacts.readonly — Korean
-> Orbit42는 사용자가 이미 알고 지내는 사람을 서비스 내에서 쉽게 연결하도록
-> 돕습니다. 사용자가 명시적으로 동의하면, Google 연락처의 이메일 주소를 읽어
-> 이미 Orbit42에 가입한 지인을 찾아 추천합니다. 매칭은 일시적으로만
-> 수행되며, 가입자가 아닌 사람의 연락처 정보는 저장하지 않습니다.
-
-### contacts.readonly — English
-> Orbit42 helps users connect with people they already know. With the user's
-> explicit consent, we read the email addresses in their Google Contacts to
-> find and suggest connections who are already Orbit42 members. Matching is
-> performed transiently; we do not store contact data for non-members.
-
 ---
 
 ## 3. 데모 영상 스크립트 (요건: 영문 권장, 비공개/일부공개 YouTube 링크)
@@ -101,12 +92,10 @@ Google은 영상에서 ① 동의화면에 우리 앱 이름/스코프가 뜨는
 5. **calendar.events**: 예약 슬롯에서 예약을 생성 → 확정 → 사용자 Google
    캘린더(google.com/calendar)에 이벤트가 생성된 것을 보여줌. 이어 취소 →
    해당 이벤트가 사라지는 것까지.
-6. **contacts.readonly**: 친구찾기/네트워크 화면에서 연락처 연동 동의 → 이미
-   가입한 지인이 매칭되어 추천되는 모습.
-7. 마무리: 설정에서 Google 연동 해제(권한 회수) 동작 한 번.
+6. 마무리: 설정에서 Google 연동 해제(권한 회수) 동작 한 번.
 
 영상 설명란에 "Demo for Orbit42 OAuth verification — scopes: calendar.readonly,
-calendar.events, contacts.readonly"를 적어두면 검토가 매끄럽다.
+calendar.events"를 적어두면 검토가 매끄럽다.
 
 ---
 
@@ -124,8 +113,8 @@ calendar.events, contacts.readonly"를 적어두면 검토가 매끄럽다.
 
 ## 5. 제출 전 체크
 
-- [ ] Console Data access 목록 = 위 4개 스코프뿐 (Gmail/Drive 없음)
-- [ ] Privacy(`/privacy`)에 Calendar·Contacts 사용 고지 명시 (Gmail 제거 완료)
+- [ ] Console Data access 목록 = 캘린더 2개 + 로그인 스코프뿐 (Gmail/Drive/Contacts 없음)
+- [ ] Privacy(`/privacy`)에 Calendar 사용 고지 명시 (Gmail/Contacts 미요청)
 - [ ] Terms(`/terms`) 접근 가능
 - [ ] Authorized domain `orbit42.org` + Search Console 소유권 인증
 - [ ] Production redirect URI `https://orbit42.org/api/google/callback` 등록

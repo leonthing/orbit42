@@ -4,7 +4,9 @@ import { getAdminClient } from "@/lib/supabase";
 const SCOPES = [
   "https://www.googleapis.com/auth/calendar.readonly",
   "https://www.googleapis.com/auth/calendar.events",
-  "https://www.googleapis.com/auth/contacts.readonly",
+  // contacts.readonly intentionally omitted — the network/친구찾기 feature is
+  // shelved (hidden from nav). Re-add here + restore the Contacts disclosure in
+  // /privacy + the verification doc if the feature comes back.
   "https://www.googleapis.com/auth/userinfo.email",
 ];
 
