@@ -14,13 +14,15 @@ const DISMISS_KEY = "orbit42:onboarding-dismissed";
 
 /**
  * "시작하기" checklist shown on the feed until the basics are done.
- * Dismissable; fully-completed lists never render.
+ * Dismiss only hides it for the current session (sessionStorage) — it
+ * comes back next visit until every step is done, so a stray click
+ * can't lose it forever. Defaults to visible to avoid a load flash.
  */
 export function OnboardingChecklist({ steps }: { steps: OnboardingStep[] }) {
-  const [dismissed, setDismissed] = useState(true);
+  const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    setDismissed(localStorage.getItem(DISMISS_KEY) === "1");
+    setDismissed(sessionStorage.getItem(DISMISS_KEY) === "1");
   }, []);
 
   const doneCount = steps.filter((s) => s.done).length;
@@ -40,7 +42,7 @@ export function OnboardingChecklist({ steps }: { steps: OnboardingStep[] }) {
         <button
           type="button"
           onClick={() => {
-            localStorage.setItem(DISMISS_KEY, "1");
+            sessionStorage.setItem(DISMISS_KEY, "1");
             setDismissed(true);
           }}
           aria-label="체크리스트 숨기기"

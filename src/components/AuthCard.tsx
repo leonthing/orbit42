@@ -191,13 +191,19 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
               mode === "signup" ? v.replace(/[^a-z0-9_-]/g, "") : v,
             );
           }}
-          placeholder={mode === "signup" ? "Username (영문 소문자, 숫자)" : "Username"}
+          placeholder={mode === "signup" ? "아이디 (영문 소문자·숫자)" : "아이디"}
           className={input}
           required
         />
-        {mode === "signup" && username && (
+        {mode === "signup" && (
           <p className="-mt-0.5 text-[11px] text-charcoal-500">
-            orbit42.org/<span className="text-red-500">{username}</span>
+            {username ? (
+              <>
+                orbit42.org/<span className="text-red-500">{username}</span>
+              </>
+            ) : (
+              "영문 소문자·숫자만 사용할 수 있어요."
+            )}
           </p>
         )}
         {mode === "signup" && (

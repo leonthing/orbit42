@@ -106,30 +106,41 @@ export default function AuctionPanel({
         </div>
 
         {!ended && slot.active && !isOwner && (
-          <div className="mt-5 flex gap-2">
-            <div className="relative flex-1">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-charcoal-500">
-                ₩
-              </span>
-              <input
-                type="number"
-                min={Math.ceil(minNext / 100)}
-                step={1}
-                value={bidInput}
-                onChange={(e) => setBidInput(e.target.value)}
-                placeholder={`${(minNext / 100).toLocaleString("ko-KR")} 이상`}
-                className="w-full rounded-lg border border-charcoal-700 bg-charcoal-900/40 py-3 pl-7 pr-3 text-base text-charcoal-100 placeholder:text-charcoal-500 focus:border-red-500/60 focus:outline-none"
-              />
+          <>
+            {!loggedIn && (
+              <p className="mt-5 rounded-lg border border-charcoal-700/60 bg-charcoal-800/30 px-3 py-2 text-xs text-charcoal-400">
+                입찰하려면 로그인이 필요해요.{" "}
+                <Link href="/login" className="font-semibold text-red-400 underline">
+                  로그인하기
+                </Link>
+              </p>
+            )}
+            <div className="mt-3 flex gap-2">
+              <div className="relative flex-1">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-charcoal-500">
+                  ₩
+                </span>
+                <input
+                  type="number"
+                  min={Math.ceil(minNext / 100)}
+                  step={1}
+                  value={bidInput}
+                  onChange={(e) => setBidInput(e.target.value)}
+                  disabled={!loggedIn}
+                  placeholder={`${(minNext / 100).toLocaleString("ko-KR")} 이상`}
+                  className="w-full rounded-lg border border-charcoal-700 bg-charcoal-900/40 py-3 pl-7 pr-3 text-base text-charcoal-100 placeholder:text-charcoal-500 focus:border-red-500/60 focus:outline-none disabled:opacity-60"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={submit}
+                disabled={pending || !loggedIn}
+                className="rounded-lg bg-red-500 px-5 py-3 text-sm font-semibold text-charcoal-950 hover:bg-red-400 disabled:opacity-60"
+              >
+                {pending ? "입찰 중…" : loggedIn ? "입찰" : "로그인 후 입찰"}
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={submit}
-              disabled={pending || !loggedIn}
-              className="rounded-lg bg-red-500 px-5 py-3 text-sm font-semibold text-charcoal-950 hover:bg-red-400 disabled:opacity-60"
-            >
-              {pending ? "입찰 중…" : loggedIn ? "Bid" : "로그인 후 입찰"}
-            </button>
-          </div>
+          </>
         )}
         {ended && bids[0] && (
           <p className="mt-5 rounded-lg border border-emerald-700/40 bg-emerald-700/10 p-3 text-sm text-emerald-300">

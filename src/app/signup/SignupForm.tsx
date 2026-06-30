@@ -85,15 +85,19 @@ export function SignupForm({ initialRef }: { initialRef: string }) {
               e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ""),
             )
           }
-          placeholder="Username"
+          placeholder="아이디 (영문 소문자·숫자)"
           required
           className={input}
         />
-        {username && (
-          <p className="-mt-1 text-[11px] text-charcoal-500">
-            orbit42.org/<span className="text-red-400">{username}</span>
-          </p>
-        )}
+        <p className="-mt-1 text-[11px] text-charcoal-500">
+          {username ? (
+            <>
+              orbit42.org/<span className="text-red-400">{username}</span>
+            </>
+          ) : (
+            "영문 소문자·숫자만 사용할 수 있어요."
+          )}
+        </p>
         <input
           type="text"
           value={displayName}

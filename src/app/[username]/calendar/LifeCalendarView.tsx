@@ -173,7 +173,7 @@ export default function LifeCalendarView({
             <div>
               <h2 className="text-xs font-bold text-charcoal-100 sm:text-sm">YOUR LIFE IN WEEKS</h2>
               <p className="mt-0.5 text-[10px] text-charcoal-500">
-                {weeksLived.toLocaleString()} lived · {Math.max(0, totalWeeks - weeksLived).toLocaleString()} remaining
+                {weeksLived.toLocaleString("ko-KR")} lived · {Math.max(0, totalWeeks - weeksLived).toLocaleString("ko-KR")} remaining
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2 text-[10px] text-charcoal-500 sm:gap-3">
