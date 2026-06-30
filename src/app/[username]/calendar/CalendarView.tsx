@@ -622,7 +622,7 @@ export default function CalendarView({
     <div className="flex shrink-0 overflow-x-auto rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 p-0.5">
       {(
         [
-          ["life", "Life"],
+          ["life", "라이프"],
           ["year", "연"],
           ["quarter", "분기"],
           ["month", "월"],

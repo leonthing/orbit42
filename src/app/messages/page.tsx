@@ -33,7 +33,7 @@ export default async function MessagesPage() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="mb-4 text-xl font-semibold text-charcoal-100">Messages</h1>
+      <h1 className="mb-4 text-xl font-semibold text-charcoal-100">메시지</h1>
 
       {conversations.length === 0 ? (
         <EmptyState

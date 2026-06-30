@@ -44,12 +44,14 @@ export default function SlotsManager({
   myCalendars,
   myMenus,
   locationPresets,
+  googleConnected,
 }: {
   username: string;
   initial: Row[];
   myCalendars: Calendar[];
   myMenus: Menu[];
   locationPresets: string[];
+  googleConnected: boolean;
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -144,6 +146,7 @@ export default function SlotsManager({
           myCalendars={myCalendars}
           myMenus={myMenus}
           locationPresets={locationPresets}
+          googleConnected={googleConnected}
           onCancel={() => setShowNew(false)}
           onSaved={() => {
             setShowNew(false);
@@ -205,6 +208,7 @@ function NewSlotForm({
   myMenus,
   locationPresets,
   username,
+  googleConnected,
 }: {
   onSaved: () => void;
   onCancel: () => void;
@@ -212,6 +216,7 @@ function NewSlotForm({
   myMenus: Menu[];
   locationPresets: string[];
   username: string;
+  googleConnected: boolean;
 }) {
   const toast = useToast();
   const defaultCalendarId =
@@ -314,6 +319,7 @@ function NewSlotForm({
       if (res.id && selectedMenus.length > 0) {
         await setSlotMenus(res.id, selectedMenus);
       }
+      toast.success("슬롯을 만들었어요.");
       onSaved();
     });
   };
@@ -483,14 +489,14 @@ function NewSlotForm({
               current={pricingModel}
               value="fixed"
               onClick={() => setPricingModel("fixed")}
-              title="Fixed price"
+              title="고정가"
               hint="정해진 가격으로 예약"
             />
             <PricingButton
               current={pricingModel}
               value="auction"
               onClick={() => setPricingModel("auction")}
-              title="Auction"
+              title="경매"
               hint="경매로 최고가 낙찰"
             />
           </div>
@@ -542,22 +548,38 @@ function NewSlotForm({
           }
         >
           {pricingModel === "fixed" && (
-            <div className="grid gap-2 md:grid-cols-2">
-              <ModeButton
-                current={mode}
-                value="manual"
-                onClick={() => setMode("manual")}
-                title="Manual"
-                hint="내가 직접 시간을 추가"
-              />
-              <ModeButton
-                current={mode}
-                value="auto"
-                onClick={() => setMode("auto")}
-                title="Auto (Google)"
-                hint="빈 시간 자동 계산"
-              />
-            </div>
+            <>
+              <div className="grid gap-2 md:grid-cols-2">
+                <ModeButton
+                  current={mode}
+                  value="manual"
+                  onClick={() => setMode("manual")}
+                  title="직접 추가"
+                  hint="내가 직접 시간을 추가"
+                />
+                <ModeButton
+                  current={mode}
+                  value="auto"
+                  onClick={() => googleConnected && setMode("auto")}
+                  disabled={!googleConnected}
+                  title="구글 캘린더 자동"
+                  hint={
+                    googleConnected ? "빈 시간 자동 계산" : "구글 연결 필요"
+                  }
+                />
+              </div>
+              {!googleConnected && (
+                <p className="mt-2 rounded-lg border border-amber-600/40 bg-amber-600/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-200">
+                  &ldquo;구글 캘린더 자동&rdquo;은 캘린더 연결이 필요해요.{" "}
+                  <Link
+                    href={`/${username}/settings#google`}
+                    className="font-semibold underline"
+                  >
+                    구글 캘린더 연결하기
+                  </Link>
+                </p>
+              )}
+            </>
           )}
 
           {pricingModel === "auction" ? (
@@ -707,17 +729,20 @@ function ChoiceCard({
   onClick,
   title,
   hint,
+  disabled = false,
 }: {
   active: boolean;
   onClick: () => void;
   title: string;
   hint: string;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`flex w-full items-start gap-3 rounded-lg border px-4 py-3 text-left transition-colors ${
+      disabled={disabled}
+      className={`flex w-full items-start gap-3 rounded-lg border px-4 py-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
         active
           ? "border-red-500 bg-red-500/10"
           : "border-charcoal-800/60 bg-charcoal-800/10 hover:border-charcoal-700 hover:bg-charcoal-800/30"
@@ -769,15 +794,23 @@ function ModeButton({
   onClick,
   title,
   hint,
+  disabled = false,
 }: {
   current: SlotMode;
   value: SlotMode;
   onClick: () => void;
   title: string;
   hint: string;
+  disabled?: boolean;
 }) {
   return (
-    <ChoiceCard active={current === value} onClick={onClick} title={title} hint={hint} />
+    <ChoiceCard
+      active={current === value}
+      onClick={onClick}
+      title={title}
+      hint={hint}
+      disabled={disabled}
+    />
   );
 }
 
@@ -1228,10 +1261,10 @@ function SlotCard({
                   : "bg-charcoal-700/40 text-charcoal-500"
               }`}
             >
-              {row.slot.active ? "ACTIVE" : "OFF"}
+              {row.slot.active ? "활성" : "중지"}
             </span>
-            <span className="rounded-full bg-charcoal-800/60 px-2 py-0.5 text-[10px] font-medium uppercase text-charcoal-400">
-              {row.slot.mode}
+            <span className="rounded-full bg-charcoal-800/60 px-2 py-0.5 text-[10px] font-medium text-charcoal-400">
+              {row.slot.mode === "auto" ? "자동" : "직접"}
             </span>
             <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-bold text-red-300">
               {priceLabel}
@@ -1313,7 +1346,7 @@ function SlotCard({
             disabled={pending}
             className="rounded-md border border-charcoal-800 px-2.5 py-1.5 text-xs text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
           >
-            {row.slot.active ? "Pause" : "활성화"}
+            {row.slot.active ? "일시중지" : "활성화"}
           </button>
           <button
             type="button"

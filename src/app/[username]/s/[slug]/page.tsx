@@ -182,7 +182,7 @@ export default async function SlotPage({
                   : "bg-charcoal-800/60 text-charcoal-400"
               }`}
             >
-              {isAuction ? "Auction" : slot.mode}
+              {isAuction ? "경매" : slot.mode === "auto" ? "자동" : "직접"}
             </span>
             <CopyLinkButton url={`${SITE.url}/${params.username}/s/${slot.slug}`} />
           </div>

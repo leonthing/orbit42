@@ -377,7 +377,7 @@ export default async function FeedPage() {
         </div>
         {following.length === 0 ? (
           <p className="mt-3 text-xs text-charcoal-500">
-            아직 팔로우한 사람이 없어요. <Link href="/explore" className="text-red-400 hover:underline">Explore</Link>에서 찾아보세요.
+            아직 팔로우한 사람이 없어요. <Link href="/explore" className="text-red-400 hover:underline">탐색</Link>에서 찾아보세요.
           </p>
         ) : (
           <div className="mt-3 flex flex-wrap gap-2">
