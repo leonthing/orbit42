@@ -23,6 +23,7 @@ import type { WorkingHours } from "@/lib/slot-availability";
 import type { Calendar } from "@/lib/calendars-types";
 import type { Menu } from "@/lib/menus";
 import { setSlotMenus } from "@/lib/menus";
+import { updateCalendar } from "@/lib/calendars";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { buttonClasses } from "@/components/PendingButton";
@@ -386,9 +387,13 @@ function NewSlotForm({
                   </select>
                 </div>
                 {violating && (
-                  <p className="rounded-lg border border-amber-600/40 bg-amber-600/10 px-3 py-2 text-xs text-amber-200">
-                    유료 슬롯은 <strong>공개(public)</strong> 캘린더에만 만들 수 있어요. Settings에서 이 캘린더를 공개로 바꾸거나 다른 공개 캘린더를 선택해주세요.
-                  </p>
+                  <div className="flex flex-col items-start gap-1 rounded-lg border border-amber-600/40 bg-amber-600/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-200">
+                    <span>
+                      유료 슬롯은 <strong>공개</strong> 캘린더에만 만들 수
+                      있어요.
+                    </span>
+                    <PublishCalendarButton calendarId={calendarId} />
+                  </div>
                 )}
                 {needsPublic &&
                   !myCalendars.some((c) => c.visibility === "public") && (
@@ -766,6 +771,29 @@ function ChoiceCard({
         </span>
         <span className="mt-0.5 block text-xs text-charcoal-500">{hint}</span>
       </span>
+    </button>
+  );
+}
+
+function PublishCalendarButton({ calendarId }: { calendarId: string }) {
+  const router = useRouter();
+  const toast = useToast();
+  const [pending, startTransition] = useTransition();
+  return (
+    <button
+      type="button"
+      disabled={pending}
+      onClick={() =>
+        startTransition(async () => {
+          const res = await updateCalendar(calendarId, { visibility: "public" });
+          if (res && "error" in res && res.error) return toast.error(res.error);
+          toast.success("캘린더를 공개로 바꿨어요.");
+          router.refresh();
+        })
+      }
+      className="mt-1 font-semibold underline disabled:opacity-50"
+    >
+      {pending ? "바꾸는 중…" : "이 캘린더를 공개로 바꾸기"}
     </button>
   );
 }
@@ -1605,9 +1633,12 @@ function EditSlotForm({
             </select>
           </div>
           {violating && (
-            <p className="rounded-lg border border-amber-600/40 bg-amber-600/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-200">
-              유료 슬롯은 <strong>공개</strong> 캘린더에만 올릴 수 있어요.
-            </p>
+            <div className="flex flex-col items-start gap-1 rounded-lg border border-amber-600/40 bg-amber-600/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-200">
+              <span>
+                유료 슬롯은 <strong>공개</strong> 캘린더에만 올릴 수 있어요.
+              </span>
+              {calendarId && <PublishCalendarButton calendarId={calendarId} />}
+            </div>
           )}
         </div>
       )}
