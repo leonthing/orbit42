@@ -13,6 +13,8 @@ import { ReactionStrip } from "@/components/ReactionStrip";
 import { ComposeBox } from "@/components/ComposeBox";
 import { DeleteFeedPostButton } from "@/components/DeleteFeedPostButton";
 import { Avatar } from "@/components/Avatar";
+import { EmptyState } from "@/components/EmptyState";
+import { VerifyEmailBanner } from "@/app/[username]/settings/AccountDangerZone";
 import { CommentSection } from "@/components/CommentSection";
 import { Markdown } from "@/components/Markdown";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
@@ -109,13 +111,13 @@ export default async function FeedPage() {
     {
       key: "profile",
       label: "프로필 사진과 소개 채우기",
-      href: `/${session.username}/settings`,
+      href: `/${session.username}/settings#profile`,
       done: !!viewerProfile?.avatar_url && !!viewerProfile?.bio,
     },
     {
       key: "google",
       label: "구글 캘린더 연결하기",
-      href: `/${session.username}/settings`,
+      href: `/${session.username}/settings#google`,
       done: googleConnected,
     },
     {
@@ -326,6 +328,14 @@ export default async function FeedPage() {
   return (
     <>
       <FeedHeader />
+
+      {viewerProfile && !viewerProfile.email_verified && (
+        <div className="mb-6">
+          <VerifyEmailBanner
+            email={(viewerProfile.email as string | null) ?? null}
+          />
+        </div>
+      )}
 
       <OnboardingChecklist steps={onboardingSteps} />
 
@@ -913,27 +923,3 @@ function relativeTimeToLabel(iso: string): string {
   return `${days}일 남음`;
 }
 
-function EmptyState({
-  title,
-  body,
-  cta,
-}: {
-  title: string;
-  body: string;
-  cta?: { href: string; label: string };
-}) {
-  return (
-    <div className="rounded-xl border border-dashed border-charcoal-800/60 p-10 text-center">
-      <p className="text-sm font-semibold text-charcoal-200">{title}</p>
-      <p className="mt-2 text-sm text-charcoal-500">{body}</p>
-      {cta && (
-        <Link
-          href={cta.href}
-          className="mt-4 inline-block rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-charcoal-950 hover:bg-red-400"
-        >
-          {cta.label}
-        </Link>
-      )}
-    </div>
-  );
-}

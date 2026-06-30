@@ -8,6 +8,7 @@ import { ReactionStrip } from "@/components/ReactionStrip";
 import { Avatar } from "@/components/Avatar";
 import { FollowButton } from "@/app/[username]/FollowButton";
 import { ExploreSearchBar } from "./ExploreSearchBar";
+import { EmptyState } from "@/components/EmptyState";
 
 export const metadata: Metadata = { title: "탐색" };
 export const dynamic = "force-dynamic";
@@ -287,9 +288,9 @@ export default async function ExplorePage() {
       )}
 
       <section className="mb-10">
-        <SectionTitle title="People you might orbit" hint="최근 활동한 사람들" />
+        <SectionTitle title="궤도에 올릴 만한 사람" hint="최근 활동한 사람들" />
         {activePeople.length === 0 ? (
-          <EmptyHint body="아직 활동한 사람이 없어요." />
+          <EmptyState title="아직 활동한 사람이 없어요." />
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {activePeople.slice(0, 12).map((p) => (
@@ -309,9 +310,9 @@ export default async function ExplorePage() {
       </section>
 
       <section>
-        <SectionTitle title="Open slots" hint="지금 열려 있는 시간들" />
+        <SectionTitle title="열린 슬롯" hint="지금 열려 있는 시간들" />
         {slots.length === 0 ? (
-          <EmptyHint body="열린 슬롯이 아직 없어요." />
+          <EmptyState title="열린 슬롯이 아직 없어요." />
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
             {slots.map((s) => (
@@ -372,13 +373,6 @@ function SectionTitle({ title, hint }: { title: string; hint?: string }) {
   );
 }
 
-function EmptyHint({ body }: { body: string }) {
-  return (
-    <div className="rounded-xl border border-dashed border-charcoal-800/60 p-6 text-center text-sm text-charcoal-500">
-      {body}
-    </div>
-  );
-}
 
 function PersonCard({
   username,
