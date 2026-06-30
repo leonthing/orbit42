@@ -1418,7 +1418,7 @@ function SlotCard({
         </div>
       ) : (
         <div className="border-t border-charcoal-800/40 bg-charcoal-950/30 px-5 py-4 text-xs text-charcoal-500">
-          Auto 모드 — Google Calendar 빈 시간을 기반으로 예약 가능 시간이 자동 생성돼요. 근무 시간 편집은 곧 Settings에서 지원될 예정입니다.
+          Auto 모드 — Google Calendar 빈 시간을 기반으로 예약 가능 시간이 자동 생성돼요. 요일·시간대 조정은 위 &ldquo;수정&rdquo;에서 할 수 있어요.
         </div>
       )}
     </div>
@@ -1478,6 +1478,14 @@ function EditSlotForm({
   const [showOnFeed, setShowOnFeed] = useState<boolean>(
     slot.show_on_feed ?? true,
   );
+  const isAuto = slot.mode === "auto";
+  const [workingHours, setWorkingHours] = useState<WorkingHours>(
+    slot.working_hours ?? {},
+  );
+  const [slotInterval, setSlotInterval] = useState(slot.slot_interval_min ?? 30);
+  const [minNotice, setMinNotice] = useState(slot.min_notice_hours ?? 4);
+  const [maxAdvance, setMaxAdvance] = useState(slot.max_advance_days ?? 30);
+  const [buffer, setBuffer] = useState(slot.buffer_min ?? 0);
   const toast = useToast();
 
   const isAuction = slot.pricing_model === "auction";
@@ -1509,6 +1517,15 @@ function EditSlotForm({
         payment_method: paymentMethod,
         image_urls: imageUrls,
         show_on_feed: showOnFeed,
+        ...(isAuto
+          ? {
+              working_hours: workingHours,
+              slot_interval_min: slotInterval,
+              min_notice_hours: minNotice,
+              max_advance_days: maxAdvance,
+              buffer_min: buffer,
+            }
+          : {}),
       });
       if (res && "error" in res && res.error) return toast.error(res.error);
       await setSlotMenus(slot.id, selectedMenus);
@@ -1630,6 +1647,26 @@ function EditSlotForm({
           presets={locationPresets}
         />
       </Field>
+
+      {isAuto && (
+        <div>
+          <p className="mb-2 text-xs font-medium text-charcoal-400">
+            예약 가능 시간 (자동)
+          </p>
+          <AutoConfig
+            workingHours={workingHours}
+            setWorkingHours={setWorkingHours}
+            slotInterval={slotInterval}
+            setSlotInterval={setSlotInterval}
+            minNotice={minNotice}
+            setMinNotice={setMinNotice}
+            maxAdvance={maxAdvance}
+            setMaxAdvance={setMaxAdvance}
+            buffer={buffer}
+            setBuffer={setBuffer}
+          />
+        </div>
+      )}
 
       <div>
         <p className="mb-2 text-xs font-medium text-charcoal-400">메뉴 / 스킬</p>
