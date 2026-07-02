@@ -397,8 +397,13 @@ export default function CalendarView({
       fetchMultiMonthEvents(t.getFullYear(), getQuarterMonths(q));
     } else {
       fetchEvents(t.getFullYear(), t.getMonth());
+      // Week grid renders from weekDays state — without this the header
+      // label jumps to today's week but the grid stays on the old week.
+      if (viewMode === "week") {
+        refetchWeekDays(new Date(t.getFullYear(), t.getMonth(), t.getDate()));
+      }
     }
-  }, [viewMode, fetchEvents, fetchMultiMonthEvents]);
+  }, [viewMode, fetchEvents, fetchMultiMonthEvents, refetchWeekDays]);
 
   const switchView = useCallback(
     (mode: ViewMode) => {
