@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { buttonClasses } from "@/components/PendingButton";
 
 type Props = {
   url: string;
@@ -73,11 +74,7 @@ export function ShareMenu({ url, title, text, compact }: Props) {
       <button
         type="button"
         onClick={share}
-        className={
-          compact
-            ? "inline-flex h-8 w-8 items-center justify-center rounded-md border border-charcoal-800/60 text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
-            : "inline-flex items-center gap-1.5 rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-1.5 text-xs font-medium text-charcoal-200 hover:border-charcoal-700 hover:text-white"
-        }
+        className={buttonClasses({ variant: "secondary", iconOnly: compact })}
         aria-label="공유"
         title="공유"
       >
@@ -99,7 +96,7 @@ export function ShareMenu({ url, title, text, compact }: Props) {
       </button>
 
       {open && (
-        <div className="absolute right-0 z-30 mt-1 w-56 overflow-hidden rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] shadow-xl">
+        <div className="absolute left-0 z-30 mt-1 w-56 overflow-hidden rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] shadow-xl">
           <ul className="divide-y divide-charcoal-800/40">
             <li>
               <button

@@ -29,10 +29,7 @@ export function TimeRequestButton({
 
   if (!loggedIn) {
     return (
-      <Link
-        href="/login"
-        className="rounded-lg border border-charcoal-700/60 bg-charcoal-800/40 px-3 py-1.5 text-xs font-semibold text-charcoal-300 hover:border-charcoal-600 hover:text-white"
-      >
+      <Link href="/login" className={buttonClasses({ variant: "secondary" })}>
         시간 요청
       </Link>
     );
@@ -65,7 +62,7 @@ export function TimeRequestButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-lg border border-charcoal-700/60 bg-charcoal-800/40 px-3 py-1.5 text-xs font-semibold text-charcoal-300 hover:border-charcoal-600 hover:text-white"
+        className={buttonClasses({ variant: "secondary" })}
       >
         시간 요청
       </button>

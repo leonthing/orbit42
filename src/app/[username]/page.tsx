@@ -199,9 +199,9 @@ export default async function PublicProfile({
   return (
     <div className="space-y-6">
       <JsonLd data={[personSchema, breadcrumbSchema]} />
-      {/* Identity row — compact */}
-      <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between md:gap-6">
-        <div className="flex min-w-0 items-start gap-3 sm:items-center sm:gap-4">
+      {/* Identity block: avatar + name/handle/stats, actions on their own row */}
+      <header className="space-y-4">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
           <ProfileAvatar
             url={(profile.avatar_url as string | null) ?? null}
             name={profile.display_name || profile.username}
@@ -209,43 +209,9 @@ export default async function PublicProfile({
             editable={isOwner}
           />
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-              <h1 className="min-w-0 break-words text-xl font-bold leading-tight text-charcoal-100 sm:text-2xl md:text-[28px]">
-                {profile.display_name || profile.username}
-              </h1>
-              {!isOwner && (
-                <>
-                  <FollowButton
-                    targetUsername={params.username}
-                    initiallyFollowing={viewerFollowing}
-                    loggedIn={!!session}
-                  />
-                  <MessageButton
-                    targetUsername={params.username}
-                    loggedIn={!!session}
-                  />
-                  <TimeRequestButton
-                    targetUsername={params.username}
-                    loggedIn={!!session}
-                  />
-                  {session && (
-                    <BlockMenu
-                      targetUsername={params.username}
-                      initiallyBlocked={viewerBlocked}
-                    />
-                  )}
-                </>
-              )}
-              <ShareMenu
-                url={profileUrl}
-                title={`${profile.display_name || profile.username} (@${profile.username}) | Orbit42`}
-                text={
-                  profile.bio ||
-                  `${profile.display_name || profile.username}님의 시간을 Orbit42에서 예약해보세요`
-                }
-                compact={!isOwner}
-              />
-            </div>
+            <h1 className="truncate text-xl font-bold leading-tight text-charcoal-100 sm:text-2xl md:text-[28px]">
+              {profile.display_name || profile.username}
+            </h1>
             <p className="truncate text-sm text-charcoal-500">
               @{profile.username}
             </p>
@@ -283,6 +249,41 @@ export default async function PublicProfile({
               )}
             </div>
           </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {!isOwner && (
+            <>
+              <FollowButton
+                targetUsername={params.username}
+                initiallyFollowing={viewerFollowing}
+                loggedIn={!!session}
+              />
+              <MessageButton
+                targetUsername={params.username}
+                loggedIn={!!session}
+              />
+              <TimeRequestButton
+                targetUsername={params.username}
+                loggedIn={!!session}
+              />
+            </>
+          )}
+          <ShareMenu
+            url={profileUrl}
+            title={`${profile.display_name || profile.username} (@${profile.username}) | Orbit42`}
+            text={
+              profile.bio ||
+              `${profile.display_name || profile.username}님의 시간을 Orbit42에서 예약해보세요`
+            }
+            compact={!isOwner}
+          />
+          {!isOwner && session && (
+            <BlockMenu
+              targetUsername={params.username}
+              initiallyBlocked={viewerBlocked}
+            />
+          )}
         </div>
       </header>
 
@@ -327,17 +328,6 @@ export default async function PublicProfile({
         </section>
       )}
 
-      {!isOwner && totalSlotWindows > 0 && (
-        <div className="flex justify-end">
-          <Link
-            href={`/${params.username}/book`}
-            className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-charcoal-950 hover:bg-red-400"
-          >
-            예약하기 ({totalSlotWindows})
-          </Link>
-        </div>
-      )}
-
       {isOwner ? (
         <ProfileTabs
           tabs={[
@@ -351,7 +341,7 @@ export default async function PublicProfile({
                 <ActionTile href={`/${params.username}/slots`} label="슬롯 만들기" highlight />
                 <ActionTile href="/feed" label="소식 공유" />
                 <ActionTile href={`/${params.username}/calendar`} label="일정 추가" />
-                <ActionTile href={`/${params.username}/book`} label="예약 링크" />
+                <ActionTile href={`/${params.username}/bookings`} label="예약 관리" />
                 <ActionTile href={`/${params.username}/insights`} label="인사이트" />
                 <ActionTile href={`/${params.username}/settings`} label="설정" />
               </div>
@@ -481,7 +471,7 @@ export default async function PublicProfile({
               <section className="space-y-3">
                 <div className="flex items-baseline justify-between">
                   <h2 className="text-lg font-semibold text-charcoal-100">
-                    모든 슬롯
+                    예약 가능한 슬롯
                   </h2>
                   <span className="text-xs text-charcoal-500">
                     {slots.length}개
