@@ -25,6 +25,7 @@ import { Markdown } from "@/components/Markdown";
 import { ComingUpCard } from "./ComingUpCard";
 import { InsightsCard } from "./InsightsCard";
 import { ProfileTabs } from "./ProfileTabs";
+import { ShareMenu } from "@/components/ShareMenu";
 import { JsonLd } from "@/components/JsonLd";
 import { SITE } from "@/lib/constants";
 import {
@@ -48,15 +49,18 @@ export async function generateMetadata({
   const name = profile.display_name || profile.username;
   const title = name;
   const description = profile.bio || `${name}'s orbit on Orbit42`;
+  const profileUrl = `${SITE.url}/${profile.username}`;
   return {
     title,
     description,
+    alternates: { canonical: profileUrl },
     openGraph: {
       title,
       description,
       type: "profile",
       siteName: "Orbit42",
       locale: "ko_KR",
+      url: profileUrl,
     },
     twitter: {
       card: "summary_large_image",
@@ -232,6 +236,15 @@ export default async function PublicProfile({
                   )}
                 </>
               )}
+              <ShareMenu
+                url={profileUrl}
+                title={`${profile.display_name || profile.username} (@${profile.username}) | Orbit42`}
+                text={
+                  profile.bio ||
+                  `${profile.display_name || profile.username}님의 시간을 Orbit42에서 예약해보세요`
+                }
+                compact={!isOwner}
+              />
             </div>
             <p className="truncate text-sm text-charcoal-500">
               @{profile.username}
