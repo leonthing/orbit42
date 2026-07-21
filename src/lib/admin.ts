@@ -5,7 +5,15 @@ import { getSession } from "@/lib/auth";
 import { getAdminClient } from "@/lib/supabase";
 
 function adminList(): string[] {
-  const raw = process.env.ADMIN_USERNAMES || "leokim5854";
+  // Fail closed: no hardcoded fallback. If ADMIN_USERNAMES is unset there are
+  // no admins, rather than silently binding admin authority to a real username
+  // that anyone could register. Set ADMIN_USERNAMES (comma-separated) in every
+  // environment — it's configured in Vercel for prod/preview/dev.
+  const raw = process.env.ADMIN_USERNAMES;
+  if (!raw) {
+    console.warn("ADMIN_USERNAMES is not set — no admins are authorized");
+    return [];
+  }
   return raw
     .split(",")
     .map((s) => s.trim().toLowerCase())
