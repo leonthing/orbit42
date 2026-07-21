@@ -256,7 +256,7 @@ export function ComposeBox({
                 disabled={pending || (!body.trim() && files.length === 0)}
                 className="rounded-full bg-red-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 disabled:cursor-not-allowed disabled:bg-charcoal-800 disabled:text-charcoal-500"
               >
-                {pending ? "올리는 중…" : "Post"}
+                {pending ? "올리는 중…" : "게시"}
               </button>
             </div>
           </div>

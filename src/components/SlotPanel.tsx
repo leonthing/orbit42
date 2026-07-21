@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { slotTypeLabel } from "@/lib/constants";
 import { createPortal } from "react-dom";
 import {
   createContext,
@@ -205,7 +206,7 @@ function SlotPanelBody({
               ? "Free"
               : `₩${(slot.price_cents / 100).toLocaleString("ko-KR")}`}
           {" · "}
-          {slot.slot_type}
+          {slotTypeLabel(slot.slot_type)}
           {slot.location_detail && ` · ${slot.location_detail}`}
         </p>
         {slot.description && (

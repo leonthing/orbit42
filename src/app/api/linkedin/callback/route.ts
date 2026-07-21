@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { exchangeLinkedInCode, getLinkedInProfile, saveLinkedInTokens } from "@/lib/social";
 import { getAdminClient } from "@/lib/supabase";
+import { getSession } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -12,6 +13,13 @@ export async function GET(request: NextRequest) {
     : [stateRaw, ""];
 
   if (!code || !username) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  // Bind to the caller's own session — state is attacker-controllable and is
+  // not a trust boundary (see OAuth account-linking CSRF).
+  const session = await getSession();
+  if (!session || session.username !== username) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 

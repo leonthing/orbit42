@@ -12,7 +12,7 @@ import { CopyLinkButton } from "@/components/CopyLinkButton";
 import { PoweredByCta } from "@/components/PoweredByCta";
 import { getHostRating, listHostReviews } from "@/lib/reviews";
 import { Avatar } from "@/components/Avatar";
-import { SITE } from "@/lib/constants";
+import { SITE, slotTypeLabel } from "@/lib/constants";
 import { JsonLd } from "@/components/JsonLd";
 
 function formatWindow(from: string | null, until: string | null): string {
@@ -204,7 +204,7 @@ export default async function SlotPage({
               ? "Free"
               : `₩${(slot.price_cents / 100).toLocaleString("ko-KR")}`}
           {" · "}
-          {slot.slot_type}
+          {slotTypeLabel(slot.slot_type)}
           {(() => {
             const locs =
               slot.locations && slot.locations.length > 0

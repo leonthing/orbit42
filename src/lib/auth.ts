@@ -3,8 +3,23 @@
 import { cookies } from "next/headers";
 import { getAdminClient } from "@/lib/supabase";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
+import { signSession, verifySession } from "@/lib/session";
 
 const COOKIE_NAME = "orbit42_session";
+
+const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
+
+// Sets the signed session cookie. The value is HMAC-signed (see lib/session)
+// so it cannot be forged client-side.
+async function setSessionCookie(username: string) {
+  cookies().set(COOKIE_NAME, await signSession({ username }), {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: SESSION_MAX_AGE,
+  });
+}
 
 export async function login(username: string, password: string) {
   const limit = rateLimit(clientKey("login", username), 8, 5 * 60_000);
@@ -19,12 +34,7 @@ export async function login(username: string, password: string) {
     return { error: "아이디 또는 비밀번호가 올바르지 않습니다." };
   }
 
-  cookies().set(COOKIE_NAME, JSON.stringify({ username }), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 7, // 7 days
-  });
+  await setSessionCookie(username);
   return { success: true, username };
 }
 
@@ -123,12 +133,7 @@ export async function signup(
   }
 
   // Auto login
-  cookies().set(COOKIE_NAME, JSON.stringify({ username }), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 7,
-  });
+  await setSessionCookie(username);
   return { success: true, username };
 }
 
@@ -164,12 +169,7 @@ export async function loginOrSignupWithGoogle(
         .update({ email_verified: true })
         .eq("id", existing.id);
     }
-    cookies().set(COOKIE_NAME, JSON.stringify({ username: existing.username }), {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7,
-    });
+    await setSessionCookie(existing.username as string);
     return { username: existing.username as string };
   }
 
@@ -231,12 +231,7 @@ export async function loginOrSignupWithGoogle(
     await seedNewUser(fresh.id as string, inviter);
   }
 
-  cookies().set(COOKIE_NAME, JSON.stringify({ username }), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 7,
-  });
+  await setSessionCookie(username);
   return { username };
 }
 
@@ -246,13 +241,7 @@ export async function logout() {
 }
 
 export async function getSession() {
-  const raw = cookies().get(COOKIE_NAME)?.value;
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as { username: string };
-  } catch {
-    return null;
-  }
+  return verifySession(cookies().get(COOKIE_NAME)?.value);
 }
 
 export async function isAuthenticated() {

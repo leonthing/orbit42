@@ -26,7 +26,10 @@ export async function searchAll(q: string): Promise<SearchResult> {
   if (query.length < 1) return { users: [], slots: [] };
   const db = getAdminClient();
 
-  const pattern = `%${query.replace(/[%_]/g, "")}%`;
+  // Strip both LIKE wildcards (%_) and PostgREST-structural characters (,()
+  // and the field.op.value separator `.`) so a crafted query cannot inject
+  // extra filter clauses into the `.or(...)` grammar below.
+  const pattern = `%${query.replace(/[%_,().]/g, "")}%`;
 
   const [usersRes, slotsRes] = await Promise.all([
     db

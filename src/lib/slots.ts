@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getAdminClient } from "@/lib/supabase";
 import { getSession } from "@/lib/auth";
 import { getUserId, requireUserId } from "@/lib/db";
+import { clientKey, rateLimit } from "@/lib/rate-limit";
 import { getAuthenticatedCalendar } from "@/lib/google";
 import { computeAutoAvailability } from "@/lib/slot-availability";
 import type { WorkingHours, AutoSlotOption } from "@/lib/slot-availability";
@@ -676,6 +677,18 @@ export async function bookSlot(args: {
 
   if (!session && !(args.guest_name && args.guest_email)) {
     return { error: "로그인하거나 이름/이메일을 입력해주세요." };
+  }
+
+  // Throttle the (session-less) guest booking path so it can't be scripted to
+  // flood a host's inbox / outbound email. Keyed by identity when we have one,
+  // else by the guest email, plus the caller IP (handled inside clientKey).
+  const rl = rateLimit(
+    clientKey("book", session?.username ?? args.guest_email ?? ""),
+    8,
+    5 * 60_000,
+  );
+  if (!rl.ok) {
+    return { error: `예약 요청이 너무 많아요. ${rl.retryAfter}초 후 다시 시도해주세요.` };
   }
 
   const db = getAdminClient();

@@ -11,16 +11,10 @@ import { createNotification } from "@/lib/notifications";
  * Fresh bookings (created within the last 2h) are skipped — their
  * confirmation email just went out. Gated by CRON_SECRET.
  */
-function authorized(request: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  const header = request.headers.get("authorization");
-  if (header === `Bearer ${secret}`) return true;
-  return request.nextUrl.searchParams.get("key") === secret;
-}
+import { isAuthorizedCron } from "@/lib/cron-auth";
 
 export async function GET(request: NextRequest) {
-  if (!authorized(request)) {
+  if (!isAuthorizedCron(request)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 

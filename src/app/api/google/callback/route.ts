@@ -8,7 +8,7 @@ import {
   fetchGoogleProfile,
 } from "@/lib/google";
 import { getAdminClient } from "@/lib/supabase";
-import { loginOrSignupWithGoogle } from "@/lib/auth";
+import { loginOrSignupWithGoogle, getSession } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -57,6 +57,16 @@ export async function GET(request: NextRequest) {
   const mode = parts[2] || "primary";
 
   if (!code || !username) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  // Bind the callback to the logged-in session: the account whose Google
+  // tokens we save must be the caller's own. Without this, an attacker can
+  // replay a `code` with `state=<victim>` (or trick a victim into a link with
+  // `state=<attacker>`) to link Google accounts across users. state is not a
+  // trust boundary; the session cookie (now HMAC-signed) is.
+  const session = await getSession();
+  if (!session || session.username !== username) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 

@@ -1,6 +1,12 @@
 "use client";
 
-import { createContext, useCallback, useContext, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import { buttonClasses } from "@/components/PendingButton";
 
 type Options = {
@@ -50,6 +56,20 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
     setPending(null);
   };
 
+  // Escape cancels the dialog (parity with clicking the backdrop / 취소).
+  useEffect(() => {
+    if (!pending) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        pending.resolve(false);
+        setPending(null);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [pending]);
+
   return (
     <Ctx.Provider value={confirm}>
       {children}
@@ -75,6 +95,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
             <div className="mt-5 flex justify-end gap-2">
               <button
                 type="button"
+                autoFocus={pending.opts.danger}
                 onClick={() => resolve(false)}
                 className={buttonClasses({ variant: "secondary" })}
               >
@@ -82,7 +103,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
               </button>
               <button
                 type="button"
-                autoFocus
+                autoFocus={!pending.opts.danger}
                 onClick={() => resolve(true)}
                 className={buttonClasses({
                   variant: pending.opts.danger ? "danger" : "primary",

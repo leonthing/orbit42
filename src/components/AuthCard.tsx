@@ -124,7 +124,7 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
               setError("");
             }}
           >
-            Sign in
+            로그인
           </TabButton>
           <TabButton
             active={mode === "signup"}
@@ -133,7 +133,7 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
               setError("");
             }}
           >
-            Sign up
+            가입
           </TabButton>
         </div>
         <button
@@ -160,12 +160,12 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
           <path fill="#fbbc04" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
           <path fill="#ea4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
         </svg>
-        Continue with Google
+        Google로 계속하기
       </a>
 
       <div className="mb-2.5 flex items-center gap-2 text-[10px] uppercase tracking-wider text-charcoal-500">
         <span className="h-px flex-1 bg-charcoal-800/60" />
-        <span>or</span>
+        <span>또는</span>
         <span className="h-px flex-1 bg-charcoal-800/60" />
       </div>
 
@@ -211,7 +211,7 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
             type="text"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            placeholder="Display name (선택)"
+            placeholder="표시 이름 (선택)"
             className={input}
           />
         )}
@@ -220,7 +220,7 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
           autoComplete={mode === "signup" ? "new-password" : "current-password"}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder={mode === "signup" ? "Password (6자 이상)" : "Password"}
+          placeholder={mode === "signup" ? "비밀번호 (6자 이상)" : "비밀번호"}
           className={input}
           required
         />
@@ -230,7 +230,7 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
             autoComplete="new-password"
             value={passwordConfirm}
             onChange={(e) => setPasswordConfirm(e.target.value)}
-            placeholder="Password 확인"
+            placeholder="비밀번호 확인"
             className={input}
             required
           />
@@ -262,10 +262,10 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
           className="!mt-3 w-full rounded-md bg-red-600 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 disabled:cursor-not-allowed disabled:bg-charcoal-800 disabled:text-charcoal-500"
         >
           {loading
-            ? "..."
+            ? "처리 중…"
             : mode === "signup"
-              ? "Create account"
-              : "Sign in"}
+              ? "계정 만들기"
+              : "로그인"}
         </button>
       </form>
 

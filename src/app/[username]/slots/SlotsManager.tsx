@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { slotTypeLabel } from "@/lib/constants";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -1316,7 +1317,7 @@ function SlotCard({
             )}
           </div>
           <p className="mt-1.5 text-xs text-charcoal-500">
-            {row.slot.duration_min}분 · {row.slot.slot_type}
+            {row.slot.duration_min}분 · {slotTypeLabel(row.slot.slot_type)}
             {row.slot.location_detail && ` · ${row.slot.location_detail}`}
           </p>
           {row.slot.description && (

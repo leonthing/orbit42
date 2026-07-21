@@ -208,15 +208,12 @@ export function NotificationBell({ initialUnread }: { initialUnread: number }) {
               </p>
             ) : (
               <ul className="divide-y divide-charcoal-800/40">
-                {items.map((n) => (
-                  <li key={n.id}>
-                    <Link
-                      href={n.link ?? "#"}
-                      onClick={() => onItemClick(n)}
-                      className={`flex items-start gap-3 px-4 py-3 hover:bg-charcoal-800/40 ${
-                        !n.read_at ? "bg-red-600/5" : ""
-                      }`}
-                    >
+                {items.map((n) => {
+                  const rowClass = `flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-charcoal-800/40 ${
+                    !n.read_at ? "bg-red-600/5" : ""
+                  }`;
+                  const inner = (
+                    <>
                       <div className="relative shrink-0">
                         {n.actor ? (
                           <Avatar
@@ -260,9 +257,30 @@ export function NotificationBell({ initialUnread }: { initialUnread: number }) {
                       {!n.read_at && (
                         <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-red-500" />
                       )}
-                    </Link>
-                  </li>
-                ))}
+                    </>
+                  );
+                  return (
+                    <li key={n.id}>
+                      {n.link ? (
+                        <Link
+                          href={n.link}
+                          onClick={() => onItemClick(n)}
+                          className={rowClass}
+                        >
+                          {inner}
+                        </Link>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => onItemClick(n)}
+                          className={rowClass}
+                        >
+                          {inner}
+                        </button>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>

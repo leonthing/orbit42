@@ -213,7 +213,7 @@ export function SettingsForm({
         </div>
         <form onSubmit={handleProfileSave} className="space-y-4 p-5">
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-charcoal-400">Username</label>
+            <label className="mb-1.5 block text-xs font-medium text-charcoal-400">아이디</label>
             <div className="flex items-center rounded-lg border border-charcoal-800 bg-charcoal-800/30 px-4 py-2.5 text-sm text-charcoal-500">
               {username}
             </div>
@@ -539,15 +539,15 @@ export function SettingsForm({
         <form onSubmit={handlePasswordChange} className="space-y-4 p-5">
           <div>
             <label className="mb-1.5 block text-xs font-medium text-charcoal-400">현재 비밀번호</label>
-            <input type="password" value={currentPw} onChange={(e) => setCurrentPw(e.target.value)} className={inputClass} />
+            <input type="password" autoComplete="current-password" value={currentPw} onChange={(e) => setCurrentPw(e.target.value)} className={inputClass} />
           </div>
           <div>
             <label className="mb-1.5 block text-xs font-medium text-charcoal-400">새 비밀번호</label>
-            <input type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)} placeholder="6자 이상" className={inputClass} />
+            <input type="password" autoComplete="new-password" value={newPw} onChange={(e) => setNewPw(e.target.value)} placeholder="6자 이상" className={inputClass} />
           </div>
           <div>
             <label className="mb-1.5 block text-xs font-medium text-charcoal-400">새 비밀번호 확인</label>
-            <input type="password" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} className={inputClass} />
+            <input type="password" autoComplete="new-password" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} className={inputClass} />
           </div>
 
           {pwMsg && (

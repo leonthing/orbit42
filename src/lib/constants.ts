@@ -19,6 +19,19 @@ export const SITE = {
   url: process.env.NEXT_PUBLIC_SITE_URL || "https://orbit42.org",
 } as const;
 
+// Korean labels for the DB `slot_type` enum. The raw values ("1on1",
+// "companion", "group") were leaking into the UI on several read surfaces.
+export const SLOT_TYPE_LABELS: Record<string, string> = {
+  "1on1": "1:1",
+  companion: "동행",
+  group: "그룹",
+};
+
+export function slotTypeLabel(t: string | null | undefined): string {
+  if (!t) return "";
+  return SLOT_TYPE_LABELS[t] ?? t;
+}
+
 export const NAV_ITEMS = [
   { href: "/calendar", label: "캘린더", icon: "calendar" },
   { href: "/slots", label: "타임슬롯", icon: "clock" },

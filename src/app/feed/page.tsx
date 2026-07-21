@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { slotTypeLabel } from "@/lib/constants";
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -379,10 +380,10 @@ export default async function FeedPage() {
       <section className="mt-10 rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-charcoal-200">
-            Orbiting ({following.length})
+            궤도 ({following.length})
           </h3>
           <Link href="/explore" className="text-xs text-red-400 hover:text-red-300">
-            Find more →
+            더 찾기 →
           </Link>
         </div>
         {following.length === 0 ? (
@@ -849,12 +850,12 @@ function FeedSlotCard({
           </p>
           <span className="shrink-0 rounded-md bg-red-500/15 px-2 py-0.5 text-xs font-bold text-red-700 dark:text-red-300">
             {item.price_cents === 0
-              ? "FREE"
+              ? "무료"
               : `₩${(item.price_cents / 100).toLocaleString("ko-KR")}`}
           </span>
         </div>
         <p className="mt-1 text-xs text-charcoal-500">
-          {item.duration_min}분 · {item.slot_type}
+          {item.duration_min}분 · {slotTypeLabel(item.slot_type)}
         </p>
       </Link>
     );
@@ -884,7 +885,7 @@ function FeedSlotCard({
       </div>
       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-charcoal-500">
         <span>
-          {item.duration_min}분 · {item.slot_type}
+          {item.duration_min}분 · {slotTypeLabel(item.slot_type)}
         </span>
         <span className="text-charcoal-400">
           <span className="font-semibold text-charcoal-200">입찰 {item.bid_count}</span>

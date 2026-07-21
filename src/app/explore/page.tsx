@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { slotTypeLabel } from "@/lib/constants";
 import Link from "next/link";
 import { getSession } from "@/lib/auth";
 import { getAdminClient } from "@/lib/supabase";
@@ -338,7 +339,7 @@ export default async function ExplorePage() {
                     {s.title}
                   </p>
                   <p className="mt-1 text-xs text-charcoal-500">
-                    {s.duration_min}분 · {s.slot_type}{" "}
+                    {s.duration_min}분 · {slotTypeLabel(s.slot_type)}{" "}
                     {s.location_detail && `· ${s.location_detail}`}{" "}
                     ·{" "}
                     {s.price_cents === 0

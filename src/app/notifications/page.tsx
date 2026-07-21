@@ -48,14 +48,12 @@ export default async function NotificationsPage() {
         />
       ) : (
         <ul className="divide-y divide-charcoal-800/40 overflow-hidden rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))]">
-          {items.map((n) => (
-            <li key={n.id}>
-              <Link
-                href={n.link ?? "#"}
-                className={`flex items-start gap-3 p-4 hover:bg-charcoal-800/40 ${
-                  !n.read_at ? "bg-red-600/5" : ""
-                }`}
-              >
+          {items.map((n) => {
+            const rowClass = `flex items-start gap-3 p-4 ${
+              !n.read_at ? "bg-red-600/5" : ""
+            }`;
+            const inner = (
+              <>
                 {n.actor ? (
                   <Avatar
                     url={n.actor.avatar_url}
@@ -83,9 +81,23 @@ export default async function NotificationsPage() {
                 {!n.read_at && (
                   <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-red-500" />
                 )}
-              </Link>
-            </li>
-          ))}
+              </>
+            );
+            return (
+              <li key={n.id}>
+                {n.link ? (
+                  <Link
+                    href={n.link}
+                    className={`${rowClass} hover:bg-charcoal-800/40`}
+                  >
+                    {inner}
+                  </Link>
+                ) : (
+                  <div className={rowClass}>{inner}</div>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

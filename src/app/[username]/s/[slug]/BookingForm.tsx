@@ -580,7 +580,7 @@ function BookingMenuPicker({
                     </span>
                     <span className="shrink-0 text-xs font-semibold text-charcoal-300">
                       {m.price_cents === 0
-                        ? "Free"
+                        ? "무료"
                         : `+ ₩${(m.price_cents / 100).toLocaleString("ko-KR")}`}
                     </span>
                   </button>

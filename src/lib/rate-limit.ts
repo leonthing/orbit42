@@ -10,9 +10,16 @@ const store = new Map<string, Entry>();
 
 export function clientKey(prefix: string, subject?: string): string {
   const h = headers();
+  // Use only IPs the platform sets, never the client-supplied left-most
+  // `x-forwarded-for` entry (which an attacker can spoof per-request to rotate
+  // the bucket key and bypass throttling). On Vercel `x-vercel-forwarded-for`
+  // / `x-real-ip` are set by the edge and cannot be forged by the client; as a
+  // last resort take the RIGHT-most XFF hop (the one the platform appended).
+  const xff = h.get("x-forwarded-for");
   const ip =
-    h.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    h.get("x-real-ip") ||
+    h.get("x-vercel-forwarded-for")?.trim() ||
+    h.get("x-real-ip")?.trim() ||
+    (xff ? xff.split(",").pop()?.trim() : "") ||
     "unknown";
   return `${prefix}:${ip}:${subject ?? ""}`;
 }

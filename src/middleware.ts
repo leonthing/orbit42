@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { verifySession } from "@/lib/session";
 
 const PUBLIC_PATHS = [
   "/",
@@ -16,7 +17,7 @@ const PUBLIC_PATHS = [
 // Sub-paths under /[username] that require the visitor to be the owner.
 const OWNER_ONLY_SEGMENTS = ["settings", "calendar", "slots", "bookings", "network"];
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hostname = request.headers.get("host") || "";
 
@@ -47,20 +48,16 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const raw = request.cookies.get("orbit42_session")?.value;
-  if (!raw) {
+  const session = await verifySession(
+    request.cookies.get("orbit42_session")?.value,
+  );
+  if (!session) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
-
-  try {
-    const session = JSON.parse(raw);
-    if (session.username !== urlUsername) {
-      return NextResponse.redirect(new URL("/forbidden", request.url));
-    }
-    return NextResponse.next();
-  } catch {
-    return NextResponse.redirect(new URL("/login", request.url));
+  if (session.username !== urlUsername) {
+    return NextResponse.redirect(new URL("/forbidden", request.url));
   }
+  return NextResponse.next();
 }
 
 export const config = {

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { slotTypeLabel } from "@/lib/constants";
 import { ReactionStrip } from "@/components/ReactionStrip";
 import { useSlotPanel } from "@/components/SlotPanel";
 import type { ReactionSummary } from "@/lib/reactions-types";
@@ -72,7 +73,7 @@ export function AllSlotsGrid({
                   {auctionStatus}
                 </span>
               )}
-              {s.duration_min}분 · {s.slot_type}
+              {s.duration_min}분 · {slotTypeLabel(s.slot_type)}
               {s.location_detail && ` · ${s.location_detail}`}
             </p>
             {s.description && (

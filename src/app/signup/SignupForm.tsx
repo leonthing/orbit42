@@ -107,6 +107,7 @@ export function SignupForm({ initialRef }: { initialRef: string }) {
         />
         <input
           type="password"
+          autoComplete="new-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="비밀번호 (6자 이상)"
@@ -115,6 +116,7 @@ export function SignupForm({ initialRef }: { initialRef: string }) {
         />
         <input
           type="password"
+          autoComplete="new-password"
           value={passwordConfirm}
           onChange={(e) => setPasswordConfirm(e.target.value)}
           placeholder="비밀번호 확인"
