@@ -83,6 +83,13 @@ final class APIClient {
         return try await perform(request)
     }
 
+    func patch<Body: Encodable, Response: Decodable>(_ path: String, body: Body) async throws -> Response {
+        var request = request(path: path, method: "PATCH")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(body)
+        return try await perform(request)
+    }
+
     // MARK: - 내부
 
     private func request(path: String, method: String) -> URLRequest {

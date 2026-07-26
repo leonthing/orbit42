@@ -1,6 +1,6 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { getAdminClient } from "@/lib/supabase";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
 import { signSession, verifySession } from "@/lib/session";
@@ -291,7 +291,15 @@ export async function logout() {
 }
 
 export async function getSession() {
-  return verifySession(cookies().get(COOKIE_NAME)?.value);
+  const fromCookie = await verifySession(cookies().get(COOKIE_NAME)?.value);
+  if (fromCookie) return fromCookie;
+  // 모바일 /api/v1: 쿠키 대신 같은 서명 포맷의 Bearer 토큰(lib/api-auth 발급)을
+  // 허용한다. 이 폴백 덕에 requireUserId() 기반 도메인 함수를 그대로 재사용한다.
+  const auth = headers().get("authorization") ?? "";
+  if (auth.toLowerCase().startsWith("bearer ")) {
+    return verifySession(auth.slice(7).trim());
+  }
+  return null;
 }
 
 export async function isAuthenticated() {
