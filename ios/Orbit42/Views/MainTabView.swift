@@ -3,7 +3,7 @@ import SwiftUI
 /// 메인 4탭: 캘린더 / 타임슬롯 / 예약 / 프로필
 struct MainTabView: View {
     enum Tab: String {
-        case calendar, slots, bookings, profile
+        case calendar, slots, bookings, asset, profile
     }
 
     @State private var selection: Tab = MainTabView.initialTab
@@ -33,6 +33,10 @@ struct MainTabView: View {
             BookingsView()
                 .tabItem { Label("예약", systemImage: "checkmark.circle") }
                 .tag(Tab.bookings)
+
+            AssetView()
+                .tabItem { Label("자산", systemImage: "wonsign.circle") }
+                .tag(Tab.asset)
 
             ProfileView()
                 .tabItem { Label("프로필", systemImage: "person.crop.circle") }
