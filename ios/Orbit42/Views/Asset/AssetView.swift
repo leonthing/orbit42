@@ -17,7 +17,7 @@ struct AssetView: View {
             .navigationTitle("자산")
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showingSettingsSheet) {
-                IncomeSettingsSheet(viewModel: viewModel)
+                AssetSettingsSheet(viewModel: viewModel)
             }
             .sheet(isPresented: $showingBucketMapSheet) {
                 BucketMapSheet(viewModel: viewModel)
@@ -162,7 +162,7 @@ struct AssetView: View {
                         .background(Theme.background.opacity(0.6))
                         .clipShape(Circle())
                 }
-                .accessibilityLabel("급여 기준 수정")
+                .accessibilityLabel("자산 설정")
             }
 
             if let conv = conversions {

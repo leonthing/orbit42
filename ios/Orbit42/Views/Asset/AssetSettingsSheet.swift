@@ -1,9 +1,9 @@
 import SwiftUI
 
-/// 급여 기준 입력 시트 — 월급/시급 세그먼트 + 금액 + 수면 시간.
-/// 저장하면 서버가 시급을 환산해 자산 탭 전체가 갱신된다.
+/// 자산 설정 — 시간 자산 계산의 기준을 한곳에서 관리한다.
+/// 급여(월급/시급), 근로시간, 수면. 앞으로 시간 자산 관련 설정이 여기에 모인다.
 /// 수면만 바뀌었으면 수면만, 급여가 바뀌었으면 급여와 함께 전송한다.
-struct IncomeSettingsSheet: View {
+struct AssetSettingsSheet: View {
     let viewModel: AssetViewModel
 
     @Environment(\.dismiss) private var dismiss
@@ -50,6 +50,23 @@ struct IncomeSettingsSheet: View {
                     .listRowBackground(Theme.surface)
 
                     Section {
+                        NavigationLink {
+                            WorkHoursView()
+                        } label: {
+                            HStack {
+                                Text("근로시간")
+                                Spacer()
+                                Text("요일별 설정")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Theme.secondaryText)
+                            }
+                        }
+                    } footer: {
+                        Text("가동률 계산과 자동 슬롯의 기본값에 쓰여요.")
+                    }
+                    .listRowBackground(Theme.surface)
+
+                    Section {
                         Stepper(value: $sleepHours, in: 4...12, step: 0.5) {
                             HStack {
                                 Text("하루 수면")
@@ -83,7 +100,7 @@ struct IncomeSettingsSheet: View {
                 }
                 .scrollContentBackground(.hidden)
             }
-            .navigationTitle("급여 기준")
+            .navigationTitle("자산 설정")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
