@@ -245,9 +245,11 @@ struct SlotBookingView: View {
                 .padding(.vertical, 28)
                 .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16))
             } else {
-                ForEach(viewModel.optionsByDay, id: \.dayText) { group in
+                BookingMiniCalendar(viewModel: viewModel)
+
+                if let dayText = viewModel.selectedDayText {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text(group.dayText)
+                        Text(dayText)
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.white)
                         LazyVGrid(
@@ -255,12 +257,12 @@ struct SlotBookingView: View {
                             alignment: .leading,
                             spacing: 8
                         ) {
-                            ForEach(group.options) { option in
+                            ForEach(viewModel.optionsForSelectedDay) { option in
                                 timeChip(option)
                             }
                         }
                     }
-                    .padding(.bottom, 4)
+                    .padding(.top, 4)
                 }
             }
         }
@@ -327,6 +329,164 @@ struct SlotBookingView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .navigationBarBackButtonHidden(true)
     }
+}
+
+// MARK: - 미니 월 캘린더
+
+/// 옵션이 존재하는 날짜만 선택할 수 있는 미니 월 캘린더.
+/// 월 이동은 옵션이 존재하는 달 범위 안에서만 가능하다.
+private struct BookingMiniCalendar: View {
+    let viewModel: SlotBookingViewModel
+
+    /// 헤더가 일요일 시작이므로 로케일과 무관하게 firstWeekday 를 일요일로 고정.
+    private static let gridCalendar: Calendar = {
+        var calendar = Calendar.current
+        calendar.firstWeekday = 1
+        return calendar
+    }()
+
+    private var calendar: Calendar { Self.gridCalendar }
+
+    var body: some View {
+        VStack(spacing: 8) {
+            monthHeader
+            weekdayHeader
+            monthGrid
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 12)
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    // MARK: - 월 헤더
+
+    private var monthHeader: some View {
+        HStack {
+            Button {
+                withAnimation { viewModel.showPreviousMonth() }
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(viewModel.canShowPreviousMonth ? Theme.accent : Theme.secondaryText.opacity(0.4))
+                    .frame(width: 40, height: 40)
+            }
+            .disabled(!viewModel.canShowPreviousMonth)
+            .accessibilityLabel("이전 달")
+
+            Spacer()
+
+            Text(Self.monthTitleFormatter.string(from: viewModel.displayedMonth))
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+
+            Spacer()
+
+            Button {
+                withAnimation { viewModel.showNextMonth() }
+            } label: {
+                Image(systemName: "chevron.right")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(viewModel.canShowNextMonth ? Theme.accent : Theme.secondaryText.opacity(0.4))
+                    .frame(width: 40, height: 40)
+            }
+            .disabled(!viewModel.canShowNextMonth)
+            .accessibilityLabel("다음 달")
+        }
+        .padding(.horizontal, 4)
+    }
+
+    // MARK: - 요일 헤더 (일요일 시작)
+
+    private var weekdayHeader: some View {
+        HStack(spacing: 0) {
+            ForEach(Array(Self.weekdaySymbols.enumerated()), id: \.offset) { index, symbol in
+                Text(symbol)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(weekdayColor(at: index))
+                    .frame(maxWidth: .infinity)
+            }
+        }
+        .padding(.horizontal, 4)
+    }
+
+    private func weekdayColor(at index: Int) -> Color {
+        switch index {
+        case 0: return Color(red: 0.94, green: 0.45, blue: 0.45)   // 일
+        case 6: return Color(red: 0.45, green: 0.62, blue: 0.94)   // 토
+        default: return Theme.secondaryText
+        }
+    }
+
+    // MARK: - 월 그리드
+
+    private var monthGrid: some View {
+        let availableDays = viewModel.availableDays
+        let selectedDay = viewModel.selectedDay
+        return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 2) {
+            ForEach(Array(monthDays.enumerated()), id: \.offset) { _, day in
+                if let day {
+                    dayCell(
+                        day,
+                        isAvailable: availableDays.contains(day),
+                        isSelected: selectedDay.map { calendar.isDate(day, inSameDayAs: $0) } ?? false
+                    )
+                } else {
+                    Color.clear.frame(height: 40)
+                }
+            }
+        }
+        .padding(.horizontal, 4)
+    }
+
+    private func dayCell(_ day: Date, isAvailable: Bool, isSelected: Bool) -> some View {
+        Button {
+            viewModel.selectDay(day)
+        } label: {
+            VStack(spacing: 2) {
+                Text("\(calendar.component(.day, from: day))")
+                    .font(.callout.weight(isSelected ? .semibold : .regular))
+                    .foregroundStyle(isAvailable ? .white : Theme.secondaryText.opacity(0.45))
+                    .frame(width: 32, height: 32)
+                    .background {
+                        if isSelected {
+                            Circle().fill(Theme.accent)
+                        }
+                    }
+
+                Circle()
+                    .fill(isAvailable && !isSelected ? Theme.accent : .clear)
+                    .frame(width: 4.5, height: 4.5)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 40)
+        }
+        .buttonStyle(.plain)
+        .disabled(!isAvailable)
+    }
+
+    /// 표시 중인 달의 셀 배열 — 앞뒤를 nil 로 패딩해 7의 배수를 맞춘다.
+    private var monthDays: [Date?] {
+        let first = viewModel.displayedMonth
+        guard let range = calendar.range(of: .day, in: .month, for: first) else { return [] }
+        let leading = (calendar.component(.weekday, from: first) - calendar.firstWeekday + 7) % 7
+        var days: [Date?] = Array(repeating: nil, count: leading)
+        for offset in 0..<range.count {
+            days.append(calendar.date(byAdding: .day, value: offset, to: first))
+        }
+        while days.count % 7 != 0 { days.append(nil) }
+        return days
+    }
+
+    /// "2026년 7월"
+    private static let monthTitleFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ko_KR")
+        formatter.dateFormat = "yyyy년 M월"
+        formatter.timeZone = .current
+        return formatter
+    }()
+
+    private static let weekdaySymbols = ["일", "월", "화", "수", "목", "금", "토"]
 }
 
 // MARK: - 예약 확인 시트
