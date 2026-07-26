@@ -211,7 +211,7 @@ struct EditProfileSheet: View {
     // MARK: - 소셜 링크
 
     private var socialLinksSection: some View {
-        Section("소셜 링크") {
+        Section {
             ForEach(SocialLinkKind.allCases) { kind in
                 HStack(spacing: 12) {
                     Text(kind.label)
@@ -226,6 +226,11 @@ struct EditProfileSheet: View {
                         .font(.subheadline)
                 }
             }
+        } header: {
+            Text("소셜 링크")
+        } footer: {
+            Text("프로필에 표시되는 링크예요. 글 자동 공유 연결은 프로필 > 글 자동 공유에서 할 수 있어요.")
+                .foregroundStyle(Theme.secondaryText)
         }
         .listRowBackground(Theme.surface)
     }

@@ -10,10 +10,39 @@ export async function GET(request: NextRequest) {
   const stateRaw = searchParams.get("state") || "";
 
   // State format: "username:verifier" or "username:returnTo:verifier"
+  // Mobile: "mobile:<purpose token>:<verifier>"
   const parts = stateRaw.split(":");
   const verifier = parts.pop() || "";
   const username = parts[0] || "";
   const returnTo = parts.length > 1 ? parts[1] : "";
+
+  if (username === "mobile") {
+    if (!code || !verifier) {
+      return NextResponse.redirect("orbit42://social-error?provider=x");
+    }
+    const { resolveMobileOAuthUser } = await import("@/lib/mobile-oauth");
+    const mobile = await resolveMobileOAuthUser(parts[1] || "", "social-connect");
+    if (!mobile) {
+      return NextResponse.redirect("orbit42://social-error?provider=x");
+    }
+    try {
+      const tokens = await exchangeXCode(code, verifier);
+      let xUsername: string | undefined;
+      try {
+        const meRes = await fetch("https://api.twitter.com/2/users/me", {
+          headers: { Authorization: `Bearer ${tokens.access_token}` },
+        });
+        if (meRes.ok) {
+          xUsername = (await meRes.json()).data?.username;
+        }
+      } catch {}
+      await saveXTokens(mobile.userId, tokens, xUsername);
+      return NextResponse.redirect("orbit42://social-connected?provider=x");
+    } catch (err) {
+      console.error("X OAuth error (mobile):", err);
+      return NextResponse.redirect("orbit42://social-error?provider=x");
+    }
+  }
 
   if (!code || !username || !verifier) {
     return NextResponse.redirect(new URL("/login", request.url));

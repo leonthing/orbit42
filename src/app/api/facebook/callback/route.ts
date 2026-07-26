@@ -12,6 +12,32 @@ export async function GET(request: NextRequest) {
     ? stateRaw.split(":", 2)
     : [stateRaw, ""];
 
+  // Mobile: state = "mobile:<purpose token>"
+  if (username === "mobile") {
+    const { resolveMobileOAuthUser } = await import("@/lib/mobile-oauth");
+    const mobile = await resolveMobileOAuthUser(
+      stateRaw.slice("mobile:".length),
+      "social-connect",
+    );
+    if (!mobile || !code) {
+      return NextResponse.redirect("orbit42://social-error?provider=facebook");
+    }
+    try {
+      const tokens = await exchangeFacebookCode(code);
+      const pages = await getFacebookPages(tokens.access_token);
+      if (pages.length > 0) {
+        const page = pages[0];
+        await saveFacebookTokens(mobile.userId, page.id, page.access_token, page.name);
+      } else {
+        await saveFacebookTokens(mobile.userId, "", tokens.access_token, "");
+      }
+      return NextResponse.redirect("orbit42://social-connected?provider=facebook");
+    } catch (err) {
+      console.error("Facebook OAuth error (mobile):", err);
+      return NextResponse.redirect("orbit42://social-error?provider=facebook");
+    }
+  }
+
   if (!code || !username) {
     return NextResponse.redirect(new URL("/login", request.url));
   }

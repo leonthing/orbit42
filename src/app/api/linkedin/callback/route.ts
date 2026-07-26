@@ -12,6 +12,27 @@ export async function GET(request: NextRequest) {
     ? stateRaw.split(":", 2)
     : [stateRaw, ""];
 
+  // Mobile: state = "mobile:<purpose token>"
+  if (username === "mobile") {
+    const { resolveMobileOAuthUser } = await import("@/lib/mobile-oauth");
+    const mobile = await resolveMobileOAuthUser(
+      stateRaw.slice("mobile:".length),
+      "social-connect",
+    );
+    if (!mobile || !code) {
+      return NextResponse.redirect("orbit42://social-error?provider=linkedin");
+    }
+    try {
+      const tokens = await exchangeLinkedInCode(code);
+      const profile = await getLinkedInProfile(tokens.access_token);
+      await saveLinkedInTokens(mobile.userId, tokens, profile || undefined);
+      return NextResponse.redirect("orbit42://social-connected?provider=linkedin");
+    } catch (err) {
+      console.error("LinkedIn OAuth error (mobile):", err);
+      return NextResponse.redirect("orbit42://social-error?provider=linkedin");
+    }
+  }
+
   if (!code || !username) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
