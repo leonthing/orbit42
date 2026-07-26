@@ -1,0 +1,58 @@
+# orbit42 iOS 앱 — XcodeGen 프로젝트 정의
+# 사용법: cd ios && xcodegen generate  (Orbit42.xcodeproj 는 생성물이므로 커밋하지 않음)
+name: Orbit42
+
+options:
+  minimumXcodeGenVersion: "2.40.0"
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+
+targets:
+  Orbit42:
+    type: application
+    platform: iOS
+    sources:
+      - path: Orbit42
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.orbit42.app
+        PRODUCT_NAME: Orbit42
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_STYLE: Automatic
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: 1
+        ENABLE_PREVIEWS: YES
+    info:
+      path: Orbit42/Info.plist
+      properties:
+        CFBundleDisplayName: Orbit42
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIUserInterfaceStyle: Dark
+        ITSAppUsesNonExemptEncryption: false
+        # DEBUG 빌드가 http://localhost:3000 (Next.js dev 서버) 에 접속할 수 있도록 허용
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+    entitlements:
+      path: Orbit42/Orbit42.entitlements
+      properties:
+        com.apple.developer.applesignin:
+          - Default
+
+schemes:
+  Orbit42:
+    build:
+      targets:
+        Orbit42: all
+    run:
+      config: Debug
+    archive:
+      config: Release

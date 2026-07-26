@@ -34,3 +34,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# ios (Xcode 프로젝트는 ios/project.yml 에서 xcodegen 으로 생성)
+ios/*.xcodeproj
+ios/DerivedData/
+ios/build/
+ios/**/xcuserdata/

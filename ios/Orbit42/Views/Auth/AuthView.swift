@@ -1,0 +1,262 @@
+import AuthenticationServices
+import SwiftUI
+
+/// 로그인 / 가입 화면.
+/// Sign in with Apple + 이메일(아이디) 로그인/가입 폼.
+struct AuthView: View {
+    private enum Mode: String, CaseIterable, Identifiable {
+        case login = "로그인"
+        case signup = "가입하기"
+        var id: String { rawValue }
+    }
+
+    @Environment(AuthViewModel.self) private var auth
+
+    @State private var mode: Mode = .login
+
+    // 로그인 폼
+    @State private var identifier = ""
+    @State private var loginPassword = ""
+
+    // 가입 폼
+    @State private var username = ""
+    @State private var email = ""
+    @State private var signupPassword = ""
+    @State private var displayName = ""
+
+    @State private var errorMessage: String?
+    @State private var isSubmitting = false
+
+    var body: some View {
+        ZStack {
+            Theme.background.ignoresSafeArea()
+
+            ScrollView {
+                VStack(spacing: 24) {
+                    header
+
+                    Picker("모드", selection: $mode) {
+                        ForEach(Mode.allCases) { mode in
+                            Text(mode.rawValue).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+
+                    Group {
+                        switch mode {
+                        case .login: loginForm
+                        case .signup: signupForm
+                        }
+                    }
+
+                    if let errorMessage {
+                        Text(errorMessage)
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: .infinity)
+                    }
+
+                    submitButton
+                    divider
+                    appleButton
+                }
+                .padding(24)
+                .frame(maxWidth: 440)
+            }
+            .scrollDismissesKeyboard(.interactively)
+        }
+        .onChange(of: mode) {
+            errorMessage = nil
+        }
+    }
+
+    // MARK: - 헤더
+
+    private var header: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "circle.dotted.circle")
+                .font(.system(size: 40, weight: .light))
+                .foregroundStyle(Theme.accent)
+            Text("orbit42")
+                .font(.largeTitle.weight(.bold))
+                .foregroundStyle(.white)
+            Text("시간을 주고받는 캘린더 SNS")
+                .font(.subheadline)
+                .foregroundStyle(Theme.secondaryText)
+        }
+        .padding(.top, 32)
+    }
+
+    // MARK: - 폼
+
+    private var loginForm: some View {
+        VStack(spacing: 12) {
+            field("아이디 또는 이메일", text: $identifier)
+                .textContentType(.username)
+                .keyboardType(.emailAddress)
+            secureField("비밀번호", text: $loginPassword)
+                .textContentType(.password)
+        }
+    }
+
+    private var signupForm: some View {
+        VStack(spacing: 12) {
+            field("아이디 (소문자·숫자·하이픈)", text: $username)
+                .textContentType(.username)
+            field("이메일", text: $email)
+                .textContentType(.emailAddress)
+                .keyboardType(.emailAddress)
+            secureField("비밀번호 (6자 이상)", text: $signupPassword)
+                .textContentType(.newPassword)
+            field("표시 이름 (선택)", text: $displayName, autocapitalization: .words)
+                .textContentType(.name)
+        }
+    }
+
+    private func field(
+        _ title: String,
+        text: Binding<String>,
+        autocapitalization: TextInputAutocapitalization = .never
+    ) -> some View {
+        TextField(title, text: text)
+            .textInputAutocapitalization(autocapitalization)
+            .autocorrectionDisabled()
+            .padding(14)
+            .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
+            .foregroundStyle(.white)
+    }
+
+    private func secureField(_ title: String, text: Binding<String>) -> some View {
+        SecureField(title, text: text)
+            .padding(14)
+            .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
+            .foregroundStyle(.white)
+    }
+
+    // MARK: - 제출
+
+    private var canSubmit: Bool {
+        switch mode {
+        case .login:
+            return !identifier.isEmpty && !loginPassword.isEmpty
+        case .signup:
+            return !username.isEmpty && !email.isEmpty && !signupPassword.isEmpty
+        }
+    }
+
+    private var submitButton: some View {
+        Button {
+            submit()
+        } label: {
+            Group {
+                if isSubmitting {
+                    ProgressView().tint(.white)
+                } else {
+                    Text(mode == .login ? "로그인" : "가입하기")
+                        .font(.headline)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 50)
+        }
+        .background(Theme.accent, in: RoundedRectangle(cornerRadius: 12))
+        .foregroundStyle(.white)
+        .disabled(!canSubmit || isSubmitting)
+        .opacity(canSubmit ? 1 : 0.5)
+    }
+
+    private func submit() {
+        errorMessage = nil
+        isSubmitting = true
+        Task {
+            defer { isSubmitting = false }
+            do {
+                switch mode {
+                case .login:
+                    try await auth.login(identifier: identifier, password: loginPassword)
+                case .signup:
+                    let trimmedDisplayName = displayName.trimmingCharacters(in: .whitespaces)
+                    try await auth.signup(
+                        username: username,
+                        password: signupPassword,
+                        email: email,
+                        displayName: trimmedDisplayName.isEmpty ? nil : trimmedDisplayName
+                    )
+                }
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    // MARK: - Sign in with Apple
+
+    private var divider: some View {
+        HStack(spacing: 12) {
+            Rectangle().fill(Color.white.opacity(0.15)).frame(height: 1)
+            Text("또는")
+                .font(.footnote)
+                .foregroundStyle(Theme.secondaryText)
+            Rectangle().fill(Color.white.opacity(0.15)).frame(height: 1)
+        }
+    }
+
+    private var appleButton: some View {
+        SignInWithAppleButton(.signIn) { request in
+            request.requestedScopes = [.fullName]
+        } onCompletion: { result in
+            handleAppleResult(result)
+        }
+        .signInWithAppleButtonStyle(.white)
+        .frame(height: 50)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func handleAppleResult(_ result: Result<ASAuthorization, Error>) {
+        switch result {
+        case .success(let authorization):
+            guard
+                let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
+                let tokenData = credential.identityToken,
+                let identityToken = String(data: tokenData, encoding: .utf8)
+            else {
+                errorMessage = "Apple 로그인 정보를 읽지 못했어요. 다시 시도해 주세요."
+                return
+            }
+
+            // fullName 은 최초 인증 시에만 내려온다.
+            var fullName: String?
+            if let components = credential.fullName {
+                let formatted = PersonNameComponentsFormatter().string(from: components)
+                    .trimmingCharacters(in: .whitespaces)
+                if !formatted.isEmpty { fullName = formatted }
+            }
+
+            errorMessage = nil
+            isSubmitting = true
+            Task {
+                defer { isSubmitting = false }
+                do {
+                    try await auth.signInWithApple(identityToken: identityToken, displayName: fullName)
+                } catch {
+                    errorMessage = error.localizedDescription
+                }
+            }
+
+        case .failure(let error):
+            // 사용자가 취소한 경우는 에러로 표시하지 않는다.
+            if let authError = error as? ASAuthorizationError, authError.code == .canceled {
+                return
+            }
+            errorMessage = "Apple 로그인에 실패했어요. 다시 시도해 주세요."
+        }
+    }
+}
+
+#Preview {
+    AuthView()
+        .environment(AuthViewModel())
+        .preferredColorScheme(.dark)
+        .tint(Theme.accent)
+}
