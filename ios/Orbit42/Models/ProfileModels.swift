@@ -98,6 +98,7 @@ struct CreateCalendarRequest: Encodable {
 enum CalendarPurpose: String, CaseIterable, Identifiable {
     case work
     case income
+    case invest
     case personal
     case couple
     case health
@@ -112,6 +113,7 @@ enum CalendarPurpose: String, CaseIterable, Identifiable {
         switch self {
         case .work: return "업무"
         case .income: return "수익"
+        case .invest: return "투자"
         case .personal: return "개인"
         case .couple: return "커플"
         case .health: return "건강"

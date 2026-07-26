@@ -5,6 +5,7 @@ export type CalendarPurpose =
   | "work"
   | "couple"
   | "income"
+  | "invest"
   | "hobby"
   | "other"
   | "health"
@@ -22,6 +23,7 @@ export type CalendarSetting = {
 export const PURPOSE_OPTIONS: { value: CalendarPurpose; label: string }[] = [
   { value: "work", label: "업무" },
   { value: "income", label: "수익" },
+  { value: "invest", label: "투자" },
   { value: "personal", label: "개인" },
   { value: "couple", label: "커플" },
   { value: "health", label: "건강" },
@@ -37,6 +39,7 @@ export type PurposeGroup = "work" | "personal" | "other";
 export const PURPOSE_GROUP: Record<CalendarPurpose, PurposeGroup> = {
   work: "work",
   income: "work",
+  invest: "personal",
   personal: "personal",
   couple: "personal",
   health: "personal",

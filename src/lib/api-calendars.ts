@@ -3,7 +3,7 @@
 import type { Calendar } from "@/lib/calendars-types";
 
 export const CALENDAR_PURPOSES = [
-  "personal", "work", "couple", "income", "hobby",
+  "personal", "work", "couple", "income", "invest", "hobby",
   "other", "health", "social", "learning",
 ] as const;
 export const CALENDAR_VISIBILITIES = ["private", "followers", "public"] as const;

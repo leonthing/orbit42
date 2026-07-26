@@ -24,6 +24,7 @@ export type BucketKey = "earn" | "invest" | "spend" | "life";
 export const DEFAULT_BUCKET_MAP: Record<CalendarPurpose, BucketKey> = {
   work: "earn",
   income: "earn",
+  invest: "invest",
   learning: "invest",
   health: "invest",
   hobby: "spend",
