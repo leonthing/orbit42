@@ -6,6 +6,8 @@ struct BookingsView: View {
     @State private var viewModel = BookingsViewModel()
     /// "예약 취소" 확인 다이얼로그 대상 (guest)
     @State private var cancelTarget: GuestBooking?
+    /// "목록에서 삭제" 확인 다이얼로그 대상 예약 id
+    @State private var deleteTargetId: String?
 
     var body: some View {
         NavigationStack {
@@ -44,6 +46,22 @@ struct BookingsView: View {
                 Button("돌아가기", role: .cancel) {}
             } message: { booking in
                 Text("\(booking.slotTitle) · \(booking.scheduledText)")
+            }
+            .confirmationDialog(
+                "이 예약을 목록에서 삭제할까요?",
+                isPresented: Binding(
+                    get: { deleteTargetId != nil },
+                    set: { if !$0 { deleteTargetId = nil } }
+                ),
+                titleVisibility: .visible,
+                presenting: deleteTargetId
+            ) { bookingId in
+                Button("삭제", role: .destructive) {
+                    Task { await viewModel.deleteBooking(bookingId) }
+                }
+                Button("돌아가기", role: .cancel) {}
+            } message: { _ in
+                Text("내 목록에서만 사라지고 상대방의 기록은 유지돼요.")
             }
             .task {
                 await viewModel.load()
@@ -206,6 +224,9 @@ struct BookingsView: View {
 
     @ViewBuilder
     private func hostRow(_ booking: HostBooking, isPast: Bool) -> some View {
+        // 진행 중(대기/확정 + 미래) 예약은 삭제 불가 — 먼저 취소해야 한다.
+        let deletable =
+            isPast || booking.status == .canceled || booking.status == .completed
         let row = HostBookingRow(
             booking: booking,
             isActing: viewModel.actingIds.contains(booking.id),
@@ -214,6 +235,15 @@ struct BookingsView: View {
             }
         )
         .bookingRowChrome()
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            if deletable {
+                Button(role: .destructive) {
+                    deleteTargetId = booking.id
+                } label: {
+                    Label("삭제", systemImage: "trash")
+                }
+            }
+        }
 
         if isPast, booking.status == .confirmed {
             row.contextMenu {
@@ -262,6 +292,15 @@ struct BookingsView: View {
                             onCancel: { cancelTarget = booking }
                         )
                         .bookingRowChrome()
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            if booking.status == .canceled || booking.status == .completed {
+                                Button(role: .destructive) {
+                                    deleteTargetId = booking.id
+                                } label: {
+                                    Label("삭제", systemImage: "trash")
+                                }
+                            }
+                        }
                     }
                 } header: {
                     sectionHeader("예정된 예약")
@@ -278,6 +317,13 @@ struct BookingsView: View {
                             onCancel: {}
                         )
                         .bookingRowChrome()
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) {
+                                deleteTargetId = booking.id
+                            } label: {
+                                Label("삭제", systemImage: "trash")
+                            }
+                        }
                     }
                 } header: {
                     sectionHeader("지난 예약")

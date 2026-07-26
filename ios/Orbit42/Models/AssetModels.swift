@@ -10,6 +10,8 @@ struct TimeAssetSettings: Decodable {
     let hourlyValueKrw: Int?
     /// 월 근로시간 기준 (주휴 포함 209시간)
     let monthlyWorkHours: Int?
+    /// 하루 수면 시간 (0~14, 0.5 단위 — 구 서버 응답에는 없을 수 있음)
+    let sleepHoursPerDay: Double?
     /// 용도(purpose) → 버킷 유효 매핑 (기본값 + 사용자 오버라이드)
     let bucketMap: [String: String]?
     /// 분류 설정 화면용 메타 — 용도 한국어 라벨과 기본 버킷
@@ -43,6 +45,8 @@ struct UpdateTimeAssetSettingsRequest: Encodable {
     var amount: Int?
     /// 용도 → 버킷 전체 맵 (서버가 기본값과 같은 항목은 알아서 정리)
     var bucketMap: [String: String]?
+    /// 하루 수면 시간 (0~14, 0.5 단위) — 단독 전송 가능
+    var sleepHoursPerDay: Double?
 }
 
 // MARK: - 시간 자산 요약 (GET /api/v1/time-asset/summary)
@@ -102,7 +106,12 @@ struct TimeAssetSummary: Decodable {
     let weekStart: String
     let buckets: [TimeAssetBucket]
     let scheduledHours: Double
+    /// 수면을 뺀 나머지 미기록 시간 (구 응답에서는 수면 포함 전체 미기록)
     let unrecordedHours: Double
+    /// 설정된 하루 수면 시간 (구 서버 응답에는 없음)
+    let sleepHoursPerDay: Double?
+    /// 주간 수면 시간 = sleepHoursPerDay × 7 (구 서버 응답에는 없음)
+    let sleepHoursPerWeek: Double?
     /// 과거 → 현재 순 4주
     let trend: [TimeAssetTrendWeek]
     let traded: TimeAssetTraded

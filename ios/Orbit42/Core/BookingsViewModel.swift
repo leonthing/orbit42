@@ -76,6 +76,28 @@ final class BookingsViewModel {
 
     // MARK: - 액션 (수락/거절/완료/취소)
 
+    /// 내 목록에서 예약 삭제(숨김). 상대방 기록·거래 통계는 서버에서 유지된다.
+    func deleteBooking(_ bookingId: String) async {
+        guard !actingIds.contains(bookingId) else { return }
+        actingIds.insert(bookingId)
+        defer { actingIds.remove(bookingId) }
+
+        do {
+            let _: BookingActionResponse = try await api.delete(
+                "/api/v1/bookings/\(bookingId)"
+            )
+            await load(force: true)
+        } catch is CancellationError {
+            return
+        } catch let urlError as URLError where urlError.code == .cancelled {
+            return
+        } catch let apiError as APIError {
+            actionMessage = apiError.errorDescription
+        } catch {
+            actionMessage = "삭제하지 못했어요. 네트워크를 확인해 주세요."
+        }
+    }
+
     func act(_ action: BookingAction, on bookingId: String) async {
         guard !actingIds.contains(bookingId) else { return }
         actingIds.insert(bookingId)

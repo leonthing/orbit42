@@ -94,6 +94,8 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
     let calendarId: String?
     let source: String        // "local" | "google"
     let tentative: Bool
+    /// 자산 탭 분석용 버킷 오버라이드 — "earn" | "invest" | "spend" | "life" | nil(캘린더 용도 따름)
+    let bucketOverride: String?
     /// endAt 이 "2026-07-26" 처럼 날짜만으로 왔는지 (종일 이벤트의 마지막 날 포함 여부 판단용)
     let endWasDateOnly: Bool
 
@@ -101,6 +103,7 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
 
     private enum CodingKeys: String, CodingKey {
         case id, title, description, startAt, endAt, allDay, calendarId, source, tentative
+        case bucketOverride
     }
 
     init(from decoder: Decoder) throws {
@@ -112,6 +115,7 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
         calendarId = try container.decodeIfPresent(String.self, forKey: .calendarId)
         source = try container.decodeIfPresent(String.self, forKey: .source) ?? "local"
         tentative = try container.decodeIfPresent(Bool.self, forKey: .tentative) ?? false
+        bucketOverride = try container.decodeIfPresent(String.self, forKey: .bucketOverride)
 
         let startRaw = try container.decode(String.self, forKey: .startAt)
         let endRaw = try container.decode(String.self, forKey: .endAt)
@@ -199,6 +203,24 @@ struct UpdateEventRequest: Encodable {
 /// PATCH/DELETE 공통 성공 응답 — `{"ok": true}`
 struct EventMutationResponse: Decodable {
     let ok: Bool
+}
+
+/// `PUT /api/v1/time-asset/event-bucket` — 이벤트 단위 자산 분류 오버라이드.
+/// bucket 은 nil 이어도 명시적 `null` 로 인코딩해 "기본(캘린더 용도)" 으로 되돌린다.
+struct UpdateEventBucketRequest: Encodable {
+    let eventId: String
+    let bucket: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case eventId, bucket
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(eventId, forKey: .eventId)
+        // encodeIfPresent 가 아닌 encode 로 Optional 을 넣으면 nil 이 JSON null 로 나간다.
+        try container.encode(bucket, forKey: .bucket)
+    }
 }
 
 // MARK: - Hex 색상

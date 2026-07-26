@@ -3,6 +3,7 @@ import {
   getIncomeSettings,
   saveIncomeSettings,
   saveBucketMap,
+  saveSleepHours,
   MONTHLY_WORK_HOURS,
   BUCKET_KEYS,
   BUCKET_META,
@@ -62,6 +63,7 @@ export async function PUT(request: Request) {
     incomeType?: string;
     amount?: number;
     bucketMap?: Record<string, string>;
+    sleepHoursPerDay?: number;
   };
   try {
     body = await request.json();
@@ -112,7 +114,25 @@ export async function PUT(request: Request) {
     }
   }
 
-  if (!hasIncome && body.bucketMap === undefined) {
+  if (body.sleepHoursPerDay !== undefined) {
+    const v = Number(body.sleepHoursPerDay);
+    if (!Number.isFinite(v) || v < 0 || v > 14) {
+      return Response.json(
+        { error: "수면 시간은 0~14시간 사이여야 해요." },
+        { status: 400 },
+      );
+    }
+    const result = await saveSleepHours(userId, Math.round(v * 2) / 2);
+    if ("error" in result && result.error) {
+      return Response.json({ error: result.error }, { status: 400 });
+    }
+  }
+
+  if (
+    !hasIncome &&
+    body.bucketMap === undefined &&
+    body.sleepHoursPerDay === undefined
+  ) {
     return Response.json({ error: "변경할 내용이 없어요." }, { status: 400 });
   }
 

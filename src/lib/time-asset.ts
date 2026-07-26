@@ -7,13 +7,7 @@
  */
 
 import { getAdminClient } from "@/lib/supabase";
-import {
-  getWeekInsights,
-  fetchTimeBlocks,
-  getWorkHours,
-  weekStartMonday,
-  type TimeBlock,
-} from "@/lib/insights";
+import { fetchTimeBlocks, weekStartMonday } from "@/lib/insights";
 import type { CalendarPurpose } from "@/lib/calendar-settings-types";
 import { getValueStats } from "@/lib/value-stats";
 
@@ -74,11 +68,12 @@ export async function getIncomeSettings(userId: string): Promise<{
   amount: number | null;
   hourlyValueKrw: number | null;
   bucketMap: Record<CalendarPurpose, BucketKey>;
+  sleepHoursPerDay: number;
 }> {
   const db = getAdminClient();
   const { data } = await db
     .from("users")
-    .select("income_type, income_amount, bucket_map")
+    .select("income_type, income_amount, bucket_map, sleep_hours")
     .eq("id", userId)
     .single();
   const incomeType = (data?.income_type as IncomeType | null) ?? null;
@@ -92,7 +87,77 @@ export async function getIncomeSettings(userId: string): Promise<{
       (data?.bucket_map as Partial<Record<CalendarPurpose, BucketKey>> | null) ??
         null,
     ),
+    sleepHoursPerDay:
+      data?.sleep_hours != null ? Number(data.sleep_hours) : DEFAULT_SLEEP_HOURS,
   };
+}
+
+/** 수면 기본값 (시간/일) — 설정 전에도 미기록 시간을 의미 있게 쪼개기 위함. */
+export const DEFAULT_SLEEP_HOURS = 7;
+
+export async function saveSleepHours(userId: string, hoursPerDay: number) {
+  const db = getAdminClient();
+  const { error } = await db
+    .from("users")
+    .update({
+      sleep_hours: hoursPerDay,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", userId);
+  if (error) {
+    console.error("saveSleepHours", error);
+    return { error: "저장에 실패했어요." };
+  }
+  return { ok: true as const };
+}
+
+// ---------- 이벤트 단위 버킷 재분류 ----------
+
+/** 사용자의 이벤트별 버킷 오버라이드 맵 (event_key → bucket). */
+export async function listEventBucketOverrides(
+  userId: string,
+): Promise<Map<string, BucketKey>> {
+  const db = getAdminClient();
+  const { data } = await db
+    .from("event_bucket_overrides")
+    .select("event_key, bucket")
+    .eq("user_id", userId);
+  const map = new Map<string, BucketKey>();
+  for (const row of data ?? []) {
+    if (BUCKET_KEYS.includes(row.bucket as BucketKey)) {
+      map.set(row.event_key as string, row.bucket as BucketKey);
+    }
+  }
+  return map;
+}
+
+/** 이벤트 버킷 지정/해제. bucket=null 이면 캘린더 용도 기본값으로 복귀. */
+export async function setEventBucket(
+  userId: string,
+  eventKey: string,
+  bucket: BucketKey | null,
+) {
+  const db = getAdminClient();
+  if (bucket === null) {
+    const { error } = await db
+      .from("event_bucket_overrides")
+      .delete()
+      .eq("user_id", userId)
+      .eq("event_key", eventKey);
+    if (error) return { error: "해제에 실패했어요." };
+    return { ok: true as const };
+  }
+  const { error } = await db
+    .from("event_bucket_overrides")
+    .upsert(
+      { user_id: userId, event_key: eventKey, bucket },
+      { onConflict: "user_id,event_key" },
+    );
+  if (error) {
+    console.error("setEventBucket", error);
+    return { error: "저장에 실패했어요." };
+  }
+  return { ok: true as const };
 }
 
 export async function saveBucketMap(
@@ -179,7 +244,10 @@ export type TimeAssetSummary = {
   weekStart: string;
   buckets: BucketStat[];
   scheduledHours: number;
-  /** 168h 중 캘린더에 없는 시간 (수면·미기록 등) */
+  /** 수면 설정 (시간/일) 과 주간 환산 */
+  sleepHoursPerDay: number;
+  sleepHoursPerWeek: number;
+  /** 168h 중 기록도 수면도 아닌 나머지 시간 */
   unrecordedHours: number;
   trend: Array<{
     weekStart: string;
@@ -220,10 +288,7 @@ export async function getTimeAssetSummary(
   username: string,
   anchor: Date = new Date(),
 ): Promise<TimeAssetSummary> {
-  const [income, workHours] = await Promise.all([
-    getIncomeSettings(userId),
-    getWorkHours(userId),
-  ]);
+  const income = await getIncomeSettings(userId);
   const hourly = income.hourlyValueKrw;
 
   const weekStart = weekStartMonday(anchor);
@@ -232,14 +297,20 @@ export async function getTimeAssetSummary(
     weekStart.getTime() - (TREND_WEEKS - 1) * 7 * 24 * 60 * 60_000,
   );
   const trendEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60_000);
-  const [week, trendBlocks, value] = await Promise.all([
-    getWeekInsights(userId, weekStart, workHours),
+  const [trendBlocks, overrides, value] = await Promise.all([
     fetchTimeBlocks(userId, trendStart, trendEnd),
+    listEventBucketOverrides(userId),
     getValueStats(username),
   ]);
 
-  // 4주 추이: 주 단위로 겹치는 구간만 잘라 purpose → 버킷으로 정밀 집계.
+  // 이벤트의 버킷: 개별 오버라이드 > 캘린더 용도 매핑 > 생활.
+  const bucketOf = (b: { id: string; purpose: CalendarPurpose | null }): BucketKey =>
+    overrides.get(b.id) ??
+    (b.purpose ? income.bucketMap[b.purpose] ?? "life" : "life");
+
+  // 4주 추이: 주 단위로 겹치는 구간만 잘라 정밀 집계. 마지막 주가 이번 주.
   const trend: Array<{ weekStart: string; hoursByBucket: Record<BucketKey, number> }> = [];
+  let currentWeekAcc = emptyBuckets();
   for (let i = 0; i < TREND_WEEKS; i++) {
     const ws = new Date(trendStart.getTime() + i * 7 * 24 * 60 * 60_000);
     const we = new Date(ws.getTime() + 7 * 24 * 60 * 60_000);
@@ -250,11 +321,9 @@ export async function getTimeAssetSummary(
         Math.min(b.end.getTime(), we.getTime()) -
         Math.max(b.start.getTime(), ws.getTime());
       if (overlap <= 0) continue;
-      const key: BucketKey = b.purpose
-        ? income.bucketMap[b.purpose] ?? "life"
-        : "life";
-      acc[key] += overlap / 3_600_000;
+      acc[bucketOf(b)] += overlap / 3_600_000;
     }
+    if (i === TREND_WEEKS - 1) currentWeekAcc = acc;
     trend.push({
       weekStart: ws.toISOString(),
       hoursByBucket: {
@@ -266,7 +335,7 @@ export async function getTimeAssetSummary(
     });
   }
 
-  const hoursByBucket = bucketize(week.by_purpose, income.bucketMap);
+  const hoursByBucket = currentWeekAcc;
   const scheduled = Object.values(hoursByBucket).reduce((a, b) => a + b, 0);
   const buckets: BucketStat[] = (
     Object.keys(BUCKET_META) as BucketKey[]
@@ -338,7 +407,12 @@ export async function getTimeAssetSummary(
     weekStart: weekStart.toISOString(),
     buckets,
     scheduledHours: Math.round(scheduled * 10) / 10,
-    unrecordedHours: Math.max(0, Math.round((168 - scheduled) * 10) / 10),
+    sleepHoursPerDay: income.sleepHoursPerDay,
+    sleepHoursPerWeek: Math.round(income.sleepHoursPerDay * 7 * 10) / 10,
+    unrecordedHours: Math.max(
+      0,
+      Math.round((168 - scheduled - income.sleepHoursPerDay * 7) * 10) / 10,
+    ),
     trend,
     traded: {
       totalBookings: value.total_bookings,

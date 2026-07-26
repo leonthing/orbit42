@@ -1203,6 +1203,7 @@ export async function listMyGuestBookings(): Promise<GuestBookingRow[]> {
       "id, scheduled_at, scheduled_end_at, status, message, host:users!bookings_host_id_fkey(username, display_name), slot:time_slots!bookings_slot_id_fkey(id, title, slug, location_detail)",
     )
     .eq("guest_id", userId)
+    .eq("hidden_by_guest", false)
     .order("scheduled_at", { ascending: true });
   return ((data ?? []) as unknown) as GuestBookingRow[];
 }
@@ -1216,6 +1217,7 @@ export async function listMyHostBookings(): Promise<BookingRow[]> {
       "id, scheduled_at, scheduled_end_at, status, message, guest_name, guest_email, selected_menu_ids, guest:users!bookings_guest_id_fkey(username, display_name), slot:time_slots!bookings_slot_id_fkey(title, slug)",
     )
     .eq("host_id", userId)
+    .eq("hidden_by_host", false)
     .order("scheduled_at", { ascending: true });
   const rows = ((data ?? []) as unknown) as BookingRow[];
 

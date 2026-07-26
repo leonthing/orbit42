@@ -1,7 +1,33 @@
 import SwiftUI
 
-/// 이벤트 상세 시트 — 수정/삭제 진입점.
-/// 수정: EditEventSheet(PATCH), 삭제: confirmationDialog → DELETE.
+/// 자산 분류 선택지 — 서버 버킷 키와 라벨/색 (자산 탭 팔레트와 동일, 하드코딩).
+private enum AssetBucketChoice: String, CaseIterable, Identifiable {
+    case earn, invest, spend, life
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .earn: return "수입"
+        case .invest: return "투자"
+        case .spend: return "소비"
+        case .life: return "생활"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .earn: return Color(hexString: "#6366f1") ?? Theme.accent
+        case .invest: return Color(hexString: "#22c55e") ?? Theme.accent
+        case .spend: return Color(hexString: "#f59e0b") ?? Theme.accent
+        case .life: return Color(hexString: "#64748b") ?? Theme.accent
+        }
+    }
+}
+
+/// 이벤트 상세 시트 — 수정/삭제 진입점 + 이벤트 단위 자산 분류.
+/// 수정: EditEventSheet(PATCH), 삭제: confirmationDialog → DELETE,
+/// 자산 분류: PUT /api/v1/time-asset/event-bucket (선택 즉시 저장).
 struct EventDetailSheet: View {
     @Environment(\.dismiss) private var dismiss
 
@@ -12,6 +38,17 @@ struct EventDetailSheet: View {
     @State private var showingDeleteConfirm = false
     @State private var isDeleting = false
     @State private var errorMessage: String?
+
+    /// 현재 표시 중인 자산 분류 (nil = 기본, 캘린더 용도 따름)
+    @State private var selectedBucket: String?
+    @State private var isSavingBucket = false
+    @State private var bucketErrorMessage: String?
+
+    init(viewModel: CalendarViewModel, event: CalendarEvent) {
+        self.viewModel = viewModel
+        self.event = event
+        _selectedBucket = State(initialValue: event.bucketOverride)
+    }
 
     private var calendar: Calendar { CalendarViewModel.calendar }
 
@@ -73,6 +110,58 @@ struct EventDetailSheet: View {
                     }
                     .listRowBackground(Theme.surface)
                 }
+
+                Section {
+                    Menu {
+                        Picker("자산 분류", selection: bucketSelection) {
+                            Text("기본 (캘린더 용도)")
+                                .tag(nil as String?)
+                            ForEach(AssetBucketChoice.allCases) { choice in
+                                HStack(spacing: 6) {
+                                    Circle()
+                                        .fill(choice.color)
+                                        .frame(width: 8, height: 8)
+                                    Text(choice.label)
+                                }
+                                .tag(choice.rawValue as String?)
+                            }
+                        }
+                    } label: {
+                        HStack {
+                            Text("자산 분류")
+                                .foregroundStyle(.white)
+                            Spacer()
+                            if isSavingBucket {
+                                ProgressView()
+                                    .tint(Theme.secondaryText)
+                            } else {
+                                HStack(spacing: 6) {
+                                    if let choice = currentBucketChoice {
+                                        Circle()
+                                            .fill(choice.color)
+                                            .frame(width: 8, height: 8)
+                                        Text(choice.label)
+                                    } else {
+                                        Text("기본 (캘린더 용도)")
+                                    }
+                                    Image(systemName: "chevron.up.chevron.down")
+                                        .font(.caption2)
+                                }
+                                .font(.subheadline)
+                                .foregroundStyle(Theme.secondaryText)
+                            }
+                        }
+                    }
+                    .disabled(isSavingBucket || isDeleting)
+                    .alert("분류를 저장하지 못했어요", isPresented: showBucketErrorAlert) {
+                        Button("확인", role: .cancel) { bucketErrorMessage = nil }
+                    } message: {
+                        Text(bucketErrorMessage ?? "")
+                    }
+                } footer: {
+                    Text("자산 탭 분석에서 이 일정만 다른 분류로 계산돼요.")
+                }
+                .listRowBackground(Theme.surface)
 
                 Section {
                     Button {
@@ -139,6 +228,47 @@ struct EventDetailSheet: View {
             get: { errorMessage != nil },
             set: { if !$0 { errorMessage = nil } }
         )
+    }
+
+    private var showBucketErrorAlert: Binding<Bool> {
+        Binding(
+            get: { bucketErrorMessage != nil },
+            set: { if !$0 { bucketErrorMessage = nil } }
+        )
+    }
+
+    // MARK: - 자산 분류
+
+    private var currentBucketChoice: AssetBucketChoice? {
+        selectedBucket.flatMap(AssetBucketChoice.init(rawValue:))
+    }
+
+    private var bucketSelection: Binding<String?> {
+        Binding(
+            get: { selectedBucket },
+            set: { setBucket($0) }
+        )
+    }
+
+    /// 선택 즉시 저장. 성공하면 표시를 유지하고(월 캐시는 뷰모델이 무효화·새로고침),
+    /// 실패하면 이전 값으로 원복 후 alert 를 띄운다.
+    private func setBucket(_ newValue: String?) {
+        guard newValue != selectedBucket, !isSavingBucket else { return }
+        let previous = selectedBucket
+        selectedBucket = newValue
+        isSavingBucket = true
+        Task {
+            defer { isSavingBucket = false }
+            do {
+                try await viewModel.setEventBucket(event, bucket: newValue)
+            } catch let apiError as APIError {
+                selectedBucket = previous
+                bucketErrorMessage = apiError.errorDescription
+            } catch {
+                selectedBucket = previous
+                bucketErrorMessage = "분류를 저장하지 못했어요. 잠시 후 다시 시도해 주세요."
+            }
+        }
     }
 
     // MARK: - 삭제

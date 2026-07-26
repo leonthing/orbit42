@@ -1,14 +1,21 @@
 import SwiftUI
 
-/// 급여 기준 입력 시트 — 월급/시급 세그먼트 + 금액.
+/// 급여 기준 입력 시트 — 월급/시급 세그먼트 + 금액 + 수면 시간.
 /// 저장하면 서버가 시급을 환산해 자산 탭 전체가 갱신된다.
+/// 수면만 바뀌었으면 수면만, 급여가 바뀌었으면 급여와 함께 전송한다.
 struct IncomeSettingsSheet: View {
     let viewModel: AssetViewModel
 
     @Environment(\.dismiss) private var dismiss
     @State private var incomeType: String = "monthly"
     @State private var amountText: String = ""
+    @State private var sleepHours: Double = 7.0
     @FocusState private var amountFocused: Bool
+
+    /// onAppear 시점 값 — 무엇이 바뀌었는지 판단용
+    @State private var initialIncomeType: String = "monthly"
+    @State private var initialAmount: Int = 0
+    @State private var initialSleepHours: Double = 7.0
 
     var body: some View {
         NavigationStack {
@@ -42,6 +49,23 @@ struct IncomeSettingsSheet: View {
                     }
                     .listRowBackground(Theme.surface)
 
+                    Section {
+                        Stepper(value: $sleepHours, in: 4...12, step: 0.5) {
+                            HStack {
+                                Text("하루 수면")
+                                Spacer()
+                                Text("\(AssetFormat.hours(sleepHours))시간/일")
+                                    .monospacedDigit()
+                                    .foregroundStyle(Theme.secondaryText)
+                            }
+                        }
+                    } header: {
+                        Text("수면")
+                    } footer: {
+                        Text("수면 시간은 미기록 시간에서 따로 보여드려요.")
+                    }
+                    .listRowBackground(Theme.surface)
+
                     if let hourly = previewHourly {
                         Section {
                             HStack {
@@ -71,16 +95,13 @@ struct IncomeSettingsSheet: View {
                     } else {
                         Button("저장") {
                             Task {
-                                if await viewModel.saveSettings(
-                                    incomeType: incomeType,
-                                    amount: amountValue
-                                ) {
+                                if await save() {
                                     dismiss()
                                 }
                             }
                         }
                         .fontWeight(.semibold)
-                        .disabled(amountValue <= 0)
+                        .disabled(amountValue <= 0 && !sleepChanged)
                     }
                 }
             }
@@ -90,7 +111,13 @@ struct IncomeSettingsSheet: View {
                     if let amount = settings.amount {
                         amountText = AssetFormat.grouped(amount)
                     }
+                    if let sleep = settings.sleepHoursPerDay {
+                        sleepHours = sleep
+                    }
                 }
+                initialIncomeType = incomeType
+                initialAmount = amountValue
+                initialSleepHours = sleepHours
                 amountFocused = true
             }
         }
@@ -99,6 +126,30 @@ struct IncomeSettingsSheet: View {
 
     private var amountValue: Int {
         Int(amountText.replacingOccurrences(of: ",", with: "")) ?? 0
+    }
+
+    private var incomeChanged: Bool {
+        incomeType != initialIncomeType || amountValue != initialAmount
+    }
+
+    private var sleepChanged: Bool {
+        sleepHours != initialSleepHours
+    }
+
+    /// 수면만 바뀌었으면 수면만, 그 외에는 급여를(바뀐 수면과 함께) 전송한다.
+    private func save() async -> Bool {
+        if sleepChanged && !incomeChanged, initialAmount > 0 {
+            return await viewModel.saveSleepHours(sleepHours)
+        }
+        if amountValue > 0 {
+            return await viewModel.saveSettings(
+                incomeType: incomeType,
+                amount: amountValue,
+                sleepHoursPerDay: sleepChanged ? sleepHours : nil
+            )
+        }
+        // 급여 미입력 상태에서 수면만 조정한 경우
+        return await viewModel.saveSleepHours(sleepHours)
     }
 
     /// 입력 중 즉석 환산 미리보기.

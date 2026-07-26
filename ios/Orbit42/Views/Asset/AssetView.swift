@@ -266,10 +266,21 @@ struct AssetView: View {
                 }
             }
 
-            Text("기록 \(AssetFormat.hours(summary.scheduledHours))시간 · 미기록(수면 등) \(AssetFormat.hours(summary.unrecordedHours))시간")
+            Text(weekUsageCaption(summary))
                 .font(.caption)
                 .foregroundStyle(Theme.secondaryText)
         }
+    }
+
+    /// 수면 시간이 내려오면 "기록 · 수면(설정) · 그 외 미기록", 구 응답이면 기존 문구.
+    private func weekUsageCaption(_ summary: TimeAssetSummary) -> String {
+        let recorded = AssetFormat.hours(summary.scheduledHours)
+        let unrecorded = AssetFormat.hours(summary.unrecordedHours)
+        guard let sleepWeek = summary.sleepHoursPerWeek else {
+            return "기록 \(recorded)시간 · 미기록(수면 등) \(unrecorded)시간"
+        }
+        let sleepPerDay = AssetFormat.hours(summary.sleepHoursPerDay ?? sleepWeek / 7)
+        return "기록 \(recorded)시간 · 수면(설정 \(sleepPerDay)시간/일) \(AssetFormat.hours(sleepWeek))시간 · 그 외 미기록 \(unrecorded)시간"
     }
 
     // MARK: 3. 4주 추이

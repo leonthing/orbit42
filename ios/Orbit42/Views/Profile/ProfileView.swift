@@ -2,7 +2,7 @@ import SwiftUI
 
 /// 프로필 탭 — 설정 허브.
 /// 헤더(아바타/이름/이메일/소개) + 프로필 편집 / 내 캘린더 / Google 캘린더 연동 /
-/// 알림 설정 / 근무시간 / 이동시간 버퍼 / 친구 초대 / 계정 / 글 자동 공유 /
+/// 알림 설정 / 근무시간 / 이동시간 버퍼 / 친구 초대 / 계정 /
 /// 웹 설정 안내 / 로그아웃 + 앱 버전.
 struct ProfileView: View {
     @Environment(AuthViewModel.self) private var auth
@@ -153,12 +153,6 @@ struct ProfileView: View {
                 AccountView()
             } label: {
                 menuRow(icon: "person.crop.circle", title: "계정")
-            }
-
-            NavigationLink {
-                SocialShareSettingsView()
-            } label: {
-                menuRow(icon: "square.and.arrow.up", title: "글 자동 공유")
             }
 
             if let url = webSettingsURL {

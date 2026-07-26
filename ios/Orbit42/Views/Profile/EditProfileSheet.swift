@@ -229,7 +229,7 @@ struct EditProfileSheet: View {
         } header: {
             Text("소셜 링크")
         } footer: {
-            Text("프로필에 표시되는 링크예요. 글 자동 공유 연결은 프로필 > 글 자동 공유에서 할 수 있어요.")
+            Text("프로필에 표시되는 링크예요. 블로그 글 자동 공유(X·페이스북 등) 연결은 웹 설정에서 할 수 있어요.")
                 .foregroundStyle(Theme.secondaryText)
         }
         .listRowBackground(Theme.surface)

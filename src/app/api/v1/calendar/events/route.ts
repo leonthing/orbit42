@@ -63,11 +63,19 @@ export async function GET(request: Request) {
     );
   }
 
-  const [events, calendars] = await Promise.all([
+  const { listEventBucketOverrides } = await import("@/lib/time-asset");
+  const [events, calendars, overrides] = await Promise.all([
     listEventsForUser(userId, year, month - 1),
     listApiCalendars(userId),
+    listEventBucketOverrides(userId),
   ]);
-  return Response.json({ events: events.map(toApiEvent), calendars });
+  return Response.json({
+    events: events.map((e) => ({
+      ...toApiEvent(e),
+      bucketOverride: overrides.get(e.id) ?? null,
+    })),
+    calendars,
+  });
 }
 
 // POST { title, description?, startAt, endAt, allDay, calendarId? }

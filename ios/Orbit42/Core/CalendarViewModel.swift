@@ -195,6 +195,19 @@ final class CalendarViewModel {
         await loadDisplayedMonth(force: true)
     }
 
+    // MARK: - 자산 분류 오버라이드
+
+    /// 이벤트의 자산 분류를 지정/해제(`bucket: nil`)하고,
+    /// 성공하면 기간이 걸친 달의 캐시를 비운 뒤 표시 중인 달을 새로고침한다.
+    func setEventBucket(_ event: CalendarEvent, bucket: String?) async throws {
+        let _: EventMutationResponse = try await api.put(
+            "/api/v1/time-asset/event-bucket",
+            body: UpdateEventBucketRequest(eventId: event.id, bucket: bucket)
+        )
+        invalidateCache(around: [event.startAt, event.endAt])
+        await loadDisplayedMonth(force: true)
+    }
+
     /// 주어진 날짜들이 속한 달의 캐시를 제거한다. (createEvent 와 같은 무효화 패턴)
     private func invalidateCache(around dates: [Date]) {
         for date in dates {

@@ -58,11 +58,21 @@ final class AssetViewModel {
 
     // MARK: - 수입 설정 저장
 
-    /// 월급/시급 설정 저장. 성공하면 요약을 새로고침하고 true 를 반환한다.
-    func saveSettings(incomeType: String, amount: Int) async -> Bool {
+    /// 월급/시급 설정 저장 (수면 시간이 함께 바뀌었으면 같이 전송).
+    /// 성공하면 요약을 새로고침하고 true 를 반환한다.
+    func saveSettings(incomeType: String, amount: Int, sleepHoursPerDay: Double? = nil) async -> Bool {
         await putSettings(
-            UpdateTimeAssetSettingsRequest(incomeType: incomeType, amount: amount)
+            UpdateTimeAssetSettingsRequest(
+                incomeType: incomeType,
+                amount: amount,
+                sleepHoursPerDay: sleepHoursPerDay
+            )
         )
+    }
+
+    /// 수면 시간만 저장. 성공하면 요약을 새로고침하고 true 를 반환한다.
+    func saveSleepHours(_ hoursPerDay: Double) async -> Bool {
+        await putSettings(UpdateTimeAssetSettingsRequest(sleepHoursPerDay: hoursPerDay))
     }
 
     /// 용도 → 버킷 분류 저장. 성공하면 요약을 새로고침하고 true 를 반환한다.
