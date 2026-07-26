@@ -14,7 +14,7 @@ import { getValueStats } from "@/lib/value-stats";
 /** 한국 근로기준 월 소정근로시간 (주휴 포함) — 월급 → 시급 환산 기준. */
 export const MONTHLY_WORK_HOURS = 209;
 
-export type IncomeType = "monthly" | "hourly";
+export type IncomeType = "monthly" | "hourly" | "freelance";
 
 export type BucketKey = "earn" | "invest" | "spend" | "life";
 
@@ -195,22 +195,79 @@ export function hourlyValue(
   incomeType: IncomeType | null,
   amount: number | null,
 ): number | null {
+  // freelance 는 월별 수입 기록으로 실효 시급을 따로 계산한다 (summary에서).
+  if (incomeType === "freelance") return null;
   if (!incomeType || amount == null || amount <= 0) return null;
   if (incomeType === "hourly") return Math.round(amount);
   return Math.round(amount / MONTHLY_WORK_HOURS);
 }
 
+// ---------- 프리랜서 월별 수입 기록 ----------
+
+export type IncomeEntry = { month: string; amountKrw: number };
+
+export async function listIncomeEntries(
+  userId: string,
+  limit = 12,
+): Promise<IncomeEntry[]> {
+  const db = getAdminClient();
+  const { data } = await db
+    .from("income_entries")
+    .select("month, amount")
+    .eq("user_id", userId)
+    .order("month", { ascending: false })
+    .limit(limit);
+  return (data ?? []).map((r) => ({
+    month: r.month as string,
+    amountKrw: Number(r.amount),
+  }));
+}
+
+export async function upsertIncomeEntry(
+  userId: string,
+  month: string,
+  amountKrw: number,
+) {
+  const db = getAdminClient();
+  const { error } = await db.from("income_entries").upsert(
+    {
+      user_id: userId,
+      month,
+      amount: Math.round(amountKrw),
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id,month" },
+  );
+  if (error) {
+    console.error("upsertIncomeEntry", error);
+    return { error: "저장에 실패했어요." };
+  }
+  return { ok: true as const };
+}
+
+export async function deleteIncomeEntry(userId: string, month: string) {
+  const db = getAdminClient();
+  const { error } = await db
+    .from("income_entries")
+    .delete()
+    .eq("user_id", userId)
+    .eq("month", month);
+  if (error) return { error: "삭제에 실패했어요." };
+  return { ok: true as const };
+}
+
 export async function saveIncomeSettings(
   userId: string,
   incomeType: IncomeType,
-  amount: number,
+  amount: number | null,
 ) {
   const db = getAdminClient();
   const { error } = await db
     .from("users")
     .update({
       income_type: incomeType,
-      income_amount: Math.round(amount),
+      // freelance 는 고정 금액이 없다 — 월별 기록(income_entries)으로 계산.
+      income_amount: amount != null ? Math.round(amount) : null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", userId);
@@ -265,6 +322,15 @@ export type TimeAssetSummary = {
   };
   /** 규칙 기반 한 줄 인사이트 */
   messages: string[];
+  /** 급여 유형 — freelance 면 실효 시급 모드 */
+  incomeType: IncomeType | null;
+  /** 프리랜서 모드 상세 (freelance 가 아니면 null) */
+  freelance: {
+    months: IncomeEntry[];
+    totalKrw: number;
+    earnHours: number;
+    effectiveHourlyKrw: number | null;
+  } | null;
 };
 
 function emptyBuckets(): Record<BucketKey, number> {
@@ -290,7 +356,7 @@ export async function getTimeAssetSummary(
   anchor: Date = new Date(),
 ): Promise<TimeAssetSummary> {
   const income = await getIncomeSettings(userId);
-  const hourly = income.hourlyValueKrw;
+  let hourly = income.hourlyValueKrw;
 
   const weekStart = weekStartMonday(anchor);
   const TREND_WEEKS = 4;
@@ -298,20 +364,73 @@ export async function getTimeAssetSummary(
     weekStart.getTime() - (TREND_WEEKS - 1) * 7 * 24 * 60 * 60_000,
   );
   const trendEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60_000);
-  const [trendBlocks, overrides, value] = await Promise.all([
+  const db = getAdminClient();
+  const [trendBlocks, overrides, value, calRatesRes] = await Promise.all([
     fetchTimeBlocks(userId, trendStart, trendEnd),
     listEventBucketOverrides(userId),
     getValueStats(username),
+    db
+      .from("calendars")
+      .select("id, hourly_rate_krw")
+      .eq("user_id", userId)
+      .not("hourly_rate_krw", "is", null),
   ]);
+
+  // A2: 캘린더별 단가 (수입 버킷 금액을 실제 매출 추정으로).
+  const rateByCalendar = new Map<string, number>();
+  for (const c of calRatesRes.data ?? []) {
+    if (c.hourly_rate_krw != null && Number(c.hourly_rate_krw) > 0) {
+      rateByCalendar.set(c.id as string, Number(c.hourly_rate_krw));
+    }
+  }
 
   // 이벤트의 버킷: 개별 오버라이드 > 캘린더 용도 매핑 > 생활.
   const bucketOf = (b: { id: string; purpose: CalendarPurpose | null }): BucketKey =>
     overrides.get(b.id) ??
     (b.purpose ? income.bucketMap[b.purpose] ?? "life" : "life");
 
+  // A1: 프리랜서 모드 — 최근 기록된 3개월 수입 ÷ 같은 기간 '수입' 시간 = 실효 시급.
+  let freelance: TimeAssetSummary["freelance"] = null;
+  if (income.incomeType === "freelance") {
+    const entries = await listIncomeEntries(userId, 3);
+    if (entries.length > 0) {
+      const months = entries.map((e) => e.month).sort();
+      const [fy, fm] = months[0].split("-").map(Number);
+      const [ly, lm] = months[months.length - 1].split("-").map(Number);
+      const rangeStart = new Date(fy, fm - 1, 1);
+      const rangeEnd = new Date(ly, lm, 1);
+      const blocks = await fetchTimeBlocks(userId, rangeStart, rangeEnd);
+      const monthSet = new Set(months);
+      let earnHours = 0;
+      for (const b of blocks) {
+        if (b.all_day) continue;
+        // 기록된 달에 속한 수입 시간만 집계 (달 경계는 이벤트 시작 기준).
+        const key = `${b.start.getFullYear()}-${String(b.start.getMonth() + 1).padStart(2, "0")}`;
+        if (!monthSet.has(key)) continue;
+        if (bucketOf(b) !== "earn") continue;
+        earnHours += (b.end.getTime() - b.start.getTime()) / 3_600_000;
+      }
+      const totalKrw = entries.reduce((a, e) => a + e.amountKrw, 0);
+      const effective =
+        earnHours >= 1 ? Math.round(totalKrw / earnHours) : null;
+      hourly = effective;
+      freelance = {
+        months: entries,
+        totalKrw,
+        earnHours: Math.round(earnHours * 10) / 10,
+        effectiveHourlyKrw: effective,
+      };
+    } else {
+      freelance = { months: [], totalKrw: 0, earnHours: 0, effectiveHourlyKrw: null };
+    }
+  }
+
   // 4주 추이: 주 단위로 겹치는 구간만 잘라 정밀 집계. 마지막 주가 이번 주.
   const trend: Array<{ weekStart: string; hoursByBucket: Record<BucketKey, number> }> = [];
   let currentWeekAcc = emptyBuckets();
+  // A2: 이번 주 수입 버킷 금액 — 캘린더 단가가 있으면 그 단가로, 없으면 기준 시급.
+  let currentWeekEarnValue = 0;
+  let earnRateApplied = false;
   for (let i = 0; i < TREND_WEEKS; i++) {
     const ws = new Date(trendStart.getTime() + i * 7 * 24 * 60 * 60_000);
     const we = new Date(ws.getTime() + 7 * 24 * 60 * 60_000);
@@ -322,7 +441,13 @@ export async function getTimeAssetSummary(
         Math.min(b.end.getTime(), we.getTime()) -
         Math.max(b.start.getTime(), ws.getTime());
       if (overlap <= 0) continue;
-      acc[bucketOf(b)] += overlap / 3_600_000;
+      const bucket = bucketOf(b);
+      acc[bucket] += overlap / 3_600_000;
+      if (i === TREND_WEEKS - 1 && bucket === "earn") {
+        const rate = rateByCalendar.get(b.calendar_id);
+        if (rate != null) earnRateApplied = true;
+        currentWeekEarnValue += (overlap / 3_600_000) * (rate ?? hourly ?? 0);
+      }
     }
     if (i === TREND_WEEKS - 1) currentWeekAcc = acc;
     trend.push({
@@ -342,11 +467,19 @@ export async function getTimeAssetSummary(
     Object.keys(BUCKET_META) as BucketKey[]
   ).map((key) => {
     const hours = Math.round(hoursByBucket[key] * 10) / 10;
+    const valueKrw =
+      key === "earn"
+        ? hourly != null || earnRateApplied
+          ? Math.round(currentWeekEarnValue)
+          : null
+        : hourly != null
+          ? Math.round(hours * hourly)
+          : null;
     return {
       key,
       ...BUCKET_META[key],
       hours,
-      valueKrw: hourly != null ? Math.round(hours * hourly) : null,
+      valueKrw,
       ratio: scheduled > 0 ? hoursByBucket[key] / scheduled : 0,
     };
   });
@@ -360,6 +493,27 @@ export async function getTimeAssetSummary(
 
   // 규칙 기반 인사이트 문구.
   const messages: string[] = [];
+  // 잃어버린 자산 프레임 — 기록도 수면도 아닌 시간의 환산 가치.
+  const unrecordedForMsg = Math.max(
+    0,
+    168 - scheduled - income.sleepHoursPerDay * 7,
+  );
+  if (hourly != null && unrecordedForMsg >= 10) {
+    messages.push(
+      `이번 주 미기록 시간 ${Math.round(unrecordedForMsg)}시간 ≈ ₩${Math.round(unrecordedForMsg * hourly).toLocaleString("ko-KR")}. 흘러간 시간은 다시 오지 않아요 — 기록이 자산 관리의 시작이에요.`,
+    );
+  }
+  if (
+    income.incomeType === "freelance" &&
+    freelance &&
+    freelance.effectiveHourlyKrw == null
+  ) {
+    messages.push(
+      freelance.months.length === 0
+        ? "월별 수입을 기록하면 실제 데이터 기반 실효 시급이 계산돼요."
+        : "기록된 달에 '수입' 시간이 아직 없어요. 일한 시간을 수입 캘린더에 기록해보세요.",
+    );
+  }
   const prevWeek = trend.length >= 2 ? trend[trend.length - 2] : null;
   if (prevWeek) {
     const prevInvest = prevWeek.hoursByBucket.invest;
@@ -426,5 +580,7 @@ export async function getTimeAssetSummary(
           : null,
     },
     messages,
+    incomeType: income.incomeType,
+    freelance,
   };
 }

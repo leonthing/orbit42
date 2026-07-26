@@ -9,7 +9,7 @@ export const CALENDAR_PURPOSES = [
 export const CALENDAR_VISIBILITIES = ["private", "followers", "public"] as const;
 export const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 
-export function toApiCalendar(c: Calendar) {
+export function toApiCalendar(c: Calendar & { hourly_rate_krw?: number | null }) {
   return {
     id: c.id,
     name: c.name,
@@ -18,5 +18,7 @@ export function toApiCalendar(c: Calendar) {
     visibility: c.visibility,
     source: c.source,
     isDefault: c.is_default,
+    // A2: 이 캘린더의 시간당 단가(원) — 수입 버킷 금액 계산에 우선 적용
+    hourlyRateKrw: c.hourly_rate_krw ?? null,
   };
 }

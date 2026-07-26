@@ -18,5 +18,7 @@ export type Calendar = {
   google_calendar_id: string | null;
   google_account_id: string | null;
   is_default: boolean;
+  /** A2: 캘린더별 시간당 단가(원) — null 이면 기준 시급 사용 */
+  hourly_rate_krw: number | null;
   created_at: string;
 };

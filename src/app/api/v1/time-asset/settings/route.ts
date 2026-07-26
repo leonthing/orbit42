@@ -4,6 +4,7 @@ import {
   saveIncomeSettings,
   saveBucketMap,
   saveSleepHours,
+  listIncomeEntries,
   MONTHLY_WORK_HOURS,
   BUCKET_KEYS,
   BUCKET_META,
@@ -17,9 +18,13 @@ import type { CalendarPurpose } from "@/lib/calendar-settings-types";
 export const dynamic = "force-dynamic";
 
 async function settingsPayload(userId: string) {
-  const settings = await getIncomeSettings(userId);
+  const [settings, incomeEntries] = await Promise.all([
+    getIncomeSettings(userId),
+    listIncomeEntries(userId),
+  ]);
   return {
     ...settings,
+    incomeEntries,
     monthlyWorkHours: MONTHLY_WORK_HOURS,
     // iOS 분류 설정 화면용 메타: 용도 한국어 라벨 + 버킷 선택지 + 기본 매핑
     purposes: PURPOSE_OPTIONS.map((p) => ({
@@ -73,12 +78,15 @@ export async function PUT(request: Request) {
 
   const hasIncome = body.incomeType !== undefined || body.amount !== undefined;
   if (hasIncome) {
-    if (body.incomeType !== "monthly" && body.incomeType !== "hourly") {
+    if (!["monthly", "hourly", "freelance"].includes(body.incomeType ?? "")) {
       return Response.json({ error: "급여 유형이 올바르지 않아요." }, { status: 400 });
     }
-    const amount = Number(body.amount);
-    if (!Number.isFinite(amount) || amount <= 0 || amount > 10_000_000_000) {
-      return Response.json({ error: "금액이 올바르지 않아요." }, { status: 400 });
+    let amount: number | null = null;
+    if (body.incomeType !== "freelance") {
+      amount = Number(body.amount);
+      if (!Number.isFinite(amount) || amount <= 0 || amount > 10_000_000_000) {
+        return Response.json({ error: "금액이 올바르지 않아요." }, { status: 400 });
+      }
     }
     const result = await saveIncomeSettings(
       userId,

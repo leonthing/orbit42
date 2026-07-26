@@ -98,7 +98,9 @@ export async function createGoogleLinkedCalendar(args: {
 
 export async function updateCalendar(
   id: string,
-  patch: Partial<Pick<Calendar, "name" | "purpose" | "color" | "visibility">>,
+  patch: Partial<
+    Pick<Calendar, "name" | "purpose" | "color" | "visibility" | "hourly_rate_krw">
+  >,
 ) {
   const userId = await requireUserId();
   const db = getAdminClient();

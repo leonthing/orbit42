@@ -32,8 +32,19 @@ export async function PATCH(
   }
 
   const patch: Partial<
-    Pick<Calendar, "name" | "purpose" | "color" | "visibility">
+    Pick<Calendar, "name" | "purpose" | "color" | "visibility" | "hourly_rate_krw">
   > = {};
+  if (body.hourlyRateKrw !== undefined) {
+    if (body.hourlyRateKrw === null) {
+      patch.hourly_rate_krw = null;
+    } else {
+      const v = Number(body.hourlyRateKrw);
+      if (!Number.isInteger(v) || v <= 0 || v > 100_000_000) {
+        return Response.json({ error: "단가가 올바르지 않아요." }, { status: 400 });
+      }
+      patch.hourly_rate_krw = v;
+    }
+  }
   if (body.name !== undefined) {
     const name = String(body.name).trim();
     if (!name || name.length > 50) {
