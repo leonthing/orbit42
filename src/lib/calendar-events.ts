@@ -202,6 +202,46 @@ export async function createEventForUser(
     }
   }
 
+  // 구글 연동 캘린더가 대상이면 구글에만 저장한다. 로컬 events 에도 넣으면
+  // 조회(로컬+구글 병합) 시 같은 일정이 두 번 보인다 — 구글 이벤트는 DB에
+  // 미러링하지 않는 것이 원칙 (updateGoogleEvent 와 동일).
+  if (targetCal?.source === "google" && targetCal.google_calendar_id) {
+    const calendar = await getAuthenticatedCalendar(userId);
+    if (!calendar) {
+      throw new Error("Google 캘린더 연결이 필요해요. 프로필 > Google 캘린더에서 다시 연결해주세요.");
+    }
+    const event: Record<string, unknown> = {
+      summary: input.title,
+      description: input.description || undefined,
+    };
+    if (input.all_day) {
+      event.start = { date: input.start_at.split("T")[0] };
+      event.end = { date: input.end_at.split("T")[0] };
+    } else {
+      event.start = { dateTime: input.start_at, timeZone: "Asia/Seoul" };
+      event.end = { dateTime: input.end_at, timeZone: "Asia/Seoul" };
+    }
+    const res = await calendar.events.insert({
+      calendarId: targetCal.google_calendar_id,
+      requestBody: event,
+    });
+    const now = new Date().toISOString();
+    return {
+      id: `gcal_${res.data.id}`,
+      title: input.title,
+      description: input.description ?? null,
+      start_at: input.start_at,
+      end_at: input.end_at,
+      all_day: input.all_day,
+      business_id: null,
+      calendar_id: calendarId,
+      source: "google",
+      tentative: false,
+      created_at: now,
+      updated_at: now,
+    };
+  }
+
   const { data, error } = await db
     .from("events")
     .insert({
@@ -218,32 +258,6 @@ export async function createEventForUser(
     .single();
 
   if (error) throw new Error(error.message);
-
-  // Sync to Google only when the target calendar is google-backed.
-  if (targetCal?.source === "google" && targetCal.google_calendar_id) {
-    try {
-      const calendar = await getAuthenticatedCalendar(userId);
-      if (calendar) {
-        const event: Record<string, unknown> = {
-          summary: input.title,
-          description: input.description || undefined,
-        };
-        if (input.all_day) {
-          event.start = { date: input.start_at.split("T")[0] };
-          event.end = { date: input.end_at.split("T")[0] };
-        } else {
-          event.start = { dateTime: input.start_at, timeZone: "Asia/Seoul" };
-          event.end = { dateTime: input.end_at, timeZone: "Asia/Seoul" };
-        }
-        await calendar.events.insert({
-          calendarId: targetCal.google_calendar_id,
-          requestBody: event,
-        });
-      }
-    } catch {
-      // Silently skip Google Calendar sync errors
-    }
-  }
 
   return { ...data, source: "local" } as CalendarEvent;
 }
