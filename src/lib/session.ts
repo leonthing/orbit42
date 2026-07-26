@@ -51,7 +51,9 @@ async function hmacKey(): Promise<CryptoKey> {
   );
 }
 
-export type SessionData = { username: string };
+// `exp` (unix seconds) is optional: web cookies rely on cookie maxAge, while
+// mobile bearer tokens embed their expiry so a leaked token eventually dies.
+export type SessionData = { username: string; exp?: number };
 
 /** Produce a signed `<payload>.<sig>` token for the given session data. */
 export async function signSession(data: SessionData): Promise<string> {
@@ -93,6 +95,8 @@ export async function verifySession(
       typeof data === "object" &&
       typeof (data as SessionData).username === "string"
     ) {
+      const exp = (data as SessionData).exp;
+      if (typeof exp === "number" && exp < Date.now() / 1000) return null;
       return { username: (data as SessionData).username };
     }
     return null;

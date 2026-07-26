@@ -138,16 +138,17 @@ export async function signup(
 }
 
 /**
- * Sign in or sign up via Google. Finds an existing user by email or
- * creates a fresh one with a generated username and a random password.
- * Returns the resolved username so the caller can redirect to /feed.
+ * Shared "verified email from an OAuth provider" flow: find an existing user
+ * by email or create a fresh one with a generated username and a random
+ * password. Used by Google (web) and Apple (iOS) sign-in.
  */
-export async function loginOrSignupWithGoogle(
-  email: string,
-  displayName: string | null,
-  referrerRef: string | null = null,
-): Promise<{ username: string } | { error: string }> {
-  const normalized = email.trim().toLowerCase();
+async function oauthLoginOrSignup(profile: {
+  email: string;
+  displayName: string | null;
+  referrerRef?: string | null;
+  appleSub?: string | null;
+}): Promise<{ username: string } | { error: string }> {
+  const normalized = profile.email.trim().toLowerCase();
   if (!normalized) return { error: "이메일을 가져올 수 없어요." };
 
   const db = getAdminClient();
@@ -155,19 +156,22 @@ export async function loginOrSignupWithGoogle(
   // 1. Existing user with this email? — simple sign-in, no code needed.
   const { data: existing } = await db
     .from("users")
-    .select("id, username, email_verified")
+    .select("id, username, email_verified, apple_sub")
     .ilike("email", normalized)
     .maybeSingle();
 
   if (existing?.username) {
-    // Google has already verified this email, so promote the flag if
-    // it is still false (covers users created before verification
-    // feature shipped).
-    if (!existing.email_verified) {
-      await db
-        .from("users")
-        .update({ email_verified: true })
-        .eq("id", existing.id);
+    // The provider has already verified this email, so promote the flag if
+    // it is still false (covers users created before verification shipped).
+    // Also link the Apple subject on first Apple sign-in to an existing
+    // account, so later logins match even if Apple stops sharing the email.
+    const patch: Record<string, unknown> = {};
+    if (!existing.email_verified) patch.email_verified = true;
+    if (profile.appleSub && !existing.apple_sub) {
+      patch.apple_sub = profile.appleSub;
+    }
+    if (Object.keys(patch).length > 0) {
+      await db.from("users").update(patch).eq("id", existing.id);
     }
     await setSessionCookie(existing.username as string);
     return { username: existing.username as string };
@@ -193,10 +197,10 @@ export async function loginOrSignupWithGoogle(
   const { error: createErr } = await db.rpc("create_user", {
     p_username: username,
     p_password: randomPassword,
-    p_display_name: displayName || username,
+    p_display_name: profile.displayName || username,
   });
   if (createErr) {
-    console.error("google signup create_user", createErr);
+    console.error("oauth signup create_user", createErr);
     return { error: "회원가입에 실패했어요." };
   }
 
@@ -209,7 +213,11 @@ export async function loginOrSignupWithGoogle(
   if (fresh) {
     await db
       .from("users")
-      .update({ email: normalized, email_verified: true })
+      .update({
+        email: normalized,
+        email_verified: true,
+        ...(profile.appleSub ? { apple_sub: profile.appleSub } : {}),
+      })
       .eq("id", fresh.id);
     await db.from("calendars").insert({
       user_id: fresh.id,
@@ -226,13 +234,55 @@ export async function loginOrSignupWithGoogle(
     );
     const inviter = await applyReferralIfPresent(
       fresh.id as string,
-      referrerRef,
+      profile.referrerRef ?? null,
     );
     await seedNewUser(fresh.id as string, inviter);
   }
 
   await setSessionCookie(username);
   return { username };
+}
+
+export async function loginOrSignupWithGoogle(
+  email: string,
+  displayName: string | null,
+  referrerRef: string | null = null,
+): Promise<{ username: string } | { error: string }> {
+  return oauthLoginOrSignup({ email, displayName, referrerRef });
+}
+
+/**
+ * Sign in or sign up with a verified Apple identity. Matches by the stable
+ * Apple subject first (works even when the email was a private relay and has
+ * since disappeared from the token), then falls back to the email flow.
+ */
+export async function loginOrSignupWithApple(
+  appleSub: string,
+  email: string | null,
+  displayName: string | null,
+  referrerRef: string | null = null,
+): Promise<{ username: string } | { error: string }> {
+  const db = getAdminClient();
+  const { data: bySub } = await db
+    .from("users")
+    .select("username")
+    .eq("apple_sub", appleSub)
+    .maybeSingle();
+  if (bySub?.username) {
+    await setSessionCookie(bySub.username as string);
+    return { username: bySub.username as string };
+  }
+
+  if (!email) {
+    // First sign-in but Apple shared no email — nothing to match or create on.
+    return { error: "Apple 계정의 이메일 공유를 허용해주세요." };
+  }
+  return oauthLoginOrSignup({
+    email,
+    displayName,
+    referrerRef,
+    appleSub,
+  });
 }
 
 export async function logout() {
