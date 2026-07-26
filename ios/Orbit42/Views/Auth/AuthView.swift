@@ -82,7 +82,7 @@ struct AuthView: View {
             Text("orbit42")
                 .font(.largeTitle.weight(.bold))
                 .foregroundStyle(.white)
-            Text("시간을 주고받는 캘린더 SNS")
+            Text("시간을 자산으로 만드는 캘린더")
                 .font(.subheadline)
                 .foregroundStyle(Theme.secondaryText)
         }
