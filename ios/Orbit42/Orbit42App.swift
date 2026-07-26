@@ -14,9 +14,11 @@ struct Orbit42App: App {
     }
 }
 
-/// 로그인 상태에 따라 AuthView / MainTabView 분기.
+/// 로그인 상태에 따라 인트로 / AuthView / MainTabView 분기.
 struct RootView: View {
     @Environment(AuthViewModel.self) private var auth
+    /// 첫 실행에만 기능 소개를 보여준다.
+    @AppStorage("hasSeenIntro") private var hasSeenIntro = false
 
     var body: some View {
         Group {
@@ -24,11 +26,14 @@ struct RootView: View {
                 splash
             } else if auth.isAuthenticated {
                 MainTabView()
+            } else if !hasSeenIntro {
+                IntroView { hasSeenIntro = true }
             } else {
                 AuthView()
             }
         }
         .animation(.default, value: auth.isAuthenticated)
+        .animation(.default, value: hasSeenIntro)
         .task {
             await auth.restoreSession()
         }

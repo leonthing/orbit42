@@ -1,0 +1,113 @@
+import SwiftUI
+
+/// 첫 실행 시 앱 주요 기능을 소개하는 온보딩.
+/// 마지막 장의 "시작하기"를 누르면 로그인/가입 화면으로 넘어간다.
+struct IntroView: View {
+    let onFinish: () -> Void
+
+    @State private var page = 0
+
+    private struct IntroPage {
+        let icon: String
+        let iconColor: Color
+        let title: String
+        let message: String
+    }
+
+    private let pages: [IntroPage] = [
+        IntroPage(
+            icon: "wonsign.circle.fill",
+            iconColor: Color(red: 0xF5 / 255, green: 0x9E / 255, blue: 0x0B / 255),
+            title: "시간은 자산이니까",
+            message: "급여를 넣으면 내 1시간이 얼마인지 나와요.\n시간을 어디에 쓰는지 수입 · 투자 · 소비로 나눠\n돈처럼 분석하는 시간 가계부예요."
+        ),
+        IntroPage(
+            icon: "clock.badge.checkmark",
+            iconColor: Theme.accent,
+            title: "내 시간을 상품으로",
+            message: "커피챗 30분, 멘토링 1시간 —\n시간을 타임슬롯으로 등록하고\n무료부터 유료, 경매까지 가격을 붙여요."
+        ),
+        IntroPage(
+            icon: "link.badge.plus",
+            iconColor: Color(red: 0x22 / 255, green: 0xC5 / 255, blue: 0x5E / 255),
+            title: "링크 하나로 판매",
+            message: "예약 페이지 링크를 공유하면 끝.\n비는 시간은 캘린더를 보고 자동 계산되고,\n예약이 들어오면 승인만 하면 돼요.\n상대는 가입 없이도 예약할 수 있어요."
+        ),
+        IntroPage(
+            icon: "calendar.badge.checkmark",
+            iconColor: Color(red: 0x06 / 255, green: 0xB6 / 255, blue: 0xD4 / 255),
+            title: "캘린더, 하나로",
+            message: "구글 캘린더까지 한곳에 모아 보고,\n일정을 만들면 구글에도 함께 저장돼요."
+        ),
+    ]
+
+    var body: some View {
+        ZStack {
+            Theme.background.ignoresSafeArea()
+            VStack(spacing: 0) {
+                HStack {
+                    Spacer()
+                    Button("건너뛰기") { onFinish() }
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.secondaryText)
+                        .padding(20)
+                }
+
+                TabView(selection: $page) {
+                    ForEach(Array(pages.enumerated()), id: \.offset) { index, intro in
+                        VStack(spacing: 20) {
+                            Image(systemName: intro.icon)
+                                .font(.system(size: 64, weight: .light))
+                                .foregroundStyle(intro.iconColor)
+                                .frame(height: 90)
+                            Text(intro.title)
+                                .font(.title.weight(.bold))
+                                .foregroundStyle(.white)
+                            Text(intro.message)
+                                .font(.body)
+                                .foregroundStyle(Theme.secondaryText)
+                                .multilineTextAlignment(.center)
+                                .lineSpacing(4)
+                        }
+                        .padding(.horizontal, 36)
+                        .tag(index)
+                    }
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+
+                // 페이지 인디케이터
+                HStack(spacing: 8) {
+                    ForEach(pages.indices, id: \.self) { index in
+                        Capsule()
+                            .fill(index == page ? Theme.accent : Color.white.opacity(0.2))
+                            .frame(width: index == page ? 22 : 8, height: 8)
+                            .animation(.spring(duration: 0.3), value: page)
+                    }
+                }
+                .padding(.bottom, 28)
+
+                Button {
+                    if page < pages.count - 1 {
+                        withAnimation { page += 1 }
+                    } else {
+                        onFinish()
+                    }
+                } label: {
+                    Text(page < pages.count - 1 ? "다음" : "시작하기")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 15)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Theme.accent)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 36)
+            }
+        }
+    }
+}
+
+#Preview {
+    IntroView(onFinish: {})
+        .preferredColorScheme(.dark)
+}

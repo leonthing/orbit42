@@ -227,10 +227,11 @@ struct AuthView: View {
                 }
             }
         } label: {
-            HStack(spacing: 8) {
-                Text("G")
-                    .font(.system(size: 19, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color(red: 0.26, green: 0.52, blue: 0.96))
+            HStack(spacing: 10) {
+                Image("GoogleLogo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 20, height: 20)
                 Text("Google로 계속하기")
                     .font(.system(size: 17, weight: .medium))
                     .foregroundStyle(.black)

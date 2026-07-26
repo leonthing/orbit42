@@ -18,14 +18,11 @@ targets:
   Orbit42:
     type: application
     platform: iOS
+    # XcodeGen 은 sources 하나로 컴파일/리소스를 자동 분류한다
+    # (.xcassets/.xcprivacy 는 Resources 페이즈로 들어감).
+    # 별도 `resources:` 키는 존재하지 않는 키라 조용히 무시되니 쓰지 말 것.
     sources:
       - path: Orbit42
-        excludes:
-          - "Assets.xcassets"
-          - "PrivacyInfo.xcprivacy"
-    resources:
-      - path: Orbit42/Assets.xcassets
-      - path: Orbit42/PrivacyInfo.xcprivacy
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: org.orbit42.app
