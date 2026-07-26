@@ -22,6 +22,18 @@ final class AuthViewModel {
 
     func restoreSession() async {
         defer { isRestoring = false }
+        #if DEBUG
+        // 개발 데모/UI 테스트용 세션 주입:
+        // `-demoToken <token>` 런치 아규먼트 또는 DEMO_TOKEN 환경변수
+        // (simctl launch 는 SIMCTL_CHILD_DEMO_TOKEN=... 으로 전달)
+        let args = ProcessInfo.processInfo.arguments
+        if let idx = args.firstIndex(of: "-demoToken"), idx + 1 < args.count {
+            KeychainStore.saveToken(args[idx + 1])
+        } else if let envToken = ProcessInfo.processInfo.environment["DEMO_TOKEN"],
+                  !envToken.isEmpty {
+            KeychainStore.saveToken(envToken)
+        }
+        #endif
         guard KeychainStore.loadToken() != nil else { return }
         do {
             let response: MeResponse = try await api.get("/api/v1/me")

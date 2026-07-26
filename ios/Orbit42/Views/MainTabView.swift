@@ -4,12 +4,8 @@ import SwiftUI
 struct MainTabView: View {
     var body: some View {
         TabView {
-            PlaceholderView(
-                title: "캘린더",
-                systemImage: "calendar",
-                message: "내 일정과 친구들의 시간을\n한눈에 보는 캘린더, 곧 만나요."
-            )
-            .tabItem { Label("캘린더", systemImage: "calendar") }
+            CalendarView()
+                .tabItem { Label("캘린더", systemImage: "calendar") }
 
             PlaceholderView(
                 title: "타임슬롯",

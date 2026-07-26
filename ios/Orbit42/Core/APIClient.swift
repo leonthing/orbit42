@@ -86,7 +86,15 @@ final class APIClient {
     // MARK: - 내부
 
     private func request(path: String, method: String) -> URLRequest {
-        var request = URLRequest(url: baseURL.appending(path: path))
+        // `appending(path:)` 는 "?a=b" 의 ? 까지 %3F 로 인코딩해 경로에 붙이므로,
+        // 쿼리 문자열을 분리해 URLComponents 로 조립한다.
+        var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)!
+        let parts = path.split(separator: "?", maxSplits: 1)
+        components.path = String(parts[0])
+        if parts.count == 2 {
+            components.percentEncodedQuery = String(parts[1])
+        }
+        var request = URLRequest(url: components.url!)
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         if let token = KeychainStore.loadToken() {

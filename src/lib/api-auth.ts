@@ -26,6 +26,19 @@ export async function apiSession(
   return verifySession(header.slice(7).trim());
 }
 
+/** Resolve the bearer session to a users.id, or null if unauthenticated. */
+export async function apiUserId(request: Request): Promise<string | null> {
+  const session = await apiSession(request);
+  if (!session) return null;
+  const db = getAdminClient();
+  const { data } = await db
+    .from("users")
+    .select("id")
+    .eq("username", session.username)
+    .single();
+  return (data?.id as string | undefined) ?? null;
+}
+
 /** The user shape every /api/v1 auth endpoint returns. */
 export type ApiUser = {
   username: string;
