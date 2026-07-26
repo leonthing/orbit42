@@ -4,15 +4,17 @@ import {
   updateProfile,
   type SocialLinks,
 } from "@/lib/auth";
+import { getFollowStats } from "@/lib/follows";
 
 export const dynamic = "force-dynamic";
 
 const SOCIAL_KEYS = ["instagram", "x", "youtube", "facebook", "linkedin"] as const;
 
 async function fullUser(username: string) {
-  const [user, profile] = await Promise.all([
+  const [user, profile, follows] = await Promise.all([
     loadApiUser(username),
     getProfile(username),
+    getFollowStats(username),
   ]);
   if (!user) return null;
   return {
@@ -21,6 +23,9 @@ async function fullUser(username: string) {
     birthDate: (profile?.birth_date as string | null) ?? null,
     socialLinks: (profile?.social_links as SocialLinks | null) ?? {},
     interests: (profile?.interests as string[] | null) ?? [],
+    // 오르빗 카운트 — orbiters: 나를 오르빗에 담은 사람, orbiting: 내가 담은 사람
+    orbiters: follows.followers,
+    orbiting: follows.following,
   };
 }
 
