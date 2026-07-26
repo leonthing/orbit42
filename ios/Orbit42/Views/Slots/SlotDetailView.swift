@@ -17,6 +17,7 @@ struct SlotDetailView: View {
     let route: SlotRoute
     let listViewModel: SlotsViewModel
 
+    @Environment(\.dismiss) private var dismiss
     @State private var viewModel: SlotDetailViewModel
     @State private var showingAddWindowSheet = false
     @State private var newWindowDate = Date()
@@ -70,6 +71,9 @@ struct SlotDetailView: View {
     private func save() async {
         if await viewModel.save(), let detail = viewModel.detail {
             listViewModel.applyUpdated(detail.asTimeSlot)
+            // 저장 성공 시 목록으로 복귀 — "저장했어요" alert 대신 pop이 피드백.
+            viewModel.actionMessage = nil
+            dismiss()
         }
     }
 

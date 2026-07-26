@@ -6,6 +6,7 @@ struct SlotsView: View {
     @State private var viewModel = SlotsViewModel()
     @State private var showingPresetDialog = false
     @State private var path = NavigationPath()
+    @State private var didAutoPushDemo = false
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -53,10 +54,14 @@ struct SlotsView: View {
             .task {
                 await viewModel.load()
                 #if DEBUG
-                // 데모/스크린샷용: DEMO_SLOT_ID 환경변수로 상세 화면 자동 진입
-                if let demoId = ProcessInfo.processInfo.environment["DEMO_SLOT_ID"],
+                // 데모/스크린샷용: DEMO_SLOT_ID 환경변수로 상세 화면 자동 진입.
+                // `.task` 는 뒤로가기로 리스트가 다시 보일 때마다 재실행되므로
+                // 반드시 앱 세션당 1회로 제한한다 (안 그러면 pop 즉시 재푸시됨).
+                if !didAutoPushDemo,
+                   let demoId = ProcessInfo.processInfo.environment["DEMO_SLOT_ID"],
                    path.isEmpty,
                    let slot = viewModel.slots?.first(where: { $0.id == demoId }) {
+                    didAutoPushDemo = true
                     path.append(SlotRoute(id: slot.id, title: slot.title))
                 }
                 #endif
