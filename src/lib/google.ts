@@ -187,12 +187,6 @@ export async function getAuthenticatedCalendar(userId: string) {
   return google.calendar({ version: "v3", auth: client });
 }
 
-export async function getAuthenticatedPeopleApi(userId: string) {
-  const client = await getAuthenticatedClient(userId);
-  if (!client) return null;
-  return google.people({ version: "v1", auth: client });
-}
-
 // ---------- Multi-account support ----------
 
 export type ExtraGoogleAccount = {

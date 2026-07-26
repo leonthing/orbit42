@@ -35,13 +35,11 @@ export default function BookingsInbox({
   hostBookings,
   guestBookings,
   reviewedBookingIds = [],
-  isMock = false,
 }: {
   username: string;
   hostBookings: BookingRow[];
   guestBookings: GuestBookingRow[];
   reviewedBookingIds?: string[];
-  isMock?: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -66,7 +64,6 @@ export default function BookingsInbox({
   const confirmedCount = upcoming.filter((b) => b.status === "confirmed").length;
 
   const update = (id: string, status: "confirmed" | "canceled" | "completed") => {
-    if (isMock) return;
     startTransition(async () => {
       await updateBookingStatus(id, status);
       router.refresh();
@@ -117,12 +114,6 @@ export default function BookingsInbox({
           내가 한 예약 {guestBookings.length > 0 && `(${guestBookings.length})`}
         </TabButton>
       </div>
-
-      {isMock && tab === "host" && (
-        <div className="rounded-lg border border-red-700/40 bg-red-700/10 px-4 py-2 text-xs text-red-200">
-          샘플 데이터 미리보기 — URL에서 <code>?mock=1</code> 제거 시 실제 데이터로 복귀합니다.
-        </div>
-      )}
 
       {tab === "host" ? (
         <>

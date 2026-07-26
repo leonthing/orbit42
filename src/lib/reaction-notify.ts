@@ -23,10 +23,10 @@ export async function notifyReaction(
   if (targetType === "feed_post") {
     const { data } = await db
       .from("feed_posts")
-      .select("author_id")
+      .select("user_id")
       .eq("id", targetId)
       .single();
-    authorId = (data?.author_id as string | undefined) ?? null;
+    authorId = (data?.user_id as string | undefined) ?? null;
     link = "/feed";
   } else if (targetType === "comment") {
     const { data } = await db

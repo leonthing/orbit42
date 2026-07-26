@@ -100,14 +100,14 @@ export async function submitFeedback(args: {
   }
 
   try {
-    const adminList = (process.env.ADMIN_USERNAMES || "leokim5854")
+    // Fail closed like lib/admin.ts: unset ADMIN_USERNAMES means no admins.
+    const adminList = (process.env.ADMIN_USERNAMES || "")
       .split(",")
       .map((s) => s.trim().toLowerCase())
       .filter(Boolean);
-    const { data: admins } = await db
-      .from("users")
-      .select("id")
-      .in("username", adminList);
+    const { data: admins } = adminList.length
+      ? await db.from("users").select("id").in("username", adminList)
+      : { data: [] };
     if (admins && admins.length > 0) {
       const { createNotification } = await import("@/lib/notifications");
       const label =

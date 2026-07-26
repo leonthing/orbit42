@@ -15,7 +15,7 @@ const PUBLIC_PATHS = [
 ];
 
 // Sub-paths under /[username] that require the visitor to be the owner.
-const OWNER_ONLY_SEGMENTS = ["settings", "calendar", "slots", "bookings", "network"];
+const OWNER_ONLY_SEGMENTS = ["settings", "calendar", "slots", "bookings"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

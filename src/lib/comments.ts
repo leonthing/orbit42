@@ -143,10 +143,10 @@ export async function addComment(
     if (targetType === "feed_post") {
       const { data: p } = await db
         .from("feed_posts")
-        .select("author_id")
+        .select("user_id")
         .eq("id", targetId)
         .single();
-      postAuthorId = (p?.author_id as string | undefined) ?? null;
+      postAuthorId = (p?.user_id as string | undefined) ?? null;
     } else {
       const { data: p } = await db
         .from("blog_posts")
