@@ -20,6 +20,18 @@ struct BookingsView: View {
             }
             .navigationTitle("예약")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                // 사람/열린 타임슬롯 검색 — 시간을 주고받는 탭이라 진입점을 여기에 둔다
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink {
+                        SearchView()
+                    } label: {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundStyle(Theme.accent)
+                    }
+                    .accessibilityLabel("검색")
+                }
+            }
             .alert(
                 "안내",
                 isPresented: Binding(

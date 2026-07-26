@@ -1,0 +1,271 @@
+import SwiftUI
+
+/// 타인 프로필 화면 — 헤더(아바타/이름/bio/관심사/궤도/평점) + 팔로우 토글 +
+/// 시간 요청 + 열린 슬롯 목록(탭 → 예약 화면).
+struct PersonProfileView: View {
+    @State private var viewModel: PersonProfileViewModel
+    @State private var showingTimeRequest = false
+
+    init(username: String) {
+        _viewModel = State(initialValue: PersonProfileViewModel(username: username))
+    }
+
+    var body: some View {
+        ZStack {
+            Theme.background.ignoresSafeArea()
+            content
+        }
+        .navigationTitle("@\(viewModel.username)")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showingTimeRequest) {
+            TimeRequestSheet(
+                username: viewModel.username,
+                displayName: viewModel.data?.user.preferredName ?? viewModel.username
+            )
+        }
+        .alert(
+            "안내",
+            isPresented: Binding(
+                get: { viewModel.actionMessage != nil },
+                set: { if !$0 { viewModel.actionMessage = nil } }
+            )
+        ) {
+            Button("확인", role: .cancel) {}
+        } message: {
+            Text(viewModel.actionMessage ?? "")
+        }
+        .task {
+            await viewModel.load()
+        }
+    }
+
+    // MARK: - 상태별 콘텐츠
+
+    @ViewBuilder
+    private var content: some View {
+        if let data = viewModel.data {
+            loaded(data)
+        } else if viewModel.isLoading {
+            VStack(spacing: 12) {
+                ProgressView()
+                    .tint(Theme.accent)
+                Text("프로필을 불러오는 중이에요")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.secondaryText)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if let message = viewModel.errorMessage {
+            VStack(spacing: 12) {
+                Image(systemName: "wifi.exclamationmark")
+                    .font(.system(size: 32, weight: .light))
+                    .foregroundStyle(Theme.secondaryText)
+                Text(message)
+                    .font(.subheadline)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(Theme.secondaryText)
+                Button {
+                    Task { await viewModel.load(force: true) }
+                } label: {
+                    Text("다시 시도")
+                        .font(.subheadline.weight(.semibold))
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 10)
+                        .background(Theme.surface, in: Capsule())
+                }
+            }
+            .padding(.horizontal, 32)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            Color.clear
+        }
+    }
+
+    private func loaded(_ data: PersonProfileResponse) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                header(data)
+                if !data.isMe {
+                    actionButtons(data)
+                }
+                slotsSection(data)
+            }
+            .padding(16)
+        }
+        .refreshable {
+            await viewModel.load(force: true)
+        }
+    }
+
+    // MARK: - 헤더
+
+    private func header(_ data: PersonProfileResponse) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 16) {
+                DiscoverAvatar(url: data.user.avatarURL, name: data.user.preferredName, size: 64)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(data.user.preferredName)
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                    Text("@\(data.user.username)")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.accent)
+                    HStack(spacing: 8) {
+                        Text("궤도 \(data.orbiters)명")
+                        if let rating = data.rating, rating.count > 0 {
+                            HStack(spacing: 2) {
+                                Image(systemName: "star.fill")
+                                    .font(.caption2)
+                                    .foregroundStyle(.yellow)
+                                Text("\(rating.averageText) (\(rating.count))")
+                            }
+                        }
+                    }
+                    .font(.footnote)
+                    .foregroundStyle(Theme.secondaryText)
+                }
+                Spacer(minLength: 0)
+            }
+
+            if let bio = data.user.bio, !bio.isEmpty {
+                Text(bio)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.secondaryText)
+            }
+
+            if !data.user.interestTags.isEmpty {
+                interestChips(data.user.interestTags)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func interestChips(_ interests: [String]) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(interests, id: \.self) { interest in
+                    Text(interest)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Theme.accent)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Theme.accent.opacity(0.15), in: Capsule())
+                }
+            }
+        }
+    }
+
+    // MARK: - 팔로우 / 시간 요청
+
+    private func actionButtons(_ data: PersonProfileResponse) -> some View {
+        HStack(spacing: 10) {
+            Button {
+                Task { await viewModel.toggleFollow() }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: data.isFollowing ? "checkmark.circle.fill" : "plus.circle")
+                        .font(.footnote)
+                    Text(data.isFollowing ? "궤도에서 제거" : "궤도에 추가")
+                }
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(data.isFollowing ? Theme.secondaryText : .white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(
+                    data.isFollowing
+                        ? AnyShapeStyle(Color.white.opacity(0.08))
+                        : AnyShapeStyle(Theme.accent),
+                    in: Capsule()
+                )
+            }
+            .disabled(viewModel.isTogglingFollow)
+            .opacity(viewModel.isTogglingFollow ? 0.5 : 1)
+
+            Button {
+                showingTimeRequest = true
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "clock.badge.questionmark")
+                        .font(.footnote)
+                    Text("시간 요청")
+                }
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Theme.accent)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(Theme.accent.opacity(0.15), in: Capsule())
+            }
+        }
+    }
+
+    // MARK: - 열린 슬롯
+
+    @ViewBuilder
+    private func slotsSection(_ data: PersonProfileResponse) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("열린 타임슬롯")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Theme.secondaryText)
+
+            if data.slots.isEmpty {
+                VStack(spacing: 8) {
+                    Image(systemName: "clock.badge.xmark")
+                        .font(.system(size: 28, weight: .light))
+                        .foregroundStyle(Theme.secondaryText)
+                    Text("아직 열어둔 시간이 없어요")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.white)
+                    Text(data.isMe ? "슬롯 탭에서 시간을 열어보세요" : "시간 요청을 보내보세요")
+                        .font(.footnote)
+                        .foregroundStyle(Theme.secondaryText)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 28)
+                .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16))
+            } else {
+                ForEach(data.slots) { slot in
+                    NavigationLink {
+                        SlotBookingView(username: viewModel.username, slug: slot.slug)
+                    } label: {
+                        personSlotRow(slot)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    private func personSlotRow(_ slot: TimeSlot) -> some View {
+        HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(slot.title)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    Text(slot.durationText)
+                    Text("·")
+                    Text(slot.isAuction ? "경매" : slot.priceText)
+                }
+                .font(.footnote)
+                .foregroundStyle(Theme.secondaryText)
+            }
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundStyle(Theme.secondaryText)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 12)
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
+    }
+}
+
+#Preview {
+    NavigationStack {
+        PersonProfileView(username: "leo")
+    }
+    .preferredColorScheme(.dark)
+    .tint(Theme.accent)
+}
