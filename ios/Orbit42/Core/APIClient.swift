@@ -94,6 +94,33 @@ final class APIClient {
         try await perform(request(path: path, method: "DELETE"))
     }
 
+    /// multipart/form-data 파일 업로드 (아바타 등).
+    func upload<Response: Decodable>(
+        _ path: String,
+        fileData: Data,
+        fieldName: String,
+        fileName: String,
+        mimeType: String
+    ) async throws -> Response {
+        var request = request(path: path, method: "POST")
+        let boundary = "orbit42-\(UUID().uuidString)"
+        request.setValue(
+            "multipart/form-data; boundary=\(boundary)",
+            forHTTPHeaderField: "Content-Type"
+        )
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append(
+            "Content-Disposition: form-data; name=\"\(fieldName)\"; filename=\"\(fileName)\"\r\n"
+                .data(using: .utf8)!
+        )
+        body.append("Content-Type: \(mimeType)\r\n\r\n".data(using: .utf8)!)
+        body.append(fileData)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        request.httpBody = body
+        return try await perform(request)
+    }
+
     // MARK: - 내부
 
     private func request(path: String, method: String) -> URLRequest {

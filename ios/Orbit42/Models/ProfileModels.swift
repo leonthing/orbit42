@@ -2,9 +2,66 @@ import Foundation
 
 // MARK: - 프로필 편집 (PATCH /api/v1/me)
 
+/// `PATCH /api/v1/me` — 바뀐 필드만 담아 보낸다 (nil 프로퍼티는 키 자체가 생략됨).
+/// birthDate 는 `PatchValue` 로 "생략 / 값 / 명시적 null(제거)" 를 구분한다.
+/// socialLinks 는 저장할 전체 셋을 보내는 계약 (부분 병합 아님).
 struct UpdateProfileRequest: Encodable {
-    let displayName: String
-    let bio: String
+    var displayName: String?
+    var bio: String?
+    var birthDate: PatchValue<String>?
+    var socialLinks: [String: String]?
+    var interests: [String]?
+
+    var isEmpty: Bool {
+        displayName == nil && bio == nil && birthDate == nil
+            && socialLinks == nil && interests == nil
+    }
+}
+
+/// 소셜 링크 5종 (서버 계약의 socialLinks 키)
+enum SocialLinkKind: String, CaseIterable, Identifiable {
+    case instagram
+    case x
+    case youtube
+    case facebook
+    case linkedin
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .instagram: return "인스타그램"
+        case .x: return "X"
+        case .youtube: return "유튜브"
+        case .facebook: return "페이스북"
+        case .linkedin: return "링크드인"
+        }
+    }
+
+    var placeholder: String {
+        switch self {
+        case .instagram: return "https://instagram.com/..."
+        case .x: return "https://x.com/..."
+        case .youtube: return "https://youtube.com/..."
+        case .facebook: return "https://facebook.com/..."
+        case .linkedin: return "https://linkedin.com/in/..."
+        }
+    }
+}
+
+// MARK: - 아바타 (POST/DELETE /api/v1/me/avatar)
+
+/// `POST /api/v1/me/avatar` → `{"ok":true,"url":"..."}`
+struct AvatarUploadResponse: Decodable {
+    let ok: Bool?
+    let url: String?
+}
+
+// MARK: - 비밀번호 변경 (POST /api/v1/me/password)
+
+struct ChangePasswordRequest: Encodable {
+    let currentPassword: String
+    let newPassword: String
 }
 
 // MARK: - 캘린더 설정 (GET/POST/PATCH/DELETE /api/v1/calendars)

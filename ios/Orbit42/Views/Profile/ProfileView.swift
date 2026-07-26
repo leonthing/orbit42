@@ -2,7 +2,7 @@ import SwiftUI
 
 /// 프로필 탭 — 설정 허브.
 /// 헤더(아바타/이름/이메일/소개) + 프로필 편집 / 내 캘린더 / Google 캘린더 연동 /
-/// 웹 설정 안내 / 로그아웃 + 앱 버전.
+/// 알림 설정 / 근무시간 / 이동시간 버퍼 / 친구 초대 / 계정 / 웹 설정 안내 / 로그아웃 + 앱 버전.
 struct ProfileView: View {
     @Environment(AuthViewModel.self) private var auth
 
@@ -121,6 +121,39 @@ struct ProfileView: View {
                 menuRow(icon: "arrow.triangle.2.circlepath", title: "Google 캘린더")
             }
 
+            NavigationLink {
+                NotificationPrefsView()
+            } label: {
+                menuRow(icon: "bell", title: "알림 설정")
+            }
+
+            NavigationLink {
+                WorkHoursView()
+            } label: {
+                menuRow(icon: "clock", title: "근무시간")
+            }
+
+            NavigationLink {
+                LocationBuffersView()
+            } label: {
+                menuRow(icon: "figure.walk", title: "이동시간 버퍼")
+            }
+
+            if let referralURL {
+                ShareLink(
+                    item: referralURL,
+                    message: Text("Orbit42에 초대합니다. 제 추천으로 가입하면 자동으로 연결돼요.")
+                ) {
+                    menuRow(icon: "person.badge.plus", title: "친구 초대")
+                }
+            }
+
+            NavigationLink {
+                AccountView()
+            } label: {
+                menuRow(icon: "person.crop.circle", title: "계정")
+            }
+
             if let url = webSettingsURL {
                 Link(destination: url) {
                     HStack {
@@ -133,7 +166,7 @@ struct ProfileView: View {
                 }
             }
         } footer: {
-            Text("근무시간·알림·소셜 연동 설정은 웹에서 할 수 있어요")
+            Text("소셜 글 자동 공유(X·페이스북·링크드인)는 웹에서 연결할 수 있어요")
                 .foregroundStyle(Theme.secondaryText)
         }
         .listRowBackground(Theme.surface)
@@ -153,6 +186,12 @@ struct ProfileView: View {
     private var webSettingsURL: URL? {
         guard let username = auth.user?.username else { return nil }
         return URL(string: "https://orbit42.org/\(username)/settings")
+    }
+
+    /// 친구 초대 추천 링크 — 이 링크로 가입하면 추천인과 자동 연결된다.
+    private var referralURL: URL? {
+        guard let username = auth.user?.username else { return nil }
+        return URL(string: "https://orbit42.org/signup?ref=\(username)")
     }
 
     // MARK: - 로그아웃 + 버전
