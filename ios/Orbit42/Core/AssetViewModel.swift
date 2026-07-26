@@ -60,6 +60,17 @@ final class AssetViewModel {
 
     /// 월급/시급 설정 저장. 성공하면 요약을 새로고침하고 true 를 반환한다.
     func saveSettings(incomeType: String, amount: Int) async -> Bool {
+        await putSettings(
+            UpdateTimeAssetSettingsRequest(incomeType: incomeType, amount: amount)
+        )
+    }
+
+    /// 용도 → 버킷 분류 저장. 성공하면 요약을 새로고침하고 true 를 반환한다.
+    func saveBucketMap(_ map: [String: String]) async -> Bool {
+        await putSettings(UpdateTimeAssetSettingsRequest(bucketMap: map))
+    }
+
+    private func putSettings(_ body: UpdateTimeAssetSettingsRequest) async -> Bool {
         guard !isSaving else { return false }
         isSaving = true
         defer { isSaving = false }
@@ -67,7 +78,7 @@ final class AssetViewModel {
         do {
             let updated: TimeAssetSettings = try await api.put(
                 "/api/v1/time-asset/settings",
-                body: UpdateTimeAssetSettingsRequest(incomeType: incomeType, amount: amount)
+                body: body
             )
             settings = updated
             await load(force: true)

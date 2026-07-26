@@ -2,7 +2,7 @@ import SwiftUI
 
 // MARK: - 시간 자산 설정 (GET/PUT /api/v1/time-asset/settings)
 
-/// 수입 설정 — 월급/시급과 금액, 서버가 계산한 시급 환산값.
+/// 수입 설정 — 월급/시급과 금액, 서버가 계산한 시급 환산값 + 버킷 분류 설정.
 struct TimeAssetSettings: Decodable {
     /// "monthly" | "hourly" | nil(미설정)
     let incomeType: String?
@@ -10,11 +10,39 @@ struct TimeAssetSettings: Decodable {
     let hourlyValueKrw: Int?
     /// 월 근로시간 기준 (주휴 포함 209시간)
     let monthlyWorkHours: Int?
+    /// 용도(purpose) → 버킷 유효 매핑 (기본값 + 사용자 오버라이드)
+    let bucketMap: [String: String]?
+    /// 분류 설정 화면용 메타 — 용도 한국어 라벨과 기본 버킷
+    let purposes: [PurposeMeta]?
+    /// 버킷 선택지 (수입/투자/소비/생활 + 색)
+    let bucketOptions: [BucketOptionMeta]?
+}
+
+struct PurposeMeta: Decodable, Identifiable {
+    let key: String
+    let label: String
+    let defaultBucket: String
+
+    var id: String { key }
+}
+
+struct BucketOptionMeta: Decodable, Identifiable {
+    let key: String
+    let label: String
+    let color: String
+
+    var id: String { key }
+
+    var swiftUIColor: Color {
+        Color(hexString: color) ?? Theme.accent
+    }
 }
 
 struct UpdateTimeAssetSettingsRequest: Encodable {
-    let incomeType: String
-    let amount: Int
+    var incomeType: String?
+    var amount: Int?
+    /// 용도 → 버킷 전체 맵 (서버가 기본값과 같은 항목은 알아서 정리)
+    var bucketMap: [String: String]?
 }
 
 // MARK: - 시간 자산 요약 (GET /api/v1/time-asset/summary)

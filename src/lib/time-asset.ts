@@ -24,9 +24,10 @@ export type IncomeType = "monthly" | "hourly";
 
 export type BucketKey = "earn" | "invest" | "spend" | "life";
 
-/** purpose → 버킷 매핑. 수입=지금 돈 버는 시간, 투자=미래 가치를 올리는 시간,
- * 소비=즐기는 시간, 생활=그 외 일상. */
-const BUCKET_OF: Record<CalendarPurpose, BucketKey> = {
+/** 기본 purpose → 버킷 매핑. 수입=지금 돈 버는 시간, 투자=미래 가치를 올리는
+ * 시간, 소비=즐기는 시간, 생활=그 외 일상. 사용자가 users.bucket_map 으로
+ * 용도별 오버라이드 가능. */
+export const DEFAULT_BUCKET_MAP: Record<CalendarPurpose, BucketKey> = {
   work: "earn",
   income: "earn",
   learning: "invest",
@@ -37,6 +38,26 @@ const BUCKET_OF: Record<CalendarPurpose, BucketKey> = {
   personal: "life",
   other: "life",
 };
+
+export const BUCKET_KEYS: BucketKey[] = ["earn", "invest", "spend", "life"];
+
+/** 기본 매핑 위에 사용자 오버라이드를 얹은 유효 매핑. */
+export function effectiveBucketMap(
+  overrides: Partial<Record<CalendarPurpose, BucketKey>> | null,
+): Record<CalendarPurpose, BucketKey> {
+  const map = { ...DEFAULT_BUCKET_MAP };
+  if (overrides) {
+    for (const [purpose, bucket] of Object.entries(overrides)) {
+      if (
+        purpose in DEFAULT_BUCKET_MAP &&
+        BUCKET_KEYS.includes(bucket as BucketKey)
+      ) {
+        map[purpose as CalendarPurpose] = bucket as BucketKey;
+      }
+    }
+  }
+  return map;
+}
 
 export const BUCKET_META: Record<
   BucketKey,
@@ -52,11 +73,12 @@ export async function getIncomeSettings(userId: string): Promise<{
   incomeType: IncomeType | null;
   amount: number | null;
   hourlyValueKrw: number | null;
+  bucketMap: Record<CalendarPurpose, BucketKey>;
 }> {
   const db = getAdminClient();
   const { data } = await db
     .from("users")
-    .select("income_type, income_amount")
+    .select("income_type, income_amount, bucket_map")
     .eq("id", userId)
     .single();
   const incomeType = (data?.income_type as IncomeType | null) ?? null;
@@ -66,7 +88,41 @@ export async function getIncomeSettings(userId: string): Promise<{
     incomeType,
     amount,
     hourlyValueKrw: hourlyValue(incomeType, amount),
+    bucketMap: effectiveBucketMap(
+      (data?.bucket_map as Partial<Record<CalendarPurpose, BucketKey>> | null) ??
+        null,
+    ),
   };
+}
+
+export async function saveBucketMap(
+  userId: string,
+  overrides: Partial<Record<CalendarPurpose, BucketKey>>,
+) {
+  const db = getAdminClient();
+  // 기본값과 같은 항목은 저장하지 않아 오버라이드만 남긴다.
+  const trimmed: Record<string, BucketKey> = {};
+  for (const [purpose, bucket] of Object.entries(overrides)) {
+    if (
+      purpose in DEFAULT_BUCKET_MAP &&
+      BUCKET_KEYS.includes(bucket as BucketKey) &&
+      DEFAULT_BUCKET_MAP[purpose as CalendarPurpose] !== bucket
+    ) {
+      trimmed[purpose] = bucket as BucketKey;
+    }
+  }
+  const { error } = await db
+    .from("users")
+    .update({
+      bucket_map: Object.keys(trimmed).length > 0 ? trimmed : null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", userId);
+  if (error) {
+    console.error("saveBucketMap", error);
+    return { error: "저장에 실패했어요." };
+  }
+  return { ok: true as const };
 }
 
 export function hourlyValue(
@@ -148,11 +204,12 @@ function emptyBuckets(): Record<BucketKey, number> {
 
 function bucketize(
   byPurpose: Array<{ purpose: CalendarPurpose | "null"; hours: number }>,
+  map: Record<CalendarPurpose, BucketKey>,
 ): Record<BucketKey, number> {
   const acc = emptyBuckets();
   for (const p of byPurpose) {
     const key: BucketKey =
-      p.purpose === "null" ? "life" : BUCKET_OF[p.purpose] ?? "life";
+      p.purpose === "null" ? "life" : map[p.purpose] ?? "life";
     acc[key] += p.hours;
   }
   return acc;
@@ -193,7 +250,9 @@ export async function getTimeAssetSummary(
         Math.min(b.end.getTime(), we.getTime()) -
         Math.max(b.start.getTime(), ws.getTime());
       if (overlap <= 0) continue;
-      const key: BucketKey = b.purpose ? BUCKET_OF[b.purpose] ?? "life" : "life";
+      const key: BucketKey = b.purpose
+        ? income.bucketMap[b.purpose] ?? "life"
+        : "life";
       acc[key] += overlap / 3_600_000;
     }
     trend.push({
@@ -207,7 +266,7 @@ export async function getTimeAssetSummary(
     });
   }
 
-  const hoursByBucket = bucketize(week.by_purpose);
+  const hoursByBucket = bucketize(week.by_purpose, income.bucketMap);
   const scheduled = Object.values(hoursByBucket).reduce((a, b) => a + b, 0);
   const buckets: BucketStat[] = (
     Object.keys(BUCKET_META) as BucketKey[]

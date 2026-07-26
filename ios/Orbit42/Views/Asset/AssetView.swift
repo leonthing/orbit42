@@ -6,6 +6,7 @@ import SwiftUI
 struct AssetView: View {
     @State private var viewModel = AssetViewModel()
     @State private var showingSettingsSheet = false
+    @State private var showingBucketMapSheet = false
 
     var body: some View {
         NavigationStack {
@@ -17,6 +18,9 @@ struct AssetView: View {
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showingSettingsSheet) {
                 IncomeSettingsSheet(viewModel: viewModel)
+            }
+            .sheet(isPresented: $showingBucketMapSheet) {
+                BucketMapSheet(viewModel: viewModel)
             }
             .alert(
                 "안내",
@@ -195,9 +199,20 @@ struct AssetView: View {
 
     private func weekUsageCard(_ summary: TimeAssetSummary) -> some View {
         card {
-            Text("이번 주 시간 사용")
-                .font(.headline)
-                .foregroundStyle(.white)
+            HStack {
+                Text("이번 주 시간 사용")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                Spacer()
+                Button {
+                    showingBucketMapSheet = true
+                } label: {
+                    Label("분류 설정", systemImage: "slider.horizontal.3")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Theme.secondaryText)
+                }
+                .accessibilityLabel("시간 분류 설정")
+            }
 
             // 버킷 비율 가로 스택 바
             if summary.scheduledHours > 0 {
