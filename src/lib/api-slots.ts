@@ -23,3 +23,18 @@ export function toApiSlot(s: TimeSlot, username: string) {
     createdAt: s.created_at,
   };
 }
+
+/** 상세/편집 화면용 — 목록 필드에 편집 가능한 설정 전부를 더한다. */
+export function toApiSlotDetail(s: TimeSlot, username: string) {
+  return {
+    ...toApiSlot(s, username),
+    locations: s.locations ?? [],
+    workingHours: s.working_hours ?? {},
+    slotIntervalMin: s.slot_interval_min,
+    minNoticeHours: s.min_notice_hours,
+    maxAdvanceDays: s.max_advance_days,
+    bufferMin: s.buffer_min,
+    validFrom: s.valid_from,
+    validUntil: s.valid_until,
+  };
+}

@@ -4,6 +4,7 @@ import SwiftUI
 struct CalendarView: View {
     @State private var viewModel = CalendarViewModel()
     @State private var showingAddSheet = false
+    @State private var selectedEvent: CalendarEvent?
 
     private var calendar: Calendar { CalendarViewModel.calendar }
 
@@ -41,6 +42,10 @@ struct CalendarView: View {
             }
             .sheet(isPresented: $showingAddSheet) {
                 AddEventSheet(viewModel: viewModel, defaultDate: viewModel.selectedDate)
+                    .preferredColorScheme(.dark)
+            }
+            .sheet(item: $selectedEvent) { event in
+                EventDetailSheet(viewModel: viewModel, event: event)
                     .preferredColorScheme(.dark)
             }
             .task(id: viewModel.currentMonthKey) {
@@ -233,7 +238,12 @@ struct CalendarView: View {
                     .padding(.vertical, 40)
                 } else {
                     ForEach(events) { event in
-                        EventRow(event: event, calendars: viewModel.calendars)
+                        Button {
+                            selectedEvent = event
+                        } label: {
+                            EventRow(event: event, calendars: viewModel.calendars)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }

@@ -48,6 +48,14 @@ final class SlotsViewModel {
         }
     }
 
+    // MARK: - 상세 편집 결과 반영
+
+    /// 상세 화면에서 저장한 슬롯을 목록에 반영한다 (네트워크 재요청 없이).
+    func applyUpdated(_ slot: TimeSlot) {
+        guard let index = slots?.firstIndex(where: { $0.id == slot.id }) else { return }
+        slots?[index] = slot
+    }
+
     // MARK: - 활성/비활성 토글
 
     func toggleActive(_ slot: TimeSlot) async {

@@ -1,13 +1,14 @@
 import SwiftUI
 
 /// 타임슬롯 탭 — 내가 열어둔 슬롯 목록 + 프리셋 빠른 생성.
-/// 상세 편집(가격·시간·경매 등)은 웹에서 하고, 앱에서는 조회·토글·공유·빠른 생성만 지원한다.
+/// 행을 탭하면 상세 편집(`SlotDetailView`)으로 이동한다.
 struct SlotsView: View {
     @State private var viewModel = SlotsViewModel()
     @State private var showingPresetDialog = false
+    @State private var path = NavigationPath()
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ZStack {
                 Theme.background.ignoresSafeArea()
                 content
@@ -46,8 +47,19 @@ struct SlotsView: View {
             } message: {
                 Text(viewModel.actionMessage ?? "")
             }
+            .navigationDestination(for: SlotRoute.self) { route in
+                SlotDetailView(route: route, listViewModel: viewModel)
+            }
             .task {
                 await viewModel.load()
+                #if DEBUG
+                // 데모/스크린샷용: DEMO_SLOT_ID 환경변수로 상세 화면 자동 진입
+                if let demoId = ProcessInfo.processInfo.environment["DEMO_SLOT_ID"],
+                   path.isEmpty,
+                   let slot = viewModel.slots?.first(where: { $0.id == demoId }) {
+                    path.append(SlotRoute(id: slot.id, title: slot.title))
+                }
+                #endif
             }
         }
     }
@@ -108,7 +120,14 @@ struct SlotsView: View {
     private func slotList(_ slots: [TimeSlot]) -> some View {
         List {
             ForEach(slots) { slot in
-                SlotRow(slot: slot)
+                ZStack {
+                    SlotRow(slot: slot)
+                    // 카드 스타일을 유지하면서 행 전체 탭 → 상세 push (chevron 숨김용 투명 링크)
+                    NavigationLink(value: SlotRoute(id: slot.id, title: slot.title)) {
+                        EmptyView()
+                    }
+                    .opacity(0)
+                }
                     .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
@@ -217,7 +236,7 @@ struct SlotsView: View {
     // MARK: - 안내 푸터
 
     private var footerNote: some View {
-        Text("상세 편집(가격·시간·경매 등)은 웹에서 할 수 있어요")
+        Text("슬롯을 탭하면 가격·시간 등 상세 편집을 할 수 있어요")
             .font(.caption)
             .foregroundStyle(Theme.secondaryText)
             .frame(maxWidth: .infinity)

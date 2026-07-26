@@ -163,6 +163,45 @@ final class CalendarViewModel {
         await loadDisplayedMonth(force: true)
     }
 
+    // MARK: - 이벤트 수정/삭제
+
+    /// 이벤트를 수정하고, 성공하면 기존/새 기간이 걸친 달의 캐시를 비운 뒤 표시 중인 달을 새로고침한다.
+    /// - Parameters:
+    ///   - body: 바뀐 필드만 담은 PATCH 페이로드 (startAt/endAt 은 쌍으로).
+    ///   - newStart/newEnd: 수정 후 기간 — 캐시 무효화 범위 계산용.
+    func updateEvent(
+        _ event: CalendarEvent,
+        body: UpdateEventRequest,
+        newStart: Date,
+        newEnd: Date
+    ) async throws {
+        let _: EventMutationResponse = try await api.patch(
+            "/api/v1/calendar/events/\(event.id)",
+            body: body
+        )
+        invalidateCache(around: [event.startAt, event.endAt, newStart, newEnd])
+        await loadDisplayedMonth(force: true)
+    }
+
+    /// 이벤트를 삭제하고, 성공하면 기간이 걸친 달의 캐시를 비운 뒤 표시 중인 달을 새로고침한다.
+    /// Google 이벤트(`gcal_` id)는 소속 native 캘린더 uuid 를 쿼리로 함께 보낸다.
+    func deleteEvent(_ event: CalendarEvent) async throws {
+        var path = "/api/v1/calendar/events/\(event.id)"
+        if event.isGoogle, let calendarId = event.calendarId {
+            path += "?calendarId=\(calendarId)"
+        }
+        let _: EventMutationResponse = try await api.delete(path)
+        invalidateCache(around: [event.startAt, event.endAt])
+        await loadDisplayedMonth(force: true)
+    }
+
+    /// 주어진 날짜들이 속한 달의 캐시를 제거한다. (createEvent 와 같은 무효화 패턴)
+    private func invalidateCache(around dates: [Date]) {
+        for date in dates {
+            cache.removeValue(forKey: Self.key(for: date))
+        }
+    }
+
     // MARK: - 내부
 
     static func key(for date: Date) -> MonthKey {

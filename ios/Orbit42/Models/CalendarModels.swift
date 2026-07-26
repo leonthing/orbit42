@@ -182,6 +182,23 @@ struct CreateEventResponse: Decodable {
     let event: CalendarEvent
 }
 
+/// `PATCH /api/v1/calendar/events/{id}` — 모든 필드 선택.
+/// nil 필드는 JSONEncoder 가 생략하므로 "바뀐 필드만" 전송된다.
+/// 단, startAt/endAt 은 서버가 쌍으로 요구하므로 항상 함께 넣는다.
+struct UpdateEventRequest: Encodable {
+    var title: String?
+    var description: String?
+    var startAt: String?
+    var endAt: String?
+    var allDay: Bool?
+    var calendarId: String?
+}
+
+/// PATCH/DELETE 공통 성공 응답 — `{"ok": true}`
+struct EventMutationResponse: Decodable {
+    let ok: Bool
+}
+
 // MARK: - Hex 색상
 
 extension Color {

@@ -90,6 +90,10 @@ final class APIClient {
         return try await perform(request)
     }
 
+    func delete<Response: Decodable>(_ path: String) async throws -> Response {
+        try await perform(request(path: path, method: "DELETE"))
+    }
+
     // MARK: - 내부
 
     private func request(path: String, method: String) -> URLRequest {
