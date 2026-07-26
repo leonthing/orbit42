@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 타인 프로필 화면 — 헤더(아바타/이름/bio/관심사/궤도/평점) + 팔로우 토글 +
+/// 타인 프로필 화면 — 헤더(아바타/이름/bio/관심사/오르빗/평점) + 팔로우 토글 +
 /// 시간 요청 + 열린 슬롯 목록(탭 → 예약 화면).
 struct PersonProfileView: View {
     @State private var viewModel: PersonProfileViewModel
@@ -110,7 +110,7 @@ struct PersonProfileView: View {
                         .font(.subheadline)
                         .foregroundStyle(Theme.accent)
                     HStack(spacing: 8) {
-                        Text("궤도 \(data.orbiters)명")
+                        Text("오르비터 \(data.orbiters)")
                         if let rating = data.rating, rating.count > 0 {
                             HStack(spacing: 2) {
                                 Image(systemName: "star.fill")
@@ -166,7 +166,7 @@ struct PersonProfileView: View {
                 HStack(spacing: 6) {
                     Image(systemName: data.isFollowing ? "checkmark.circle.fill" : "plus.circle")
                         .font(.footnote)
-                    Text(data.isFollowing ? "궤도에서 제거" : "궤도에 추가")
+                    Text(data.isFollowing ? "오르빗에서 빼기" : "오르빗에 담기")
                 }
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(data.isFollowing ? Theme.secondaryText : .white)

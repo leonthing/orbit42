@@ -78,6 +78,13 @@ struct ProfileView: View {
                         .font(.footnote)
                         .foregroundStyle(Theme.secondaryText)
                 }
+
+                if let orbiting = user.orbiting, let orbiters = user.orbiters {
+                    Text("오르빗 \(orbiting) · 오르비터 \(orbiters)")
+                        .font(.caption)
+                        .monospacedDigit()
+                        .foregroundStyle(Theme.secondaryText)
+                }
             }
             .padding(.vertical, 8)
         }

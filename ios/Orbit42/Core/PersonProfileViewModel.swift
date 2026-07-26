@@ -46,7 +46,7 @@ final class PersonProfileViewModel {
         }
     }
 
-    /// "궤도에 추가" / "궤도에서 제거" 토글.
+    /// "오르빗에 담기" / "오르빗에서 빼기" 토글.
     func toggleFollow() async {
         guard let current = data, !isTogglingFollow else { return }
         isTogglingFollow = true
@@ -58,7 +58,7 @@ final class PersonProfileViewModel {
                 body: FollowRequest(follow: !current.isFollowing)
             )
             data?.isFollowing = response.isFollowing
-            // 궤도(팔로워) 카운트도 낙관적으로 맞춰준다.
+            // 오르빗(팔로워) 카운트도 낙관적으로 맞춰준다.
             if response.isFollowing != current.isFollowing {
                 data?.orbiters = max(0, current.orbiters + (response.isFollowing ? 1 : -1))
             }

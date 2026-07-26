@@ -57,7 +57,7 @@ struct SearchResponse: Decodable, Sendable {
 }
 
 /// 검색 결과의 사람 항목.
-// MARK: - 내 궤도 (GET /api/v1/orbit)
+// MARK: - 내 오르빗 (GET /api/v1/orbit)
 
 /// 팔로우한 사람 + 그 사람의 열린 타임슬롯. 피드가 아니라
 /// "아는 사람들의 예약 가능한 시간 디렉토리".

@@ -34,6 +34,12 @@ struct IntroView: View {
             message: "예약 페이지 링크를 공유하면 끝.\n비는 시간은 캘린더를 보고 자동 계산되고,\n예약이 들어오면 승인만 하면 돼요.\n상대는 가입 없이도 예약할 수 있어요."
         ),
         IntroPage(
+            icon: "circle.dotted.circle",
+            iconColor: Theme.accent,
+            title: "오르빗에 담아두면",
+            message: "관심 있는 사람을 오르빗에 담으면\n그 사람의 열리는 시간이 한곳에 모여요.\n친구를 초대하면 서로의 오르빗에 자동 연결."
+        ),
+        IntroPage(
             icon: "calendar.badge.checkmark",
             iconColor: Color(red: 0x06 / 255, green: 0xB6 / 255, blue: 0xD4 / 255),
             title: "캘린더, 하나로",

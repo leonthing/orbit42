@@ -14,7 +14,7 @@ struct SearchView: View {
                 content
             }
         }
-        .navigationTitle("검색")
+        .navigationTitle("오르빗")
         .navigationBarTitleDisplayMode(.inline)
         .task { await viewModel.loadOrbit() }
     }
@@ -64,8 +64,8 @@ struct SearchView: View {
             } else {
                 hintState(
                     icon: "sparkle.magnifyingglass",
-                    title: "이름이나 슬롯을 검색해보세요",
-                    message: "사람을 찾아 궤도에 추가하면 여기에 모여요.\n친구를 초대하면 자동으로 서로의 궤도에 연결돼요."
+                    title: "오르빗이 비어있어요",
+                    message: "관심 있는 사람을 검색해 오르빗에 담으면\n그 사람의 열리는 시간이 여기 모여요.\n친구를 초대하면 자동으로 서로 연결돼요."
                 )
             }
         } else if let message = viewModel.errorMessage {
@@ -184,7 +184,7 @@ struct SearchView: View {
             .textCase(nil)
     }
 
-    // MARK: - 내 궤도 (검색어 없을 때 기본 콘텐츠)
+    // MARK: - 내 오르빗 (검색어 없을 때 기본 콘텐츠)
 
     private func orbitList(_ people: [OrbitPerson]) -> some View {
         List {
@@ -252,9 +252,9 @@ struct SearchView: View {
                     .searchRowChrome()
                 }
             } header: {
-                sectionHeader("내 궤도")
+                sectionHeader("내 오르빗")
             } footer: {
-                Text("팔로우한 사람들의 열린 타임슬롯이에요. 친구를 초대하면 자동으로 연결돼요.")
+                Text("오르빗에 담은 사람들의 열린 시간이에요. 친구를 초대하면 서로의 오르빗에 자동으로 연결돼요.")
                     .font(.caption)
                     .foregroundStyle(Theme.secondaryText)
             }

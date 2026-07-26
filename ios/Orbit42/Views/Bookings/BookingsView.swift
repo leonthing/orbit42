@@ -20,18 +20,6 @@ struct BookingsView: View {
             }
             .navigationTitle("예약")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                // 사람/열린 타임슬롯 검색 — 시간을 주고받는 탭이라 진입점을 여기에 둔다
-                ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink {
-                        SearchView()
-                    } label: {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundStyle(Theme.accent)
-                    }
-                    .accessibilityLabel("검색")
-                }
-            }
             .alert(
                 "안내",
                 isPresented: Binding(
@@ -116,7 +104,7 @@ struct BookingsView: View {
                     emptyState(
                         icon: "calendar.badge.clock",
                         title: "예약한 일정이 없어요",
-                        message: "다른 사람의 타임슬롯을 예약하면 이곳에 보여요"
+                        message: "오르빗 탭에서 사람을 찾아 시간을 예약해보세요"
                     )
                 } else {
                     guestList(data.guest)

@@ -18,6 +18,10 @@ struct User: Codable, Equatable, Sendable {
     let socialLinks: [String: String]?
     /// 관심사 태그 (최대 10개)
     let interests: [String]?
+    /// 나를 오르빗에 담은 사람 수 (구버전 응답에는 없을 수 있어 옵셔널)
+    let orbiters: Int?
+    /// 내가 오르빗에 담은 사람 수 (구버전 응답에는 없을 수 있어 옵셔널)
+    let orbiting: Int?
 
     init(
         username: String,
@@ -28,7 +32,9 @@ struct User: Codable, Equatable, Sendable {
         bio: String?,
         birthDate: String? = nil,
         socialLinks: [String: String]? = nil,
-        interests: [String]? = nil
+        interests: [String]? = nil,
+        orbiters: Int? = nil,
+        orbiting: Int? = nil
     ) {
         self.username = username
         self.displayName = displayName
@@ -39,6 +45,8 @@ struct User: Codable, Equatable, Sendable {
         self.birthDate = birthDate
         self.socialLinks = socialLinks
         self.interests = interests
+        self.orbiters = orbiters
+        self.orbiting = orbiting
     }
 
     /// 화면에 표시할 이름 (displayName 이 없으면 username)

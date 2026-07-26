@@ -13,7 +13,7 @@ final class SearchViewModel {
     private(set) var isSearching = false
     private(set) var errorMessage: String?
 
-    /// 내 궤도 — 검색어가 없을 때 기본 콘텐츠로 보여준다. nil 이면 로딩 전.
+    /// 내 오르빗 — 검색어가 없을 때 기본 콘텐츠로 보여준다. nil 이면 로딩 전.
     private(set) var orbit: [OrbitPerson]?
 
     /// 디바운스 중인 검색 작업 — 새 입력이 오면 취소한다.
@@ -45,14 +45,14 @@ final class SearchViewModel {
         }
     }
 
-    /// 검색 화면 진입 시 내 궤도(팔로우한 사람들의 열린 슬롯)를 불러온다.
+    /// 검색 화면 진입 시 내 오르빗(팔로우한 사람들의 열린 슬롯)를 불러온다.
     func loadOrbit(force: Bool = false) async {
         if !force, orbit != nil { return }
         do {
             let response: OrbitResponse = try await api.get("/api/v1/orbit")
             orbit = response.people
         } catch {
-            // 궤도는 부가 콘텐츠 — 실패해도 검색 안내만 보여주면 된다.
+            // 오르빗은 부가 콘텐츠 — 실패해도 검색 안내만 보여주면 된다.
             if orbit == nil { orbit = [] }
         }
     }

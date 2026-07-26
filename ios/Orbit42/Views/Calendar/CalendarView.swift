@@ -1,45 +1,62 @@
 import SwiftUI
 
-/// 캘린더 탭 — 월 그리드 + 선택된 날짜의 이벤트 목록.
+/// 캘린더 탭 — 상단 세그먼트로 "일정"(월 그리드 + 이벤트 목록)과
+/// "타임슬롯"(`SlotsContent`, 내가 열어둔 슬롯 관리)을 오간다.
 struct CalendarView: View {
+    /// 상단 세그먼트 구분.
+    private enum Mode: String, CaseIterable, Identifiable {
+        case schedule
+        case slots
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .schedule: return "일정"
+            case .slots: return "타임슬롯"
+            }
+        }
+    }
+
     @State private var viewModel = CalendarViewModel()
     @State private var showingAddSheet = false
     @State private var selectedEvent: CalendarEvent?
 
+    @State private var mode: Mode = CalendarView.initialMode
+    /// 세그먼트 전환에도 슬롯 목록 캐시가 유지되도록 여기서 소유한다.
+    @State private var slotsViewModel = SlotsViewModel()
+    /// 슬롯 상세 push 용 path — `SlotsContent` 의 DEMO_SLOT_ID 자동 진입에도 쓰인다.
+    @State private var path = NavigationPath()
+
+    /// DEBUG 데모/스크린샷용: 구 DEMO_TAB=slots 는 이제 캘린더 탭의
+    /// "타임슬롯" 세그먼트로 통합되었으므로 초기 세그먼트를 그쪽으로 연다.
+    private static var initialMode: Mode {
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["DEMO_TAB"] == "slots" {
+            return .slots
+        }
+        #endif
+        return .schedule
+    }
+
     private var calendar: Calendar { CalendarViewModel.calendar }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ZStack {
                 Theme.background.ignoresSafeArea()
                 VStack(spacing: 0) {
-                    monthHeader
-                    weekdayHeader
-                    monthGrid
-                    Divider()
-                        .overlay(Color.white.opacity(0.08))
-                        .padding(.top, 8)
-                    eventListSection
+                    modePicker
+                    switch mode {
+                    case .schedule:
+                        scheduleContent
+                    case .slots:
+                        SlotsContent(viewModel: slotsViewModel, path: $path)
+                    }
                 }
             }
             .navigationTitle("캘린더")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("오늘") {
-                        withAnimation { viewModel.showToday() }
-                    }
-                    .font(.subheadline.weight(.medium))
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showingAddSheet = true
-                    } label: {
-                        Image(systemName: "plus")
-                    }
-                    .accessibilityLabel("일정 추가")
-                }
-            }
             .sheet(isPresented: $showingAddSheet) {
                 AddEventSheet(viewModel: viewModel, defaultDate: viewModel.selectedDate)
                     .preferredColorScheme(.dark)
@@ -50,6 +67,52 @@ struct CalendarView: View {
             }
             .task(id: viewModel.currentMonthKey) {
                 await viewModel.loadDisplayedMonth()
+            }
+        }
+    }
+
+    // MARK: - 세그먼트
+
+    private var modePicker: some View {
+        Picker("캘린더 보기", selection: $mode) {
+            ForEach(Mode.allCases) { mode in
+                Text(mode.title).tag(mode)
+            }
+        }
+        .pickerStyle(.segmented)
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 4)
+    }
+
+    // MARK: - 일정 콘텐츠
+
+    /// "일정" 세그먼트 — 캘린더 전용 toolbar(오늘/+)는 이 브랜치에만 붙어서,
+    /// "타임슬롯" 세그먼트에서는 `SlotsContent` 의 +(프리셋) toolbar 가 대신 보인다.
+    private var scheduleContent: some View {
+        VStack(spacing: 0) {
+            monthHeader
+            weekdayHeader
+            monthGrid
+            Divider()
+                .overlay(Color.white.opacity(0.08))
+                .padding(.top, 8)
+            eventListSection
+        }
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("오늘") {
+                    withAnimation { viewModel.showToday() }
+                }
+                .font(.subheadline.weight(.medium))
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showingAddSheet = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .accessibilityLabel("일정 추가")
             }
         }
     }

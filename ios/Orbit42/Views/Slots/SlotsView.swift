@@ -1,71 +1,73 @@
 import SwiftUI
 
-/// 타임슬롯 탭 — 내가 열어둔 슬롯 목록 + 프리셋 빠른 생성.
+/// 타임슬롯 목록 콘텐츠 — 내가 열어둔 슬롯 목록 + 프리셋 빠른 생성.
+/// 자체 NavigationStack 없이, 감싸는 쪽(캘린더 탭)의 스택 안에서 동작한다.
+/// toolbar(+)·navigationDestination·alert 등은 모두 여기에 붙어 있어
+/// 캘린더 탭의 "타임슬롯" 세그먼트에서 그대로 쓸 수 있다.
 /// 행을 탭하면 상세 편집(`SlotDetailView`)으로 이동한다.
-struct SlotsView: View {
-    @State private var viewModel = SlotsViewModel()
+struct SlotsContent: View {
+    /// 세그먼트 전환 시 캐시가 유지되도록 뷰모델은 감싸는 쪽에서 소유한다.
+    let viewModel: SlotsViewModel
+    /// 감싸는 NavigationStack 의 path — DEMO_SLOT_ID 자동 진입에 쓴다.
+    @Binding var path: NavigationPath
+
     @State private var showingPresetDialog = false
-    @State private var path = NavigationPath()
     @State private var didAutoPushDemo = false
 
     var body: some View {
-        NavigationStack(path: $path) {
-            ZStack {
-                Theme.background.ignoresSafeArea()
-                content
+        ZStack {
+            content
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showingPresetDialog = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .accessibilityLabel("타임슬롯 추가")
+                .disabled(viewModel.isCreatingPreset)
             }
-            .navigationTitle("타임슬롯")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showingPresetDialog = true
-                    } label: {
-                        Image(systemName: "plus")
-                    }
-                    .accessibilityLabel("타임슬롯 추가")
-                    .disabled(viewModel.isCreatingPreset)
+        }
+        .confirmationDialog("빠른 생성", isPresented: $showingPresetDialog, titleVisibility: .visible) {
+            ForEach(SlotPreset.allCases) { preset in
+                Button(preset.title) {
+                    Task { await viewModel.createPreset(preset) }
                 }
             }
-            .confirmationDialog("빠른 생성", isPresented: $showingPresetDialog, titleVisibility: .visible) {
-                ForEach(SlotPreset.allCases) { preset in
-                    Button(preset.title) {
-                        Task { await viewModel.createPreset(preset) }
-                    }
-                }
-                Button("취소", role: .cancel) {}
-            } message: {
-                Text("자주 쓰는 타임슬롯을 프리셋으로 바로 만들어요")
+            Button("취소", role: .cancel) {}
+        } message: {
+            Text("자주 쓰는 타임슬롯을 프리셋으로 바로 만들어요")
+        }
+        .alert(
+            "안내",
+            isPresented: Binding(
+                get: { viewModel.actionMessage != nil },
+                set: { if !$0 { viewModel.actionMessage = nil } }
+            )
+        ) {
+            Button("확인", role: .cancel) {}
+        } message: {
+            Text(viewModel.actionMessage ?? "")
+        }
+        .navigationDestination(for: SlotRoute.self) { route in
+            SlotDetailView(route: route, listViewModel: viewModel)
+        }
+        .task {
+            await viewModel.load()
+            #if DEBUG
+            // 데모/스크린샷용: DEMO_SLOT_ID 환경변수로 상세 화면 자동 진입.
+            // `.task` 는 뒤로가기로 리스트가 다시 보일 때마다 재실행되므로
+            // 반드시 앱 세션당 1회로 제한한다 (안 그러면 pop 즉시 재푸시됨).
+            if !didAutoPushDemo,
+               let demoId = ProcessInfo.processInfo.environment["DEMO_SLOT_ID"],
+               path.isEmpty,
+               let slot = viewModel.slots?.first(where: { $0.id == demoId }) {
+                didAutoPushDemo = true
+                path.append(SlotRoute(id: slot.id, title: slot.title))
             }
-            .alert(
-                "안내",
-                isPresented: Binding(
-                    get: { viewModel.actionMessage != nil },
-                    set: { if !$0 { viewModel.actionMessage = nil } }
-                )
-            ) {
-                Button("확인", role: .cancel) {}
-            } message: {
-                Text(viewModel.actionMessage ?? "")
-            }
-            .navigationDestination(for: SlotRoute.self) { route in
-                SlotDetailView(route: route, listViewModel: viewModel)
-            }
-            .task {
-                await viewModel.load()
-                #if DEBUG
-                // 데모/스크린샷용: DEMO_SLOT_ID 환경변수로 상세 화면 자동 진입.
-                // `.task` 는 뒤로가기로 리스트가 다시 보일 때마다 재실행되므로
-                // 반드시 앱 세션당 1회로 제한한다 (안 그러면 pop 즉시 재푸시됨).
-                if !didAutoPushDemo,
-                   let demoId = ProcessInfo.processInfo.environment["DEMO_SLOT_ID"],
-                   path.isEmpty,
-                   let slot = viewModel.slots?.first(where: { $0.id == demoId }) {
-                    didAutoPushDemo = true
-                    path.append(SlotRoute(id: slot.id, title: slot.title))
-                }
-                #endif
-            }
+            #endif
         }
     }
 
@@ -312,6 +314,26 @@ private struct SlotBadge: View {
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
             .background(Color.white.opacity(0.08), in: Capsule())
+    }
+}
+
+// MARK: - 단독 래퍼 (프리뷰용)
+
+/// `SlotsContent` 를 자체 NavigationStack 으로 감싼 단독 화면.
+/// 앱에서는 캘린더 탭이 콘텐츠를 직접 품으므로 프리뷰 용도로만 남겨둔다.
+struct SlotsView: View {
+    @State private var viewModel = SlotsViewModel()
+    @State private var path = NavigationPath()
+
+    var body: some View {
+        NavigationStack(path: $path) {
+            ZStack {
+                Theme.background.ignoresSafeArea()
+                SlotsContent(viewModel: viewModel, path: $path)
+            }
+            .navigationTitle("타임슬롯")
+            .navigationBarTitleDisplayMode(.inline)
+        }
     }
 }
 
