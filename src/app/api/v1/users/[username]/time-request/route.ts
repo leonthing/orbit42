@@ -26,6 +26,22 @@ export async function POST(
     return Response.json({ error: "잘못된 요청이에요." }, { status: 400 });
   }
 
+  // 차단 관계(양방향)면 요청 불가.
+  {
+    const { apiUserId } = await import("@/lib/api-auth");
+    const { isBlockedEitherWay } = await import("@/lib/blocks");
+    const { getAdminClient } = await import("@/lib/supabase");
+    const myId = await apiUserId(request);
+    const { data: host } = await getAdminClient()
+      .from("users")
+      .select("id")
+      .eq("username", params.username)
+      .maybeSingle();
+    if (myId && host?.id && (await isBlockedEitherWay(myId, host.id as string))) {
+      return Response.json({ error: "요청할 수 없는 상대예요." }, { status: 403 });
+    }
+  }
+
   const result = await createTimeRequest(params.username, {
     message: body.message ?? "",
     duration_min: Number(body.durationMin) || 60,

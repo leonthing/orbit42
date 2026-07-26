@@ -26,6 +26,22 @@ export async function POST(
     return Response.json({ error: "follow 값이 필요해요." }, { status: 400 });
   }
 
+  if (body.follow) {
+    // 차단 관계(양방향)면 오르빗에 담을 수 없다.
+    const { apiUserId } = await import("@/lib/api-auth");
+    const { isBlockedEitherWay } = await import("@/lib/blocks");
+    const { getAdminClient } = await import("@/lib/supabase");
+    const myId = await apiUserId(request);
+    const { data: target } = await getAdminClient()
+      .from("users")
+      .select("id")
+      .eq("username", params.username)
+      .maybeSingle();
+    if (myId && target?.id && (await isBlockedEitherWay(myId, target.id as string))) {
+      return Response.json({ error: "담을 수 없는 상대예요." }, { status: 403 });
+    }
+  }
+
   const result = body.follow
     ? await follow(params.username)
     : await unfollow(params.username);

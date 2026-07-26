@@ -14,13 +14,30 @@ export async function GET(request: Request) {
     return Response.json({ error: "로그인이 필요해요." }, { status: 401 });
   }
 
-  const people = await listFollowing(session.username);
+  let people = await listFollowing(session.username);
   if (people.length === 0) {
     return Response.json({ people: [] });
   }
 
-  // 팔로우한 전원의 활성 슬롯을 한 번에 조회해 사람별로 묶는다.
   const db = getAdminClient();
+
+  // 비공개로 전환한 사람은 오르빗 노출에서도 제외한다.
+  {
+    const allIds = people.map((p) => (p as { id: string }).id);
+    const { data: privacyRows } = await db
+      .from("users")
+      .select("id, is_private")
+      .in("id", allIds);
+    const privateIds = new Set(
+      (privacyRows ?? []).filter((r) => r.is_private).map((r) => r.id as string),
+    );
+    people = people.filter((p) => !privateIds.has((p as { id: string }).id));
+    if (people.length === 0) {
+      return Response.json({ people: [] });
+    }
+  }
+
+  // 팔로우한 전원의 활성 슬롯을 한 번에 조회해 사람별로 묶는다.
   const ids = people.map((p) => (p as { id: string }).id);
   const { data: slotRows } = await db
     .from("time_slots")

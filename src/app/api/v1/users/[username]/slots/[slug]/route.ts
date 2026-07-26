@@ -80,6 +80,16 @@ export async function POST(
     return Response.json({ error: "내 슬롯은 예약할 수 없어요." }, { status: 400 });
   }
 
+  // 차단 관계(양방향)면 예약 불가.
+  {
+    const { apiUserId } = await import("@/lib/api-auth");
+    const { isBlockedEitherWay } = await import("@/lib/blocks");
+    const myId = await apiUserId(request);
+    if (myId && (await isBlockedEitherWay(myId, found.slot.host_id))) {
+      return Response.json({ error: "예약할 수 없는 상대예요." }, { status: 403 });
+    }
+  }
+
   let body: {
     startAt?: string;
     availabilityId?: string;

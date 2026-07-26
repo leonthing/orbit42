@@ -64,15 +64,22 @@ export async function GET(request: Request) {
   }
 
   const { listEventBucketOverrides } = await import("@/lib/time-asset");
+  const { getCompletedKeys } = await import("@/lib/event-completions");
+  const { normalizeEventKey } = await import("@/lib/event-key");
   const [events, calendars, overrides] = await Promise.all([
     listEventsForUser(userId, year, month - 1),
     listApiCalendars(userId),
     listEventBucketOverrides(userId),
   ]);
+  // 완료 체크(투두) — 웹과 같은 event_completions 를 공유한다.
+  const completedSet = new Set(
+    await getCompletedKeys(events.map((e) => normalizeEventKey(e.id))),
+  );
   return Response.json({
     events: events.map((e) => ({
       ...toApiEvent(e),
       bucketOverride: overrides.get(e.id) ?? null,
+      completed: completedSet.has(normalizeEventKey(e.id)),
     })),
     calendars,
   });

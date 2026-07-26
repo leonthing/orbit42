@@ -11,10 +11,16 @@ export const dynamic = "force-dynamic";
 const SOCIAL_KEYS = ["instagram", "x", "youtube", "facebook", "linkedin"] as const;
 
 async function fullUser(username: string) {
-  const [user, profile, follows] = await Promise.all([
+  const { getAdminClient } = await import("@/lib/supabase");
+  const [user, profile, follows, privacyRow] = await Promise.all([
     loadApiUser(username),
     getProfile(username),
     getFollowStats(username),
+    getAdminClient()
+      .from("users")
+      .select("is_private")
+      .eq("username", username)
+      .maybeSingle(),
   ]);
   if (!user) return null;
   return {
@@ -26,6 +32,8 @@ async function fullUser(username: string) {
     // 오르빗 카운트 — orbiters: 나를 오르빗에 담은 사람, orbiting: 내가 담은 사람
     orbiters: follows.followers,
     orbiting: follows.following,
+    // 프로필 비공개: 검색·프로필 조회·오르빗 노출에서 숨김
+    isPrivate: Boolean(privacyRow.data?.is_private),
   };
 }
 
@@ -55,11 +63,37 @@ export async function PATCH(request: Request) {
     birthDate?: string | null;
     socialLinks?: Record<string, string>;
     interests?: string[];
+    isPrivate?: boolean;
   };
   try {
     body = await request.json();
   } catch {
     return Response.json({ error: "잘못된 요청이에요." }, { status: 400 });
+  }
+
+  // 프로필 비공개 토글은 다른 필드와 독립적으로 처리한다.
+  if (body.isPrivate !== undefined) {
+    if (typeof body.isPrivate !== "boolean") {
+      return Response.json({ error: "isPrivate 값이 올바르지 않아요." }, { status: 400 });
+    }
+    const { getAdminClient } = await import("@/lib/supabase");
+    const { error } = await getAdminClient()
+      .from("users")
+      .update({ is_private: body.isPrivate, updated_at: new Date().toISOString() })
+      .eq("username", session.username);
+    if (error) {
+      return Response.json({ error: "저장에 실패했어요." }, { status: 400 });
+    }
+    // isPrivate만 온 경우 바로 응답.
+    const onlyPrivacy =
+      body.displayName === undefined &&
+      body.bio === undefined &&
+      body.birthDate === undefined &&
+      body.socialLinks === undefined &&
+      body.interests === undefined;
+    if (onlyPrivacy) {
+      return Response.json({ user: await fullUser(session.username) });
+    }
   }
 
   const current = await getProfile(session.username);
