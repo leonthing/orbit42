@@ -19,6 +19,10 @@ struct CalendarEditorSheet: View {
     @State private var colorHex: String
     @State private var visibility: CalendarVisibility
     @State private var linkGoogle = false
+    /// 시간당 단가 입력 (콤마 포맷, 편집 모드 전용 — 서버 POST 는 단가를 받지 않음)
+    @State private var rateText = ""
+    /// onAppear 시점 단가 — 바뀌었을 때만 PATCH 에 담는다
+    @State private var initialRate: Int?
     @State private var isSaving = false
     @State private var errorMessage: String?
 
@@ -88,6 +92,27 @@ struct CalendarEditorSheet: View {
                 }
                 .listRowBackground(Theme.surface)
 
+                if !isCreate {
+                    Section {
+                        HStack {
+                            TextField("예: 50,000", text: $rateText)
+                                .keyboardType(.numberPad)
+                                .foregroundStyle(.white)
+                                .onChange(of: rateText) { _, newValue in
+                                    rateText = Self.formatRateInput(newValue)
+                                }
+                            Text("원")
+                                .foregroundStyle(Theme.secondaryText)
+                        }
+                    } header: {
+                        Text("시간당 단가(선택)")
+                    } footer: {
+                        Text("이 캘린더의 '수입' 시간은 기준 시급 대신 이 단가로 계산돼요. 비워두면 기준 시급을 써요.")
+                            .foregroundStyle(Theme.secondaryText)
+                    }
+                    .listRowBackground(Theme.surface)
+                }
+
                 if isCreate, viewModel.googleConnected {
                     Section {
                         Toggle("Google 캘린더로도 만들기", isOn: $linkGoogle)
@@ -129,7 +154,28 @@ struct CalendarEditorSheet: View {
                 }
             }
             .interactiveDismissDisabled(isSaving)
+            .onAppear {
+                if let original, let rate = viewModel.hourlyRates[original.id] {
+                    rateText = AssetFormat.grouped(rate)
+                    initialRate = rate
+                }
+            }
         }
+    }
+
+    // MARK: - 시간당 단가
+
+    /// 입력값 (콤마 제거, 빈칸·0 은 nil = 단가 해제)
+    private var rateValue: Int? {
+        let value = Int(rateText.replacingOccurrences(of: ",", with: "")) ?? 0
+        return value > 0 ? value : nil
+    }
+
+    /// 숫자만 남기고 천 단위 콤마를 다시 찍는다.
+    private static func formatRateInput(_ raw: String) -> String {
+        let digits = raw.filter(\.isNumber)
+        guard let value = Int(digits.prefix(12)) else { return "" }
+        return value > 0 ? AssetFormat.grouped(value) : ""
     }
 
     // MARK: - 색상 팔레트
@@ -181,6 +227,10 @@ struct CalendarEditorSheet: View {
                     }
                     if visibility.rawValue != (original.visibility ?? "private") {
                         request.visibility = visibility.rawValue
+                    }
+                    if rateValue != initialRate {
+                        // 값 입력 → 설정, 지움 → 명시적 null 로 해제
+                        request.hourlyRateKrw = rateValue.map(PatchValue.value) ?? .null
                     }
                     if request.isEmpty {
                         dismiss()

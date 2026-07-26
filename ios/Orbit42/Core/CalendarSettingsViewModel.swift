@@ -9,6 +9,8 @@ import Observation
 final class CalendarSettingsViewModel {
     /// nil 이면 아직 최초 로딩 전.
     private(set) var calendars: [CalendarInfo]?
+    /// 캘린더별 시간당 단가 (id → 원/시간, 설정된 캘린더만) — 편집 시트 프리필용
+    private(set) var hourlyRates: [String: Int] = [:]
     private(set) var isLoading = false
     /// 최초 로딩/새로고침 실패 메시지 (전체 화면 에러 상태용)
     private(set) var errorMessage: String?
@@ -25,6 +27,12 @@ final class CalendarSettingsViewModel {
         self.api = api
     }
 
+    /// 모든 응답이 전체 배열을 돌려주므로 목록과 단가 맵을 함께 교체한다.
+    private func apply(_ response: CalendarsResponse) {
+        calendars = response.calendars
+        hourlyRates = response.hourlyRatesByCalendarId
+    }
+
     // MARK: - 목록 로딩
 
     func load(force: Bool = false) async {
@@ -37,7 +45,7 @@ final class CalendarSettingsViewModel {
 
         do {
             let response: CalendarsResponse = try await api.get("/api/v1/calendars")
-            calendars = response.calendars
+            apply(response)
         } catch is CancellationError {
             return
         } catch let urlError as URLError where urlError.code == .cancelled {
@@ -61,12 +69,12 @@ final class CalendarSettingsViewModel {
 
     func create(_ request: CreateCalendarRequest) async throws {
         let response: CalendarsResponse = try await api.post("/api/v1/calendars", body: request)
-        calendars = response.calendars
+        apply(response)
     }
 
     func update(id: String, request: UpdateCalendarRequest) async throws {
         let response: CalendarsResponse = try await api.patch("/api/v1/calendars/\(id)", body: request)
-        calendars = response.calendars
+        apply(response)
     }
 
     // MARK: - 삭제
@@ -79,7 +87,7 @@ final class CalendarSettingsViewModel {
 
         do {
             let response: CalendarsResponse = try await api.delete("/api/v1/calendars/\(calendar.id)")
-            calendars = response.calendars
+            apply(response)
         } catch is CancellationError {
             return
         } catch let urlError as URLError where urlError.code == .cancelled {

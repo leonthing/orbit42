@@ -2,11 +2,14 @@ import SwiftUI
 
 // MARK: - 시간 자산 설정 (GET/PUT /api/v1/time-asset/settings)
 
-/// 수입 설정 — 월급/시급과 금액, 서버가 계산한 시급 환산값 + 버킷 분류 설정.
+/// 수입 설정 — 월급/시급/프리랜서와 금액, 서버가 계산한 시급 환산값 + 버킷 분류 설정.
 struct TimeAssetSettings: Decodable {
-    /// "monthly" | "hourly" | nil(미설정)
+    /// "monthly" | "hourly" | "freelance" | nil(미설정)
     let incomeType: String?
+    /// freelance 면 null — 월별 수입 기록으로 실효 시급을 계산한다.
     let amount: Int?
+    /// 프리랜서 월별 수입 기록 (최신순 12개, freelance 가 아니어도 내려올 수 있음)
+    let incomeEntries: [IncomeEntry]?
     let hourlyValueKrw: Int?
     /// 월 근로시간 기준 (주휴 포함 209시간)
     let monthlyWorkHours: Int?
@@ -47,6 +50,28 @@ struct UpdateTimeAssetSettingsRequest: Encodable {
     var bucketMap: [String: String]?
     /// 하루 수면 시간 (0~14, 0.5 단위) — 단독 전송 가능
     var sleepHoursPerDay: Double?
+}
+
+// MARK: - 월별 수입 기록 (PUT/DELETE /api/v1/time-asset/income-entries)
+
+/// 프리랜서 월별 수입 한 건 — settings 의 incomeEntries, summary 의 freelance.months 공용.
+struct IncomeEntry: Decodable, Identifiable {
+    /// "YYYY-MM"
+    let month: String
+    let amountKrw: Int
+
+    var id: String { month }
+}
+
+/// `PUT /api/v1/time-asset/income-entries`
+struct UpsertIncomeEntryRequest: Encodable {
+    let month: String
+    let amountKrw: Int
+}
+
+/// PUT/DELETE 공통 응답 — `{"entries":[...최신순]}`
+struct IncomeEntriesResponse: Decodable {
+    let entries: [IncomeEntry]
 }
 
 // MARK: - 시간 자산 요약 (GET /api/v1/time-asset/summary)
@@ -100,8 +125,22 @@ struct TimeAssetTraded: Decodable {
     let vsIncomeRatio: Double?
 }
 
+/// 프리랜서 실효 시급 계산 근거 — 최근 수입 기록과 같은 기간의 '수입' 시간.
+struct TimeAssetFreelance: Decodable {
+    let months: [IncomeEntry]
+    let totalKrw: Int
+    let earnHours: Double
+    /// 수입 시간이 1시간 미만이면 null (아직 계산 불가)
+    let effectiveHourlyKrw: Int?
+}
+
 struct TimeAssetSummary: Decodable {
+    /// "monthly" | "hourly" | "freelance" | nil(미설정)
+    let incomeType: String?
+    /// freelance 면 실효 시급(계산값) — 수입 시간이 부족하면 null.
     let hourlyValueKrw: Int?
+    /// incomeType == "freelance" 일 때의 계산 근거 (그 외에는 null)
+    let freelance: TimeAssetFreelance?
     let conversions: TimeAssetConversions?
     let weekStart: String
     let buckets: [TimeAssetBucket]
@@ -175,6 +214,16 @@ enum AssetFormat {
     /// 0.398 → "40%"
     static func percent(_ ratio: Double) -> String {
         "\(Int((ratio * 100).rounded()))%"
+    }
+
+    /// "2026-07" → "2026년 7월". 파싱 실패 시 원문 그대로.
+    static func monthLabel(_ month: String) -> String {
+        let parts = month.split(separator: "-")
+        guard parts.count == 2,
+              let year = Int(parts[0]),
+              let monthNumber = Int(parts[1])
+        else { return month }
+        return "\(year)년 \(monthNumber)월"
     }
 
     /// ISO 주 시작일 → "7/20" 형태 라벨. 파싱 실패 시 원문 앞 10자.

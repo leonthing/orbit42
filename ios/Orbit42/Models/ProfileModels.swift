@@ -68,20 +68,48 @@ struct ChangePasswordRequest: Encodable {
 
 /// 목록 조회 및 모든 캘린더 mutation 의 공통 응답 — `{"calendars":[...]}`
 /// (mutation 응답은 항상 전체 배열을 돌려주므로 그대로 교체하면 된다)
+///
+/// 캘린더별 시간당 단가(`hourlyRateKrw`)는 캘린더 탭 공용 모델(`CalendarInfo`)을
+/// 건드리지 않도록 같은 배열에서 id → 단가 맵으로만 따로 디코드한다.
 struct CalendarsResponse: Decodable {
     let calendars: [CalendarInfo]
+    /// 단가가 설정된 캘린더만 담긴다 (id → 원/시간)
+    let hourlyRatesByCalendarId: [String: Int]
+
+    private struct RateEntry: Decodable {
+        let id: String
+        let hourlyRateKrw: Int?
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case calendars
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        calendars = try container.decode([CalendarInfo].self, forKey: .calendars)
+        let entries = (try? container.decode([RateEntry].self, forKey: .calendars)) ?? []
+        hourlyRatesByCalendarId = Dictionary(
+            uniqueKeysWithValues: entries.compactMap { entry in
+                entry.hourlyRateKrw.map { (entry.id, $0) }
+            }
+        )
+    }
 }
 
 /// `PATCH /api/v1/calendars/{id}` — nil 필드는 JSONEncoder 가 생략하므로
 /// "바뀐 필드만" 전송된다.
+/// hourlyRateKrw 는 "생략 / 값 / 명시적 null(단가 해제)" 를 구분하려고 PatchValue 를 쓴다.
 struct UpdateCalendarRequest: Encodable {
     var name: String?
     var purpose: String?
     var color: String?
     var visibility: String?
+    var hourlyRateKrw: PatchValue<Int>?
 
     var isEmpty: Bool {
         name == nil && purpose == nil && color == nil && visibility == nil
+            && hourlyRateKrw == nil
     }
 }
 

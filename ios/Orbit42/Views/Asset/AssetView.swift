@@ -42,7 +42,9 @@ struct AssetView: View {
     @ViewBuilder
     private var content: some View {
         if let summary = viewModel.summary {
-            if summary.hourlyValueKrw == nil {
+            // freelance 는 실효 시급이 아직 없어도(수입 시간 부족) 본문을 보여주고
+            // 헤더에서만 안내한다 — 온보딩은 급여 유형 자체가 미설정일 때만.
+            if summary.hourlyValueKrw == nil, summary.incomeType != "freelance" {
                 onboarding
             } else {
                 loaded(summary)
@@ -111,8 +113,15 @@ struct AssetView: View {
     private func loaded(_ summary: TimeAssetSummary) -> some View {
         ScrollView {
             VStack(spacing: 16) {
-                if let hourly = summary.hourlyValueKrw {
-                    headerCard(hourly: hourly, conversions: summary.conversions)
+                if summary.incomeType == "freelance" {
+                    freelanceHeader(summary)
+                } else if let hourly = summary.hourlyValueKrw {
+                    headerCard(
+                        title: "내 1시간",
+                        hourly: hourly,
+                        caption: nil,
+                        conversions: summary.conversions
+                    )
                 }
                 weekUsageCard(summary)
                 if summary.trend.count > 1 {
@@ -138,31 +147,91 @@ struct AssetView: View {
             .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 
-    // MARK: 1. 헤더 — 내 1시간
+    // MARK: 1. 헤더 — 내 1시간 / 내 실효 시급
 
-    private func headerCard(hourly: Int, conversions: TimeAssetConversions?) -> some View {
+    /// 프리랜서 헤더 — 실효 시급이 계산됐으면 근거 캡션과 함께, 아직이면 안내 카드.
+    @ViewBuilder
+    private func freelanceHeader(_ summary: TimeAssetSummary) -> some View {
+        if let hourly = summary.hourlyValueKrw {
+            headerCard(
+                title: "내 실효 시급",
+                hourly: hourly,
+                caption: freelanceCaption(summary.freelance),
+                conversions: summary.conversions
+            )
+        } else {
+            freelanceEmptyHeaderCard
+        }
+    }
+
+    /// "최근 3개월 수입 ₩18,000,000 ÷ 수입 120시간"
+    private func freelanceCaption(_ freelance: TimeAssetFreelance?) -> String? {
+        guard let freelance else { return nil }
+        return "최근 \(freelance.months.count)개월 수입 \(AssetFormat.won(freelance.totalKrw))"
+            + " ÷ 수입 \(AssetFormat.hours(freelance.earnHours))시간"
+    }
+
+    /// 프리랜서 전환은 됐지만 수입 시간이 부족해 아직 실효 시급이 없는 상태.
+    private var freelanceEmptyHeaderCard: some View {
         card {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("내 1시간")
+                    Text("내 실효 시급")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.secondaryText)
+                    Text("아직 계산할 수 없어요")
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(.white)
+                    Text("월 수입과 수입 시간을 기록하면 실효 시급이 나와요")
+                        .font(.caption)
+                        .foregroundStyle(Theme.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer()
+                settingsButton
+            }
+        }
+    }
+
+    private var settingsButton: some View {
+        Button {
+            showingSettingsSheet = true
+        } label: {
+            Image(systemName: "pencil")
+                .foregroundStyle(Theme.secondaryText)
+                .padding(8)
+                .background(Theme.background.opacity(0.6))
+                .clipShape(Circle())
+        }
+        .accessibilityLabel("자산 설정")
+    }
+
+    private func headerCard(
+        title: String,
+        hourly: Int,
+        caption: String?,
+        conversions: TimeAssetConversions?
+    ) -> some View {
+        card {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(title)
                         .font(.subheadline)
                         .foregroundStyle(Theme.secondaryText)
                     Text(AssetFormat.won(hourly))
                         .font(.system(size: 34, weight: .bold, design: .rounded))
                         .monospacedDigit()
                         .foregroundStyle(.white)
+                    if let caption {
+                        Text(caption)
+                            .font(.caption)
+                            .monospacedDigit()
+                            .foregroundStyle(Theme.secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
                 Spacer()
-                Button {
-                    showingSettingsSheet = true
-                } label: {
-                    Image(systemName: "pencil")
-                        .foregroundStyle(Theme.secondaryText)
-                        .padding(8)
-                        .background(Theme.background.opacity(0.6))
-                        .clipShape(Circle())
-                }
-                .accessibilityLabel("자산 설정")
+                settingsButton
             }
 
             if let conv = conversions {
