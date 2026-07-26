@@ -19,7 +19,7 @@ struct IntroView: View {
             icon: "wonsign.circle.fill",
             iconColor: Color(red: 0xF5 / 255, green: 0x9E / 255, blue: 0x0B / 255),
             title: "시간은 자산이니까",
-            message: "급여를 넣으면 내 1시간이 얼마인지 나와요.\n시간을 어디에 쓰는지 수입 · 투자 · 소비로 나눠\n돈처럼 분석하는 시간 가계부예요."
+            message: "매일 주어지는 24시간, 가장 공평한 자산이에요.\n시간을 어디에 쓰는지 돈으로 환산해 확인하고\n수입 · 투자 · 소비로 나눠 분석해요.\n시간을 더 잘 쓰는 것만으로 내일의 자산이 커져요."
         ),
         IntroPage(
             icon: "clock.badge.checkmark",
