@@ -30,13 +30,14 @@ struct AddEventSheet: View {
         _start = State(initialValue: startDate)
         _end = State(initialValue: startDate.addingTimeInterval(3600))
 
-        // 기본값: isDefault 캘린더 (쓰기 가능한 native 중에서)
-        let writable = viewModel.calendars.filter(\.isNative)
+        // 기본값: isDefault 캘린더. 구글 연동 캘린더도 선택 가능
+        // (서버가 생성 시 구글에도 push 한다).
+        let writable = viewModel.calendars
         _selectedCalendarId = State(initialValue: (writable.first(where: \.isDefault) ?? writable.first)?.id)
     }
 
     private var writableCalendars: [CalendarInfo] {
-        viewModel.calendars.filter(\.isNative)
+        viewModel.calendars
     }
 
     private var canSave: Bool {

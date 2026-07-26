@@ -50,6 +50,30 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Mobile app "Google로 계속하기" (로그인/가입). 성공 시 Bearer 토큰을
+  // 커스텀 스킴으로 앱에 전달한다 — ASWebAuthenticationSession 이 콜백 URL 을
+  // 세션을 시작한 앱에만 넘겨주므로 토큰 탈취 경로가 없다.
+  if (stateRaw === "mobile-signin") {
+    const fail = (reason: string) =>
+      NextResponse.redirect(`orbit42://signin-error?reason=${reason}`);
+    if (!code) return fail("no_code");
+    try {
+      const tokens = await exchangeCode(code);
+      const { email, name } = await fetchGoogleProfile(tokens);
+      if (!email) return fail("no_email");
+      const res = await loginOrSignupWithGoogle(email, name);
+      if ("error" in res) return fail("signup_failed");
+      const { issueApiToken } = await import("@/lib/api-auth");
+      const token = await issueApiToken(res.username);
+      return NextResponse.redirect(
+        `orbit42://signin?token=${encodeURIComponent(token)}`,
+      );
+    } catch (err) {
+      console.error("google mobile signin", err);
+      return fail("exchange_failed");
+    }
+  }
+
   // Mobile app connect (ASWebAuthenticationSession — no web session cookie).
   // state format: "mobile:<signed purpose token>[:add]". The token (HMAC,
   // 10-min expiry, purpose=gcal-connect) identifies the user instead of the

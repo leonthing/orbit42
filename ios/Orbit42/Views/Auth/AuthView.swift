@@ -60,6 +60,7 @@ struct AuthView: View {
                     submitButton
                     divider
                     appleButton
+                    googleButton
                 }
                 .padding(24)
                 .frame(maxWidth: 440)
@@ -211,6 +212,35 @@ struct AuthView: View {
         .signInWithAppleButtonStyle(.white)
         .frame(height: 50)
         .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    private var googleButton: some View {
+        Button {
+            errorMessage = nil
+            isSubmitting = true
+            Task {
+                defer { isSubmitting = false }
+                do {
+                    try await auth.signInWithGoogle()
+                } catch {
+                    errorMessage = error.localizedDescription
+                }
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Text("G")
+                    .font(.system(size: 19, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color(red: 0.26, green: 0.52, blue: 0.96))
+                Text("Google로 계속하기")
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(.black)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 50)
+            .background(.white)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .disabled(isSubmitting)
     }
 
     private func handleAppleResult(_ result: Result<ASAuthorization, Error>) {

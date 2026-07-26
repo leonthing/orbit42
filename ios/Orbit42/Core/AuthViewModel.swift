@@ -1,3 +1,4 @@
+import AuthenticationServices
 import Foundation
 import Observation
 
@@ -69,6 +70,61 @@ final class AuthViewModel {
             body: AppleAuthRequest(identityToken: identityToken, displayName: displayName)
         )
         apply(response)
+    }
+
+    /// "Google로 계속하기" — 서버가 만든 OAuth URL 을 인앱 브라우저로 열고,
+    /// 콜백(orbit42://signin?token=...)의 Bearer 토큰으로 세션을 연다.
+    /// 사용자가 브라우저 시트를 닫으면 조용히 종료한다.
+    func signInWithGoogle() async throws {
+        struct GoogleURLResponse: Decodable { let url: String }
+        let res: GoogleURLResponse = try await api.get("/api/v1/auth/google-url")
+        guard let authURL = URL(string: res.url) else {
+            throw APIError.invalidResponse
+        }
+
+        let callbackURL: URL
+        do {
+            callbackURL = try await webAuthenticate(url: authURL)
+        } catch let authError as ASWebAuthenticationSessionError
+            where authError.code == .canceledLogin {
+            return
+        }
+
+        guard callbackURL.host == "signin",
+              let token = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false)?
+                  .queryItems?.first(where: { $0.name == "token" })?.value,
+              !token.isEmpty
+        else {
+            throw APIError.server(
+                message: "Google 로그인에 실패했어요. 다시 시도해 주세요.",
+                statusCode: 400
+            )
+        }
+
+        KeychainStore.saveToken(token)
+        let response: MeResponse = try await api.get("/api/v1/me")
+        user = response.user
+    }
+
+    private let webAuthContext = WebAuthPresentationContext()
+    private var webAuthSession: ASWebAuthenticationSession?
+
+    private func webAuthenticate(url: URL) async throws -> URL {
+        try await withCheckedThrowingContinuation { continuation in
+            let session = ASWebAuthenticationSession(
+                url: url,
+                callbackURLScheme: "orbit42"
+            ) { callbackURL, error in
+                if let callbackURL {
+                    continuation.resume(returning: callbackURL)
+                } else {
+                    continuation.resume(throwing: error ?? APIError.invalidResponse)
+                }
+            }
+            session.presentationContextProvider = webAuthContext
+            webAuthSession = session
+            session.start()
+        }
     }
 
     func logout() {
