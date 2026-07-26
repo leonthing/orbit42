@@ -43,6 +43,10 @@ targets:
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         UILaunchScreen: {}
+        # 모바일 Google OAuth 콜백 수신용 커스텀 스킴 (orbit42://google-connected)
+        CFBundleURLTypes:
+          - CFBundleURLSchemes:
+              - orbit42
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         UIUserInterfaceStyle: Dark

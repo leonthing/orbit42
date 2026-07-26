@@ -76,6 +76,13 @@ final class AuthViewModel {
         user = nil
     }
 
+    // MARK: - 프로필 갱신
+
+    /// 프로필 편집 등에서 서버가 돌려준 최신 user 객체로 교체한다.
+    func updateUser(_ newUser: User) {
+        user = newUser
+    }
+
     // MARK: - 내부
 
     private func apply(_ response: AuthResponse) {

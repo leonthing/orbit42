@@ -23,7 +23,23 @@ export async function apiSession(
 ): Promise<SessionData | null> {
   const header = request.headers.get("authorization") ?? "";
   if (!header.toLowerCase().startsWith("bearer ")) return null;
-  return verifySession(header.slice(7).trim());
+  const session = await verifySession(header.slice(7).trim());
+  // 단일 목적 토큰(OAuth state 등)은 API 세션으로 인정하지 않는다.
+  if (session?.purpose) return null;
+  return session;
+}
+
+/** 특정 용도의 단기 토큰 발급 (예: 모바일 Google OAuth state). */
+export async function issuePurposeToken(
+  username: string,
+  purpose: string,
+  maxAgeSec: number,
+): Promise<string> {
+  return signSession({
+    username,
+    purpose,
+    exp: Math.floor(Date.now() / 1000) + maxAgeSec,
+  });
 }
 
 /** Resolve the bearer session to a users.id, or null if unauthenticated. */

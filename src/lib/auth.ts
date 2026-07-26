@@ -297,7 +297,10 @@ export async function getSession() {
   // 허용한다. 이 폴백 덕에 requireUserId() 기반 도메인 함수를 그대로 재사용한다.
   const auth = headers().get("authorization") ?? "";
   if (auth.toLowerCase().startsWith("bearer ")) {
-    return verifySession(auth.slice(7).trim());
+    const session = await verifySession(auth.slice(7).trim());
+    // 단일 목적 토큰(OAuth state 등)은 세션으로 인정하지 않는다.
+    if (session?.purpose) return null;
+    return session;
   }
   return null;
 }

@@ -69,6 +69,8 @@ struct CalendarInfo: Decodable, Identifiable, Hashable, Sendable {
     let name: String
     let color: String
     let purpose: String?
+    /// "private" | "followers" | "public" (이벤트 응답에는 없을 수 있어 옵셔널)
+    let visibility: String?
     let source: String        // "native" | "google"
     let isDefault: Bool
 

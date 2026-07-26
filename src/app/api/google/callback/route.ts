@@ -50,6 +50,47 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Mobile app connect (ASWebAuthenticationSession — no web session cookie).
+  // state format: "mobile:<signed purpose token>[:add]". The token (HMAC,
+  // 10-min expiry, purpose=gcal-connect) identifies the user instead of the
+  // cookie; general API tokens are rejected because their purpose is absent.
+  if (stateRaw.startsWith("mobile:")) {
+    const mParts = stateRaw.split(":");
+    const token = mParts[1] || "";
+    const mobileAdd = mParts[2] === "add";
+    const fail = (reason: string) =>
+      NextResponse.redirect(`orbit42://google-error?reason=${reason}`);
+
+    const { verifySession } = await import("@/lib/session");
+    const mobileSession = await verifySession(token);
+    if (!mobileSession || mobileSession.purpose !== "gcal-connect") {
+      return fail("invalid_state");
+    }
+    if (!code) return fail("no_code");
+
+    try {
+      const tokens = await exchangeCode(code);
+      const db = getAdminClient();
+      const { data: user } = await db
+        .from("users")
+        .select("id")
+        .eq("username", mobileSession.username)
+        .single();
+      if (!user) return fail("no_user");
+
+      if (mobileAdd) {
+        const email = await fetchGoogleEmail(tokens);
+        await saveExtraGoogleAccount(user.id, tokens, email);
+      } else {
+        await saveGoogleTokens(user.id, tokens);
+      }
+      return NextResponse.redirect("orbit42://google-connected");
+    } catch (err) {
+      console.error("mobile google connect", err);
+      return fail("exchange_failed");
+    }
+  }
+
   // state formats: "username", "username:returnTo", "username:returnTo:add"
   const parts = stateRaw.split(":");
   const username = parts[0] || "";
