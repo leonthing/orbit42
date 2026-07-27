@@ -385,3 +385,30 @@ export async function sendPasswordResetEmail(to: string, token: string) {
   });
   return send(to, "[Orbit42] 비밀번호 재설정", html);
 }
+
+export async function sendEventInviteEmail(
+  to: string,
+  args: {
+    inviterName: string;
+    eventTitle: string;
+    when: string;
+    refUsername: string;
+  },
+) {
+  const url = siteUrl(`/signup?ref=${encodeURIComponent(args.refUsername)}`);
+  const html = renderEmail({
+    eyebrow: "일정 초대",
+    heading: `${escapeHtml(args.inviterName)}님이 일정에 초대했어요`,
+    preheader: `${args.eventTitle} · ${args.when}`,
+    bodyHtml:
+      detailCard(escapeHtml(args.eventTitle), [
+        { label: "일시", value: escapeHtml(args.when), strong: true },
+        { label: "보낸 사람", value: escapeHtml(args.inviterName) },
+      ]) +
+      emailButton("Orbit42에서 확인하기", url) +
+      mutedNote(
+        "Orbit42는 시간을 자산으로 만드는 캘린더예요. 가입하면 초대한 사람과 자동으로 연결돼요.",
+      ),
+  });
+  return send(to, `[Orbit42] 일정 초대: ${args.eventTitle}`, html);
+}

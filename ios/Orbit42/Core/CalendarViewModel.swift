@@ -243,6 +243,12 @@ final class CalendarViewModel {
         await loadDisplayedMonth(force: true)
     }
 
+    /// 초대 응답 등 외부 변경 후 해당 이벤트가 걸친 달을 다시 불러온다.
+    func reloadMonth(around event: CalendarEvent) async {
+        invalidateCache(around: [event.startAt, event.endAt])
+        await loadDisplayedMonth(force: true)
+    }
+
     /// 주어진 날짜들이 속한 달의 캐시를 제거한다. (createEvent 와 같은 무효화 패턴)
     private func invalidateCache(around dates: [Date]) {
         for date in dates {

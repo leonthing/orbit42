@@ -102,14 +102,21 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
     let autoValueKrw: Int?
     /// 완료 체크(투두) 상태 — 낙관적 업데이트를 위해 var (서버가 안 주면 false)
     var completed: Bool
+    /// 초대받은 일정(source == "invite")일 때의 참여 행 id / 상태 / 보낸 사람
+    let inviteId: String?
+    let inviteStatus: String?
+    let inviterName: String?
     /// endAt 이 "2026-07-26" 처럼 날짜만으로 왔는지 (종일 이벤트의 마지막 날 포함 여부 판단용)
     let endWasDateOnly: Bool
 
     var isGoogle: Bool { source == "google" }
+    /// 초대받은 일정 (읽기 전용 — 수락/거절만 가능)
+    var isInvite: Bool { source == "invite" }
 
     private enum CodingKeys: String, CodingKey {
         case id, title, description, startAt, endAt, allDay, calendarId, source, tentative
         case bucketOverride, earningKrw, autoValueKrw, completed
+        case inviteId, inviteStatus, inviterName
     }
 
     init(from decoder: Decoder) throws {
@@ -125,6 +132,9 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
         earningKrw = try container.decodeIfPresent(Int.self, forKey: .earningKrw)
         autoValueKrw = try container.decodeIfPresent(Int.self, forKey: .autoValueKrw)
         completed = try container.decodeIfPresent(Bool.self, forKey: .completed) ?? false
+        inviteId = try container.decodeIfPresent(String.self, forKey: .inviteId)
+        inviteStatus = try container.decodeIfPresent(String.self, forKey: .inviteStatus)
+        inviterName = try container.decodeIfPresent(String.self, forKey: .inviterName)
 
         let startRaw = try container.decode(String.self, forKey: .startAt)
         let endRaw = try container.decode(String.self, forKey: .endAt)
@@ -261,6 +271,45 @@ struct UpdateEventEarningRequest: Encodable {
         try container.encode(eventId, forKey: .eventId)
         try container.encode(amountKrw, forKey: .amountKrw)
     }
+}
+
+// MARK: - 일정 참석자 (GET/POST/DELETE /api/v1/calendar/events/{id}/participants)
+
+struct EventParticipant: Decodable, Identifiable, Sendable {
+    let id: String
+    let status: String
+    let username: String?
+    let displayName: String?
+    let avatarUrl: String?
+    let email: String?
+
+    var label: String {
+        if let displayName, !displayName.isEmpty { return displayName }
+        if let username { return "@" + username }
+        return email ?? "알 수 없음"
+    }
+
+    var statusLabel: String {
+        switch status {
+        case "accepted": return "수락"
+        case "declined": return "거절"
+        default: return email != nil ? "메일 발송됨" : "대기중"
+        }
+    }
+}
+
+struct ParticipantsResponse: Decodable, Sendable {
+    let participants: [EventParticipant]
+}
+
+/// POST — username 또는 email 중 하나 + 일정 스냅샷.
+struct AddParticipantRequest: Encodable {
+    var username: String?
+    var email: String?
+    let title: String
+    let startAt: String
+    let endAt: String?
+    let allDay: Bool
 }
 
 // MARK: - Hex 색상

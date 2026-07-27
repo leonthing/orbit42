@@ -499,6 +499,14 @@ private struct EventRow: View {
                                     .padding(.vertical, 2)
                                     .background(Color.white.opacity(0.08), in: Capsule())
                             }
+                            if event.isInvite {
+                                Text(event.inviteStatus == "accepted" ? "참여" : "초대")
+                                    .font(.caption2.weight(.medium))
+                                    .foregroundStyle(Theme.accent)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Theme.accent.opacity(0.15), in: Capsule())
+                            }
                         }
                         HStack(spacing: 6) {
                             Text(timeText)

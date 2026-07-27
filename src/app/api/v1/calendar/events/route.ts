@@ -105,14 +105,41 @@ export async function GET(request: Request) {
     return Math.round(hours * rate);
   };
 
+  // 내가 초대받은 일정 — 읽기 전용 항목으로 병합 (거절한 초대는 제외).
+  const { listMyInvites } = await import("@/lib/event-participants");
+  const monthStart = new Date(year, month - 1, 1);
+  const monthEnd = new Date(year, month, 0, 23, 59, 59, 999);
+  const invites = await listMyInvites(userId, monthStart, monthEnd);
+
   return Response.json({
-    events: events.map((e) => ({
-      ...toApiEvent(e),
-      bucketOverride: overrides.get(e.id) ?? null,
-      earningKrw: earnings.get(e.id) ?? null,
-      autoValueKrw: autoValueOf(e),
-      completed: completedSet.has(normalizeEventKey(e.id)),
-    })),
+    events: [
+      ...events.map((e) => ({
+        ...toApiEvent(e),
+        bucketOverride: overrides.get(e.id) ?? null,
+        earningKrw: earnings.get(e.id) ?? null,
+        autoValueKrw: autoValueOf(e),
+        completed: completedSet.has(normalizeEventKey(e.id)),
+      })),
+      ...invites.map((inv) => ({
+        id: `invite_${inv.id}`,
+        title: inv.title,
+        description: null,
+        startAt: inv.start_at,
+        endAt: inv.end_at,
+        allDay: inv.all_day,
+        calendarId: null,
+        source: "invite",
+        tentative: inv.status === "invited",
+        bucketOverride: null,
+        earningKrw: null,
+        autoValueKrw: null,
+        completed: false,
+        inviteId: inv.id,
+        inviteStatus: inv.status,
+        inviterName: inv.inviterName,
+        inviterUsername: inv.inviterUsername,
+      })),
+    ],
     calendars,
   });
 }

@@ -61,6 +61,13 @@ struct EventDetailSheet: View {
     @State private var isSavingPostVisibility = false
     @State private var postErrorMessage: String?
 
+    /// 참석자 (태그/초대)
+    @State private var participants: [EventParticipant]?
+    @State private var showingAddParticipant = false
+    @State private var participantErrorMessage: String?
+    /// 초대받은 일정의 응답 진행 상태
+    @State private var isResponding = false
+
     /// 완료 체크(투두) — 시트가 든 event 는 스냅샷이므로 표시는 이 상태로 한다.
     @State private var isCompleted: Bool
     @State private var isSavingCompletion = false
@@ -87,6 +94,9 @@ struct EventDetailSheet: View {
     var body: some View {
         NavigationStack {
             List {
+                if event.isInvite {
+                    inviteSections
+                } else {
                 Section {
                     VStack(alignment: .leading, spacing: 10) {
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -201,6 +211,8 @@ struct EventDetailSheet: View {
 
                 timelogSection
 
+                participantsSection
+
                 Section {
                     Button {
                         toggleCompletion()
@@ -250,6 +262,7 @@ struct EventDetailSheet: View {
                     .disabled(isDeleting)
                 }
                 .listRowBackground(Theme.surface)
+                }
             }
             .scrollContentBackground(.hidden)
             .background(Theme.background)
@@ -676,6 +689,217 @@ struct EventDetailSheet: View {
             image.draw(in: CGRect(origin: .zero, size: newSize))
         }
         return resized.jpegData(compressionQuality: 0.85)
+    }
+
+    // MARK: - 초대받은 일정 (수락/거절)
+
+    @ViewBuilder
+    private var inviteSections: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(event.title)
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(.white)
+                    Text(event.inviteStatus == "accepted" ? "참여 중" : "초대")
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(Theme.accent)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Theme.accent.opacity(0.15), in: Capsule())
+                }
+                Label {
+                    Text(dateTimeText)
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.secondaryText)
+                } icon: {
+                    Image(systemName: "clock")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.secondaryText)
+                }
+                if let inviter = event.inviterName {
+                    Label {
+                        Text("\(inviter)님의 초대")
+                            .font(.subheadline)
+                            .foregroundStyle(Theme.secondaryText)
+                    } icon: {
+                        Image(systemName: "person")
+                            .font(.subheadline)
+                            .foregroundStyle(Theme.secondaryText)
+                    }
+                }
+            }
+            .padding(.vertical, 4)
+        }
+        .listRowBackground(Theme.surface)
+
+        Section {
+            if event.inviteStatus == "accepted" {
+                Label("수락한 일정이에요", systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                Button(role: .destructive) {
+                    respondToInvite("declined")
+                } label: {
+                    inviteButtonLabel("거절로 변경", systemImage: "xmark.circle")
+                }
+                .disabled(isResponding)
+            } else {
+                Button {
+                    respondToInvite("accepted")
+                } label: {
+                    inviteButtonLabel("수락", systemImage: "checkmark.circle")
+                }
+                .disabled(isResponding)
+                Button(role: .destructive) {
+                    respondToInvite("declined")
+                } label: {
+                    inviteButtonLabel("거절", systemImage: "xmark.circle")
+                }
+                .disabled(isResponding)
+            }
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+            }
+        } footer: {
+            Text("수락하면 캘린더에 계속 표시되고, 거절하면 목록에서 사라져요.")
+        }
+        .listRowBackground(Theme.surface)
+    }
+
+    private func inviteButtonLabel(_ title: String, systemImage: String) -> some View {
+        HStack {
+            Label(title, systemImage: systemImage)
+            Spacer()
+            if isResponding {
+                ProgressView().tint(Theme.secondaryText)
+            }
+        }
+    }
+
+    private func respondToInvite(_ status: String) {
+        guard let inviteId = event.inviteId, !isResponding else { return }
+        errorMessage = nil
+        isResponding = true
+        Task {
+            defer { isResponding = false }
+            do {
+                struct RespondRequest: Encodable { let status: String }
+                let _: AckResponse = try await APIClient.shared.post(
+                    "/api/v1/participations/\(inviteId)",
+                    body: RespondRequest(status: status)
+                )
+                await viewModel.reloadMonth(around: event)
+                dismiss()
+            } catch let apiError as APIError {
+                errorMessage = apiError.errorDescription
+            } catch {
+                errorMessage = "응답을 저장하지 못했어요. 잠시 후 다시 시도해 주세요."
+            }
+        }
+    }
+
+    // MARK: - 참석자 (태그/초대)
+
+    private var participantsSection: some View {
+        Section {
+            if let participants, !participants.isEmpty {
+                ForEach(participants) { participant in
+                    HStack(spacing: 10) {
+                        DiscoverAvatar(
+                            url: participant.avatarUrl.flatMap(URL.init(string:)),
+                            name: participant.label,
+                            size: 30
+                        )
+                        Text(participant.label)
+                            .font(.subheadline)
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                        Spacer()
+                        Text(participant.statusLabel)
+                            .font(.caption)
+                            .foregroundStyle(
+                                participant.status == "accepted"
+                                    ? .green
+                                    : participant.status == "declined"
+                                        ? .orange
+                                        : Theme.secondaryText
+                            )
+                    }
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            removeParticipant(participant)
+                        } label: {
+                            Label("초대 취소", systemImage: "trash")
+                        }
+                    }
+                }
+            }
+
+            Button {
+                showingAddParticipant = true
+            } label: {
+                Label("참석자 추가", systemImage: "person.badge.plus")
+                    .foregroundStyle(Theme.accent)
+            }
+
+            if let participantErrorMessage {
+                Text(participantErrorMessage)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+            }
+        } header: {
+            Text("참석자")
+        } footer: {
+            Text("orbit42 사용자를 태그하거나 이메일로 초대할 수 있어요. 태그하면 상대 캘린더에도 이 일정이 보여요.")
+        }
+        .listRowBackground(Theme.surface)
+        .task {
+            if participants == nil,
+               let response: ParticipantsResponse = try? await APIClient.shared.get(
+                   "/api/v1/calendar/events/\(event.id)/participants"
+               ) {
+                participants = response.participants
+            }
+        }
+        .sheet(isPresented: $showingAddParticipant) {
+            ParticipantAddSheet(
+                eventId: event.id,
+                snapshot: participantSnapshot
+            ) { updated in
+                participants = updated
+            }
+            .preferredColorScheme(.dark)
+        }
+    }
+
+    /// 참석자 추가/시간 로그 공용 일정 스냅샷.
+    var participantSnapshot: (title: String, startAt: String, endAt: String?, allDay: Bool) {
+        (
+            title: event.title,
+            startAt: event.allDay
+                ? APIDateParser.encodeDateOnly(event.startAt)
+                : APIDateParser.encodeDateTime(event.startAt),
+            endAt: event.allDay
+                ? APIDateParser.encodeDateOnly(event.endAt)
+                : APIDateParser.encodeDateTime(event.endAt),
+            allDay: event.allDay
+        )
+    }
+
+    private func removeParticipant(_ participant: EventParticipant) {
+        participantErrorMessage = nil
+        Task {
+            do {
+                let response: ParticipantsResponse = try await APIClient.shared.delete(
+                    "/api/v1/calendar/events/\(event.id)/participants?participantId=\(participant.id)"
+                )
+                participants = response.participants
+            } catch {
+                participantErrorMessage = "초대를 취소하지 못했어요."
+            }
+        }
     }
 
     // MARK: - 삭제
