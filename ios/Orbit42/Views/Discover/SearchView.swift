@@ -186,23 +186,26 @@ struct SearchView: View {
 
     // MARK: - 내 오르빗 (검색어 없을 때 기본 콘텐츠)
 
+    // List 대신 ScrollView — List의 NavigationLink 자동 chevron(들쭉날쭉한
+    // 오른쪽 화살표)을 원천 제거하기 위함.
     private func orbitList(_ people: [OrbitPerson]) -> some View {
-        List {
-            Section {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 10) {
+                sectionHeader("내 오르빗")
+                    .padding(.top, 6)
+
                 ForEach(people) { person in
                     OrbitPersonCard(person: person)
-                        .searchRowChrome()
                 }
-            } header: {
-                sectionHeader("내 오르빗")
-            } footer: {
+
                 Text("팔로우한 사람들의 열린 시간이에요. 친구를 초대하면 자동으로 맞팔로우돼요.")
                     .font(.caption)
                     .foregroundStyle(Theme.secondaryText)
+                    .padding(.top, 4)
             }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 24)
         }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.immediately)
         .refreshable { await viewModel.loadOrbit(force: true) }
     }
@@ -274,6 +277,24 @@ private struct OrbitPersonCard: View {
                     .font(.footnote)
                     .foregroundStyle(Theme.accent)
                     .lineLimit(1)
+                // 관심사 태그 (최대 3개) — "어떤 사람인지" 한눈에
+                if let interests = person.interests, !interests.isEmpty {
+                    HStack(spacing: 4) {
+                        ForEach(interests.prefix(3), id: \.self) { tag in
+                            Text(tag)
+                                .font(.caption2)
+                                .foregroundStyle(Theme.secondaryText)
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 2.5)
+                                .background(
+                                    Color.white.opacity(0.06),
+                                    in: Capsule()
+                                )
+                                .lineLimit(1)
+                        }
+                    }
+                    .padding(.top, 3)
+                }
                 if person.slots.isEmpty {
                     Text("아직 열린 시간이 없어요")
                         .font(.caption)

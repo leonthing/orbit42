@@ -21,16 +21,21 @@ export async function GET(request: Request) {
 
   const db = getAdminClient();
 
-  // 비공개로 전환한 사람은 오르빗 노출에서도 제외한다.
+  // 비공개로 전환한 사람은 오르빗 노출에서도 제외하고,
+  // 카드에 보여줄 관심사 태그를 함께 조회한다.
+  const interestsById = new Map<string, string[]>();
   {
     const allIds = people.map((p) => (p as { id: string }).id);
-    const { data: privacyRows } = await db
+    const { data: rows } = await db
       .from("users")
-      .select("id, is_private")
+      .select("id, is_private, interests")
       .in("id", allIds);
     const privateIds = new Set(
-      (privacyRows ?? []).filter((r) => r.is_private).map((r) => r.id as string),
+      (rows ?? []).filter((r) => r.is_private).map((r) => r.id as string),
     );
+    for (const r of rows ?? []) {
+      interestsById.set(r.id as string, (r.interests as string[] | null) ?? []);
+    }
     people = people.filter((p) => !privateIds.has((p as { id: string }).id));
     if (people.length === 0) {
       return Response.json({ people: [] });
@@ -65,6 +70,7 @@ export async function GET(request: Request) {
         username: person.username,
         displayName: person.display_name,
         avatarUrl: person.avatar_url,
+        interests: interestsById.get(person.id) ?? [],
         slots: (slotsByHost.get(person.id) ?? []).map((s) =>
           toApiSlot(s, person.username),
         ),

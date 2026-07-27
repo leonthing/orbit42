@@ -85,6 +85,8 @@ struct OrbitPerson: Decodable, Identifiable {
     let username: String
     let displayName: String?
     let avatarUrl: String?
+    /// 관심사 태그 (카드에 최대 3개 표시 — 구버전 응답 호환 옵셔널)
+    let interests: [String]?
     let slots: [TimeSlot]
 
     var id: String { username }
