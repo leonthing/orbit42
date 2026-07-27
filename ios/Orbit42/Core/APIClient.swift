@@ -103,13 +103,15 @@ final class APIClient {
         try await perform(request(path: path, method: "DELETE"))
     }
 
-    /// multipart/form-data 파일 업로드 (아바타 등).
+    /// multipart/form-data 파일 업로드 (아바타·시간 로그 사진 등).
+    /// `fields` 는 파일과 함께 보낼 일반 텍스트 필드.
     func upload<Response: Decodable>(
         _ path: String,
         fileData: Data,
         fieldName: String,
         fileName: String,
-        mimeType: String
+        mimeType: String,
+        fields: [String: String] = [:]
     ) async throws -> Response {
         var request = request(path: path, method: "POST")
         let boundary = "orbit42-\(UUID().uuidString)"
@@ -118,6 +120,13 @@ final class APIClient {
             forHTTPHeaderField: "Content-Type"
         )
         var body = Data()
+        for (name, value) in fields {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append(
+                "Content-Disposition: form-data; name=\"\(name)\"\r\n\r\n".data(using: .utf8)!
+            )
+            body.append("\(value)\r\n".data(using: .utf8)!)
+        }
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
         body.append(
             "Content-Disposition: form-data; name=\"\(fieldName)\"; filename=\"\(fileName)\"\r\n"

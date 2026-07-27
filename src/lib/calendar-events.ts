@@ -299,6 +299,11 @@ async function migrateEventKeys(userId: string, oldId: string, newId: string) {
     .update({ event_key: newId })
     .eq("user_id", userId)
     .eq("event_key", oldId);
+  await db
+    .from("event_posts")
+    .update({ event_key: newId })
+    .eq("user_id", userId)
+    .eq("event_key", oldId);
   const { normalizeEventKey } = await import("@/lib/event-key");
   await db
     .from("event_completions")

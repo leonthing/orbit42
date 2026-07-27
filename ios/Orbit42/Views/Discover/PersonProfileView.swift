@@ -7,6 +7,8 @@ struct PersonProfileView: View {
     @State private var viewModel: PersonProfileViewModel
     @State private var showingTimeRequest = false
     @State private var showingBlockConfirm = false
+    /// 이 사람의 시간 로그 (공개 범위는 서버가 거름)
+    @State private var timelogPosts: [TimelogPost]?
 
     init(username: String) {
         _viewModel = State(initialValue: PersonProfileViewModel(username: username))
@@ -129,6 +131,10 @@ struct PersonProfileView: View {
                     if !data.isMe {
                         actionButtons(data)
                     }
+                    // 시간 로그 — 서버가 공개 범위(팔로워/전체)를 걸러서 준다.
+                    if let posts = timelogPosts, !posts.isEmpty {
+                        TimelogSectionView(posts: posts, showsEmptyHint: false)
+                    }
                     slotsSection(data)
                 }
             }
@@ -136,6 +142,17 @@ struct PersonProfileView: View {
         }
         .refreshable {
             await viewModel.load(force: true)
+            await loadTimelog()
+        }
+        .task { await loadTimelog() }
+    }
+
+    /// 시간 로그 로딩 — 부가 콘텐츠라 실패(비공개 403 포함)하면 조용히 숨긴다.
+    private func loadTimelog() async {
+        if let response: TimelogResponse = try? await APIClient.shared.get(
+            "/api/v1/users/\(viewModel.username)/timelog"
+        ) {
+            timelogPosts = response.posts
         }
     }
 

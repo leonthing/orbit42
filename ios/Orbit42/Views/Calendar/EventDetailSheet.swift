@@ -1,4 +1,6 @@
+import PhotosUI
 import SwiftUI
+import UIKit
 
 /// 자산 분류 선택지 — 서버 버킷 키와 라벨/색 (자산 탭 팔레트와 동일, 하드코딩).
 private enum AssetBucketChoice: String, CaseIterable, Identifiable {
@@ -50,6 +52,14 @@ struct EventDetailSheet: View {
     @State private var showingEarningInput = false
     @State private var earningInputText = ""
     @State private var earningErrorMessage: String?
+
+    /// 시간 로그 (사진 + 공개 범위)
+    @State private var post: EventPost?
+    @State private var didLoadPost = false
+    @State private var photoItems: [PhotosPickerItem] = []
+    @State private var isUploadingPhotos = false
+    @State private var isSavingPostVisibility = false
+    @State private var postErrorMessage: String?
 
     /// 완료 체크(투두) — 시트가 든 event 는 스냅샷이므로 표시는 이 상태로 한다.
     @State private var isCompleted: Bool
@@ -188,6 +198,8 @@ struct EventDetailSheet: View {
                 .listRowBackground(Theme.surface)
 
                 earningSection
+
+                timelogSection
 
                 Section {
                     Button {
@@ -448,6 +460,222 @@ struct EventDetailSheet: View {
                 earningErrorMessage = "수익을 저장하지 못했어요. 잠시 후 다시 시도해 주세요."
             }
         }
+    }
+
+    // MARK: - 시간 로그 (사진 + 공개 범위)
+
+    private var timelogSection: some View {
+        Section {
+            if let post, !post.imageUrls.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(post.imageUrls, id: \.self) { url in
+                            AsyncImage(url: URL(string: url)) { phase in
+                                if let image = phase.image {
+                                    image.resizable().scaledToFill()
+                                } else {
+                                    ZStack {
+                                        Color.white.opacity(0.05)
+                                        ProgressView().tint(Theme.secondaryText)
+                                    }
+                                }
+                            }
+                            .frame(width: 64, height: 64)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .contextMenu {
+                                Button(role: .destructive) {
+                                    deletePhoto(url)
+                                } label: {
+                                    Label("사진 삭제", systemImage: "trash")
+                                }
+                            }
+                        }
+                    }
+                }
+                .listRowSeparator(.hidden)
+            }
+
+            PhotosPicker(
+                selection: $photoItems,
+                maxSelectionCount: 10,
+                matching: .images
+            ) {
+                HStack {
+                    Label(post?.imageUrls.isEmpty == false ? "사진 추가" : "사진 붙이기",
+                          systemImage: "photo.badge.plus")
+                        .foregroundStyle(Theme.accent)
+                    Spacer()
+                    if isUploadingPhotos {
+                        ProgressView().tint(Theme.secondaryText)
+                    }
+                }
+            }
+            .disabled(isUploadingPhotos)
+            .onChange(of: photoItems) { _, newItems in
+                if !newItems.isEmpty { uploadPhotos(newItems) }
+            }
+
+            if post != nil {
+                Menu {
+                    Picker("공개 범위", selection: visibilitySelection) {
+                        ForEach(TimelogVisibility.allCases) { choice in
+                            Label(choice.label, systemImage: choice.systemImage)
+                                .tag(choice.rawValue)
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Text("공개 범위")
+                            .foregroundStyle(.white)
+                        Spacer()
+                        if isSavingPostVisibility {
+                            ProgressView().tint(Theme.secondaryText)
+                        } else {
+                            HStack(spacing: 6) {
+                                let choice = TimelogVisibility(rawValue: post?.visibility ?? "") ?? .followers
+                                Image(systemName: choice.systemImage)
+                                    .font(.caption)
+                                Text(choice.label)
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .font(.caption2)
+                            }
+                            .font(.subheadline)
+                            .foregroundStyle(Theme.secondaryText)
+                        }
+                    }
+                }
+                .disabled(isSavingPostVisibility)
+            }
+
+            if let postErrorMessage {
+                Text(postErrorMessage)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+            }
+        } header: {
+            Text("시간 로그")
+        } footer: {
+            Text("사진을 붙이면 이 일정이 시간 기록이 돼요. 팔로워·전체 공개면 프로필의 시간 로그에 보여요.")
+        }
+        .listRowBackground(Theme.surface)
+        .task {
+            guard !didLoadPost else { return }
+            didLoadPost = true
+            if let response: EventPostResponse = try? await APIClient.shared.get(
+                "/api/v1/calendar/events/\(event.id)/post"
+            ) {
+                post = response.post
+            }
+        }
+    }
+
+    /// 일정 스냅샷 — 포스트 생성/갱신 시 서버에 함께 보낸다.
+    private var postSnapshotFields: [String: String] {
+        [
+            "title": event.title,
+            "startAt": event.allDay
+                ? APIDateParser.encodeDateOnly(event.startAt)
+                : APIDateParser.encodeDateTime(event.startAt),
+            "endAt": event.allDay
+                ? APIDateParser.encodeDateOnly(event.endAt)
+                : APIDateParser.encodeDateTime(event.endAt),
+            "allDay": event.allDay ? "true" : "false",
+        ]
+    }
+
+    private var visibilitySelection: Binding<String> {
+        Binding(
+            get: { post?.visibility ?? TimelogVisibility.followers.rawValue },
+            set: { setPostVisibility($0) }
+        )
+    }
+
+    private func uploadPhotos(_ items: [PhotosPickerItem]) {
+        postErrorMessage = nil
+        isUploadingPhotos = true
+        Task {
+            defer {
+                isUploadingPhotos = false
+                photoItems = []
+            }
+            for item in items {
+                guard let raw = try? await item.loadTransferable(type: Data.self),
+                      let jpeg = Self.resizedJPEG(from: raw)
+                else { continue }
+                do {
+                    let response: EventPostResponse = try await APIClient.shared.upload(
+                        "/api/v1/calendar/events/\(event.id)/post",
+                        fileData: jpeg,
+                        fieldName: "files",
+                        fileName: "photo.jpg",
+                        mimeType: "image/jpeg",
+                        fields: postSnapshotFields
+                    )
+                    post = response.post
+                } catch let apiError as APIError {
+                    postErrorMessage = apiError.errorDescription
+                    return
+                } catch {
+                    postErrorMessage = "사진을 올리지 못했어요. 잠시 후 다시 시도해 주세요."
+                    return
+                }
+            }
+        }
+    }
+
+    private func setPostVisibility(_ newValue: String) {
+        guard newValue != post?.visibility, !isSavingPostVisibility else { return }
+        postErrorMessage = nil
+        isSavingPostVisibility = true
+        Task {
+            defer { isSavingPostVisibility = false }
+            do {
+                let response: EventPostResponse = try await APIClient.shared.put(
+                    "/api/v1/calendar/events/\(event.id)/post",
+                    body: UpdateEventPostRequest(
+                        title: event.title,
+                        startAt: postSnapshotFields["startAt"] ?? "",
+                        endAt: postSnapshotFields["endAt"],
+                        allDay: event.allDay,
+                        visibility: newValue
+                    )
+                )
+                post = response.post
+            } catch {
+                postErrorMessage = "공개 범위를 저장하지 못했어요."
+            }
+        }
+    }
+
+    private func deletePhoto(_ url: String) {
+        postErrorMessage = nil
+        Task {
+            var allowed = CharacterSet.urlQueryAllowed
+            allowed.remove(charactersIn: "&=+?#/:")
+            let encoded = url.addingPercentEncoding(withAllowedCharacters: allowed) ?? url
+            do {
+                let response: EventPostResponse = try await APIClient.shared.delete(
+                    "/api/v1/calendar/events/\(event.id)/post?imageUrl=\(encoded)"
+                )
+                post = response.post
+            } catch {
+                postErrorMessage = "사진을 삭제하지 못했어요."
+            }
+        }
+    }
+
+    /// 긴 변 1600px, JPEG 85% (시간 로그는 프로필 그리드에도 쓰여 조금 크게).
+    private static func resizedJPEG(from data: Data, maxDimension: CGFloat = 1600) -> Data? {
+        guard let image = UIImage(data: data) else { return nil }
+        let longest = max(image.size.width, image.size.height)
+        guard longest > maxDimension else { return image.jpegData(compressionQuality: 0.85) }
+        let scale = maxDimension / longest
+        let newSize = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        let resized = renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+        }
+        return resized.jpegData(compressionQuality: 0.85)
     }
 
     // MARK: - 삭제

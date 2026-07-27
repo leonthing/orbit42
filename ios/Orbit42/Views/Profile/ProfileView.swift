@@ -43,6 +43,8 @@ private struct MyProfileContent: View {
     @State private var showingEditProfile = false
     /// 내 캘린더 목록 — nil 이면 로딩 전. 실패해도 섹션만 숨긴다 (부가 콘텐츠).
     @State private var calendars: [CalendarInfo]?
+    /// 내 시간 로그 — nil 이면 로딩 전.
+    @State private var timelogPosts: [TimelogPost]?
 
     init(username: String) {
         _viewModel = State(initialValue: PersonProfileViewModel(username: username))
@@ -57,6 +59,7 @@ private struct MyProfileContent: View {
                 VStack(alignment: .leading, spacing: 20) {
                     header
                     actionButtons
+                    TimelogSectionView(posts: timelogPosts ?? [], showsEmptyHint: timelogPosts != nil)
                     calendarsSection
                     slotsSection
                 }
@@ -65,6 +68,7 @@ private struct MyProfileContent: View {
             .refreshable {
                 await viewModel.load(force: true)
                 await loadCalendars()
+                await loadTimelog()
             }
         }
         .sheet(isPresented: $showingEditProfile, onDismiss: {
@@ -78,6 +82,15 @@ private struct MyProfileContent: View {
         .task {
             await viewModel.load()
             await loadCalendars()
+            await loadTimelog()
+        }
+    }
+
+    private func loadTimelog() async {
+        if let response: TimelogResponse = try? await APIClient.shared.get(
+            "/api/v1/users/\(username)/timelog"
+        ) {
+            timelogPosts = response.posts
         }
     }
 
