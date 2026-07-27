@@ -64,9 +64,10 @@ final class APIClient {
     #if targetEnvironment(simulator)
     let baseURL = URL(string: "http://localhost:3000")!
     #else
-    // 실기기 DEBUG: Cloudflare 터널 경유 Mac 개발 서버 (네트워크 무관, HTTPS).
-    // 터널 재기동 시 URL이 바뀌므로 갱신 필요: cloudflared tunnel --url http://localhost:3000
-    let baseURL = URL(string: "https://tract-parameters-debate-clouds.trycloudflare.com")!
+    // 실기기 DEBUG: 프로덕션 직결 (v1 API 배포 완료).
+    // 로컬 서버 테스트가 필요하면 Cloudflare 터널 URL로 임시 교체:
+    //   cloudflared tunnel --url http://localhost:3000
+    let baseURL = URL(string: "https://orbit42.org")!
     #endif
     #else
     let baseURL = URL(string: "https://orbit42.org")!
