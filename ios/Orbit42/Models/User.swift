@@ -24,6 +24,8 @@ struct User: Codable, Equatable, Sendable {
     let orbiting: Int?
     /// 프로필 비공개 여부 (구버전 응답에는 없을 수 있어 옵셔널)
     let isPrivate: Bool?
+    /// Apple 계정 연결 여부 (설정 > 계정)
+    let appleLinked: Bool?
 
     init(
         username: String,
@@ -37,7 +39,8 @@ struct User: Codable, Equatable, Sendable {
         interests: [String]? = nil,
         orbiters: Int? = nil,
         orbiting: Int? = nil,
-        isPrivate: Bool? = nil
+        isPrivate: Bool? = nil,
+        appleLinked: Bool? = nil
     ) {
         self.username = username
         self.displayName = displayName
@@ -51,6 +54,7 @@ struct User: Codable, Equatable, Sendable {
         self.orbiters = orbiters
         self.orbiting = orbiting
         self.isPrivate = isPrivate
+        self.appleLinked = appleLinked
     }
 
     /// 화면에 표시할 이름 (displayName 이 없으면 username)

@@ -18,7 +18,7 @@ async function fullUser(username: string) {
     getFollowStats(username),
     getAdminClient()
       .from("users")
-      .select("is_private")
+      .select("is_private, apple_sub")
       .eq("username", username)
       .maybeSingle(),
   ]);
@@ -34,6 +34,8 @@ async function fullUser(username: string) {
     orbiting: follows.following,
     // 프로필 비공개: 검색·프로필 조회·오르빗 노출에서 숨김
     isPrivate: Boolean(privacyRow.data?.is_private),
+    // Apple 계정 연결 여부 (설정 > 계정)
+    appleLinked: privacyRow.data?.apple_sub != null,
   };
 }
 
