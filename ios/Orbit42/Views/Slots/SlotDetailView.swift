@@ -21,6 +21,8 @@ struct SlotDetailView: View {
     @State private var viewModel: SlotDetailViewModel
     @State private var showingAddWindowSheet = false
     @State private var newWindowDate = Date()
+    /// 미리보기 미니 캘린더에서 선택한 날 (자정 기준)
+    @State private var previewDay: Date?
 
     init(route: SlotRoute, listViewModel: SlotsViewModel) {
         self.route = route
@@ -440,6 +442,34 @@ struct SlotDetailView: View {
 
     // MARK: 예약 가능 시간 미리보기
 
+    /// 옵션을 날짜(자정)별로 묶는다 — 미니 캘린더·시간 칩의 데이터 소스.
+    private var previewOptionsByDay: [Date: [AvailabilityOption]] {
+        guard let options = viewModel.availability?.options else { return [:] }
+        let calendar = PreviewMiniCalendar.calendar
+        var grouped: [Date: [AvailabilityOption]] = [:]
+        for option in options {
+            guard let date = APIDateParser.parse(option.startAt) else { continue }
+            grouped[calendar.startOfDay(for: date), default: []].append(option)
+        }
+        return grouped
+    }
+
+    /// "7월 30일 (목)"
+    private static let previewDayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ko_KR")
+        formatter.dateFormat = "M월 d일 (E)"
+        return formatter
+    }()
+
+    /// "15:00"
+    private static let previewTimeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ko_KR")
+        formatter.dateFormat = "HH:mm"
+        return formatter
+    }()
+
     private var previewSection: some View {
         Section {
             if viewModel.isLoadingAvailability {
@@ -450,16 +480,38 @@ struct SlotDetailView: View {
                 Text(message)
                     .font(.subheadline)
                     .foregroundStyle(Theme.secondaryText)
-            } else if let options = viewModel.availability?.options, !options.isEmpty {
-                ForEach(Array(options.prefix(10))) { option in
-                    HStack {
-                        Text(option.displayText)
-                            .font(.subheadline)
-                        Spacer()
-                        Text("\(option.remaining)자리")
-                            .font(.footnote)
-                            .foregroundStyle(Theme.secondaryText)
+            } else if !previewOptionsByDay.isEmpty {
+                let optionsByDay = previewOptionsByDay
+                let availableDays = Set(optionsByDay.keys)
+                // 선택이 없거나 옵션이 사라진 날이면 첫 가능일로 보정.
+                let effectiveDay = previewDay.flatMap { availableDays.contains($0) ? $0 : nil }
+                    ?? availableDays.min()
+
+                PreviewMiniCalendar(
+                    availableDays: availableDays,
+                    selectedDay: Binding(
+                        get: { effectiveDay },
+                        set: { previewDay = $0 }
+                    )
+                )
+                .listRowSeparator(.hidden)
+
+                if let day = effectiveDay, let dayOptions = optionsByDay[day] {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(Self.previewDayFormatter.string(from: day))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                        LazyVGrid(
+                            columns: [GridItem(.adaptive(minimum: 76), spacing: 8)],
+                            alignment: .leading,
+                            spacing: 8
+                        ) {
+                            ForEach(dayOptions) { option in
+                                previewTimeChip(option)
+                            }
+                        }
                     }
+                    .padding(.vertical, 4)
                 }
             } else {
                 Text("지금 조건으로는 예약 가능한 시간이 없어요")
@@ -485,11 +537,176 @@ struct SlotDetailView: View {
         .listRowBackground(Theme.surface)
     }
 
+    private func previewTimeChip(_ option: AvailabilityOption) -> some View {
+        VStack(spacing: 2) {
+            Text(
+                APIDateParser.parse(option.startAt)
+                    .map(Self.previewTimeFormatter.string(from:)) ?? option.startAt
+            )
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.white)
+            if option.remaining > 1 {
+                Text("\(option.remaining)자리")
+                    .font(.caption2)
+                    .foregroundStyle(Theme.secondaryText)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .strokeBorder(Theme.accent.opacity(0.4), lineWidth: 1)
+        )
+    }
+
     // MARK: - 헬퍼
 
     /// 현재 값이 프리셋 목록에 없으면 (서버가 임의 값을 내려준 경우) 목록에 끼워 넣는다.
     private func optionList(_ presets: [Int], current: Int) -> [Int] {
         presets.contains(current) ? presets : (presets + [current]).sorted()
+    }
+}
+
+// MARK: - 미리보기 미니 캘린더
+
+/// 내 슬롯의 예약 가능일을 한 달 그리드로 보여준다 — 예약 화면(SlotBookingView)과
+/// 같은 사용 방식: 가능일만 탭할 수 있고, 선택한 날의 시간이 아래 칩으로 나온다.
+private struct PreviewMiniCalendar: View {
+    let availableDays: Set<Date>
+    @Binding var selectedDay: Date?
+
+    @State private var month: Date
+
+    /// ko_KR·일요일 시작 (예약 화면과 동일)
+    static let calendar: Calendar = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = Locale(identifier: "ko_KR")
+        calendar.firstWeekday = 1
+        return calendar
+    }()
+
+    init(availableDays: Set<Date>, selectedDay: Binding<Date?>) {
+        self.availableDays = availableDays
+        self._selectedDay = selectedDay
+        let calendar = Self.calendar
+        let base = selectedDay.wrappedValue ?? availableDays.min() ?? Date()
+        _month = State(
+            initialValue: calendar.date(
+                from: calendar.dateComponents([.year, .month], from: base)
+            ) ?? base
+        )
+    }
+
+    private static let monthFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ko_KR")
+        formatter.dateFormat = "yyyy년 M월"
+        return formatter
+    }()
+
+    private static let weekdaySymbols = ["일", "월", "화", "수", "목", "금", "토"]
+
+    var body: some View {
+        VStack(spacing: 8) {
+            monthHeader
+            weekdayHeader
+            monthGrid
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var monthHeader: some View {
+        HStack {
+            Button {
+                shiftMonth(-1)
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.secondaryText)
+                    .frame(width: 32, height: 32)
+            }
+            .buttonStyle(.borderless)
+            Spacer()
+            Text(Self.monthFormatter.string(from: month))
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+            Spacer()
+            Button {
+                shiftMonth(1)
+            } label: {
+                Image(systemName: "chevron.right")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.secondaryText)
+                    .frame(width: 32, height: 32)
+            }
+            .buttonStyle(.borderless)
+        }
+    }
+
+    private var weekdayHeader: some View {
+        HStack(spacing: 0) {
+            ForEach(Self.weekdaySymbols, id: \.self) { symbol in
+                Text(symbol)
+                    .font(.caption2)
+                    .foregroundStyle(Theme.secondaryText)
+                    .frame(maxWidth: .infinity)
+            }
+        }
+    }
+
+    private var monthGrid: some View {
+        let calendar = Self.calendar
+        let firstWeekday = calendar.component(.weekday, from: month) - 1
+        let dayCount = calendar.range(of: .day, in: .month, for: month)?.count ?? 30
+
+        return LazyVGrid(
+            columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7),
+            spacing: 6
+        ) {
+            ForEach(0..<firstWeekday, id: \.self) { _ in
+                Color.clear.frame(height: 34)
+            }
+            ForEach(1...dayCount, id: \.self) { day in
+                let date = calendar.date(byAdding: .day, value: day - 1, to: month)!
+                dayCell(day: day, date: date)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func dayCell(day: Int, date: Date) -> some View {
+        let isAvailable = availableDays.contains(date)
+        let isSelected = selectedDay == date
+
+        Button {
+            selectedDay = date
+        } label: {
+            VStack(spacing: 3) {
+                Text("\(day)")
+                    .font(.subheadline.weight(isAvailable ? .semibold : .regular))
+                    .foregroundStyle(
+                        isSelected ? Color.white : (isAvailable ? .white : Theme.secondaryText.opacity(0.5))
+                    )
+                Circle()
+                    .fill(isAvailable ? Theme.accent : .clear)
+                    .frame(width: 4, height: 4)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 34)
+            .background(
+                isSelected ? Theme.accent.opacity(0.35) : .clear,
+                in: RoundedRectangle(cornerRadius: 8)
+            )
+        }
+        .buttonStyle(.borderless)
+        .disabled(!isAvailable)
+    }
+
+    private func shiftMonth(_ delta: Int) {
+        if let next = Self.calendar.date(byAdding: .month, value: delta, to: month) {
+            month = next
+        }
     }
 }
 
