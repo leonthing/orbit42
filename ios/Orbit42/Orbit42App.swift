@@ -15,10 +15,12 @@ struct Orbit42App: App {
 }
 
 /// 로그인 상태에 따라 인트로 / AuthView / MainTabView 분기.
+/// 비로그인 상태의 앱 실행은 항상 서비스 소개(인트로)부터 시작하고,
+/// 마지막 장 "시작하기" → 가입 폼, 우상단 "로그인" → 로그인 폼으로 넘어간다.
 struct RootView: View {
     @Environment(AuthViewModel.self) private var auth
-    /// 첫 실행에만 기능 소개를 보여준다.
-    @AppStorage("hasSeenIntro") private var hasSeenIntro = false
+    /// nil 이면 아직 인트로 단계. 인트로에서 고른 목적지(가입/로그인)로 이동한다.
+    @State private var authIntent: AuthIntent?
 
     var body: some View {
         Group {
@@ -30,14 +32,21 @@ struct RootView: View {
                 } else {
                     MainTabView()
                 }
-            } else if !hasSeenIntro {
-                IntroView { hasSeenIntro = true }
+            } else if let authIntent {
+                AuthView(initialMode: authIntent == .signup ? .signup : .login)
             } else {
-                AuthView()
+                IntroView { intent in
+                    self.authIntent = intent
+                }
             }
         }
         .animation(.default, value: auth.isAuthenticated)
-        .animation(.default, value: hasSeenIntro)
+        .onChange(of: auth.isAuthenticated) { wasAuthenticated, isAuthenticated in
+            if wasAuthenticated && !isAuthenticated {
+                // 로그아웃 직후엔 인트로를 다시 보여줄 필요 없이 로그인 폼으로.
+                authIntent = .login
+            }
+        }
         .task {
             await auth.restoreSession()
         }

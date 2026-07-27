@@ -3,8 +3,9 @@ import SwiftUI
 
 /// 로그인 / 가입 화면.
 /// Sign in with Apple + 이메일(아이디) 로그인/가입 폼.
+/// 표시 이름·프로필 등은 가입 직후 온보딩 위저드에서 받는다.
 struct AuthView: View {
-    private enum Mode: String, CaseIterable, Identifiable {
+    enum Mode: String, CaseIterable, Identifiable {
         case login = "로그인"
         case signup = "가입하기"
         var id: String { rawValue }
@@ -12,7 +13,11 @@ struct AuthView: View {
 
     @Environment(AuthViewModel.self) private var auth
 
-    @State private var mode: Mode = .login
+    @State private var mode: Mode
+
+    init(initialMode: Mode = .login) {
+        _mode = State(initialValue: initialMode)
+    }
 
     // 로그인 폼
     @State private var identifier = ""
@@ -22,7 +27,6 @@ struct AuthView: View {
     @State private var username = ""
     @State private var email = ""
     @State private var signupPassword = ""
-    @State private var displayName = ""
 
     @State private var errorMessage: String?
     @State private var isSubmitting = false
@@ -111,8 +115,6 @@ struct AuthView: View {
                 .keyboardType(.emailAddress)
             secureField("비밀번호 (6자 이상)", text: $signupPassword)
                 .textContentType(.newPassword)
-            field("표시 이름 (선택)", text: $displayName, autocapitalization: .words)
-                .textContentType(.name)
         }
     }
 
@@ -178,12 +180,12 @@ struct AuthView: View {
                 case .login:
                     try await auth.login(identifier: identifier, password: loginPassword)
                 case .signup:
-                    let trimmedDisplayName = displayName.trimmingCharacters(in: .whitespaces)
+                    // 표시 이름은 가입 직후 온보딩 위저드의 프로필 단계에서 받는다.
                     try await auth.signup(
                         username: username,
                         password: signupPassword,
                         email: email,
-                        displayName: trimmedDisplayName.isEmpty ? nil : trimmedDisplayName
+                        displayName: nil
                     )
                 }
             } catch {

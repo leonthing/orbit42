@@ -1,9 +1,15 @@
 import SwiftUI
 
-/// 첫 실행 시 앱 주요 기능을 소개하는 온보딩.
-/// 마지막 장의 "시작하기"를 누르면 로그인/가입 화면으로 넘어간다.
+/// 인트로에서 어느 인증 화면으로 넘어갈지 — 가입("시작하기") 또는 로그인(우상단).
+enum AuthIntent {
+    case signup
+    case login
+}
+
+/// 비로그인 상태의 첫 화면 — 앱 주요 기능 소개.
+/// "시작하기" → 가입 폼, 우상단 "로그인" → 로그인 폼으로 넘어간다.
 struct IntroView: View {
-    let onFinish: () -> Void
+    let onFinish: (AuthIntent) -> Void
 
     @State private var page = 0
 
@@ -53,10 +59,17 @@ struct IntroView: View {
             VStack(spacing: 0) {
                 HStack {
                     Spacer()
-                    Button("건너뛰기") { onFinish() }
-                        .font(.subheadline)
-                        .foregroundStyle(Theme.secondaryText)
-                        .padding(20)
+                    Button {
+                        onFinish(.login)
+                    } label: {
+                        Text("이미 계정이 있나요? ")
+                            .foregroundStyle(Theme.secondaryText)
+                        + Text("로그인")
+                            .foregroundStyle(Theme.accent)
+                            .fontWeight(.semibold)
+                    }
+                    .font(.subheadline)
+                    .padding(20)
                 }
 
                 TabView(selection: $page) {
@@ -96,7 +109,7 @@ struct IntroView: View {
                     if page < pages.count - 1 {
                         withAnimation { page += 1 }
                     } else {
-                        onFinish()
+                        onFinish(.signup)
                     }
                 } label: {
                     Text(page < pages.count - 1 ? "다음" : "시작하기")
@@ -114,6 +127,6 @@ struct IntroView: View {
 }
 
 #Preview {
-    IntroView(onFinish: {})
+    IntroView(onFinish: { _ in })
         .preferredColorScheme(.dark)
 }
