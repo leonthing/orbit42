@@ -112,6 +112,17 @@ final class CalendarViewModel {
         errorMessage = nil
     }
 
+    /// 주간/일간/연간 뷰에서 임의 날짜 선택 — 달이 바뀌면 표시 달도 따라간다.
+    func select(date: Date) {
+        let day = Self.calendar.startOfDay(for: date)
+        selectedDate = day
+        let month = Self.firstDayOfMonth(containing: day)
+        if Self.key(for: month) != currentMonthKey {
+            displayedMonth = month
+        }
+        errorMessage = nil
+    }
+
     private func shiftMonth(by delta: Int) {
         guard let newMonth = Self.calendar.date(byAdding: .month, value: delta, to: displayedMonth) else { return }
         displayedMonth = newMonth

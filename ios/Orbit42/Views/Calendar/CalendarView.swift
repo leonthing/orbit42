@@ -109,15 +109,53 @@ struct CalendarView: View {
 
     /// "일정" 세그먼트 — 캘린더 전용 toolbar(오늘/+)는 이 브랜치에만 붙어서,
     /// "타임슬롯" 세그먼트에서는 `SlotsContent` 의 +(프리셋) toolbar 가 대신 보인다.
+    /// 일정 세그먼트의 보기 단위 — 연/월/주/일.
+    private enum ScheduleViewMode: String, CaseIterable, Identifiable {
+        case year = "연"
+        case month = "월"
+        case week = "주"
+        case day = "일"
+        var id: String { rawValue }
+    }
+
+    @State private var scheduleViewMode: ScheduleViewMode = .month
+
     private var scheduleContent: some View {
         VStack(spacing: 0) {
-            monthHeader
-            weekdayHeader
-            monthGrid
-            Divider()
-                .overlay(Color.white.opacity(0.08))
-                .padding(.top, 8)
-            eventListSection
+            Picker("보기", selection: $scheduleViewMode) {
+                ForEach(ScheduleViewMode.allCases) { mode in
+                    Text(mode.rawValue).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, 16)
+            .padding(.top, 6)
+
+            switch scheduleViewMode {
+            case .year:
+                yearView
+            case .month:
+                monthHeader
+                weekdayHeader
+                monthGrid
+                Divider()
+                    .overlay(Color.white.opacity(0.08))
+                    .padding(.top, 8)
+                eventListSection
+            case .week:
+                weekHeader
+                weekStrip
+                Divider()
+                    .overlay(Color.white.opacity(0.08))
+                    .padding(.top, 8)
+                eventListSection
+            case .day:
+                dayHeader
+                Divider()
+                    .overlay(Color.white.opacity(0.08))
+                    .padding(.top, 8)
+                eventListSection
+            }
         }
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
@@ -194,6 +232,241 @@ struct CalendarView: View {
         }
         .padding(.horizontal, 8)
         .padding(.top, 4)
+    }
+
+    // MARK: - 주간 뷰
+
+    /// 선택일이 속한 주의 시작(일요일).
+    private var weekStart: Date {
+        calendar.dateInterval(of: .weekOfYear, for: viewModel.selectedDate)?.start
+            ?? calendar.startOfDay(for: viewModel.selectedDate)
+    }
+
+    private static let weekRangeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ko_KR")
+        formatter.dateFormat = "M월 d일"
+        return formatter
+    }()
+
+    private var weekHeader: some View {
+        HStack {
+            Button {
+                withAnimation { shiftDays(-7) }
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.body.weight(.semibold))
+                    .frame(width: 44, height: 44)
+            }
+            .accessibilityLabel("이전 주")
+            Spacer()
+            Text("\(Self.weekRangeFormatter.string(from: weekStart)) ~ \(Self.weekRangeFormatter.string(from: calendar.date(byAdding: .day, value: 6, to: weekStart) ?? weekStart))")
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(.white)
+            Spacer()
+            Button {
+                withAnimation { shiftDays(7) }
+            } label: {
+                Image(systemName: "chevron.right")
+                    .font(.body.weight(.semibold))
+                    .frame(width: 44, height: 44)
+            }
+            .accessibilityLabel("다음 주")
+        }
+        .padding(.horizontal, 8)
+        .padding(.top, 4)
+    }
+
+    private var weekStrip: some View {
+        HStack(spacing: 0) {
+            ForEach(0..<7, id: \.self) { offset in
+                let date = calendar.date(byAdding: .day, value: offset, to: weekStart) ?? weekStart
+                weekDayCell(date)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.top, 6)
+    }
+
+    private func weekDayCell(_ date: Date) -> some View {
+        let isSelected = calendar.isDate(date, inSameDayAs: viewModel.selectedDate)
+        let isToday = calendar.isDateInToday(date)
+        let dots = viewModel.dotColors(on: date)
+
+        return Button {
+            withAnimation { viewModel.select(date: date) }
+        } label: {
+            VStack(spacing: 4) {
+                Text(Self.weekdaySymbols[calendar.component(.weekday, from: date) - 1])
+                    .font(.caption2)
+                    .foregroundStyle(Theme.secondaryText)
+                Text("\(calendar.component(.day, from: date))")
+                    .font(.subheadline.weight(isToday ? .bold : .medium))
+                    .foregroundStyle(isSelected ? .white : (isToday ? Theme.accent : .white.opacity(0.85)))
+                HStack(spacing: 3) {
+                    ForEach(Array(dots.prefix(3).enumerated()), id: \.offset) { _, color in
+                        Circle().fill(color).frame(width: 4, height: 4)
+                    }
+                    if dots.isEmpty {
+                        Circle().fill(.clear).frame(width: 4, height: 4)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .background(
+                isSelected ? Theme.accent.opacity(0.3) : .clear,
+                in: RoundedRectangle(cornerRadius: 10)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - 일간 뷰
+
+    private static let dayTitleFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ko_KR")
+        formatter.dateFormat = "M월 d일 (E)"
+        return formatter
+    }()
+
+    private var dayHeader: some View {
+        HStack {
+            Button {
+                withAnimation { shiftDays(-1) }
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.body.weight(.semibold))
+                    .frame(width: 44, height: 44)
+            }
+            .accessibilityLabel("이전 날")
+            Spacer()
+            VStack(spacing: 2) {
+                Text(Self.dayTitleFormatter.string(from: viewModel.selectedDate))
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(calendar.isDateInToday(viewModel.selectedDate) ? Theme.accent : .white)
+                if calendar.isDateInToday(viewModel.selectedDate) {
+                    Text("오늘")
+                        .font(.caption2)
+                        .foregroundStyle(Theme.secondaryText)
+                }
+            }
+            Spacer()
+            Button {
+                withAnimation { shiftDays(1) }
+            } label: {
+                Image(systemName: "chevron.right")
+                    .font(.body.weight(.semibold))
+                    .frame(width: 44, height: 44)
+            }
+            .accessibilityLabel("다음 날")
+        }
+        .padding(.horizontal, 8)
+        .padding(.top, 4)
+    }
+
+    private func shiftDays(_ delta: Int) {
+        if let next = calendar.date(byAdding: .day, value: delta, to: viewModel.selectedDate) {
+            viewModel.select(date: next)
+        }
+    }
+
+    // MARK: - 연간 뷰
+
+    private var displayedYear: Int {
+        calendar.component(.year, from: viewModel.displayedMonth)
+    }
+
+    private var yearView: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Button {
+                    withAnimation { shiftYear(-1) }
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.body.weight(.semibold))
+                        .frame(width: 44, height: 44)
+                }
+                .accessibilityLabel("이전 해")
+                Spacer()
+                Text("\(String(displayedYear))년")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(.white)
+                Spacer()
+                Button {
+                    withAnimation { shiftYear(1) }
+                } label: {
+                    Image(systemName: "chevron.right")
+                        .font(.body.weight(.semibold))
+                        .frame(width: 44, height: 44)
+                }
+                .accessibilityLabel("다음 해")
+            }
+            .padding(.horizontal, 8)
+            .padding(.top, 4)
+
+            ScrollView {
+                LazyVGrid(
+                    columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3),
+                    spacing: 16
+                ) {
+                    ForEach(1...12, id: \.self) { month in
+                        miniMonth(month)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+            }
+        }
+    }
+
+    private func shiftYear(_ delta: Int) {
+        var comps = calendar.dateComponents([.year, .month], from: viewModel.displayedMonth)
+        comps.year = (comps.year ?? displayedYear) + delta
+        comps.day = 1
+        if let date = calendar.date(from: comps) {
+            viewModel.select(date: date)
+        }
+    }
+
+    private func miniMonth(_ month: Int) -> some View {
+        let firstDay = calendar.date(
+            from: DateComponents(year: displayedYear, month: month, day: 1)
+        ) ?? Date()
+        let dayCount = calendar.range(of: .day, in: .month, for: firstDay)?.count ?? 30
+        let leading = calendar.component(.weekday, from: firstDay) - 1
+        let isCurrentMonth = calendar.isDate(firstDay, equalTo: Date(), toGranularity: .month)
+
+        return Button {
+            viewModel.select(date: firstDay)
+            withAnimation { scheduleViewMode = .month }
+        } label: {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("\(month)월")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(isCurrentMonth ? Theme.accent : .white)
+                LazyVGrid(
+                    columns: Array(repeating: GridItem(.flexible(), spacing: 1), count: 7),
+                    spacing: 2
+                ) {
+                    ForEach(0..<leading, id: \.self) { _ in
+                        Text(" ").font(.system(size: 8))
+                    }
+                    ForEach(1...dayCount, id: \.self) { day in
+                        let isToday = isCurrentMonth
+                            && calendar.component(.day, from: Date()) == day
+                        Text("\(day)")
+                            .font(.system(size: 8, weight: isToday ? .bold : .regular))
+                            .foregroundStyle(isToday ? Theme.accent : Theme.secondaryText)
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+            }
+            .padding(8)
+            .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - 요일 헤더 (일요일 시작)

@@ -294,6 +294,23 @@ struct EventDetailSheet: View {
                 }
                 .preferredColorScheme(.dark)
             }
+            .sheet(isPresented: $showingAddParticipant) {
+                ParticipantAddSheet(
+                    eventId: event.id,
+                    snapshot: participantSnapshot
+                ) { updated in
+                    participants = updated
+                }
+                .preferredColorScheme(.dark)
+            }
+            .task {
+                guard !event.isInvite, participants == nil else { return }
+                if let response: ParticipantsResponse = try? await APIClient.shared.get(
+                    "/api/v1/calendar/events/\(event.id)/participants"
+                ) {
+                    participants = response.participants
+                }
+            }
             .interactiveDismissDisabled(isDeleting)
         }
     }
@@ -855,23 +872,8 @@ struct EventDetailSheet: View {
             Text("orbit42 사용자를 태그하거나 이메일로 초대할 수 있어요. 태그하면 상대 캘린더에도 이 일정이 보여요.")
         }
         .listRowBackground(Theme.surface)
-        .task {
-            if participants == nil,
-               let response: ParticipantsResponse = try? await APIClient.shared.get(
-                   "/api/v1/calendar/events/\(event.id)/participants"
-               ) {
-                participants = response.participants
-            }
-        }
-        .sheet(isPresented: $showingAddParticipant) {
-            ParticipantAddSheet(
-                eventId: event.id,
-                snapshot: participantSnapshot
-            ) { updated in
-                participants = updated
-            }
-            .preferredColorScheme(.dark)
-        }
+        // 주의: sheet/task 를 이 Section 에 붙이면 목록 리빌드 때 시트가 바로
+        // 닫히는 문제가 있어 최상위(NavigationStack)에 붙인다.
     }
 
     /// 참석자 추가/시간 로그 공용 일정 스냅샷.
