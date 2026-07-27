@@ -61,6 +61,7 @@ struct AuthView: View {
                     divider
                     appleButton
                     googleButton
+                    consentNotice
                 }
                 .padding(24)
                 .frame(maxWidth: 440)
@@ -189,6 +190,16 @@ struct AuthView: View {
                 errorMessage = error.localizedDescription
             }
         }
+    }
+
+    /// 가입·로그인 공통 동의 안내 — 링크는 웹의 약관/방침 페이지로 연다.
+    private var consentNotice: some View {
+        Text("계속하면 orbit42의 [이용약관](https://orbit42.org/terms)과 [개인정보처리방침](https://orbit42.org/privacy)에 동의하게 돼요.")
+            .font(.caption)
+            .foregroundStyle(Theme.secondaryText)
+            .tint(Theme.accent)
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity)
     }
 
     // MARK: - Sign in with Apple

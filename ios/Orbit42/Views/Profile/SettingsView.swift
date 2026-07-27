@@ -20,6 +20,7 @@ struct SettingsView: View {
         List {
             menuSection
             privacySection
+            legalSection
             logoutSection
         }
         .scrollContentBackground(.hidden)
@@ -184,6 +185,28 @@ struct SettingsView: View {
             isPrivate = !newValue
             privacyErrorMessage = (error as? APIError)?.errorDescription
                 ?? "설정을 저장하지 못했어요. 네트워크를 확인해 주세요."
+        }
+    }
+
+    // MARK: - 약관·정책
+
+    private var legalSection: some View {
+        Section {
+            legalLink(title: "이용약관", path: "terms")
+            legalLink(title: "개인정보처리방침", path: "privacy")
+        }
+        .listRowBackground(Theme.surface)
+    }
+
+    private func legalLink(title: String, path: String) -> some View {
+        Link(destination: URL(string: "https://orbit42.org/\(path)")!) {
+            HStack {
+                menuRow(icon: "doc.text", title: title)
+                Spacer()
+                Image(systemName: "arrow.up.right")
+                    .font(.caption)
+                    .foregroundStyle(Theme.secondaryText)
+            }
         }
     }
 

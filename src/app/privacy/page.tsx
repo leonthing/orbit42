@@ -24,7 +24,7 @@ export default function PrivacyPage() {
       <main className="mx-auto max-w-3xl px-4 pb-24 pt-6 sm:px-6">
         <h1 className="text-3xl font-bold text-charcoal-100">개인정보처리방침</h1>
         <p className="mt-2 text-sm text-charcoal-500">
-          최종 업데이트: 2026년 4월 15일
+          최종 업데이트: 2026년 7월 27일
         </p>
 
         <div className="mt-10 space-y-8">
@@ -38,6 +38,10 @@ export default function PrivacyPage() {
               <li>이메일, 비밀번호(암호화 저장), 사용자명, 표시명</li>
               <li>
                 구글(OAuth)로 가입하는 경우: 이메일, 이름, 프로필 사진(선택)
+              </li>
+              <li>
+                Apple로 가입·로그인하는 경우: 이메일(비공개 릴레이 주소일 수
+                있음), 이름(최초 1회), Apple 계정 식별자
               </li>
             </List>
             <SubHead>나. 서비스 이용 시 자동 수집</SubHead>
@@ -142,6 +146,11 @@ export default function PrivacyPage() {
                     <Td>OAuth 로그인, Calendar API 연동</Td>
                     <Td>미국</Td>
                   </tr>
+                  <tr>
+                    <Td>Apple Inc.</Td>
+                    <Td>Apple 계정 로그인(Sign in with Apple)</Td>
+                    <Td>미국</Td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -229,6 +238,10 @@ export default function PrivacyPage() {
           <Section title="11. 변경 이력">
             <List>
               <li>2026-04-15: 최초 제정</li>
+              <li>
+                2026-07-27: Apple 로그인 도입에 따라 수집 항목 및 처리 위탁
+                내역 갱신
+              </li>
             </List>
           </Section>
         </div>
