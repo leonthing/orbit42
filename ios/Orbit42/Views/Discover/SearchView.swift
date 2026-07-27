@@ -278,23 +278,8 @@ private struct OrbitPersonCard: View {
                     .foregroundStyle(Theme.accent)
                     .lineLimit(1)
                 // 관심사 태그 (최대 3개) — "어떤 사람인지" 한눈에
-                if let interests = person.interests, !interests.isEmpty {
-                    HStack(spacing: 4) {
-                        ForEach(interests.prefix(3), id: \.self) { tag in
-                            Text(tag)
-                                .font(.caption2)
-                                .foregroundStyle(Theme.secondaryText)
-                                .padding(.horizontal, 7)
-                                .padding(.vertical, 2.5)
-                                .background(
-                                    Color.white.opacity(0.06),
-                                    in: Capsule()
-                                )
-                                .lineLimit(1)
-                        }
-                    }
+                InterestTagStrip(interests: person.interests)
                     .padding(.top, 3)
-                }
                 if person.slots.isEmpty {
                     Text("아직 열린 시간이 없어요")
                         .font(.caption)
@@ -356,6 +341,8 @@ private struct PersonResultRow: View {
                         .foregroundStyle(Theme.secondaryText)
                         .lineLimit(1)
                 }
+                InterestTagStrip(interests: user.interests)
+                    .padding(.top, 2)
             }
             Spacer(minLength: 0)
         }
@@ -396,6 +383,27 @@ private struct SlotResultRow: View {
 // MARK: - 공용 아바타
 
 /// 검색/프로필 화면 공용 아바타 — 이미지가 없으면 이니셜.
+/// 관심사 태그 스트립 (최대 3개) — 사용자 리스트 공용.
+struct InterestTagStrip: View {
+    let interests: [String]?
+
+    var body: some View {
+        if let interests, !interests.isEmpty {
+            HStack(spacing: 4) {
+                ForEach(interests.prefix(3), id: \.self) { tag in
+                    Text(tag)
+                        .font(.caption2)
+                        .foregroundStyle(Theme.secondaryText)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 2.5)
+                        .background(Color.white.opacity(0.06), in: Capsule())
+                        .lineLimit(1)
+                }
+            }
+        }
+    }
+}
+
 struct DiscoverAvatar: View {
     let url: URL?
     let name: String

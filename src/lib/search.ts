@@ -8,6 +8,7 @@ export type SearchResult = {
     display_name: string | null;
     avatar_url: string | null;
     bio: string | null;
+    interests: string[];
   }[];
   slots: {
     id: string;
@@ -34,7 +35,7 @@ export async function searchAll(q: string): Promise<SearchResult> {
   const [usersRes, slotsRes] = await Promise.all([
     db
       .from("users")
-      .select("username, display_name, avatar_url, bio")
+      .select("username, display_name, avatar_url, bio, interests")
       .or(`username.ilike.${pattern},display_name.ilike.${pattern}`)
       .limit(20),
     db
@@ -52,6 +53,7 @@ export async function searchAll(q: string): Promise<SearchResult> {
     display_name: (u.display_name as string | null) ?? null,
     avatar_url: (u.avatar_url as string | null) ?? null,
     bio: (u.bio as string | null) ?? null,
+    interests: (u.interests as string[] | null) ?? [],
   }));
 
   // Resolve slot hosts.

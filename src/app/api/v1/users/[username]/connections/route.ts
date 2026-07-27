@@ -47,17 +47,23 @@ export async function GET(
       ? await listFollowers(target.username as string)
       : await listFollowing(target.username as string);
 
-  // 목록 안의 비공개 사용자는 타인에게 숨긴다 (본인 목록은 그대로).
+  // 목록 안의 비공개 사용자는 타인에게 숨기고, 관심사 태그를 함께 조회한다.
   const ids = rows.map((r) => (r as { id: string }).id);
   let privateIds = new Set<string>();
-  if (!isMe && ids.length > 0) {
-    const { data: privacyRows } = await db
+  const interestsById = new Map<string, string[]>();
+  if (ids.length > 0) {
+    const { data: metaRows } = await db
       .from("users")
-      .select("id, is_private")
+      .select("id, is_private, interests")
       .in("id", ids);
-    privateIds = new Set(
-      (privacyRows ?? []).filter((r) => r.is_private).map((r) => r.id as string),
-    );
+    if (!isMe) {
+      privateIds = new Set(
+        (metaRows ?? []).filter((r) => r.is_private).map((r) => r.id as string),
+      );
+    }
+    for (const r of metaRows ?? []) {
+      interestsById.set(r.id as string, (r.interests as string[] | null) ?? []);
+    }
   }
 
   return Response.json({
@@ -65,6 +71,7 @@ export async function GET(
       .filter((r) => !privateIds.has((r as { id: string }).id))
       .map((r) => {
         const u = r as {
+          id: string;
           username: string;
           display_name: string | null;
           avatar_url: string | null;
@@ -73,6 +80,7 @@ export async function GET(
           username: u.username,
           displayName: u.display_name,
           avatarUrl: u.avatar_url,
+          interests: interestsById.get(u.id) ?? [],
         };
       }),
   });

@@ -190,6 +190,8 @@ struct ConnectionsView: View {
                     .font(.footnote)
                     .foregroundStyle(Theme.accent)
                     .lineLimit(1)
+                InterestTagStrip(interests: user.interests)
+                    .padding(.top, 2)
             }
             Spacer(minLength: 0)
             Image(systemName: "chevron.right")

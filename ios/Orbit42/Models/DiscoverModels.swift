@@ -101,6 +101,8 @@ struct SearchUser: Decodable, Identifiable, Sendable {
     let displayName: String?
     let avatarUrl: String?
     let bio: String?
+    /// 관심사 태그 (리스트에 최대 3개 표시 — 구버전 응답 호환 옵셔널)
+    let interests: [String]?
 
     var id: String { username }
 
@@ -270,6 +272,8 @@ struct ConnectionUser: Decodable, Identifiable, Sendable {
     let username: String
     let displayName: String?
     let avatarUrl: String?
+    /// 관심사 태그 (리스트에 최대 3개 표시)
+    let interests: [String]?
 
     var id: String { username }
 

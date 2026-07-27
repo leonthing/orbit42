@@ -64,6 +64,7 @@ export async function GET(request: Request) {
       displayName: u.display_name,
       avatarUrl: u.avatar_url,
       bio: u.bio,
+      interests: u.interests,
     })),
     slots: result.slots.map((s) => ({
       id: s.id,
