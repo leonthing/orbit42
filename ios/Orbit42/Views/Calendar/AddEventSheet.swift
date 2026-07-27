@@ -36,8 +36,25 @@ struct AddEventSheet: View {
         _selectedCalendarId = State(initialValue: (writable.first(where: \.isDefault) ?? writable.first)?.id)
     }
 
+    /// 시트를 연 시점의 최신 캘린더 목록 — 월 캐시(viewModel.calendars)는 설정에서
+    /// 새로 만든 캘린더를 모를 수 있어, 열릴 때 서버에서 다시 받아 덮어쓴다.
+    @State private var freshCalendars: [CalendarInfo]?
+
     private var writableCalendars: [CalendarInfo] {
-        viewModel.calendars
+        freshCalendars ?? viewModel.calendars
+    }
+
+    private func refreshCalendars() async {
+        guard let response: CalendarsResponse = try? await APIClient.shared.get("/api/v1/calendars") else {
+            return
+        }
+        freshCalendars = response.calendars
+        // 선택이 비어있거나(캐시가 비었던 경우) 사라진 캘린더면 기본값으로 보정.
+        if selectedCalendarId == nil
+            || !response.calendars.contains(where: { $0.id == selectedCalendarId }) {
+            selectedCalendarId = (response.calendars.first(where: \.isDefault)
+                ?? response.calendars.first)?.id
+        }
     }
 
     private var canSave: Bool {
@@ -130,6 +147,7 @@ struct AddEventSheet: View {
                 }
             }
             .interactiveDismissDisabled(isSaving)
+            .task { await refreshCalendars() }
         }
     }
 

@@ -21,9 +21,13 @@ struct EditEventSheet: View {
     @State private var isSaving = false
     @State private var errorMessage: String?
 
+    /// 시트를 연 시점의 최신 캘린더 목록 — 월 캐시는 설정에서 새로 만든
+    /// 캘린더를 모를 수 있어, 열릴 때 서버에서 다시 받아 덮어쓴다.
+    @State private var freshCalendars: [CalendarInfo]?
+
     /// 이동 가능한 대상 — 전체 캘린더 (다른 Google 계정 간 이동만 서버가 거부).
     private var movableCalendars: [CalendarInfo] {
-        viewModel.calendars
+        freshCalendars ?? viewModel.calendars
     }
 
     /// 변경 감지용 원본 값
@@ -147,6 +151,11 @@ struct EditEventSheet: View {
                 }
             }
             .interactiveDismissDisabled(isSaving)
+            .task {
+                if let response: CalendarsResponse = try? await APIClient.shared.get("/api/v1/calendars") {
+                    freshCalendars = response.calendars
+                }
+            }
         }
     }
 
