@@ -45,6 +45,22 @@ enum DiscoverFormat {
         formatter.timeZone = .current
         return formatter
     }()
+
+    /// "2018 ~ 2022" / "2020 ~ 현재" — 양쪽 다 비어 있으면 nil.
+    static func yearRange(start: String?, end: String?) -> String? {
+        func trimmed(_ value: String?) -> String? {
+            guard let value = value?.trimmingCharacters(in: .whitespaces), !value.isEmpty else {
+                return nil
+            }
+            return value
+        }
+        switch (trimmed(start), trimmed(end)) {
+        case let (start?, end?): return "\(start) ~ \(end)"
+        case let (start?, nil): return "\(start) ~"
+        case let (nil, end?): return "~ \(end)"
+        default: return nil
+        }
+    }
 }
 
 // MARK: - 검색 (GET /api/v1/search?q=...)
@@ -145,6 +161,10 @@ struct PersonUser: Decodable, Sendable {
     let avatarUrl: String?
     let bio: String?
     let interests: [String]?
+    /// `{"instagram": "https://...", ...}` — 존재하는 플랫폼 키만 내려온다.
+    let socialLinks: [String: String]?
+    let education: [Education]?
+    let experience: [Experience]?
 
     var preferredName: String {
         if let displayName, !displayName.isEmpty { return displayName }
@@ -157,6 +177,109 @@ struct PersonUser: Decodable, Sendable {
     }
 
     var interestTags: [String] { interests ?? [] }
+
+    /// 값이 유효한 링크만, 인스타그램→X→유튜브→페이스북→링크드인 고정 순서로.
+    var socialLinkItems: [SocialLinkItem] {
+        guard let socialLinks else { return [] }
+        return SocialLinkKind.allCases.compactMap { kind in
+            guard
+                let raw = socialLinks[kind.rawValue]?.trimmingCharacters(in: .whitespaces),
+                !raw.isEmpty,
+                let url = URL(string: raw)
+            else { return nil }
+            return SocialLinkItem(kind: kind, url: url)
+        }
+    }
+
+    var educationItems: [Education] { education ?? [] }
+    var experienceItems: [Experience] { experience ?? [] }
+}
+
+// MARK: - 프로필 부가 정보 (socialLinks / education / experience)
+
+/// 프로필에 표시할 소셜 링크 한 개.
+struct SocialLinkItem: Identifiable, Sendable {
+    let kind: SocialLinkKind
+    let url: URL
+
+    var id: String { kind.rawValue }
+}
+
+extension SocialLinkKind {
+    /// 프로필 소셜 링크 행에 쓰는 SF Symbols 근사 아이콘.
+    var systemImage: String {
+        switch self {
+        case .instagram: return "camera"
+        case .x: return "xmark"
+        case .youtube: return "play.rectangle"
+        case .facebook: return "f.square"
+        case .linkedin: return "briefcase"
+        }
+    }
+}
+
+/// 학력 항목 — school 만 필수 (서버 계약, 연도는 문자열).
+struct Education: Decodable, Sendable {
+    let school: String
+    let degree: String?
+    let field: String?
+    let startYear: String?
+    let endYear: String?
+
+    /// "학사 · 컴퓨터공학"
+    var detailText: String? {
+        let parts = [degree, field].compactMap { value -> String? in
+            guard let value = value?.trimmingCharacters(in: .whitespaces), !value.isEmpty else {
+                return nil
+            }
+            return value
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    /// "2018 ~ 2022"
+    var periodText: String? {
+        DiscoverFormat.yearRange(start: startYear, end: endYear)
+    }
+}
+
+/// 경력 항목 — company 만 필수 (서버 계약, 연도는 문자열).
+struct Experience: Decodable, Sendable {
+    let company: String
+    let role: String?
+    let description: String?
+    let startYear: String?
+    let endYear: String?
+    let current: Bool?
+
+    /// "2020 ~ 현재" (current 면 endYear 대신 "현재")
+    var periodText: String? {
+        DiscoverFormat.yearRange(start: startYear, end: current == true ? "현재" : endYear)
+    }
+}
+
+// MARK: - 오르비터/오르빗 목록 (GET /api/v1/users/{username}/connections?type=orbiters|orbiting)
+
+struct ConnectionsResponse: Decodable, Sendable {
+    let users: [ConnectionUser]
+}
+
+struct ConnectionUser: Decodable, Identifiable, Sendable {
+    let username: String
+    let displayName: String?
+    let avatarUrl: String?
+
+    var id: String { username }
+
+    var preferredName: String {
+        if let displayName, !displayName.isEmpty { return displayName }
+        return username
+    }
+
+    var avatarURL: URL? {
+        guard let avatarUrl, !avatarUrl.isEmpty else { return nil }
+        return URL(string: avatarUrl)
+    }
 }
 
 struct PersonRating: Decodable, Sendable {

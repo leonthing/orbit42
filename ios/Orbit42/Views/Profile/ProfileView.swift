@@ -134,8 +134,23 @@ private struct MyProfileContent: View {
 
             if orbiting != nil || orbiters != nil {
                 HStack(spacing: 8) {
-                    Text("오르빗 \(orbiting ?? 0) · 오르비터 \(orbiters ?? 0)")
-                        .monospacedDigit()
+                    HStack(spacing: 6) {
+                        NavigationLink {
+                            ConnectionsView(username: username, initialType: .orbiting)
+                        } label: {
+                            Text("오르빗 \(orbiting ?? 0)")
+                                .monospacedDigit()
+                        }
+                        .buttonStyle(.plain)
+                        Text("·")
+                        NavigationLink {
+                            ConnectionsView(username: username, initialType: .orbiters)
+                        } label: {
+                            Text("오르비터 \(orbiters ?? 0)")
+                                .monospacedDigit()
+                        }
+                        .buttonStyle(.plain)
+                    }
                     if let rating = viewModel.data?.rating, rating.count > 0 {
                         HStack(spacing: 2) {
                             Image(systemName: "star.fill")

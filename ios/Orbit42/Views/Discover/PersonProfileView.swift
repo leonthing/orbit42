@@ -3,6 +3,7 @@ import SwiftUI
 /// 타인 프로필 화면 — 헤더(아바타/이름/bio/관심사/오르빗/평점) + 팔로우 토글 +
 /// 시간 요청 + 열린 슬롯 목록(탭 → 예약 화면).
 struct PersonProfileView: View {
+    @Environment(\.openURL) private var openURL
     @State private var viewModel: PersonProfileViewModel
     @State private var showingTimeRequest = false
     @State private var showingBlockConfirm = false
@@ -186,7 +187,13 @@ struct PersonProfileView: View {
                         .font(.subheadline)
                         .foregroundStyle(Theme.accent)
                     HStack(spacing: 8) {
-                        Text("오르비터 \(data.orbiters)")
+                        NavigationLink {
+                            ConnectionsView(username: data.user.username, initialType: .orbiters)
+                        } label: {
+                            Text("오르비터 \(data.orbiters)")
+                                .monospacedDigit()
+                        }
+                        .buttonStyle(.plain)
                         if let rating = data.rating, rating.count > 0 {
                             HStack(spacing: 2) {
                                 Image(systemName: "star.fill")
@@ -211,10 +218,100 @@ struct PersonProfileView: View {
             if !data.user.interestTags.isEmpty {
                 interestChips(data.user.interestTags)
             }
+
+            let socialLinks = data.user.socialLinkItems
+            if !socialLinks.isEmpty {
+                socialLinksRow(socialLinks)
+            }
+
+            let experience = Array(data.user.experienceItems.prefix(3))
+            if !experience.isEmpty {
+                experienceSection(experience)
+            }
+
+            let education = Array(data.user.educationItems.prefix(2))
+            if !education.isEmpty {
+                educationSection(education)
+            }
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    // MARK: - 소셜 링크 / 경력 / 학력
+
+    private func socialLinksRow(_ links: [SocialLinkItem]) -> some View {
+        HStack(spacing: 10) {
+            ForEach(links) { link in
+                Button {
+                    openURL(link.url)
+                } label: {
+                    Image(systemName: link.kind.systemImage)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Theme.accent)
+                        .frame(width: 34, height: 34)
+                        .background(Color.white.opacity(0.08), in: Circle())
+                }
+                .accessibilityLabel(link.kind.label)
+            }
+        }
+    }
+
+    private func experienceSection(_ items: [Experience]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("경력")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Theme.secondaryText)
+            ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text(item.company)
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(.white)
+                        if let role = item.role, !role.isEmpty {
+                            Text(role)
+                                .font(.footnote)
+                                .foregroundStyle(Theme.secondaryText)
+                        }
+                    }
+                    if let period = item.periodText {
+                        Text(period)
+                            .font(.caption)
+                            .monospacedDigit()
+                            .foregroundStyle(Theme.secondaryText)
+                    }
+                }
+            }
+        }
+    }
+
+    private func educationSection(_ items: [Education]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("학력")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Theme.secondaryText)
+            ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text(item.school)
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(.white)
+                        if let detail = item.detailText {
+                            Text(detail)
+                                .font(.footnote)
+                                .foregroundStyle(Theme.secondaryText)
+                        }
+                    }
+                    if let period = item.periodText {
+                        Text(period)
+                            .font(.caption)
+                            .monospacedDigit()
+                            .foregroundStyle(Theme.secondaryText)
+                    }
+                }
+            }
+        }
     }
 
     private func interestChips(_ interests: [String]) -> some View {

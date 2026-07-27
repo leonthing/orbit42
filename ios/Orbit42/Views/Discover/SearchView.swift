@@ -239,20 +239,25 @@ private struct OrbitPersonCard: View {
                     .frame(height: 1)
                     .padding(.horizontal, 12)
 
-                ForEach(person.slots) { slot in
-                    NavigationLink {
-                        SlotBookingView(username: person.username, slug: slot.slug)
-                    } label: {
-                        slotRow(slot)
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(person.slots) { slot in
+                        NavigationLink {
+                            SlotBookingView(username: person.username, slug: slot.slug)
+                        } label: {
+                            slotPill(slot)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
             }
         }
         .background(Theme.surface, in: RoundedRectangle(cornerRadius: 14))
     }
 
-    /// 상단 행 — 탭하면 프로필로 간다는 걸 "프로필 >" 로 명시.
+    /// 상단 행 — 행 전체 탭 = 프로필 (표준 관례라 별도 affordance 없이 충분).
     private var personRow: some View {
         HStack(spacing: 12) {
             DiscoverAvatar(
@@ -276,41 +281,32 @@ private struct OrbitPersonCard: View {
                         .padding(.top, 2)
                 }
             }
-            Spacer(minLength: 8)
-            HStack(spacing: 3) {
-                Text("프로필")
-                    .font(.caption)
-                Image(systemName: "chevron.right")
-                    .font(.caption2.weight(.semibold))
-            }
-            .foregroundStyle(Theme.secondaryText)
+            Spacer(minLength: 0)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 12)
         .contentShape(Rectangle())
     }
 
-    private func slotRow(_ slot: TimeSlot) -> some View {
-        HStack(spacing: 8) {
+    /// 슬롯 알약 버튼 — 캡슐 배경이 버튼 affordance 를 주므로 chevron 불필요.
+    private func slotPill(_ slot: TimeSlot) -> some View {
+        HStack(spacing: 6) {
             Image(systemName: "clock")
-                .font(.caption)
+                .font(.caption2)
                 .foregroundStyle(Theme.accent)
             Text(slot.title)
                 .font(.footnote.weight(.medium))
                 .foregroundStyle(.white)
                 .lineLimit(1)
-            Spacer(minLength: 8)
-            Text("\(slot.durationMin)분 · \(DiscoverFormat.priceText(cents: slot.priceCents))")
+            Text("· \(slot.durationMin)분 · \(DiscoverFormat.priceText(cents: slot.priceCents))")
                 .font(.caption)
                 .monospacedDigit()
                 .foregroundStyle(Theme.secondaryText)
-            Image(systemName: "chevron.right")
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(Theme.secondaryText.opacity(0.7))
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .contentShape(Rectangle())
+        .padding(.vertical, 8)
+        .background(Theme.accent.opacity(0.12), in: Capsule())
+        .contentShape(Capsule())
     }
 }
 
