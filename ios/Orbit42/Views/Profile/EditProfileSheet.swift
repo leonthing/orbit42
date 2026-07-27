@@ -22,6 +22,9 @@ struct EditProfileSheet: View {
 
     @State private var photoItem: PhotosPickerItem?
     @State private var isUploadingAvatar = false
+    /// 공유(OG) 헤더 이미지
+    @State private var sharePhotoItem: PhotosPickerItem?
+    @State private var isUploadingShareImage = false
     @State private var isSaving = false
     @State private var errorMessage: String?
 
@@ -63,6 +66,7 @@ struct EditProfileSheet: View {
         NavigationStack {
             Form {
                 avatarSection
+                shareHeaderSection
                 nameSection
                 bioSection
                 birthDateSection
@@ -161,6 +165,109 @@ struct EditProfileSheet: View {
         }
         .frame(width: 64, height: 64)
         .clipShape(Circle())
+    }
+
+    // MARK: - 공유 헤더 이미지 (OG)
+
+    private var shareHeaderSection: some View {
+        Section {
+            if let urlString = currentUser.shareImageUrl, let url = URL(string: urlString) {
+                AsyncImage(url: url) { phase in
+                    if let image = phase.image {
+                        image.resizable().scaledToFill()
+                    } else {
+                        ZStack {
+                            Color.white.opacity(0.05)
+                            ProgressView().tint(Theme.secondaryText)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 120)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .listRowSeparator(.hidden)
+            }
+
+            PhotosPicker(selection: $sharePhotoItem, matching: .images) {
+                HStack {
+                    Label(
+                        currentUser.shareImageUrl == nil ? "이미지 선택" : "이미지 바꾸기",
+                        systemImage: "photo.badge.plus"
+                    )
+                    .foregroundStyle(Theme.accent)
+                    Spacer()
+                    if isUploadingShareImage {
+                        ProgressView().tint(Theme.secondaryText)
+                    }
+                }
+            }
+            .disabled(isUploadingShareImage)
+            .onChange(of: sharePhotoItem) { _, newItem in
+                if let newItem { uploadShareImage(newItem) }
+            }
+
+            if currentUser.shareImageUrl != nil {
+                Button(role: .destructive) {
+                    removeShareImage()
+                } label: {
+                    Label("기본 카드로 되돌리기", systemImage: "arrow.uturn.backward")
+                }
+                .disabled(isUploadingShareImage)
+            }
+        } header: {
+            Text("공유 헤더 이미지")
+        } footer: {
+            Text("프로필 링크를 공유할 때(카톡·문자 미리보기) 나오는 이미지예요. 설정하지 않으면 자동 명함 카드가 나가요. 가로 1200×630 비율을 권장해요.")
+        }
+        .listRowBackground(Theme.surface)
+    }
+
+    private func uploadShareImage(_ item: PhotosPickerItem) {
+        errorMessage = nil
+        isUploadingShareImage = true
+        Task {
+            defer {
+                isUploadingShareImage = false
+                sharePhotoItem = nil
+            }
+            do {
+                guard let rawData = try await item.loadTransferable(type: Data.self),
+                      let jpegData = Self.resizedJPEG(from: rawData, maxDimension: 1600)
+                else {
+                    errorMessage = "이미지를 불러오지 못했어요. 다른 사진을 골라 주세요."
+                    return
+                }
+                struct ShareImageResponse: Decodable { let ok: Bool?; let shareImageUrl: String? }
+                let _: ShareImageResponse = try await APIClient.shared.upload(
+                    "/api/v1/me/share-image",
+                    fileData: jpegData,
+                    fieldName: "file",
+                    fileName: "share.jpg",
+                    mimeType: "image/jpeg"
+                )
+                let response: MeResponse = try await APIClient.shared.get("/api/v1/me")
+                auth.updateUser(response.user)
+            } catch let apiError as APIError {
+                errorMessage = apiError.errorDescription
+            } catch {
+                errorMessage = "이미지를 올리지 못했어요. 잠시 후 다시 시도해 주세요."
+            }
+        }
+    }
+
+    private func removeShareImage() {
+        errorMessage = nil
+        isUploadingShareImage = true
+        Task {
+            defer { isUploadingShareImage = false }
+            do {
+                let _: AckResponse = try await APIClient.shared.delete("/api/v1/me/share-image")
+                let response: MeResponse = try await APIClient.shared.get("/api/v1/me")
+                auth.updateUser(response.user)
+            } catch {
+                errorMessage = "이미지를 제거하지 못했어요. 잠시 후 다시 시도해 주세요."
+            }
+        }
     }
 
     // MARK: - 이름 / 소개

@@ -109,28 +109,18 @@ struct CalendarView: View {
 
     /// "일정" 세그먼트 — 캘린더 전용 toolbar(오늘/+)는 이 브랜치에만 붙어서,
     /// "타임슬롯" 세그먼트에서는 `SlotsContent` 의 +(프리셋) toolbar 가 대신 보인다.
-    /// 일정 세그먼트의 보기 단위 — 연/월/주/일.
-    private enum ScheduleViewMode: String, CaseIterable, Identifiable {
-        case year = "연"
-        case month = "월"
-        case week = "주"
-        case day = "일"
-        var id: String { rawValue }
+    /// 일정 세그먼트의 보기 단계 — 애플 캘린더식 드릴다운 (연 → 월 → 주).
+    /// 좌상단 뒤로가기로 한 단계 올라가고, 연의 월 탭 / 월의 선택일 재탭으로 내려간다.
+    private enum ScheduleViewMode {
+        case year
+        case month
+        case week
     }
 
     @State private var scheduleViewMode: ScheduleViewMode = .month
 
     private var scheduleContent: some View {
         VStack(spacing: 0) {
-            Picker("보기", selection: $scheduleViewMode) {
-                ForEach(ScheduleViewMode.allCases) { mode in
-                    Text(mode.rawValue).tag(mode)
-                }
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal, 16)
-            .padding(.top, 6)
-
             switch scheduleViewMode {
             case .year:
                 yearView
@@ -145,12 +135,6 @@ struct CalendarView: View {
             case .week:
                 weekHeader
                 weekStrip
-                Divider()
-                    .overlay(Color.white.opacity(0.08))
-                    .padding(.top, 8)
-                eventListSection
-            case .day:
-                dayHeader
                 Divider()
                     .overlay(Color.white.opacity(0.08))
                     .padding(.top, 8)
@@ -203,15 +187,21 @@ struct CalendarView: View {
     // MARK: - 월 헤더
 
     private var monthHeader: some View {
-        HStack {
+        HStack(spacing: 4) {
+            // 애플 캘린더식 뒤로가기 — 연간 보기로 올라간다.
             Button {
-                withAnimation { viewModel.showPreviousMonth() }
+                withAnimation { scheduleViewMode = .year }
             } label: {
-                Image(systemName: "chevron.left")
-                    .font(.body.weight(.semibold))
-                    .frame(width: 44, height: 44)
+                HStack(spacing: 3) {
+                    Image(systemName: "chevron.left")
+                        .font(.subheadline.weight(.semibold))
+                    Text(String(displayedYear) + "년")
+                        .font(.subheadline.weight(.medium))
+                }
+                .foregroundStyle(Theme.accent)
+                .frame(height: 44)
             }
-            .accessibilityLabel("이전 달")
+            .accessibilityLabel("연간 보기")
 
             Spacer()
 
@@ -222,11 +212,19 @@ struct CalendarView: View {
             Spacer()
 
             Button {
+                withAnimation { viewModel.showPreviousMonth() }
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.body.weight(.semibold))
+                    .frame(width: 40, height: 44)
+            }
+            .accessibilityLabel("이전 달")
+            Button {
                 withAnimation { viewModel.showNextMonth() }
             } label: {
                 Image(systemName: "chevron.right")
                     .font(.body.weight(.semibold))
-                    .frame(width: 44, height: 44)
+                    .frame(width: 40, height: 44)
             }
             .accessibilityLabel("다음 달")
         }
@@ -250,26 +248,44 @@ struct CalendarView: View {
     }()
 
     private var weekHeader: some View {
-        HStack {
+        HStack(spacing: 4) {
+            // 뒤로가기 — 월간 보기로 올라간다.
+            Button {
+                withAnimation { scheduleViewMode = .month }
+            } label: {
+                HStack(spacing: 3) {
+                    Image(systemName: "chevron.left")
+                        .font(.subheadline.weight(.semibold))
+                    Text("\(calendar.component(.month, from: viewModel.selectedDate))월")
+                        .font(.subheadline.weight(.medium))
+                }
+                .foregroundStyle(Theme.accent)
+                .frame(height: 44)
+            }
+            .accessibilityLabel("월간 보기")
+
+            Spacer()
+
+            Text("\(Self.weekRangeFormatter.string(from: weekStart)) ~ \(Self.weekRangeFormatter.string(from: calendar.date(byAdding: .day, value: 6, to: weekStart) ?? weekStart))")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+
+            Spacer()
+
             Button {
                 withAnimation { shiftDays(-7) }
             } label: {
                 Image(systemName: "chevron.left")
                     .font(.body.weight(.semibold))
-                    .frame(width: 44, height: 44)
+                    .frame(width: 40, height: 44)
             }
             .accessibilityLabel("이전 주")
-            Spacer()
-            Text("\(Self.weekRangeFormatter.string(from: weekStart)) ~ \(Self.weekRangeFormatter.string(from: calendar.date(byAdding: .day, value: 6, to: weekStart) ?? weekStart))")
-                .font(.headline.weight(.semibold))
-                .foregroundStyle(.white)
-            Spacer()
             Button {
                 withAnimation { shiftDays(7) }
             } label: {
                 Image(systemName: "chevron.right")
                     .font(.body.weight(.semibold))
-                    .frame(width: 44, height: 44)
+                    .frame(width: 40, height: 44)
             }
             .accessibilityLabel("다음 주")
         }
@@ -320,50 +336,6 @@ struct CalendarView: View {
             )
         }
         .buttonStyle(.plain)
-    }
-
-    // MARK: - 일간 뷰
-
-    private static let dayTitleFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "ko_KR")
-        formatter.dateFormat = "M월 d일 (E)"
-        return formatter
-    }()
-
-    private var dayHeader: some View {
-        HStack {
-            Button {
-                withAnimation { shiftDays(-1) }
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.body.weight(.semibold))
-                    .frame(width: 44, height: 44)
-            }
-            .accessibilityLabel("이전 날")
-            Spacer()
-            VStack(spacing: 2) {
-                Text(Self.dayTitleFormatter.string(from: viewModel.selectedDate))
-                    .font(.headline.weight(.semibold))
-                    .foregroundStyle(calendar.isDateInToday(viewModel.selectedDate) ? Theme.accent : .white)
-                if calendar.isDateInToday(viewModel.selectedDate) {
-                    Text("오늘")
-                        .font(.caption2)
-                        .foregroundStyle(Theme.secondaryText)
-                }
-            }
-            Spacer()
-            Button {
-                withAnimation { shiftDays(1) }
-            } label: {
-                Image(systemName: "chevron.right")
-                    .font(.body.weight(.semibold))
-                    .frame(width: 44, height: 44)
-            }
-            .accessibilityLabel("다음 날")
-        }
-        .padding(.horizontal, 8)
-        .padding(.top, 4)
     }
 
     private func shiftDays(_ delta: Int) {
@@ -504,7 +476,12 @@ struct CalendarView: View {
                         isToday: calendar.isDateInToday(day),
                         dotColors: viewModel.dotColors(on: day)
                     ) {
-                        viewModel.selectedDate = day
+                        // 애플 캘린더식 드릴다운: 이미 선택된 날을 다시 탭하면 주 보기로.
+                        if calendar.isDate(day, inSameDayAs: viewModel.selectedDate) {
+                            withAnimation { scheduleViewMode = .week }
+                        } else {
+                            viewModel.selectedDate = day
+                        }
                     }
                 } else {
                     Color.clear.frame(height: 46)

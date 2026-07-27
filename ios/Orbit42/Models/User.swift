@@ -26,6 +26,8 @@ struct User: Codable, Equatable, Sendable {
     let isPrivate: Bool?
     /// Apple 계정 연결 여부 (설정 > 계정)
     let appleLinked: Bool?
+    /// 프로필 공유(OG) 헤더 이미지 — 없으면 자동 명함 카드
+    let shareImageUrl: String?
 
     init(
         username: String,
@@ -40,7 +42,8 @@ struct User: Codable, Equatable, Sendable {
         orbiters: Int? = nil,
         orbiting: Int? = nil,
         isPrivate: Bool? = nil,
-        appleLinked: Bool? = nil
+        appleLinked: Bool? = nil,
+        shareImageUrl: String? = nil
     ) {
         self.username = username
         self.displayName = displayName
@@ -55,6 +58,7 @@ struct User: Codable, Equatable, Sendable {
         self.orbiting = orbiting
         self.isPrivate = isPrivate
         self.appleLinked = appleLinked
+        self.shareImageUrl = shareImageUrl
     }
 
     /// 화면에 표시할 이름 (displayName 이 없으면 username)

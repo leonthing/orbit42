@@ -14,6 +14,32 @@ export default async function Image({
   params: { username: string };
 }) {
   const profile = await getProfile(params.username);
+
+  // 사용자가 직접 올린 공유 헤더 이미지가 있으면 명함 카드 대신 그 이미지로.
+  const customShareImage = (profile?.share_image_url as string | null) || null;
+  if (customShareImage) {
+    return new ImageResponse(
+      (
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            background: "#0a0a0f",
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={customShareImage}
+            alt=""
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
+        </div>
+      ),
+      { ...size },
+    );
+  }
+
   const name = profile?.display_name || profile?.username || "Orbit42";
   const username = profile?.username || params.username;
   const bio = (profile?.bio as string | null) || "";

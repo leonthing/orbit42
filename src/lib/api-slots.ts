@@ -36,5 +36,6 @@ export function toApiSlotDetail(s: TimeSlot, username: string) {
     bufferMin: s.buffer_min,
     validFrom: s.valid_from,
     validUntil: s.valid_until,
+    imageUrls: s.image_urls ?? [],
   };
 }

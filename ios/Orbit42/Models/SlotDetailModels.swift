@@ -39,6 +39,8 @@ struct SlotDetail: Decodable, Identifiable, Sendable {
     let bufferMin: Int
     let validFrom: String?
     let validUntil: String?
+    /// 공유 링크(OG) 미리보기에 쓰이는 슬롯 이미지 (첫 장이 헤더)
+    let imageUrls: [String]?
 
     var isAuction: Bool { pricingModel == "auction" }
 
@@ -58,7 +60,7 @@ struct SlotDetail: Decodable, Identifiable, Sendable {
         case capacity, slotType, mode, pricingModel, active, autoApprove
         case shareUrl, createdAt
         case locations, workingHours, slotIntervalMin, minNoticeHours
-        case maxAdvanceDays, bufferMin, validFrom, validUntil
+        case maxAdvanceDays, bufferMin, validFrom, validUntil, imageUrls
     }
 
     init(from decoder: Decoder) throws {
@@ -87,6 +89,7 @@ struct SlotDetail: Decodable, Identifiable, Sendable {
         bufferMin = try container.decodeIfPresent(Int.self, forKey: .bufferMin) ?? 0
         validFrom = try container.decodeIfPresent(String.self, forKey: .validFrom)
         validUntil = try container.decodeIfPresent(String.self, forKey: .validUntil)
+        imageUrls = try container.decodeIfPresent([String].self, forKey: .imageUrls)
     }
 }
 
@@ -212,4 +215,10 @@ enum SlotDetailFormat {
         formatter.dateFormat = "M월 d일 (E) HH:mm"
         return formatter
     }()
+}
+
+
+/// POST/DELETE /api/v1/slots/{id}/images 응답.
+struct SlotImagesResponse: Decodable, Sendable {
+    let imageUrls: [String]
 }

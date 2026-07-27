@@ -18,7 +18,7 @@ async function fullUser(username: string) {
     getFollowStats(username),
     getAdminClient()
       .from("users")
-      .select("is_private, apple_sub")
+      .select("is_private, apple_sub, share_image_url")
       .eq("username", username)
       .maybeSingle(),
   ]);
@@ -36,6 +36,8 @@ async function fullUser(username: string) {
     isPrivate: Boolean(privacyRow.data?.is_private),
     // Apple 계정 연결 여부 (설정 > 계정)
     appleLinked: privacyRow.data?.apple_sub != null,
+    // 프로필 공유(OG) 헤더 이미지 — 없으면 자동 명함 카드
+    shareImageUrl: (privacyRow.data?.share_image_url as string | null) ?? null,
   };
 }
 

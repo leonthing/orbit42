@@ -1,4 +1,6 @@
+import PhotosUI
 import SwiftUI
+import UIKit
 
 // MARK: - 내비게이션 라우트
 
@@ -23,6 +25,11 @@ struct SlotDetailView: View {
     @State private var newWindowDate = Date()
     /// 미리보기 미니 캘린더에서 선택한 날 (자정 기준)
     @State private var previewDay: Date?
+    /// 공유(OG) 이미지 — nil 이면 서버 값(detail.imageUrls) 사용
+    @State private var shareImages: [String]?
+    @State private var sharePhotoItems: [PhotosPickerItem] = []
+    @State private var isUploadingShareImages = false
+    @State private var shareImageError: String?
 
     init(route: SlotRoute, listViewModel: SlotsViewModel) {
         self.route = route
@@ -141,6 +148,7 @@ struct SlotDetailView: View {
                 windowsSection
             }
             validitySection
+            shareImagesSection
             previewSection
         }
         .scrollContentBackground(.hidden)
@@ -438,6 +446,139 @@ struct SlotDetailView: View {
             Text("설정하지 않으면 기간 제한 없이 열려요")
         }
         .listRowBackground(Theme.surface)
+    }
+
+    // MARK: 공유 이미지 (OG)
+
+    private var currentShareImages: [String] {
+        shareImages ?? viewModel.detail?.imageUrls ?? []
+    }
+
+    private var shareImagesSection: some View {
+        Section {
+            if !currentShareImages.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(currentShareImages, id: \.self) { url in
+                            AsyncImage(url: URL(string: url)) { phase in
+                                if let image = phase.image {
+                                    image.resizable().scaledToFill()
+                                } else {
+                                    ZStack {
+                                        Color.white.opacity(0.05)
+                                        ProgressView().tint(Theme.secondaryText)
+                                    }
+                                }
+                            }
+                            .frame(width: 96, height: 60)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .contextMenu {
+                                Button(role: .destructive) {
+                                    deleteShareImage(url)
+                                } label: {
+                                    Label("삭제", systemImage: "trash")
+                                }
+                            }
+                        }
+                    }
+                }
+                .listRowSeparator(.hidden)
+            }
+
+            PhotosPicker(
+                selection: $sharePhotoItems,
+                maxSelectionCount: 6,
+                matching: .images
+            ) {
+                HStack {
+                    Label(currentShareImages.isEmpty ? "이미지 추가" : "이미지 더 추가",
+                          systemImage: "photo.badge.plus")
+                        .foregroundStyle(Theme.accent)
+                    Spacer()
+                    if isUploadingShareImages {
+                        ProgressView().tint(Theme.secondaryText)
+                    }
+                }
+            }
+            .disabled(isUploadingShareImages)
+            .onChange(of: sharePhotoItems) { _, newItems in
+                if !newItems.isEmpty { uploadShareImages(newItems) }
+            }
+
+            if let shareImageError {
+                Text(shareImageError)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+            }
+        } header: {
+            Text("공유 이미지")
+        } footer: {
+            Text("링크를 공유할 때(카톡·문자 미리보기) 첫 번째 이미지가 헤더로 나와요. 예약 페이지에도 표시돼요.")
+        }
+        .listRowBackground(Theme.surface)
+    }
+
+    private func uploadShareImages(_ items: [PhotosPickerItem]) {
+        shareImageError = nil
+        isUploadingShareImages = true
+        Task {
+            defer {
+                isUploadingShareImages = false
+                sharePhotoItems = []
+            }
+            for item in items {
+                guard let raw = try? await item.loadTransferable(type: Data.self),
+                      let jpeg = Self.shareResizedJPEG(from: raw)
+                else { continue }
+                do {
+                    let response: SlotImagesResponse = try await APIClient.shared.upload(
+                        "/api/v1/slots/\(route.id)/images",
+                        fileData: jpeg,
+                        fieldName: "files",
+                        fileName: "slot.jpg",
+                        mimeType: "image/jpeg"
+                    )
+                    shareImages = response.imageUrls
+                } catch let apiError as APIError {
+                    shareImageError = apiError.errorDescription
+                    return
+                } catch {
+                    shareImageError = "이미지를 올리지 못했어요. 잠시 후 다시 시도해 주세요."
+                    return
+                }
+            }
+        }
+    }
+
+    private func deleteShareImage(_ url: String) {
+        shareImageError = nil
+        Task {
+            var allowed = CharacterSet.urlQueryAllowed
+            allowed.remove(charactersIn: "&=+?#/:")
+            let encoded = url.addingPercentEncoding(withAllowedCharacters: allowed) ?? url
+            do {
+                let response: SlotImagesResponse = try await APIClient.shared.delete(
+                    "/api/v1/slots/\(route.id)/images?url=\(encoded)"
+                )
+                shareImages = response.imageUrls
+            } catch {
+                shareImageError = "이미지를 삭제하지 못했어요."
+            }
+        }
+    }
+
+    /// 긴 변 1600px, JPEG 85% — OG 헤더(1200×630)에 충분한 크기.
+    private static func shareResizedJPEG(from data: Data, maxDimension: CGFloat = 1600) -> Data? {
+        guard let image = UIImage(data: data) else { return nil }
+        let longest = max(image.size.width, image.size.height)
+        guard longest > maxDimension else { return image.jpegData(compressionQuality: 0.85) }
+        let scale = maxDimension / longest
+        let newSize = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        let resized = renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+        }
+        return resized.jpegData(compressionQuality: 0.85)
     }
 
     // MARK: 예약 가능 시간 미리보기
