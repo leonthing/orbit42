@@ -23,6 +23,7 @@ struct CalendarView: View {
     @State private var selectedEvent: CalendarEvent?
     @State private var completionErrorMessage: String?
 
+    @Environment(TabRouter.self) private var router
     @State private var mode: Mode = CalendarView.initialMode
     /// 세그먼트 전환에도 슬롯 목록 캐시가 유지되도록 여기서 소유한다.
     @State private var slotsViewModel = SlotsViewModel()
@@ -74,7 +75,20 @@ struct CalendarView: View {
             } message: {
                 Text(completionErrorMessage ?? "")
             }
+            // 자산 탭 추천 카드 등 다른 탭에서 요청한 세그먼트로 전환.
+            .onChange(of: router.calendarModeRequest) { _, request in
+                applyModeRequest(request)
+            }
+            .onAppear {
+                applyModeRequest(router.calendarModeRequest)
+            }
         }
+    }
+
+    private func applyModeRequest(_ request: String?) {
+        guard let request, let requested = Mode(rawValue: request) else { return }
+        mode = requested
+        router.calendarModeRequest = nil
     }
 
     // MARK: - 세그먼트

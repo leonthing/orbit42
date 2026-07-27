@@ -155,6 +155,30 @@ struct TimeAssetSummary: Decodable {
     let trend: [TimeAssetTrendWeek]
     let traded: TimeAssetTraded
     let messages: [String]
+    /// 행동 추천 카드 (구 서버 응답에는 없음)
+    let actions: [TimeAssetAction]?
+}
+
+/// 진단 → 행동 연결 카드. target: "slots" | "calendar" | "profile" | "asset-settings"
+struct TimeAssetAction: Decodable, Identifiable {
+    let key: String
+    let title: String
+    let body: String
+    let ctaLabel: String
+    let target: String
+
+    var id: String { key }
+
+    var systemImage: String {
+        switch key {
+        case "create-slot": return "clock.badge.checkmark"
+        case "share-profile": return "square.and.arrow.up"
+        case "invest-time": return "chart.line.uptrend.xyaxis"
+        case "set-wage": return "wonsign.circle"
+        case "record-income": return "plus.circle"
+        default: return "sparkles"
+        }
+    }
 }
 
 // MARK: - 포맷 헬퍼

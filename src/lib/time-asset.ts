@@ -372,6 +372,15 @@ export type TimeAssetSummary = {
     /** 내 기준 시급 대비 판매 단가 배수 (둘 다 있을 때만) */
     vsIncomeRatio: number | null;
   };
+  /** 행동 추천 — 진단을 다음 행동(슬롯 판매·투자·설정)으로 잇는 카드 */
+  actions: Array<{
+    key: string;
+    title: string;
+    body: string;
+    ctaLabel: string;
+    /** "slots" | "calendar" | "profile" | "asset-settings" */
+    target: string;
+  }>;
   /** 규칙 기반 한 줄 인사이트 */
   messages: string[];
   /** 급여 유형 — freelance 면 실효 시급 모드 */
@@ -622,6 +631,74 @@ export async function getTimeAssetSummary(
     messages.push("기록 시간의 70% 이상이 수입 활동이에요. 소비·투자 균형도 챙겨보세요.");
   }
 
+  // 행동 추천 — "시간 진단"을 실제 다음 행동으로 연결한다 (우선순위 순, 최대 3개).
+  const { count: slotCount } = await db
+    .from("time_slots")
+    .select("id", { count: "exact", head: true })
+    .eq("host_id", userId)
+    .eq("active", true);
+
+  const actions: TimeAssetSummary["actions"] = [];
+  const freeH = Math.round(unrecordedForMsg);
+
+  if (income.incomeType == null) {
+    actions.push({
+      key: "set-wage",
+      title: "내 1시간의 가치부터 정해보세요",
+      body: "시급이나 월급을 설정하면 모든 일정이 금액으로 보이고, 시간 분석이 돈 단위로 계산돼요.",
+      ctaLabel: "자산 설정 열기",
+      target: "asset-settings",
+    });
+  }
+
+  if ((slotCount ?? 0) === 0) {
+    actions.push({
+      key: "create-slot",
+      title: "남는 시간으로 수익을 만들어 보세요",
+      body:
+        hourly != null && freeH >= 5
+          ? `이번 주 비어있는 시간이 약 ${freeH}시간 — 시급 기준 ₩${Math.round(freeH * hourly).toLocaleString("ko-KR")}어치예요. 커피챗·멘토링·자문 타임슬롯을 열면 그중 일부가 실제 수익이 돼요.`
+          : "커피챗·멘토링·자문 타임슬롯을 열면 비어있는 시간이 예약 가능한 상품이 돼요. 가격은 무료부터 경매까지 자유예요.",
+      ctaLabel: "타임슬롯 만들기",
+      target: "slots",
+    });
+  } else if (tradedKrw === 0) {
+    actions.push({
+      key: "share-profile",
+      title: "열어둔 타임슬롯을 알려보세요",
+      body: "아직 거래가 없어요. 프로필 링크를 SNS나 지인에게 공유하면 예약이 시작돼요. 팔로워에게는 오르빗 탭에도 노출돼요.",
+      ctaLabel: "프로필 공유하러 가기",
+      target: "profile",
+    });
+  }
+
+  if (hoursByBucket.invest === 0 && scheduled > 0) {
+    actions.push({
+      key: "invest-time",
+      title: "미래에 투자하는 시간이 이번 주 0시간이에요",
+      body:
+        hourly != null
+          ? `학습·운동·사이드 프로젝트 같은 투자 시간이 내일의 시급을 올려요. 주 2시간이면 1년에 ${Math.round(104)}시간 — 지금 시급 기준 ₩${Math.round(104 * hourly).toLocaleString("ko-KR")}어치의 미래 투자예요.`
+          : "학습·운동·사이드 프로젝트 같은 투자 시간이 내일의 시급을 올려요. 학습 캘린더에 한 블록만 넣어볼까요?",
+      ctaLabel: "학습 일정 추가",
+      target: "calendar",
+    });
+  }
+
+  if (
+    income.incomeType === "freelance" &&
+    freelance &&
+    freelance.months.length === 0
+  ) {
+    actions.push({
+      key: "record-income",
+      title: "이번 달 수입을 기록해 보세요",
+      body: "월 수입을 기록하면 실제 데이터로 실효 시급이 계산되고, 시간당 얼마를 벌고 있는지 정확해져요.",
+      ctaLabel: "수입 기록하기",
+      target: "asset-settings",
+    });
+  }
+
   return {
     hourlyValueKrw: hourly,
     conversions:
@@ -654,6 +731,7 @@ export async function getTimeAssetSummary(
           : null,
     },
     messages,
+    actions: actions.slice(0, 3),
     incomeType: income.incomeType,
     freelance,
   };

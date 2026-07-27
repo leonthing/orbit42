@@ -3,11 +3,13 @@ import SwiftUI
 @main
 struct Orbit42App: App {
     @State private var auth = AuthViewModel()
+    @State private var router = TabRouter()
 
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environment(auth)
+                .environment(router)
                 .preferredColorScheme(.dark)
                 .tint(Theme.accent)
         }

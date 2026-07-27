@@ -4,6 +4,7 @@ import SwiftUI
 /// 시급 기준(월급/시급 입력)으로 내 1시간의 가치를 환산하고,
 /// 이번 주 시간 사용을 수입/투자/소비/생활 버킷으로 분석한다.
 struct AssetView: View {
+    @Environment(TabRouter.self) private var router
     @State private var viewModel = AssetViewModel()
     @State private var showingSettingsSheet = false
     @State private var showingBucketMapSheet = false
@@ -127,6 +128,9 @@ struct AssetView: View {
                     )
                 }
                 weekUsageCard(summary)
+                if let actions = summary.actions, !actions.isEmpty {
+                    actionsCard(actions)
+                }
                 if summary.trend.count > 1 {
                     trendCard(summary.trend)
                 }
@@ -353,6 +357,66 @@ struct AssetView: View {
         }
         let sleepPerDay = AssetFormat.hours(summary.sleepHoursPerDay ?? sleepWeek / 7)
         return "기록 \(recorded)시간 · 수면(설정 \(sleepPerDay)시간/일) \(AssetFormat.hours(sleepWeek))시간 · 그 외 미기록 \(unrecorded)시간"
+    }
+
+    // MARK: 2.5 행동 추천 — 진단을 다음 행동으로
+
+    private func actionsCard(_ actions: [TimeAssetAction]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("이렇게 활용해 보세요")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Theme.secondaryText)
+
+            ForEach(actions) { action in
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 8) {
+                        Image(systemName: action.systemImage)
+                            .font(.subheadline)
+                            .foregroundStyle(Theme.accent)
+                        Text(action.title)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                    }
+                    Text(action.body)
+                        .font(.footnote)
+                        .foregroundStyle(Theme.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Button {
+                        perform(action)
+                    } label: {
+                        Text(action.ctaLabel)
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(Theme.accent)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 7)
+                            .background(Theme.accent.opacity(0.15), in: Capsule())
+                    }
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
+            }
+        }
+        .padding(16)
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    /// 추천 카드 CTA — 대상 탭/시트로 이동.
+    private func perform(_ action: TimeAssetAction) {
+        switch action.target {
+        case "slots":
+            router.calendarModeRequest = "slots"
+            router.selection = .calendar
+        case "calendar":
+            router.calendarModeRequest = "schedule"
+            router.selection = .calendar
+        case "profile":
+            router.selection = .profile
+        case "asset-settings":
+            showingSettingsSheet = true
+        default:
+            break
+        }
     }
 
     // MARK: 3. 4주 추이
