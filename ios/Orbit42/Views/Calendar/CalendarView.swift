@@ -461,9 +461,19 @@ private struct EventRow: View {
                                     .background(Color.white.opacity(0.08), in: Capsule())
                             }
                         }
-                        Text(timeText)
-                            .font(.footnote)
-                            .foregroundStyle(Theme.secondaryText)
+                        HStack(spacing: 6) {
+                            Text(timeText)
+                                .font(.footnote)
+                                .foregroundStyle(Theme.secondaryText)
+                            if let earningText {
+                                Text(earningText)
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(Theme.accent)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Theme.accent.opacity(0.15), in: Capsule())
+                            }
+                        }
                         if let description = event.description, !description.isEmpty {
                             Text(description)
                                 .font(.footnote)
@@ -488,6 +498,16 @@ private struct EventRow: View {
     private var rowOpacity: Double {
         if event.completed { return 0.55 }
         return event.tentative ? 0.65 : 1
+    }
+
+    /// 수익 기록 배지 — "₩50,000"
+    private var earningText: String? {
+        guard let earning = event.earningKrw else { return nil }
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.locale = Locale(identifier: "ko_KR")
+        let amount = formatter.string(from: NSNumber(value: earning)) ?? "\(earning)"
+        return "₩\(amount)"
     }
 
     private var timeText: String {

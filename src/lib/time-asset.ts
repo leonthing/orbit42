@@ -497,6 +497,18 @@ export async function getTimeAssetSummary(
     const we = new Date(ws.getTime() + 7 * 24 * 60 * 60_000);
     const acc = emptyBuckets();
     for (const b of trendBlocks) {
+      // 수동 수익 기록은 "실제 번 돈"이므로 버킷·종일 여부와 무관하게 이번 주
+      // 수입 금액에 합산한다 (시간 비례가 아니라 이벤트 단위 — 시작 시각이
+      // 이번 주에 속할 때 한 번만).
+      if (i === TREND_WEEKS - 1) {
+        const manual = earningFor(b.id);
+        if (manual != null) {
+          earnRateApplied = true;
+          if (b.start.getTime() >= ws.getTime() && b.start.getTime() < we.getTime()) {
+            currentWeekEarnValue += manual;
+          }
+        }
+      }
       if (b.all_day) continue;
       const overlap =
         Math.min(b.end.getTime(), we.getTime()) -
@@ -504,21 +516,11 @@ export async function getTimeAssetSummary(
       if (overlap <= 0) continue;
       const bucket = bucketOf(b);
       acc[bucket] += overlap / 3_600_000;
-      if (i === TREND_WEEKS - 1 && bucket === "earn") {
-        // 수동 기록이 있으면 실제 번 금액으로, 없으면 캘린더 단가 → 기준 시급.
-        // 수동 금액은 시간 비례가 아니라 이벤트 단위라 시작 시각이 이번 주에
-        // 속할 때 한 번만 더한다.
-        const manual = earningFor(b.id);
-        if (manual != null) {
-          earnRateApplied = true;
-          if (b.start.getTime() >= ws.getTime() && b.start.getTime() < we.getTime()) {
-            currentWeekEarnValue += manual;
-          }
-        } else {
-          const rate = rateByCalendar.get(b.calendar_id);
-          if (rate != null) earnRateApplied = true;
-          currentWeekEarnValue += (overlap / 3_600_000) * (rate ?? hourly ?? 0);
-        }
+      // 자동 계산(캘린더 단가 → 기준 시급)은 수동 기록이 없는 수입 일정만.
+      if (i === TREND_WEEKS - 1 && bucket === "earn" && earningFor(b.id) == null) {
+        const rate = rateByCalendar.get(b.calendar_id);
+        if (rate != null) earnRateApplied = true;
+        currentWeekEarnValue += (overlap / 3_600_000) * (rate ?? hourly ?? 0);
       }
     }
     if (i === TREND_WEEKS - 1) currentWeekAcc = acc;
