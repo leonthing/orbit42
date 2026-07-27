@@ -96,6 +96,14 @@ export async function verifyAppleIdentityToken(
       email_verified?: boolean | string;
     }>(payloadB64);
 
+    // TEMP: 실기기 이메일 누락 디버깅 — 클레임 구성 확인용 (해결 후 제거)
+    console.log("[apple-debug] claims:", JSON.stringify({
+      keys: Object.keys(payload),
+      hasEmail: payload.email != null,
+      emailVerified: payload.email_verified,
+      aud: payload.aud,
+    }));
+
     if (payload.iss !== APPLE_ISSUER) return null;
     const aud = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
     if (!aud.includes(APPLE_BUNDLE_ID)) return null;
