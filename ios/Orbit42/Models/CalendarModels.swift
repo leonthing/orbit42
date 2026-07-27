@@ -96,6 +96,8 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
     let tentative: Bool
     /// 자산 탭 분석용 버킷 오버라이드 — "earn" | "invest" | "spend" | "life" | nil(캘린더 용도 따름)
     let bucketOverride: String?
+    /// 이 일정으로 실제 번 금액(원) 수동 기록 — nil 이면 자동(시급×시간) 계산
+    let earningKrw: Int?
     /// 완료 체크(투두) 상태 — 낙관적 업데이트를 위해 var (서버가 안 주면 false)
     var completed: Bool
     /// endAt 이 "2026-07-26" 처럼 날짜만으로 왔는지 (종일 이벤트의 마지막 날 포함 여부 판단용)
@@ -105,7 +107,7 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
 
     private enum CodingKeys: String, CodingKey {
         case id, title, description, startAt, endAt, allDay, calendarId, source, tentative
-        case bucketOverride, completed
+        case bucketOverride, earningKrw, completed
     }
 
     init(from decoder: Decoder) throws {
@@ -118,6 +120,7 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
         source = try container.decodeIfPresent(String.self, forKey: .source) ?? "local"
         tentative = try container.decodeIfPresent(Bool.self, forKey: .tentative) ?? false
         bucketOverride = try container.decodeIfPresent(String.self, forKey: .bucketOverride)
+        earningKrw = try container.decodeIfPresent(Int.self, forKey: .earningKrw)
         completed = try container.decodeIfPresent(Bool.self, forKey: .completed) ?? false
 
         let startRaw = try container.decode(String.self, forKey: .startAt)
@@ -237,6 +240,23 @@ struct UpdateEventBucketRequest: Encodable {
         try container.encode(eventId, forKey: .eventId)
         // encodeIfPresent 가 아닌 encode 로 Optional 을 넣으면 nil 이 JSON null 로 나간다.
         try container.encode(bucket, forKey: .bucket)
+    }
+}
+
+/// `PUT /api/v1/time-asset/event-earning` — 일정별 실제 수익 기록.
+/// amountKrw 는 nil 이어도 명시적 `null` 로 인코딩해 자동 계산으로 되돌린다.
+struct UpdateEventEarningRequest: Encodable {
+    let eventId: String
+    let amountKrw: Int?
+
+    private enum CodingKeys: String, CodingKey {
+        case eventId, amountKrw
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(eventId, forKey: .eventId)
+        try container.encode(amountKrw, forKey: .amountKrw)
     }
 }
 

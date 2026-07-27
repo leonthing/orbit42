@@ -284,19 +284,27 @@ async function clientForCalendar(userId: string, cal: CalendarRow) {
   return getCalendarForExtraAccount(account);
 }
 
-/** 이동으로 이벤트 id 가 바뀔 때 자산 분류·완료 체크 키를 새 id 로 이관. */
-async function migrateEventKeys(userId: string, oldKey: string, newKey: string) {
+/** 이동으로 이벤트 id 가 바뀔 때 자산 분류·수익 기록·완료 체크 키를 새 id 로 이관.
+ * 분류·수익은 클라이언트 원형 id(uuid/gcal_*)로, 완료 체크는 정규화 키
+ * (local:/google:)로 저장돼 있어 각각 형식에 맞춰 옮긴다. */
+async function migrateEventKeys(userId: string, oldId: string, newId: string) {
   const db = getAdminClient();
   await db
     .from("event_bucket_overrides")
-    .update({ event_key: newKey })
+    .update({ event_key: newId })
     .eq("user_id", userId)
-    .eq("event_key", oldKey);
+    .eq("event_key", oldId);
+  await db
+    .from("event_earnings")
+    .update({ event_key: newId })
+    .eq("user_id", userId)
+    .eq("event_key", oldId);
+  const { normalizeEventKey } = await import("@/lib/event-key");
   await db
     .from("event_completions")
-    .update({ event_key: newKey })
+    .update({ event_key: normalizeEventKey(newId) })
     .eq("user_id", userId)
-    .eq("event_key", oldKey);
+    .eq("event_key", normalizeEventKey(oldId));
 }
 
 function googleEventBody(input: {

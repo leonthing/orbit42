@@ -44,6 +44,13 @@ struct EventDetailSheet: View {
     @State private var isSavingBucket = false
     @State private var bucketErrorMessage: String?
 
+    /// 일정별 실제 수익 기록 (nil = 자동 계산)
+    @State private var earningKrw: Int?
+    @State private var isSavingEarning = false
+    @State private var showingEarningInput = false
+    @State private var earningInputText = ""
+    @State private var earningErrorMessage: String?
+
     /// 완료 체크(투두) — 시트가 든 event 는 스냅샷이므로 표시는 이 상태로 한다.
     @State private var isCompleted: Bool
     @State private var isSavingCompletion = false
@@ -56,6 +63,7 @@ struct EventDetailSheet: View {
         self.viewModel = viewModel
         self.event = event
         _selectedBucket = State(initialValue: event.bucketOverride)
+        _earningKrw = State(initialValue: event.earningKrw)
         _isCompleted = State(initialValue: event.completed)
     }
 
@@ -178,6 +186,8 @@ struct EventDetailSheet: View {
                     Text("자산 탭 분석에서 이 일정만 다른 분류로 계산돼요.")
                 }
                 .listRowBackground(Theme.surface)
+
+                earningSection
 
                 Section {
                     Button {
@@ -337,6 +347,94 @@ struct EventDetailSheet: View {
             } catch {
                 selectedBucket = previous
                 bucketErrorMessage = "분류를 저장하지 못했어요. 잠시 후 다시 시도해 주세요."
+            }
+        }
+    }
+
+    // MARK: - 수익 기록
+
+    private var earningSection: some View {
+        Section {
+            Button {
+                earningInputText = earningKrw.map(String.init) ?? ""
+                showingEarningInput = true
+            } label: {
+                HStack {
+                    Text("수익 기록")
+                        .foregroundStyle(.white)
+                    Spacer()
+                    if isSavingEarning {
+                        ProgressView()
+                            .tint(Theme.secondaryText)
+                    } else {
+                        Text(earningKrw.map { "₩\(Self.wonFormatter.string(from: NSNumber(value: $0)) ?? "\($0)")" } ?? "자동 (시급 기준)")
+                            .font(.subheadline)
+                            .foregroundStyle(earningKrw != nil ? Theme.accent : Theme.secondaryText)
+                    }
+                }
+            }
+            .disabled(isSavingEarning || isDeleting)
+            .alert("이 일정으로 번 금액", isPresented: $showingEarningInput) {
+                TextField("금액 (원)", text: $earningInputText)
+                    .keyboardType(.numberPad)
+                Button("저장") { saveEarning() }
+                if earningKrw != nil {
+                    Button("기록 해제", role: .destructive) { setEarning(nil) }
+                }
+                Button("취소", role: .cancel) {}
+            } message: {
+                Text("실제 번 금액을 기록하면 자산 탭 수입 계산에 시급 대신 이 금액이 쓰여요.")
+            }
+            .alert("수익을 저장하지 못했어요", isPresented: showEarningErrorAlert) {
+                Button("확인", role: .cancel) { earningErrorMessage = nil }
+            } message: {
+                Text(earningErrorMessage ?? "")
+            }
+        } footer: {
+            Text("수입으로 분류된 일정은 시급×시간으로 자동 계산돼요. 실제 금액이 다르면 직접 기록하세요.")
+        }
+        .listRowBackground(Theme.surface)
+    }
+
+    private var showEarningErrorAlert: Binding<Bool> {
+        Binding(
+            get: { earningErrorMessage != nil },
+            set: { if !$0 { earningErrorMessage = nil } }
+        )
+    }
+
+    private static let wonFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.locale = Locale(identifier: "ko_KR")
+        return formatter
+    }()
+
+    private func saveEarning() {
+        let cleaned = earningInputText.replacingOccurrences(of: ",", with: "")
+            .trimmingCharacters(in: .whitespaces)
+        guard let amount = Int(cleaned), amount >= 0 else {
+            earningErrorMessage = "숫자만 입력해 주세요."
+            return
+        }
+        setEarning(amount)
+    }
+
+    private func setEarning(_ amount: Int?) {
+        guard !isSavingEarning else { return }
+        let previous = earningKrw
+        earningKrw = amount
+        isSavingEarning = true
+        Task {
+            defer { isSavingEarning = false }
+            do {
+                try await viewModel.setEventEarning(event, amountKrw: amount)
+            } catch let apiError as APIError {
+                earningKrw = previous
+                earningErrorMessage = apiError.errorDescription
+            } catch {
+                earningKrw = previous
+                earningErrorMessage = "수익을 저장하지 못했어요. 잠시 후 다시 시도해 주세요."
             }
         }
     }

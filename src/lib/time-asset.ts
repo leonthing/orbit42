@@ -161,6 +161,58 @@ export async function setEventBucket(
   return { ok: true as const };
 }
 
+// ── 이벤트별 수익 기록 (event_earnings) ─────────────────────────
+// 키는 이벤트 분류(event_bucket_overrides)와 같은 클라이언트 원형 id
+// (로컬 uuid / "gcal_<id>"). 수입 버킷 금액 계산에서 시급×시간 대신 쓰인다.
+
+export async function listEventEarnings(
+  userId: string,
+): Promise<Map<string, number>> {
+  const db = getAdminClient();
+  const { data } = await db
+    .from("event_earnings")
+    .select("event_key, amount_krw")
+    .eq("user_id", userId);
+  const map = new Map<string, number>();
+  for (const row of data ?? []) {
+    map.set(row.event_key as string, Number(row.amount_krw));
+  }
+  return map;
+}
+
+export async function setEventEarning(
+  userId: string,
+  eventKey: string,
+  amountKrw: number | null,
+) {
+  const db = getAdminClient();
+  if (amountKrw === null) {
+    const { error } = await db
+      .from("event_earnings")
+      .delete()
+      .eq("user_id", userId)
+      .eq("event_key", eventKey);
+    if (error) return { error: "해제에 실패했어요." };
+    return { ok: true as const };
+  }
+  const { error } = await db
+    .from("event_earnings")
+    .upsert(
+      {
+        user_id: userId,
+        event_key: eventKey,
+        amount_krw: Math.round(amountKrw),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,event_key" },
+    );
+  if (error) {
+    console.error("setEventEarning", error);
+    return { error: "저장에 실패했어요." };
+  }
+  return { ok: true as const };
+}
+
 export async function saveBucketMap(
   userId: string,
   overrides: Partial<Record<CalendarPurpose, BucketKey>>,
@@ -352,9 +404,10 @@ export async function getTimeAssetSummary(
   );
   const trendEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60_000);
   const db = getAdminClient();
-  const [trendBlocks, overrides, value, calRatesRes] = await Promise.all([
+  const [trendBlocks, overrides, earnings, value, calRatesRes] = await Promise.all([
     fetchTimeBlocks(userId, trendStart, trendEnd),
     listEventBucketOverrides(userId),
+    listEventEarnings(userId),
     getValueStats(username),
     db
       .from("calendars")
@@ -386,6 +439,16 @@ export async function getTimeAssetSummary(
   const bucketOf = (b: { id: string; purpose: CalendarPurpose | null }): BucketKey =>
     overrideFor(b.id) ??
     (b.purpose ? income.bucketMap[b.purpose] ?? "life" : "life");
+
+  // 수동 수익 기록 — 오버라이드와 같은 키 형식(uuid/gcal_*)으로 조회.
+  const earningFor = (blockId: string): number | undefined => {
+    if (blockId.startsWith("native:")) {
+      return earnings.get(blockId.slice("native:".length));
+    }
+    const sep = blockId.indexOf("::");
+    if (sep >= 0) return earnings.get(`gcal_${blockId.slice(sep + 2)}`);
+    return earnings.get(blockId);
+  };
 
   // A1: 프리랜서 모드 — 최근 기록된 3개월 수입 ÷ 같은 기간 '수입' 시간 = 실효 시급.
   let freelance: TimeAssetSummary["freelance"] = null;
@@ -442,9 +505,20 @@ export async function getTimeAssetSummary(
       const bucket = bucketOf(b);
       acc[bucket] += overlap / 3_600_000;
       if (i === TREND_WEEKS - 1 && bucket === "earn") {
-        const rate = rateByCalendar.get(b.calendar_id);
-        if (rate != null) earnRateApplied = true;
-        currentWeekEarnValue += (overlap / 3_600_000) * (rate ?? hourly ?? 0);
+        // 수동 기록이 있으면 실제 번 금액으로, 없으면 캘린더 단가 → 기준 시급.
+        // 수동 금액은 시간 비례가 아니라 이벤트 단위라 시작 시각이 이번 주에
+        // 속할 때 한 번만 더한다.
+        const manual = earningFor(b.id);
+        if (manual != null) {
+          earnRateApplied = true;
+          if (b.start.getTime() >= ws.getTime() && b.start.getTime() < we.getTime()) {
+            currentWeekEarnValue += manual;
+          }
+        } else {
+          const rate = rateByCalendar.get(b.calendar_id);
+          if (rate != null) earnRateApplied = true;
+          currentWeekEarnValue += (overlap / 3_600_000) * (rate ?? hourly ?? 0);
+        }
       }
     }
     if (i === TREND_WEEKS - 1) currentWeekAcc = acc;

@@ -208,6 +208,16 @@ final class CalendarViewModel {
         await loadDisplayedMonth(force: true)
     }
 
+    /// 일정별 실제 수익 기록 (nil = 해제, 자동 계산으로 복귀).
+    func setEventEarning(_ event: CalendarEvent, amountKrw: Int?) async throws {
+        let _: EventMutationResponse = try await api.put(
+            "/api/v1/time-asset/event-earning",
+            body: UpdateEventEarningRequest(eventId: event.id, amountKrw: amountKrw)
+        )
+        invalidateCache(around: [event.startAt, event.endAt])
+        await loadDisplayedMonth(force: true)
+    }
+
     /// 주어진 날짜들이 속한 달의 캐시를 제거한다. (createEvent 와 같은 무효화 패턴)
     private func invalidateCache(around dates: [Date]) {
         for date in dates {
