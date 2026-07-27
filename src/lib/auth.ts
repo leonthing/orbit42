@@ -274,8 +274,12 @@ export async function loginOrSignupWithApple(
   }
 
   if (!email) {
-    // First sign-in but Apple shared no email — nothing to match or create on.
-    return { error: "Apple 계정의 이메일 공유를 허용해주세요." };
+    // Apple이 이메일을 안 내려주는 재인증 상태 (계정 미연결) — 사용자가
+    // 스스로 풀 수 있도록 계정 연결 경로를 안내한다.
+    return {
+      error:
+        "Apple에서 이메일을 받지 못했어요. 이메일이나 Google로 로그인한 뒤 설정 > 계정에서 Apple 계정을 연결하면 다음부터 Apple로 로그인할 수 있어요.",
+    };
   }
   return oauthLoginOrSignup({
     email,
