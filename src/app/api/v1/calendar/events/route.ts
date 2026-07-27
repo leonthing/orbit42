@@ -63,26 +63,54 @@ export async function GET(request: Request) {
     );
   }
 
-  const { listEventBucketOverrides, listEventEarnings } = await import(
-    "@/lib/time-asset"
-  );
+  const { listEventBucketOverrides, listEventEarnings, getIncomeSettings } =
+    await import("@/lib/time-asset");
   const { getCompletedKeys } = await import("@/lib/event-completions");
   const { normalizeEventKey } = await import("@/lib/event-key");
-  const [events, calendars, overrides, earnings] = await Promise.all([
-    listEventsForUser(userId, year, month - 1),
-    listApiCalendars(userId),
-    listEventBucketOverrides(userId),
-    listEventEarnings(userId),
-  ]);
+  const db = getAdminClient();
+  const [events, calendars, overrides, earnings, income, calRatesRes] =
+    await Promise.all([
+      listEventsForUser(userId, year, month - 1),
+      listApiCalendars(userId),
+      listEventBucketOverrides(userId),
+      listEventEarnings(userId),
+      getIncomeSettings(userId),
+      db
+        .from("calendars")
+        .select("id, hourly_rate_krw")
+        .eq("user_id", userId)
+        .not("hourly_rate_krw", "is", null),
+    ]);
   // 완료 체크(투두) — 웹과 같은 event_completions 를 공유한다.
   const completedSet = new Set(
     await getCompletedKeys(events.map((e) => normalizeEventKey(e.id))),
   );
+
+  // "모든 일정 = 시간 = 금액" — 수동 기록이 없어도 캘린더 단가 → 기준 시급으로
+  // 환산한 시간 가치를 함께 내려준다 (종일 일정 제외).
+  const rateByCalendar = new Map<string, number>();
+  for (const c of calRatesRes.data ?? []) {
+    if (c.hourly_rate_krw != null && Number(c.hourly_rate_krw) > 0) {
+      rateByCalendar.set(c.id as string, Number(c.hourly_rate_krw));
+    }
+  }
+  const autoValueOf = (e: CalendarEvent): number | null => {
+    if (e.all_day) return null;
+    const rate =
+      (e.calendar_id ? rateByCalendar.get(e.calendar_id) : undefined) ??
+      income.hourlyValueKrw;
+    if (rate == null) return null;
+    const hours = (Date.parse(e.end_at) - Date.parse(e.start_at)) / 3_600_000;
+    if (!Number.isFinite(hours) || hours <= 0) return null;
+    return Math.round(hours * rate);
+  };
+
   return Response.json({
     events: events.map((e) => ({
       ...toApiEvent(e),
       bucketOverride: overrides.get(e.id) ?? null,
       earningKrw: earnings.get(e.id) ?? null,
+      autoValueKrw: autoValueOf(e),
       completed: completedSet.has(normalizeEventKey(e.id)),
     })),
     calendars,

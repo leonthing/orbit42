@@ -98,6 +98,8 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
     let bucketOverride: String?
     /// 이 일정으로 실제 번 금액(원) 수동 기록 — nil 이면 자동(시급×시간) 계산
     let earningKrw: Int?
+    /// 시간 가치 자동 환산(원) — 캘린더 단가 → 기준 시급 × 시간 (서버 계산, 종일 제외)
+    let autoValueKrw: Int?
     /// 완료 체크(투두) 상태 — 낙관적 업데이트를 위해 var (서버가 안 주면 false)
     var completed: Bool
     /// endAt 이 "2026-07-26" 처럼 날짜만으로 왔는지 (종일 이벤트의 마지막 날 포함 여부 판단용)
@@ -107,7 +109,7 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
 
     private enum CodingKeys: String, CodingKey {
         case id, title, description, startAt, endAt, allDay, calendarId, source, tentative
-        case bucketOverride, earningKrw, completed
+        case bucketOverride, earningKrw, autoValueKrw, completed
     }
 
     init(from decoder: Decoder) throws {
@@ -121,6 +123,7 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
         tentative = try container.decodeIfPresent(Bool.self, forKey: .tentative) ?? false
         bucketOverride = try container.decodeIfPresent(String.self, forKey: .bucketOverride)
         earningKrw = try container.decodeIfPresent(Int.self, forKey: .earningKrw)
+        autoValueKrw = try container.decodeIfPresent(Int.self, forKey: .autoValueKrw)
         completed = try container.decodeIfPresent(Bool.self, forKey: .completed) ?? false
 
         let startRaw = try container.decode(String.self, forKey: .startAt)

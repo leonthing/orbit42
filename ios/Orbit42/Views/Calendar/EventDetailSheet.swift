@@ -367,7 +367,7 @@ struct EventDetailSheet: View {
                         ProgressView()
                             .tint(Theme.secondaryText)
                     } else {
-                        Text(earningKrw.map { "₩\(Self.wonFormatter.string(from: NSNumber(value: $0)) ?? "\($0)")" } ?? "자동 (시급 기준)")
+                        Text(earningValueText)
                             .font(.subheadline)
                             .foregroundStyle(earningKrw != nil ? Theme.accent : Theme.secondaryText)
                     }
@@ -409,6 +409,17 @@ struct EventDetailSheet: View {
         formatter.locale = Locale(identifier: "ko_KR")
         return formatter
     }()
+
+    /// 행 우측 표시 — 수동 기록 > 자동 환산 > 안내.
+    private var earningValueText: String {
+        if let earningKrw {
+            return "₩\(Self.wonFormatter.string(from: NSNumber(value: earningKrw)) ?? "\(earningKrw)")"
+        }
+        if let auto = event.autoValueKrw {
+            return "자동 ₩\(Self.wonFormatter.string(from: NSNumber(value: auto)) ?? "\(auto)")"
+        }
+        return "자동 (시급 기준)"
+    }
 
     private func saveEarning() {
         let cleaned = earningInputText.replacingOccurrences(of: ",", with: "")

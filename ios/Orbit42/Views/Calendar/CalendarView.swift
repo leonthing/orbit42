@@ -465,6 +465,7 @@ private struct EventRow: View {
                             Text(timeText)
                                 .font(.footnote)
                                 .foregroundStyle(Theme.secondaryText)
+                            // 모든 일정 = 시간 = 금액 — 수동 기록은 강조, 자동 환산은 은은하게
                             if let earningText {
                                 Text(earningText)
                                     .font(.caption2.weight(.semibold))
@@ -472,6 +473,10 @@ private struct EventRow: View {
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
                                     .background(Theme.accent.opacity(0.15), in: Capsule())
+                            } else if let autoValueText {
+                                Text(autoValueText)
+                                    .font(.caption2)
+                                    .foregroundStyle(Theme.secondaryText)
                             }
                         }
                         if let description = event.description, !description.isEmpty {
@@ -500,14 +505,25 @@ private struct EventRow: View {
         return event.tentative ? 0.65 : 1
     }
 
-    /// 수익 기록 배지 — "₩50,000"
-    private var earningText: String? {
-        guard let earning = event.earningKrw else { return nil }
+    private static let wonFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
         formatter.locale = Locale(identifier: "ko_KR")
-        let amount = formatter.string(from: NSNumber(value: earning)) ?? "\(earning)"
-        return "₩\(amount)"
+        return formatter
+    }()
+
+    private static func won(_ amount: Int) -> String {
+        "₩\(wonFormatter.string(from: NSNumber(value: amount)) ?? "\(amount)")"
+    }
+
+    /// 수동 수익 기록 배지 — "₩50,000"
+    private var earningText: String? {
+        event.earningKrw.map(Self.won)
+    }
+
+    /// 자동 환산(시급×시간) — 수동 기록이 없을 때만
+    private var autoValueText: String? {
+        event.autoValueKrw.map(Self.won)
     }
 
     private var timeText: String {
