@@ -7,7 +7,11 @@
  */
 
 import { getAdminClient } from "@/lib/supabase";
-import { getAuthenticatedCalendar } from "@/lib/google";
+import {
+  getAuthenticatedCalendar,
+  listExtraGoogleAccounts,
+  getCalendarForExtraAccount,
+} from "@/lib/google";
 
 export type CalendarEvent = {
   id: string;
@@ -260,4 +264,258 @@ export async function createEventForUser(
   if (error) throw new Error(error.message);
 
   return { ...data, source: "local" } as CalendarEvent;
+}
+
+// ── 캘린더 이동 ────────────────────────────────────────────────
+
+type CalendarRow = {
+  id: string;
+  source: "native" | "google";
+  google_calendar_id: string | null;
+  google_account_id: string | null;
+};
+
+/** 캘린더가 속한 Google 계정의 API 클라이언트 (기본 계정 또는 추가 계정). */
+async function clientForCalendar(userId: string, cal: CalendarRow) {
+  if (!cal.google_account_id) return getAuthenticatedCalendar(userId);
+  const extras = await listExtraGoogleAccounts(userId);
+  const account = extras.find((a) => a.id === cal.google_account_id);
+  if (!account) return null;
+  return getCalendarForExtraAccount(account);
+}
+
+/** 이동으로 이벤트 id 가 바뀔 때 자산 분류·완료 체크 키를 새 id 로 이관. */
+async function migrateEventKeys(userId: string, oldKey: string, newKey: string) {
+  const db = getAdminClient();
+  await db
+    .from("event_bucket_overrides")
+    .update({ event_key: newKey })
+    .eq("user_id", userId)
+    .eq("event_key", oldKey);
+  await db
+    .from("event_completions")
+    .update({ event_key: newKey })
+    .eq("user_id", userId)
+    .eq("event_key", oldKey);
+}
+
+function googleEventBody(input: {
+  title: string;
+  description: string | null;
+  start_at: string;
+  end_at: string;
+  all_day: boolean;
+}): Record<string, unknown> {
+  const body: Record<string, unknown> = {
+    summary: input.title,
+    description: input.description || undefined,
+  };
+  if (input.all_day) {
+    body.start = { date: input.start_at.split("T")[0] };
+    body.end = { date: input.end_at.split("T")[0] };
+  } else {
+    body.start = { dateTime: input.start_at, timeZone: "Asia/Seoul" };
+    body.end = { dateTime: input.end_at, timeZone: "Asia/Seoul" };
+  }
+  return body;
+}
+
+/**
+ * 이벤트를 다른 캘린더로 이동한다 (수정 patch 를 함께 적용).
+ * - 로컬 → 로컬: calendar_id 재배정
+ * - 로컬 → 구글: 구글에 생성 후 로컬 삭제
+ * - 구글 → 로컬: 구글에서 읽어 로컬 생성 후 구글 삭제 (삭제 실패 시 롤백)
+ * - 구글 → 구글: 같은 계정이면 events.move, 다른 계정은 미지원
+ * id 가 바뀌면 자산 분류·완료 체크 키도 따라간다.
+ */
+export async function moveEventToCalendar(
+  userId: string,
+  eventId: string,
+  targetCalendarId: string,
+  sourceCalendarId: string | null,
+  patch: Partial<CalendarEventInput>,
+): Promise<{ ok: true; newId: string } | { error: string }> {
+  const db = getAdminClient();
+  const { data: target } = await db
+    .from("calendars")
+    .select("id, source, google_calendar_id, google_account_id")
+    .eq("id", targetCalendarId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!target) return { error: "옮길 캘린더를 찾을 수 없어요." };
+
+  const isGoogleEvent = eventId.startsWith("gcal_");
+
+  // ── 로컬 이벤트 ──
+  if (!isGoogleEvent) {
+    const { data: row } = await db
+      .from("events")
+      .select("id, title, description, start_at, end_at, all_day")
+      .eq("id", eventId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!row) return { error: "일정을 찾을 수 없어요." };
+
+    if (target.source === "native") {
+      const { error } = await db
+        .from("events")
+        .update({
+          ...patch,
+          calendar_id: target.id,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", eventId)
+        .eq("user_id", userId);
+      if (error) return { error: "일정을 옮기지 못했어요." };
+      return { ok: true, newId: eventId };
+    }
+
+    // 로컬 → 구글
+    if (!target.google_calendar_id) {
+      return { error: "Google 캘린더 정보를 찾을 수 없어요." };
+    }
+    const client = await clientForCalendar(userId, target as CalendarRow);
+    if (!client) return { error: "Google 캘린더 연결이 필요해요." };
+    const merged = {
+      title: patch.title ?? (row.title as string),
+      description:
+        patch.description !== undefined
+          ? patch.description
+          : ((row.description as string | null) ?? null),
+      start_at: patch.start_at ?? (row.start_at as string),
+      end_at: patch.end_at ?? ((row.end_at as string | null) || (row.start_at as string)),
+      all_day: patch.all_day ?? Boolean(row.all_day),
+    };
+    let createdId: string | null | undefined;
+    try {
+      const res = await client.events.insert({
+        calendarId: target.google_calendar_id,
+        requestBody: googleEventBody(merged),
+      });
+      createdId = res.data.id;
+    } catch (err) {
+      console.error("moveEvent local→google insert", err);
+      return { error: "Google에 일정을 만들지 못했어요." };
+    }
+    if (!createdId) return { error: "Google에 일정을 만들지 못했어요." };
+    await db.from("events").delete().eq("id", eventId).eq("user_id", userId);
+    const newId = `gcal_${createdId}`;
+    await migrateEventKeys(userId, eventId, newId);
+    return { ok: true, newId };
+  }
+
+  // ── 구글 이벤트 ──
+  if (!sourceCalendarId) return { error: "현재 캘린더 정보가 필요해요." };
+  const { data: source } = await db
+    .from("calendars")
+    .select("id, source, google_calendar_id, google_account_id")
+    .eq("id", sourceCalendarId)
+    .eq("user_id", userId)
+    .eq("source", "google")
+    .maybeSingle();
+  if (!source?.google_calendar_id) {
+    return { error: "현재 Google 캘린더를 찾을 수 없어요." };
+  }
+  const srcClient = await clientForCalendar(userId, source as CalendarRow);
+  if (!srcClient) return { error: "Google 캘린더 연결이 필요해요." };
+  const googleId = eventId.slice("gcal_".length);
+
+  if (target.source === "google") {
+    if (!target.google_calendar_id) {
+      return { error: "Google 캘린더 정보를 찾을 수 없어요." };
+    }
+    if (target.google_account_id !== source.google_account_id) {
+      return { error: "다른 Google 계정의 캘린더로는 옮길 수 없어요." };
+    }
+    try {
+      await srcClient.events.move({
+        calendarId: source.google_calendar_id,
+        eventId: googleId,
+        destination: target.google_calendar_id,
+      });
+    } catch (err) {
+      console.error("moveEvent google→google", err);
+      return { error: "Google 캘린더 간 이동에 실패했어요." };
+    }
+    if (Object.keys(patch).length > 0) {
+      // 바뀐 필드만 부분 patch (updateGoogleEvent 와 같은 매핑).
+      const patchBody: Record<string, unknown> = {};
+      if (patch.title !== undefined) patchBody.summary = patch.title;
+      if (patch.description !== undefined) {
+        patchBody.description = patch.description ?? "";
+      }
+      if (patch.start_at !== undefined && patch.end_at !== undefined) {
+        if (patch.all_day) {
+          patchBody.start = { date: patch.start_at.split("T")[0] };
+          patchBody.end = { date: patch.end_at.split("T")[0] };
+        } else {
+          patchBody.start = { dateTime: patch.start_at, timeZone: "Asia/Seoul" };
+          patchBody.end = { dateTime: patch.end_at, timeZone: "Asia/Seoul" };
+        }
+      }
+      try {
+        await srcClient.events.patch({
+          calendarId: target.google_calendar_id,
+          eventId: googleId,
+          requestBody: patchBody,
+        });
+      } catch {
+        return { error: "캘린더는 옮겼지만 내용 수정에 실패했어요. 다시 시도해 주세요." };
+      }
+    }
+    return { ok: true, newId: eventId };
+  }
+
+  // 구글 → 로컬
+  let g: { summary?: string | null; description?: string | null; start?: { date?: string | null; dateTime?: string | null }; end?: { date?: string | null; dateTime?: string | null } };
+  try {
+    const res = await srcClient.events.get({
+      calendarId: source.google_calendar_id,
+      eventId: googleId,
+    });
+    g = res.data;
+  } catch (err) {
+    console.error("moveEvent google→local get", err);
+    return { error: "Google 일정을 읽지 못했어요." };
+  }
+  const allDay = !!g.start?.date;
+  const startIso = g.start?.dateTime || g.start?.date;
+  const endIso = g.end?.dateTime || g.end?.date || startIso;
+  if (!startIso) return { error: "일정 시간 정보를 읽지 못했어요." };
+
+  const merged = {
+    title: patch.title ?? (g.summary || "(제목 없음)"),
+    description:
+      patch.description !== undefined ? patch.description : (g.description ?? null),
+    start_at: patch.start_at ?? startIso,
+    end_at: patch.end_at ?? (endIso as string),
+    all_day: patch.all_day ?? allDay,
+  };
+  const { data: inserted, error: insErr } = await db
+    .from("events")
+    .insert({
+      user_id: userId,
+      calendar_id: target.id,
+      title: merged.title,
+      description: merged.description,
+      start_at: merged.start_at,
+      end_at: merged.end_at,
+      all_day: merged.all_day,
+    })
+    .select("id")
+    .single();
+  if (insErr || !inserted) return { error: "일정을 옮기지 못했어요." };
+  try {
+    await srcClient.events.delete({
+      calendarId: source.google_calendar_id,
+      eventId: googleId,
+    });
+  } catch (err) {
+    // 구글 원본 삭제 실패 → 로컬 사본 제거해 중복을 막고 이동 취소.
+    console.error("moveEvent google→local delete", err);
+    await db.from("events").delete().eq("id", inserted.id);
+    return { error: "Google 일정을 삭제하지 못해 이동을 취소했어요." };
+  }
+  await migrateEventKeys(userId, eventId, inserted.id as string);
+  return { ok: true, newId: inserted.id as string };
 }

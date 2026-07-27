@@ -372,8 +372,19 @@ export async function getTimeAssetSummary(
   }
 
   // 이벤트의 버킷: 개별 오버라이드 > 캘린더 용도 매핑 > 생활.
+  // 오버라이드 키는 클라이언트 이벤트 id(로컬 uuid / "gcal_<id>")로 저장되고,
+  // fetchTimeBlocks 블록 id 는 "native:<uuid>" / "<구글캘린더ID>::<id>" 형식이라
+  // 조회 전에 형식을 맞춰준다.
+  const overrideFor = (blockId: string): BucketKey | undefined => {
+    if (blockId.startsWith("native:")) {
+      return overrides.get(blockId.slice("native:".length));
+    }
+    const sep = blockId.indexOf("::");
+    if (sep >= 0) return overrides.get(`gcal_${blockId.slice(sep + 2)}`);
+    return overrides.get(blockId);
+  };
   const bucketOf = (b: { id: string; purpose: CalendarPurpose | null }): BucketKey =>
-    overrides.get(b.id) ??
+    overrideFor(b.id) ??
     (b.purpose ? income.bucketMap[b.purpose] ?? "life" : "life");
 
   // A1: 프리랜서 모드 — 최근 기록된 3개월 수입 ÷ 같은 기간 '수입' 시간 = 실효 시급.

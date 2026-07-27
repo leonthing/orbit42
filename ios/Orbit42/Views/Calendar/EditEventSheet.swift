@@ -1,8 +1,8 @@
 import SwiftUI
 
 /// 이벤트 수정 시트 — PATCH /api/v1/calendar/events/{id}
-/// AddEventSheet 와 같은 폼을 프리필한다. 로컬 이벤트는 다른 로컬 캘린더로
-/// 이동할 수 있다 (Google 이벤트는 Google 쪽에 실체가 있어 이동 미지원).
+/// AddEventSheet 와 같은 폼을 프리필한다. 캘린더 Picker 로 로컬↔로컬,
+/// 로컬↔구글, 구글(같은 계정)간 이동을 지원한다 (서버가 복사+삭제로 처리).
 /// 바뀐 필드만 보내고, 시작/종료는 서버 요구대로 항상 쌍으로 보낸다.
 struct EditEventSheet: View {
     @Environment(\.dismiss) private var dismiss
@@ -21,9 +21,9 @@ struct EditEventSheet: View {
     @State private var isSaving = false
     @State private var errorMessage: String?
 
-    /// 이동 가능한 대상 — 로컬 캘린더만 (Google 이벤트는 이동 미지원).
+    /// 이동 가능한 대상 — 전체 캘린더 (다른 Google 계정 간 이동만 서버가 거부).
     private var movableCalendars: [CalendarInfo] {
-        viewModel.calendars.filter(\.isNative)
+        viewModel.calendars
     }
 
     /// 변경 감지용 원본 값
@@ -81,7 +81,7 @@ struct EditEventSheet: View {
                 }
                 .listRowBackground(Theme.surface)
 
-                if !event.isGoogle, movableCalendars.count > 1 {
+                if movableCalendars.count > 1 {
                     Section {
                         Picker("캘린더", selection: $selectedCalendarId) {
                             ForEach(movableCalendars) { calendar in
@@ -95,6 +95,11 @@ struct EditEventSheet: View {
                             }
                         }
                         .tint(Theme.secondaryText)
+                    } footer: {
+                        if selectedCalendarId != event.calendarId {
+                            Text("저장하면 일정이 선택한 캘린더로 이동해요.")
+                                .foregroundStyle(Theme.secondaryText)
+                        }
                     }
                     .listRowBackground(Theme.surface)
                 }
@@ -172,8 +177,8 @@ struct EditEventSheet: View {
             body.allDay = allDay
         }
 
-        // 캘린더 이동 (로컬 이벤트만)
-        if !event.isGoogle, let selectedCalendarId, selectedCalendarId != event.calendarId {
+        // 캘린더 이동 — 대상이 현재 소속과 다를 때만 보낸다
+        if let selectedCalendarId, selectedCalendarId != event.calendarId {
             body.calendarId = selectedCalendarId
         }
 
@@ -184,9 +189,10 @@ struct EditEventSheet: View {
             return
         }
 
-        // Google 이벤트("gcal_" id)는 소속 native 캘린더 uuid 를 body 에 반드시 포함
+        // Google 이벤트("gcal_" id)는 현재 소속 native 캘린더 uuid 를 함께 보낸다
+        // (서버가 소속 Google 계정/캘린더를 해석하는 데 사용)
         if event.isGoogle {
-            body.calendarId = event.calendarId
+            body.sourceCalendarId = event.calendarId
         }
 
         isSaving = true

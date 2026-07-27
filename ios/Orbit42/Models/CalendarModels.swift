@@ -200,7 +200,10 @@ struct UpdateEventRequest: Encodable {
     var startAt: String?
     var endAt: String?
     var allDay: Bool?
+    /// 캘린더 이동 대상 (변경 시에만 전송)
     var calendarId: String?
+    /// gcal_* 이벤트의 현재 소속 native 캘린더 uuid (서버가 소속 계정 해석에 사용)
+    var sourceCalendarId: String?
 }
 
 /// PATCH/DELETE 공통 성공 응답 — `{"ok": true}`

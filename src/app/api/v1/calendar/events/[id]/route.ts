@@ -52,8 +52,9 @@ function buildEventPatch(body: Record<string, unknown>): Partial<EventInput> {
   return patch;
 }
 
-// PATCH { title?, description?, startAt?, endAt?, allDay?, calendarId? }
+// PATCH { title?, description?, startAt?, endAt?, allDay?, calendarId?, sourceCalendarId? }
 // 로컬 이벤트는 DB 수정, gcal_* 이벤트는 Google Calendar API로 패치.
+// calendarId 는 캘린더 이동 대상 — 로컬↔로컬/로컬↔구글/구글(같은 계정)간 이동 지원.
 export async function PATCH(
   request: Request,
   { params }: { params: { id: string } },
@@ -72,33 +73,23 @@ export async function PATCH(
 
   const patch = buildEventPatch(body);
 
-  // 캘린더 이동 — 로컬 이벤트를 다른 로컬 캘린더로만.
-  // (gcal_* 이벤트의 calendarId 는 이동이 아니라 "현재 소속" 해석용 그대로 둔다.
-  //  Google 이벤트는 Google 쪽에 실체가 있어 계정/캘린더 간 이동을 지원하지 않는다.)
-  if (body.calendarId !== undefined && !params.id.startsWith("gcal_")) {
-    const userId = await apiUserId(request);
-    if (!userId) {
-      return Response.json({ error: "로그인이 필요해요." }, { status: 401 });
-    }
-    const { data: target } = await getAdminClient()
-      .from("calendars")
-      .select("id, source")
-      .eq("id", String(body.calendarId))
-      .eq("user_id", userId)
-      .maybeSingle();
-    if (!target) {
-      return Response.json({ error: "캘린더를 찾을 수 없어요." }, { status: 400 });
-    }
-    if (target.source !== "native") {
-      return Response.json(
-        { error: "Google 캘린더로는 옮길 수 없어요. 로컬 캘린더만 선택할 수 있어요." },
-        { status: 400 },
-      );
-    }
-    patch.calendar_id = target.id as string;
-  }
+  // 캘린더 이동 판단.
+  // - calendarId: 옮길 "대상" 캘린더 (변경 시에만 전송)
+  // - sourceCalendarId: gcal_* 이벤트의 현재 소속 native uuid (해석용)
+  // - 구버전 호환: gcal_* 이벤트가 sourceCalendarId 없이 calendarId 만 보내면
+  //   이동이 아니라 기존처럼 "현재 소속" 해석용으로 취급한다.
+  const isGoogleEvent = params.id.startsWith("gcal_");
+  const targetId =
+    body.calendarId !== undefined ? String(body.calendarId) : undefined;
+  const sourceId =
+    body.sourceCalendarId !== undefined
+      ? String(body.sourceCalendarId)
+      : undefined;
+  const wantsMove =
+    targetId !== undefined &&
+    (!isGoogleEvent || (sourceId !== undefined && targetId !== sourceId));
 
-  if (Object.keys(patch).length === 0) {
+  if (!wantsMove && Object.keys(patch).length === 0) {
     return Response.json({ error: "변경할 내용이 없어요." }, { status: 400 });
   }
   if (patch.title !== undefined && !patch.title) {
@@ -124,14 +115,33 @@ export async function PATCH(
   }
 
   try {
-    if (params.id.startsWith("gcal_")) {
+    if (wantsMove) {
+      const userId = await apiUserId(request);
+      if (!userId) {
+        return Response.json({ error: "로그인이 필요해요." }, { status: 401 });
+      }
+      const { moveEventToCalendar } = await import("@/lib/calendar-events");
+      const result = await moveEventToCalendar(
+        userId,
+        params.id,
+        targetId as string,
+        sourceId ?? null,
+        patch,
+      );
+      if ("error" in result) {
+        return Response.json({ error: result.error }, { status: 400 });
+      }
+      return Response.json({ ok: true, id: result.newId });
+    }
+
+    if (isGoogleEvent) {
       const userId = await apiUserId(request);
       if (!userId) {
         return Response.json({ error: "로그인이 필요해요." }, { status: 401 });
       }
       const gcalId = await resolveGoogleCalendarId(
         userId,
-        (body.calendarId as string | undefined) ?? null,
+        sourceId ?? targetId ?? null,
       );
       if (!gcalId) {
         return Response.json(
