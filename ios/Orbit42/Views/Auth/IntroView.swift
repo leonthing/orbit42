@@ -36,8 +36,8 @@ struct IntroView: View {
         IntroPage(
             icon: "circle.dotted.circle",
             iconColor: Theme.accent,
-            title: "오르빗에 담아두면",
-            message: "관심 있는 사람을 오르빗에 담으면\n그 사람의 열리는 시간이 한곳에 모여요.\n친구를 초대하면 서로의 오르빗에 자동 연결."
+            title: "팔로우하면 시간이 모여요",
+            message: "관심 있는 사람을 팔로우하면\n열리는 시간이 오르빗 탭에 모여요.\n친구를 초대하면 자동으로 맞팔로우."
         ),
         IntroPage(
             icon: "calendar.badge.checkmark",

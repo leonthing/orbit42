@@ -3,7 +3,7 @@ import SwiftUI
 
 // MARK: - 세그먼트 종류
 
-/// 오르비터(이 사람을 담은) / 오르빗(이 사람이 담은) 목록 구분.
+/// 팔로워(이 사람을 팔로우하는) / 팔로잉(이 사람이 팔로우하는) 목록 구분.
 enum ConnectionType: String, CaseIterable, Identifiable {
     case orbiters
     case orbiting
@@ -12,7 +12,7 @@ enum ConnectionType: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .orbiters: return "오르비터"
+        case .orbiters: return "팔로워"
         case .orbiting: return "오르빗"
         }
     }
@@ -20,7 +20,7 @@ enum ConnectionType: String, CaseIterable, Identifiable {
 
 // MARK: - 뷰모델
 
-/// 오르비터/오르빗 목록 상태 관리 — 세그먼트별로 lazy 로드하고 캐시한다.
+/// 팔로워/팔로잉 목록 상태 관리 — 세그먼트별로 lazy 로드하고 캐시한다.
 /// (Core/ 는 병렬 작업 중이라 화면 파일에 같이 둔다.)
 @MainActor
 @Observable
@@ -77,7 +77,7 @@ final class ConnectionsViewModel {
 
 // MARK: - 화면
 
-/// 오르비터/오르빗 목록 — 행 탭 → 그 사람 프로필로 이동 (그래프 탐색).
+/// 팔로워/팔로잉 목록 — 행 탭 → 그 사람 프로필로 이동 (그래프 탐색).
 struct ConnectionsView: View {
     @State private var viewModel: ConnectionsViewModel
 

@@ -48,7 +48,7 @@ final class PersonProfileViewModel {
         }
     }
 
-    /// "오르빗에 담기" / "오르빗에서 빼기" 토글.
+    /// "팔로우" / "팔로잉" 토글.
     func toggleFollow() async {
         guard let current = data, !isTogglingFollow else { return }
         isTogglingFollow = true

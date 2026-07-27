@@ -65,7 +65,7 @@ struct SearchView: View {
                 hintState(
                     icon: "sparkle.magnifyingglass",
                     title: "오르빗이 비어있어요",
-                    message: "관심 있는 사람을 검색해 오르빗에 담으면\n그 사람의 열리는 시간이 여기 모여요.\n친구를 초대하면 자동으로 서로 연결돼요."
+                    message: "관심 있는 사람을 팔로우하면\n그 사람의 열리는 시간이 여기 모여요.\n친구를 초대하면 자동으로 맞팔로우돼요."
                 )
             }
         } else if let message = viewModel.errorMessage {
@@ -196,7 +196,7 @@ struct SearchView: View {
             } header: {
                 sectionHeader("내 오르빗")
             } footer: {
-                Text("오르빗에 담은 사람들의 열린 시간이에요. 친구를 초대하면 서로의 오르빗에 자동으로 연결돼요.")
+                Text("팔로우한 사람들의 열린 시간이에요. 친구를 초대하면 자동으로 맞팔로우돼요.")
                     .font(.caption)
                     .foregroundStyle(Theme.secondaryText)
             }

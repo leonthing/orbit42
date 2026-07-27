@@ -27,7 +27,7 @@ export async function POST(
   }
 
   if (body.follow) {
-    // 차단 관계(양방향)면 오르빗에 담을 수 없다.
+    // 차단 관계(양방향)면 팔로우할 수 없다.
     const { apiUserId } = await import("@/lib/api-auth");
     const { isBlockedEitherWay } = await import("@/lib/blocks");
     const { getAdminClient } = await import("@/lib/supabase");
@@ -38,7 +38,7 @@ export async function POST(
       .eq("username", params.username)
       .maybeSingle();
     if (myId && target?.id && (await isBlockedEitherWay(myId, target.id as string))) {
-      return Response.json({ error: "담을 수 없는 상대예요." }, { status: 403 });
+      return Response.json({ error: "팔로우할 수 없는 상대예요." }, { status: 403 });
     }
   }
 

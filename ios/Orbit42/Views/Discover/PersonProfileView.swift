@@ -45,7 +45,7 @@ struct PersonProfileView: View {
             }
         }
         .confirmationDialog(
-            "차단하면 서로의 오르빗에서 제거되고, 검색·예약·시간 요청이 막혀요.",
+            "차단하면 서로 팔로우가 해제되고, 검색·예약·시간 요청이 막혀요.",
             isPresented: $showingBlockConfirm,
             titleVisibility: .visible
         ) {
@@ -190,7 +190,7 @@ struct PersonProfileView: View {
                         NavigationLink {
                             ConnectionsView(username: data.user.username, initialType: .orbiters)
                         } label: {
-                            Text("오르비터 \(data.orbiters)")
+                            Text("팔로워 \(data.orbiters)")
                                 .monospacedDigit()
                         }
                         .buttonStyle(.plain)
@@ -339,7 +339,7 @@ struct PersonProfileView: View {
                 HStack(spacing: 6) {
                     Image(systemName: data.isFollowing ? "checkmark.circle.fill" : "plus.circle")
                         .font(.footnote)
-                    Text(data.isFollowing ? "오르빗에서 빼기" : "오르빗에 담기")
+                    Text(data.isFollowing ? "팔로잉" : "팔로우")
                 }
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(data.isFollowing ? Theme.secondaryText : .white)

@@ -138,7 +138,7 @@ private struct MyProfileContent: View {
                         NavigationLink {
                             ConnectionsView(username: username, initialType: .orbiting)
                         } label: {
-                            Text("오르빗 \(orbiting ?? 0)")
+                            Text("팔로잉 \(orbiting ?? 0)")
                                 .monospacedDigit()
                         }
                         .buttonStyle(.plain)
@@ -146,7 +146,7 @@ private struct MyProfileContent: View {
                         NavigationLink {
                             ConnectionsView(username: username, initialType: .orbiters)
                         } label: {
-                            Text("오르비터 \(orbiters ?? 0)")
+                            Text("팔로워 \(orbiters ?? 0)")
                                 .monospacedDigit()
                         }
                         .buttonStyle(.plain)
