@@ -190,66 +190,8 @@ struct SearchView: View {
         List {
             Section {
                 ForEach(people) { person in
-                    VStack(spacing: 6) {
-                        NavigationLink {
-                            PersonProfileView(username: person.username)
-                        } label: {
-                            HStack(spacing: 12) {
-                                DiscoverAvatar(
-                                    url: person.avatarUrl.flatMap(URL.init(string:)),
-                                    name: person.preferredName,
-                                    size: 40
-                                )
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(person.preferredName)
-                                        .font(.subheadline.weight(.medium))
-                                        .foregroundStyle(.white)
-                                        .lineLimit(1)
-                                    Text("@\(person.username)")
-                                        .font(.footnote)
-                                        .foregroundStyle(Theme.accent)
-                                }
-                                Spacer(minLength: 0)
-                                if person.slots.isEmpty {
-                                    Text("열린 시간 없음")
-                                        .font(.caption)
-                                        .foregroundStyle(Theme.secondaryText)
-                                }
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 10)
-                            .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
-                        }
-
-                        ForEach(person.slots) { slot in
-                            NavigationLink {
-                                SlotBookingView(username: person.username, slug: slot.slug)
-                            } label: {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "clock")
-                                        .font(.caption)
-                                        .foregroundStyle(Theme.accent)
-                                    Text(slot.title)
-                                        .font(.footnote.weight(.medium))
-                                        .foregroundStyle(.white)
-                                        .lineLimit(1)
-                                    Spacer(minLength: 0)
-                                    Text("\(slot.durationMin)분 · \(DiscoverFormat.priceText(cents: slot.priceCents))")
-                                        .font(.caption)
-                                        .monospacedDigit()
-                                        .foregroundStyle(Theme.secondaryText)
-                                }
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 9)
-                                .background(
-                                    Theme.surface.opacity(0.6),
-                                    in: RoundedRectangle(cornerRadius: 10)
-                                )
-                                .padding(.leading, 24)
-                            }
-                        }
-                    }
-                    .searchRowChrome()
+                    OrbitPersonCard(person: person)
+                        .searchRowChrome()
                 }
             } header: {
                 sectionHeader("내 오르빗")
@@ -274,6 +216,101 @@ private extension View {
             .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
             .listRowSeparator(.hidden)
             .listRowBackground(Color.clear)
+    }
+}
+
+// MARK: - 내 오르빗 카드 (사람 + 열린 슬롯을 한 카드로)
+
+private struct OrbitPersonCard: View {
+    let person: OrbitPerson
+
+    var body: some View {
+        VStack(spacing: 0) {
+            NavigationLink {
+                PersonProfileView(username: person.username)
+            } label: {
+                personRow
+            }
+            .buttonStyle(.plain)
+
+            if !person.slots.isEmpty {
+                Rectangle()
+                    .fill(Color.white.opacity(0.06))
+                    .frame(height: 1)
+                    .padding(.horizontal, 12)
+
+                ForEach(person.slots) { slot in
+                    NavigationLink {
+                        SlotBookingView(username: person.username, slug: slot.slug)
+                    } label: {
+                        slotRow(slot)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 14))
+    }
+
+    /// 상단 행 — 탭하면 프로필로 간다는 걸 "프로필 >" 로 명시.
+    private var personRow: some View {
+        HStack(spacing: 12) {
+            DiscoverAvatar(
+                url: person.avatarUrl.flatMap(URL.init(string:)),
+                name: person.preferredName,
+                size: 40
+            )
+            VStack(alignment: .leading, spacing: 2) {
+                Text(person.preferredName)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                Text("@\(person.username)")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.accent)
+                    .lineLimit(1)
+                if person.slots.isEmpty {
+                    Text("아직 열린 시간이 없어요")
+                        .font(.caption)
+                        .foregroundStyle(Theme.secondaryText)
+                        .padding(.top, 2)
+                }
+            }
+            Spacer(minLength: 8)
+            HStack(spacing: 3) {
+                Text("프로필")
+                    .font(.caption)
+                Image(systemName: "chevron.right")
+                    .font(.caption2.weight(.semibold))
+            }
+            .foregroundStyle(Theme.secondaryText)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 12)
+        .contentShape(Rectangle())
+    }
+
+    private func slotRow(_ slot: TimeSlot) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "clock")
+                .font(.caption)
+                .foregroundStyle(Theme.accent)
+            Text(slot.title)
+                .font(.footnote.weight(.medium))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+            Spacer(minLength: 8)
+            Text("\(slot.durationMin)분 · \(DiscoverFormat.priceText(cents: slot.priceCents))")
+                .font(.caption)
+                .monospacedDigit()
+                .foregroundStyle(Theme.secondaryText)
+            Image(systemName: "chevron.right")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(Theme.secondaryText.opacity(0.7))
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .contentShape(Rectangle())
     }
 }
 

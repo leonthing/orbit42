@@ -21,6 +21,7 @@ struct CalendarView: View {
     @State private var viewModel = CalendarViewModel()
     @State private var showingAddSheet = false
     @State private var selectedEvent: CalendarEvent?
+    @State private var completionErrorMessage: String?
 
     @State private var mode: Mode = CalendarView.initialMode
     /// 세그먼트 전환에도 슬롯 목록 캐시가 유지되도록 여기서 소유한다.
@@ -67,6 +68,11 @@ struct CalendarView: View {
             }
             .task(id: viewModel.currentMonthKey) {
                 await viewModel.loadDisplayedMonth()
+            }
+            .alert("완료 상태를 저장하지 못했어요", isPresented: showCompletionErrorAlert) {
+                Button("확인", role: .cancel) { completionErrorMessage = nil }
+            } message: {
+                Text(completionErrorMessage ?? "")
             }
         }
     }
@@ -301,12 +307,12 @@ struct CalendarView: View {
                     .padding(.vertical, 40)
                 } else {
                     ForEach(events) { event in
-                        Button {
-                            selectedEvent = event
-                        } label: {
-                            EventRow(event: event, calendars: viewModel.calendars)
-                        }
-                        .buttonStyle(.plain)
+                        EventRow(
+                            event: event,
+                            calendars: viewModel.calendars,
+                            onToggleCompletion: { toggleCompletion(event) },
+                            onOpen: { selectedEvent = event }
+                        )
                     }
                 }
             }
@@ -315,6 +321,28 @@ struct CalendarView: View {
         }
         .refreshable {
             await viewModel.loadDisplayedMonth(force: true)
+        }
+    }
+
+    // MARK: - 완료 체크
+
+    private var showCompletionErrorAlert: Binding<Bool> {
+        Binding(
+            get: { completionErrorMessage != nil },
+            set: { if !$0 { completionErrorMessage = nil } }
+        )
+    }
+
+    /// 행의 체크 버튼 탭 — 뷰모델이 낙관적으로 반영/원복하므로 여기선 실패 alert 만 담당.
+    private func toggleCompletion(_ event: CalendarEvent) {
+        Task {
+            do {
+                try await viewModel.toggleCompletion(event)
+            } catch let apiError as APIError {
+                completionErrorMessage = apiError.errorDescription
+            } catch {
+                completionErrorMessage = "완료 상태를 저장하지 못했어요. 잠시 후 다시 시도해 주세요."
+            }
         }
     }
 
@@ -387,50 +415,79 @@ private struct DayCell: View {
 
 // MARK: - 이벤트 행
 
+/// 일별 이벤트 목록의 한 행 — 완료 체크 버튼과 상세 열기(나머지 영역)를
+/// 형제 버튼으로 분리해 히트영역이 겹치지 않게 한다. (버튼 중첩은 탭이 안 먹는다)
 private struct EventRow: View {
     let event: CalendarEvent
     let calendars: [CalendarInfo]
+    let onToggleCompletion: () -> Void
+    let onOpen: () -> Void
+
+    /// 완료 체크 초록 — 웹과 동일한 #22c55e
+    private static let completedGreen = Color(hexString: "#22c55e") ?? .green
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 8) {
             RoundedRectangle(cornerRadius: 2)
                 .fill(event.displayColor(in: calendars))
                 .frame(width: 4)
                 .frame(maxHeight: .infinity)
 
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    Text(event.title)
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.white)
-                        .lineLimit(2)
-                    if event.isGoogle {
-                        Text("Google")
-                            .font(.caption2.weight(.medium))
-                            .foregroundStyle(Theme.secondaryText)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color.white.opacity(0.08), in: Capsule())
-                    }
-                }
-                Text(timeText)
-                    .font(.footnote)
-                    .foregroundStyle(Theme.secondaryText)
-                if let description = event.description, !description.isEmpty {
-                    Text(description)
-                        .font(.footnote)
-                        .foregroundStyle(Theme.secondaryText)
-                        .lineLimit(1)
-                }
+            Button(action: onToggleCompletion) {
+                Image(systemName: event.completed ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 22, weight: .regular))
+                    .foregroundStyle(event.completed ? Self.completedGreen : Theme.secondaryText)
+                    .frame(width: 36, height: 36)
+                    .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel(event.completed ? "완료 해제" : "완료로 표시")
 
-            Spacer(minLength: 0)
+            Button(action: onOpen) {
+                HStack(spacing: 8) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack(spacing: 6) {
+                            Text(event.title)
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(.white)
+                                .strikethrough(event.completed)
+                                .lineLimit(2)
+                            if event.isGoogle {
+                                Text("Google")
+                                    .font(.caption2.weight(.medium))
+                                    .foregroundStyle(Theme.secondaryText)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Color.white.opacity(0.08), in: Capsule())
+                            }
+                        }
+                        Text(timeText)
+                            .font(.footnote)
+                            .foregroundStyle(Theme.secondaryText)
+                        if let description = event.description, !description.isEmpty {
+                            Text(description)
+                                .font(.footnote)
+                                .foregroundStyle(Theme.secondaryText)
+                                .lineLimit(1)
+                        }
+                    }
+                    Spacer(minLength: 0)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
-        .opacity(event.tentative ? 0.65 : 1)
+        .opacity(rowOpacity)
         .fixedSize(horizontal: false, vertical: true)
+        .animation(.easeInOut(duration: 0.15), value: event.completed)
+    }
+
+    private var rowOpacity: Double {
+        if event.completed { return 0.55 }
+        return event.tentative ? 0.65 : 1
     }
 
     private var timeText: String {

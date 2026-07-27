@@ -1,17 +1,25 @@
 import SwiftUI
 
 /// 설정 화면 — 프로필 탭 우상단 톱니에서 push.
-/// 내 캘린더 / Google 캘린더 / 알림 설정 / 이동시간 버퍼 / 친구 초대 / 계정 /
-/// 웹 설정 안내 / 로그아웃 + 앱 버전.
+/// 내 캘린더 / Google 캘린더 / 알림 설정 / 이동시간 버퍼 / 친구 초대 / 차단 관리 / 계정 /
+/// 웹 설정 안내 / 프로필 비공개 / 로그아웃 + 앱 버전.
 /// (근로시간·급여·수면은 자산 탭 > 자산 설정에서 관리)
 struct SettingsView: View {
     @Environment(AuthViewModel.self) private var auth
 
     @State private var showingLogoutConfirm = false
 
+    // 프로필 비공개 토글 상태 — auth.user 값으로 최초 1회 동기화 후 로컬로 관리,
+    // PATCH 실패 시 원복한다.
+    @State private var isPrivate = false
+    @State private var didSyncPrivacy = false
+    @State private var isSavingPrivacy = false
+    @State private var privacyErrorMessage: String?
+
     var body: some View {
         List {
             menuSection
+            privacySection
             logoutSection
         }
         .scrollContentBackground(.hidden)
@@ -27,6 +35,23 @@ struct SettingsView: View {
                 auth.logout()
             }
             Button("취소", role: .cancel) {}
+        }
+        .alert(
+            "안내",
+            isPresented: Binding(
+                get: { privacyErrorMessage != nil },
+                set: { if !$0 { privacyErrorMessage = nil } }
+            )
+        ) {
+            Button("확인", role: .cancel) {}
+        } message: {
+            Text(privacyErrorMessage ?? "")
+        }
+        .onAppear {
+            if !didSyncPrivacy {
+                isPrivate = auth.user?.isPrivate ?? false
+                didSyncPrivacy = true
+            }
         }
     }
 
@@ -64,6 +89,12 @@ struct SettingsView: View {
                 ShareLink(item: referralText) {
                     menuRow(icon: "person.badge.plus", title: "친구 초대")
                 }
+            }
+
+            NavigationLink {
+                BlockedUsersView()
+            } label: {
+                menuRow(icon: "hand.raised", title: "차단 관리")
             }
 
             NavigationLink {
@@ -110,6 +141,52 @@ struct SettingsView: View {
         return "https://orbit42.org/signup?ref=\(username)\n\nOrbit42에 초대합니다. 제 추천으로 가입하면 자동으로 연결돼요."
     }
 
+    // MARK: - 프로필 비공개
+
+    private var privacySection: some View {
+        Section {
+            Toggle(isOn: Binding(
+                get: { isPrivate },
+                set: { newValue in
+                    guard newValue != isPrivate else { return }
+                    isPrivate = newValue
+                    Task { await updatePrivacy(newValue) }
+                }
+            )) {
+                menuRow(icon: "lock", title: "프로필 비공개")
+            }
+            .tint(Theme.accent)
+            .disabled(isSavingPrivacy)
+        } footer: {
+            Text("켜면 검색과 프로필 조회, 다른 사람의 오르빗에서 숨겨져요. 직접 공유한 예약 링크는 계속 동작해요.")
+                .foregroundStyle(Theme.secondaryText)
+        }
+        .listRowBackground(Theme.surface)
+    }
+
+    private func updatePrivacy(_ newValue: Bool) async {
+        isSavingPrivacy = true
+        defer { isSavingPrivacy = false }
+
+        do {
+            let response: MeResponse = try await APIClient.shared.patch(
+                "/api/v1/me",
+                body: UpdatePrivacyRequest(isPrivate: newValue)
+            )
+            auth.updateUser(response.user)
+            isPrivate = response.user.isPrivate ?? newValue
+        } catch is CancellationError {
+            return
+        } catch let urlError as URLError where urlError.code == .cancelled {
+            return
+        } catch {
+            // 실패: 토글 원복 + 안내
+            isPrivate = !newValue
+            privacyErrorMessage = (error as? APIError)?.errorDescription
+                ?? "설정을 저장하지 못했어요. 네트워크를 확인해 주세요."
+        }
+    }
+
     // MARK: - 로그아웃 + 버전
 
     private var logoutSection: some View {
@@ -133,6 +210,11 @@ struct SettingsView: View {
     private var appVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "-"
     }
+}
+
+/// PATCH /api/v1/me — 프로필 비공개 설정만 변경.
+private struct UpdatePrivacyRequest: Encodable {
+    let isPrivate: Bool
 }
 
 #Preview {

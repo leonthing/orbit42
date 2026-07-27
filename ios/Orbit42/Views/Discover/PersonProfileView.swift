@@ -5,6 +5,7 @@ import SwiftUI
 struct PersonProfileView: View {
     @State private var viewModel: PersonProfileViewModel
     @State private var showingTimeRequest = false
+    @State private var showingBlockConfirm = false
 
     init(username: String) {
         _viewModel = State(initialValue: PersonProfileViewModel(username: username))
@@ -17,6 +18,41 @@ struct PersonProfileView: View {
         }
         .navigationTitle("@\(viewModel.username)")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if let data = viewModel.data, !data.isMe {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        if data.isBlocked {
+                            Button {
+                                Task { await viewModel.toggleBlock() }
+                            } label: {
+                                Label("차단 해제", systemImage: "hand.raised.slash")
+                            }
+                        } else {
+                            Button(role: .destructive) {
+                                showingBlockConfirm = true
+                            } label: {
+                                Label("차단하기", systemImage: "hand.raised")
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .foregroundStyle(.white)
+                    }
+                    .disabled(viewModel.isTogglingBlock)
+                }
+            }
+        }
+        .confirmationDialog(
+            "차단하면 서로의 오르빗에서 제거되고, 검색·예약·시간 요청이 막혀요.",
+            isPresented: $showingBlockConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("차단하기", role: .destructive) {
+                Task { await viewModel.toggleBlock() }
+            }
+            Button("취소", role: .cancel) {}
+        }
         .sheet(isPresented: $showingTimeRequest) {
             TimeRequestSheet(
                 username: viewModel.username,
@@ -84,16 +120,56 @@ struct PersonProfileView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 header(data)
-                if !data.isMe {
-                    actionButtons(data)
+                if data.isBlocked {
+                    // 차단 상태: 서버가 bio/관심사/슬롯을 비워서 주므로
+                    // 헤더(아바타·이름·핸들)만 남고, 액션/슬롯 대신 안내를 보여준다.
+                    blockedNotice
+                } else {
+                    if !data.isMe {
+                        actionButtons(data)
+                    }
+                    slotsSection(data)
                 }
-                slotsSection(data)
             }
             .padding(16)
         }
         .refreshable {
             await viewModel.load(force: true)
         }
+    }
+
+    // MARK: - 차단 상태 안내
+
+    private var blockedNotice: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "hand.raised.fill")
+                .font(.system(size: 28, weight: .light))
+                .foregroundStyle(Theme.secondaryText)
+            Text("차단한 사용자예요")
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.white)
+            Text("차단을 해제하면 프로필과 열린 시간을 다시 볼 수 있어요.")
+                .font(.footnote)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(Theme.secondaryText)
+            Button {
+                Task { await viewModel.toggleBlock() }
+            } label: {
+                Text("차단 해제")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 10)
+                    .background(Color.white.opacity(0.08), in: Capsule())
+            }
+            .disabled(viewModel.isTogglingBlock)
+            .opacity(viewModel.isTogglingBlock ? 0.5 : 1)
+            .padding(.top, 4)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 28)
+        .padding(.horizontal, 16)
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16))
     }
 
     // MARK: - 헤더

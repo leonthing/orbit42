@@ -128,6 +128,15 @@ struct PersonProfileResponse: Decodable, Sendable {
     let isMe: Bool
     let rating: PersonRating?
     let slots: [TimeSlot]
+    /// 내가 이 사람을 차단했는지 — 구버전 서버 응답에는 없을 수 있어 옵셔널로 받는다.
+    private let isBlockedValue: Bool?
+
+    var isBlocked: Bool { isBlockedValue ?? false }
+
+    private enum CodingKeys: String, CodingKey {
+        case user, orbiters, orbiting, isFollowing, isMe, rating, slots
+        case isBlockedValue = "isBlocked"
+    }
 }
 
 struct PersonUser: Decodable, Sendable {
@@ -165,6 +174,39 @@ struct FollowRequest: Encodable {
 
 struct FollowResponse: Decodable {
     let isFollowing: Bool
+}
+
+// MARK: - 차단 (POST /api/v1/users/{username}/block, GET /api/v1/blocks)
+
+struct BlockRequest: Encodable {
+    let block: Bool
+}
+
+struct BlockResponse: Decodable {
+    let isBlocked: Bool
+}
+
+/// GET /api/v1/blocks — 내가 차단한 사용자 목록.
+struct BlocksResponse: Decodable, Sendable {
+    let users: [BlockedUser]
+}
+
+struct BlockedUser: Decodable, Identifiable, Sendable {
+    let username: String
+    let displayName: String?
+    let avatarUrl: String?
+
+    var id: String { username }
+
+    var preferredName: String {
+        if let displayName, !displayName.isEmpty { return displayName }
+        return username
+    }
+
+    var avatarURL: URL? {
+        guard let avatarUrl, !avatarUrl.isEmpty else { return nil }
+        return URL(string: avatarUrl)
+    }
 }
 
 // MARK: - 슬롯 예약 (GET/POST /api/v1/users/{username}/slots/{slug})

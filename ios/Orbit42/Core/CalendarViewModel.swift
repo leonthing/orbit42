@@ -215,6 +215,53 @@ final class CalendarViewModel {
         }
     }
 
+    // MARK: - 완료 체크(투두)
+
+    /// 이벤트의 완료 상태를 토글한다 — 캐시의 최신 값 기준으로 반전.
+    func toggleCompletion(_ event: CalendarEvent) async throws {
+        try await setCompletion(event, completed: !currentCompleted(of: event))
+    }
+
+    /// 완료 상태를 낙관적으로 캐시에 먼저 반영하고 `PUT .../completion` 으로 저장한다.
+    /// 실패하면 원복한 뒤 에러를 다시 던진다 (표출은 호출한 뷰가 담당).
+    func setCompletion(_ event: CalendarEvent, completed: Bool) async throws {
+        let previous = currentCompleted(of: event)
+        guard previous != completed else { return }
+        applyCompletion(eventId: event.id, completed: completed)
+        do {
+            let _: EventCompletionResponse = try await api.put(
+                "/api/v1/calendar/events/\(event.id)/completion",
+                body: UpdateEventCompletionRequest(completed: completed)
+            )
+        } catch {
+            applyCompletion(eventId: event.id, completed: previous)
+            throw error
+        }
+    }
+
+    /// 캐시에 반영된 최신 완료 상태. (상세 시트가 든 스냅샷이 낡았을 수 있어 캐시 우선)
+    private func currentCompleted(of event: CalendarEvent) -> Bool {
+        for data in cache.values {
+            if let cached = data.events.first(where: { $0.id == event.id }) {
+                return cached.completed
+            }
+        }
+        return event.completed
+    }
+
+    /// 모든 월 캐시에서 해당 이벤트의 completed 를 교체한다. (여러 달에 걸친 이벤트 포함)
+    private func applyCompletion(eventId: String, completed: Bool) {
+        for key in cache.keys {
+            guard var data = cache[key] else { continue }
+            var changed = false
+            for index in data.events.indices where data.events[index].id == eventId {
+                data.events[index].completed = completed
+                changed = true
+            }
+            if changed { cache[key] = data }
+        }
+    }
+
     // MARK: - 내부
 
     static func key(for date: Date) -> MonthKey {

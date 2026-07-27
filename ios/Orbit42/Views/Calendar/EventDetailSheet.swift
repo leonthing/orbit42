@@ -44,10 +44,19 @@ struct EventDetailSheet: View {
     @State private var isSavingBucket = false
     @State private var bucketErrorMessage: String?
 
+    /// 완료 체크(투두) — 시트가 든 event 는 스냅샷이므로 표시는 이 상태로 한다.
+    @State private var isCompleted: Bool
+    @State private var isSavingCompletion = false
+    @State private var completionErrorMessage: String?
+
+    /// 완료 체크 초록 — 웹과 동일한 #22c55e
+    private static let completedGreen = Color(hexString: "#22c55e") ?? .green
+
     init(viewModel: CalendarViewModel, event: CalendarEvent) {
         self.viewModel = viewModel
         self.event = event
         _selectedBucket = State(initialValue: event.bucketOverride)
+        _isCompleted = State(initialValue: event.completed)
     }
 
     private var calendar: Calendar { CalendarViewModel.calendar }
@@ -66,6 +75,13 @@ struct EventDetailSheet: View {
                             Text(event.title)
                                 .font(.title3.weight(.semibold))
                                 .foregroundStyle(.white)
+                                .strikethrough(isCompleted)
+                            if isCompleted {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Self.completedGreen)
+                                    .accessibilityLabel("완료됨")
+                            }
                             if event.isGoogle {
                                 Text("Google")
                                     .font(.caption2.weight(.medium))
@@ -165,6 +181,30 @@ struct EventDetailSheet: View {
 
                 Section {
                     Button {
+                        toggleCompletion()
+                    } label: {
+                        HStack {
+                            Label {
+                                Text(isCompleted ? "완료 해제" : "완료로 표시")
+                            } icon: {
+                                Image(systemName: isCompleted ? "checkmark.circle.fill" : "checkmark.circle")
+                                    .foregroundStyle(isCompleted ? Self.completedGreen : Theme.accent)
+                            }
+                            Spacer()
+                            if isSavingCompletion {
+                                ProgressView()
+                                    .tint(Theme.secondaryText)
+                            }
+                        }
+                    }
+                    .disabled(isSavingCompletion || isDeleting)
+                    .alert("완료 상태를 저장하지 못했어요", isPresented: showCompletionErrorAlert) {
+                        Button("확인", role: .cancel) { completionErrorMessage = nil }
+                    } message: {
+                        Text(completionErrorMessage ?? "")
+                    }
+
+                    Button {
                         showingEdit = true
                     } label: {
                         Label("수정", systemImage: "pencil")
@@ -235,6 +275,36 @@ struct EventDetailSheet: View {
             get: { bucketErrorMessage != nil },
             set: { if !$0 { bucketErrorMessage = nil } }
         )
+    }
+
+    private var showCompletionErrorAlert: Binding<Bool> {
+        Binding(
+            get: { completionErrorMessage != nil },
+            set: { if !$0 { completionErrorMessage = nil } }
+        )
+    }
+
+    // MARK: - 완료 체크
+
+    /// 시트 표시를 낙관적으로 뒤집고 저장한다. 뷰모델이 월 캐시를 함께 갱신하므로
+    /// 목록 행도 즉시 반영되고, 실패하면 둘 다 원복된다.
+    private func toggleCompletion() {
+        guard !isSavingCompletion else { return }
+        let newValue = !isCompleted
+        isCompleted = newValue
+        isSavingCompletion = true
+        Task {
+            defer { isSavingCompletion = false }
+            do {
+                try await viewModel.setCompletion(event, completed: newValue)
+            } catch let apiError as APIError {
+                isCompleted = !newValue
+                completionErrorMessage = apiError.errorDescription
+            } catch {
+                isCompleted = !newValue
+                completionErrorMessage = "완료 상태를 저장하지 못했어요. 잠시 후 다시 시도해 주세요."
+            }
+        }
     }
 
     // MARK: - 자산 분류

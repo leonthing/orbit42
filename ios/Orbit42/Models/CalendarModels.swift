@@ -96,6 +96,8 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
     let tentative: Bool
     /// 자산 탭 분석용 버킷 오버라이드 — "earn" | "invest" | "spend" | "life" | nil(캘린더 용도 따름)
     let bucketOverride: String?
+    /// 완료 체크(투두) 상태 — 낙관적 업데이트를 위해 var (서버가 안 주면 false)
+    var completed: Bool
     /// endAt 이 "2026-07-26" 처럼 날짜만으로 왔는지 (종일 이벤트의 마지막 날 포함 여부 판단용)
     let endWasDateOnly: Bool
 
@@ -103,7 +105,7 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
 
     private enum CodingKeys: String, CodingKey {
         case id, title, description, startAt, endAt, allDay, calendarId, source, tentative
-        case bucketOverride
+        case bucketOverride, completed
     }
 
     init(from decoder: Decoder) throws {
@@ -116,6 +118,7 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
         source = try container.decodeIfPresent(String.self, forKey: .source) ?? "local"
         tentative = try container.decodeIfPresent(Bool.self, forKey: .tentative) ?? false
         bucketOverride = try container.decodeIfPresent(String.self, forKey: .bucketOverride)
+        completed = try container.decodeIfPresent(Bool.self, forKey: .completed) ?? false
 
         let startRaw = try container.decode(String.self, forKey: .startAt)
         let endRaw = try container.decode(String.self, forKey: .endAt)
@@ -203,6 +206,17 @@ struct UpdateEventRequest: Encodable {
 /// PATCH/DELETE 공통 성공 응답 — `{"ok": true}`
 struct EventMutationResponse: Decodable {
     let ok: Bool
+}
+
+/// `PUT /api/v1/calendar/events/{id}/completion` — 일정 완료 체크(투두).
+struct UpdateEventCompletionRequest: Encodable {
+    let completed: Bool
+}
+
+/// 완료 토글 성공 응답 — `{"ok": true, "completed": Bool}`
+struct EventCompletionResponse: Decodable {
+    let ok: Bool
+    let completed: Bool
 }
 
 /// `PUT /api/v1/time-asset/event-bucket` — 이벤트 단위 자산 분류 오버라이드.
