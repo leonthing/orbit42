@@ -81,8 +81,12 @@ export async function loadApiUser(username: string): Promise<ApiUser | null> {
   };
 }
 
-/** 200 payload with a fresh token for the given username. */
-export async function tokenResponse(username: string): Promise<Response> {
+/** 200 payload with a fresh token for the given username.
+ * isNew: 이번 요청으로 계정이 새로 만들어졌는지 — 클라이언트 온보딩 트리거. */
+export async function tokenResponse(
+  username: string,
+  isNew = false,
+): Promise<Response> {
   const [token, user] = await Promise.all([
     issueApiToken(username),
     loadApiUser(username),
@@ -90,5 +94,5 @@ export async function tokenResponse(username: string): Promise<Response> {
   if (!user) {
     return Response.json({ error: "사용자를 찾을 수 없어요." }, { status: 404 });
   }
-  return Response.json({ token, user });
+  return Response.json({ token, user, isNew });
 }

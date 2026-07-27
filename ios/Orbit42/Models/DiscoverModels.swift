@@ -288,6 +288,35 @@ struct ConnectionUser: Decodable, Identifiable, Sendable {
     }
 }
 
+// MARK: - 팔로우 추천 (GET /api/v1/recommendations)
+
+struct RecommendationsResponse: Decodable, Sendable {
+    let users: [RecommendedUser]
+}
+
+/// 추천 사용자 — interests 는 내 관심사와 겹치는 태그가 앞에 오도록 서버가 정렬한다.
+struct RecommendedUser: Decodable, Identifiable, Sendable {
+    let username: String
+    let displayName: String?
+    let avatarUrl: String?
+    let bio: String?
+    let interests: [String]?
+    /// 나와 겹치는 관심사 개수
+    let overlapCount: Int?
+
+    var id: String { username }
+
+    var preferredName: String {
+        if let displayName, !displayName.isEmpty { return displayName }
+        return username
+    }
+
+    var avatarURL: URL? {
+        guard let avatarUrl, !avatarUrl.isEmpty else { return nil }
+        return URL(string: avatarUrl)
+    }
+}
+
 struct PersonRating: Decodable, Sendable {
     let average: Double
     let count: Int

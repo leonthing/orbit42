@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
       const { issueApiToken } = await import("@/lib/api-auth");
       const token = await issueApiToken(res.username);
       return NextResponse.redirect(
-        `orbit42://signin?token=${encodeURIComponent(token)}`,
+        `orbit42://signin?token=${encodeURIComponent(token)}${res.created ? "&new=1" : ""}`,
       );
     } catch (err) {
       console.error("google mobile signin", err);

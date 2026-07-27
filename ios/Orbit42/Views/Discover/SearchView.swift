@@ -4,6 +4,8 @@ import SwiftUI
 /// 예약 탭 툴바의 돋보기에서 push 된다.
 struct SearchView: View {
     @State private var viewModel = SearchViewModel()
+    /// 팔로우 추천 — 오르빗 아래 섹션 (온보딩과 같은 API·행 공용).
+    @State private var suggestions = FollowSuggestionsViewModel()
     @FocusState private var isSearchFocused: Bool
 
     var body: some View {
@@ -16,7 +18,11 @@ struct SearchView: View {
         }
         .navigationTitle("오르빗")
         .navigationBarTitleDisplayMode(.inline)
-        .task { await viewModel.loadOrbit() }
+        .task {
+            async let orbit: Void = viewModel.loadOrbit()
+            async let suggested: Void = suggestions.load()
+            _ = await (orbit, suggested)
+        }
     }
 
     // MARK: - 검색바
@@ -59,14 +65,15 @@ struct SearchView: View {
     @ViewBuilder
     private var content: some View {
         if viewModel.trimmedQuery.isEmpty {
-            if let orbit = viewModel.orbit, !orbit.isEmpty {
-                orbitList(orbit)
-            } else {
+            let orbit = viewModel.orbit ?? []
+            if orbit.isEmpty, suggestions.users?.isEmpty != false {
                 hintState(
                     icon: "sparkle.magnifyingglass",
                     title: "오르빗이 비어있어요",
                     message: "관심 있는 사람을 팔로우하면\n그 사람의 열리는 시간이 여기 모여요.\n친구를 초대하면 자동으로 맞팔로우돼요."
                 )
+            } else {
+                orbitList(orbit)
             }
         } else if let message = viewModel.errorMessage {
             errorState(message)
@@ -191,23 +198,68 @@ struct SearchView: View {
     private func orbitList(_ people: [OrbitPerson]) -> some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 10) {
-                sectionHeader("내 오르빗")
-                    .padding(.top, 6)
+                if !people.isEmpty {
+                    sectionHeader("내 오르빗")
+                        .padding(.top, 6)
 
-                ForEach(people) { person in
-                    OrbitPersonCard(person: person)
+                    ForEach(people) { person in
+                        OrbitPersonCard(person: person)
+                    }
+
+                    Text("팔로우한 사람들의 열린 시간이에요. 친구를 초대하면 자동으로 맞팔로우돼요.")
+                        .font(.caption)
+                        .foregroundStyle(Theme.secondaryText)
+                        .padding(.top, 4)
+                } else {
+                    sectionHeader("내 오르빗")
+                        .padding(.top, 6)
+                    Text("아직 비어있어요. 아래에서 관심 가는 사람을 팔로우해 보세요.")
+                        .font(.caption)
+                        .foregroundStyle(Theme.secondaryText)
                 }
 
-                Text("팔로우한 사람들의 열린 시간이에요. 친구를 초대하면 자동으로 맞팔로우돼요.")
-                    .font(.caption)
-                    .foregroundStyle(Theme.secondaryText)
-                    .padding(.top, 4)
+                if let suggested = suggestions.users, !suggested.isEmpty {
+                    sectionHeader("추천")
+                        .padding(.top, 14)
+
+                    ForEach(suggested) { user in
+                        suggestionRow(user)
+                    }
+
+                    Text("아직 팔로우하지 않은 사람들이에요. 관심사가 비슷한 사람부터 보여드려요.")
+                        .font(.caption)
+                        .foregroundStyle(Theme.secondaryText)
+                        .padding(.top, 4)
+                }
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 24)
         }
         .scrollDismissesKeyboard(.immediately)
-        .refreshable { await viewModel.loadOrbit(force: true) }
+        .refreshable {
+            await viewModel.loadOrbit(force: true)
+            await suggestions.load(force: true)
+        }
+    }
+
+    /// 추천 사용자 행 — 행 탭은 프로필로, 버튼은 팔로우로.
+    /// 팔로우하면 오르빗 목록을 새로 고쳐 그 사람이 위 섹션에 나타난다.
+    private func suggestionRow(_ user: RecommendedUser) -> some View {
+        NavigationLink {
+            PersonProfileView(username: user.username)
+        } label: {
+            SuggestedPersonRow(
+                user: user,
+                isFollowed: suggestions.followed.contains(user.username),
+                isBusy: suggestions.busy.contains(user.username)
+            ) {
+                Task {
+                    await suggestions.toggleFollow(user.username)
+                    await viewModel.loadOrbit(force: true)
+                }
+            }
+        }
+        .buttonStyle(.plain)
     }
 }
 

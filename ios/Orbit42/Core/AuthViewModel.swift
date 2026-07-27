@@ -10,6 +10,8 @@ final class AuthViewModel {
     private(set) var user: User?
     /// 앱 시작 직후 세션 복원 중 여부 (스플래시 표시용)
     private(set) var isRestoring = true
+    /// 방금 가입한 계정인지 — true 면 팔로우 추천 온보딩을 먼저 보여준다.
+    private(set) var needsFollowOnboarding = false
 
     var isAuthenticated: Bool { user != nil }
 
@@ -90,9 +92,10 @@ final class AuthViewModel {
             return
         }
 
+        let queryItems = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false)?
+            .queryItems
         guard callbackURL.host == "signin",
-              let token = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false)?
-                  .queryItems?.first(where: { $0.name == "token" })?.value,
+              let token = queryItems?.first(where: { $0.name == "token" })?.value,
               !token.isEmpty
         else {
             throw APIError.server(
@@ -103,6 +106,9 @@ final class AuthViewModel {
 
         KeychainStore.saveToken(token)
         let response: MeResponse = try await api.get("/api/v1/me")
+        if queryItems?.contains(where: { $0.name == "new" && $0.value == "1" }) == true {
+            needsFollowOnboarding = true
+        }
         user = response.user
     }
 
@@ -130,6 +136,12 @@ final class AuthViewModel {
     func logout() {
         KeychainStore.deleteToken()
         user = nil
+        needsFollowOnboarding = false
+    }
+
+    /// 팔로우 추천 온보딩 완료(또는 건너뛰기) — 메인 탭으로 진입한다.
+    func finishFollowOnboarding() {
+        needsFollowOnboarding = false
     }
 
     // MARK: - 프로필 갱신
@@ -143,6 +155,9 @@ final class AuthViewModel {
 
     private func apply(_ response: AuthResponse) {
         KeychainStore.saveToken(response.token)
+        if response.isNew == true {
+            needsFollowOnboarding = true
+        }
         user = response.user
     }
 }

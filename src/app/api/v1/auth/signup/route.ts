@@ -32,5 +32,5 @@ export async function POST(request: Request) {
   if (!("success" in result) || !result.success) {
     return Response.json({ error: "회원가입에 실패했습니다." }, { status: 400 });
   }
-  return tokenResponse(result.username);
+  return tokenResponse(result.username, true);
 }

@@ -43,5 +43,5 @@ export async function POST(request: Request) {
   if ("error" in result) {
     return Response.json({ error: result.error }, { status: 401 });
   }
-  return tokenResponse(result.username);
+  return tokenResponse(result.username, result.created);
 }

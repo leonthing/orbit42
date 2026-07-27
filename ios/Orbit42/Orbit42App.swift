@@ -25,7 +25,11 @@ struct RootView: View {
             if auth.isRestoring {
                 splash
             } else if auth.isAuthenticated {
-                MainTabView()
+                if auth.needsFollowOnboarding {
+                    FollowOnboardingView()
+                } else {
+                    MainTabView()
+                }
             } else if !hasSeenIntro {
                 IntroView { hasSeenIntro = true }
             } else {

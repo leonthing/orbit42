@@ -43,6 +43,8 @@ struct AppleAuthRequest: Encodable {
 struct AuthResponse: Decodable {
     let token: String
     let user: User
+    /// 이번 요청으로 계정이 새로 만들어졌는지 — 팔로우 추천 온보딩 트리거.
+    let isNew: Bool?
 }
 
 struct MeResponse: Decodable {

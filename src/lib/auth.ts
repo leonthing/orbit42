@@ -147,7 +147,7 @@ async function oauthLoginOrSignup(profile: {
   displayName: string | null;
   referrerRef?: string | null;
   appleSub?: string | null;
-}): Promise<{ username: string } | { error: string }> {
+}): Promise<{ username: string; created: boolean } | { error: string }> {
   const normalized = profile.email.trim().toLowerCase();
   if (!normalized) return { error: "이메일을 가져올 수 없어요." };
 
@@ -174,7 +174,7 @@ async function oauthLoginOrSignup(profile: {
       await db.from("users").update(patch).eq("id", existing.id);
     }
     await setSessionCookie(existing.username as string);
-    return { username: existing.username as string };
+    return { username: existing.username as string, created: false };
   }
 
   // 2. Fresh signup — open. Referral code is optional.
@@ -240,14 +240,14 @@ async function oauthLoginOrSignup(profile: {
   }
 
   await setSessionCookie(username);
-  return { username };
+  return { username, created: true };
 }
 
 export async function loginOrSignupWithGoogle(
   email: string,
   displayName: string | null,
   referrerRef: string | null = null,
-): Promise<{ username: string } | { error: string }> {
+): Promise<{ username: string; created: boolean } | { error: string }> {
   return oauthLoginOrSignup({ email, displayName, referrerRef });
 }
 
@@ -261,7 +261,7 @@ export async function loginOrSignupWithApple(
   email: string | null,
   displayName: string | null,
   referrerRef: string | null = null,
-): Promise<{ username: string } | { error: string }> {
+): Promise<{ username: string; created: boolean } | { error: string }> {
   const db = getAdminClient();
   const { data: bySub } = await db
     .from("users")
@@ -270,7 +270,7 @@ export async function loginOrSignupWithApple(
     .maybeSingle();
   if (bySub?.username) {
     await setSessionCookie(bySub.username as string);
-    return { username: bySub.username as string };
+    return { username: bySub.username as string, created: false };
   }
 
   if (!email) {
