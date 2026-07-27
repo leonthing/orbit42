@@ -13,7 +13,7 @@ enum ConnectionType: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .orbiters: return "팔로워"
-        case .orbiting: return "오르빗"
+        case .orbiting: return "팔로잉"
         }
     }
 }
