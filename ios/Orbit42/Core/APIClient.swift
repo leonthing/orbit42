@@ -61,7 +61,13 @@ final class APIClient {
     static let shared = APIClient()
 
     #if DEBUG
+    #if targetEnvironment(simulator)
     let baseURL = URL(string: "http://localhost:3000")!
+    #else
+    // 실기기 DEBUG: Cloudflare 터널 경유 Mac 개발 서버 (네트워크 무관, HTTPS).
+    // 터널 재기동 시 URL이 바뀌므로 갱신 필요: cloudflared tunnel --url http://localhost:3000
+    let baseURL = URL(string: "https://tract-parameters-debate-clouds.trycloudflare.com")!
+    #endif
     #else
     let baseURL = URL(string: "https://orbit42.org")!
     #endif

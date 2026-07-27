@@ -205,7 +205,9 @@ struct AuthView: View {
 
     private var appleButton: some View {
         SignInWithAppleButton(.signIn) { request in
-            request.requestedScopes = [.fullName]
+            // .email 필수 — 없으면 identity token에 이메일이 안 와서
+            // 기존 계정과 연결할 수 없다 (서버는 이메일로 계정을 찾거나 만든다).
+            request.requestedScopes = [.fullName, .email]
         } onCompletion: { result in
             handleAppleResult(result)
         }

@@ -51,6 +51,8 @@ targets:
         # DEBUG 빌드가 http://localhost:3000 (Next.js dev 서버) 에 접속할 수 있도록 허용
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
+        # 실기기 DEBUG가 같은 Wi-Fi의 Mac 개발 서버(LAN IP)에 접속할 때 필요
+        NSLocalNetworkUsageDescription: 개발용 로컬 서버에 연결하기 위해 로컬 네트워크 접근이 필요해요.
     entitlements:
       path: Orbit42/Orbit42.entitlements
       properties:
