@@ -71,6 +71,40 @@ final class AssetViewModel {
     }
 
     /// 수면 시간만 저장. 성공하면 요약을 새로고침하고 true 를 반환한다.
+    /// 주간 목표 저장 (nil = 해제). 성공 시 요약을 다시 계산한다.
+    func saveWeeklyGoals(earnKrw: Int?, investHours: Double?) async -> Bool {
+        struct SaveGoalsRequest: Encodable {
+            let weeklyEarnGoalKrw: Int?
+            let weeklyInvestGoalHours: Double?
+
+            private enum CodingKeys: String, CodingKey {
+                case weeklyEarnGoalKrw, weeklyInvestGoalHours
+            }
+
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                // nil 도 명시적 null 로 보내 목표 해제가 되게 한다.
+                try container.encode(weeklyEarnGoalKrw, forKey: .weeklyEarnGoalKrw)
+                try container.encode(weeklyInvestGoalHours, forKey: .weeklyInvestGoalHours)
+            }
+        }
+        do {
+            let updated: TimeAssetSettings = try await api.put(
+                "/api/v1/time-asset/settings",
+                body: SaveGoalsRequest(weeklyEarnGoalKrw: earnKrw, weeklyInvestGoalHours: investHours)
+            )
+            settings = updated
+            await load(force: true)
+            return true
+        } catch let apiError as APIError {
+            actionMessage = apiError.errorDescription
+            return false
+        } catch {
+            actionMessage = "목표를 저장하지 못했어요. 네트워크를 확인해 주세요."
+            return false
+        }
+    }
+
     func saveSleepHours(_ hoursPerDay: Double) async -> Bool {
         await putSettings(UpdateTimeAssetSettingsRequest(sleepHoursPerDay: hoursPerDay))
     }

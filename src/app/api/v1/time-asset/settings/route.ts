@@ -69,6 +69,8 @@ export async function PUT(request: Request) {
     amount?: number;
     bucketMap?: Record<string, string>;
     sleepHoursPerDay?: number;
+    weeklyEarnGoalKrw?: number | null;
+    weeklyInvestGoalHours?: number | null;
   };
   try {
     body = await request.json();
@@ -136,10 +138,41 @@ export async function PUT(request: Request) {
     }
   }
 
+  const hasGoals =
+    body.weeklyEarnGoalKrw !== undefined ||
+    body.weeklyInvestGoalHours !== undefined;
+  if (hasGoals) {
+    const validate = (v: unknown, max: number): number | null | false => {
+      if (v === null) return null;
+      const n = Number(v);
+      return Number.isFinite(n) && n >= 0 && n <= max ? n : false;
+    };
+    const earn =
+      body.weeklyEarnGoalKrw !== undefined
+        ? validate(body.weeklyEarnGoalKrw, 10_000_000_000)
+        : undefined;
+    const invest =
+      body.weeklyInvestGoalHours !== undefined
+        ? validate(body.weeklyInvestGoalHours, 100)
+        : undefined;
+    if (earn === false || invest === false) {
+      return Response.json({ error: "목표 값이 올바르지 않아요." }, { status: 400 });
+    }
+    const { saveWeeklyGoals } = await import("@/lib/time-asset");
+    const result = await saveWeeklyGoals(userId, {
+      earnKrw: earn,
+      investHours: invest,
+    });
+    if ("error" in result && result.error) {
+      return Response.json({ error: result.error }, { status: 400 });
+    }
+  }
+
   if (
     !hasIncome &&
     body.bucketMap === undefined &&
-    body.sleepHoursPerDay === undefined
+    body.sleepHoursPerDay === undefined &&
+    !hasGoals
   ) {
     return Response.json({ error: "변경할 내용이 없어요." }, { status: 400 });
   }

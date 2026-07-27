@@ -70,11 +70,16 @@ export async function getIncomeSettings(userId: string): Promise<{
   hourlyValueKrw: number | null;
   bucketMap: Record<CalendarPurpose, BucketKey>;
   sleepHoursPerDay: number;
+  birthDate: string | null;
+  weeklyEarnGoalKrw: number | null;
+  weeklyInvestGoalHours: number | null;
 }> {
   const db = getAdminClient();
   const { data } = await db
     .from("users")
-    .select("income_type, income_amount, bucket_map, sleep_hours")
+    .select(
+      "income_type, income_amount, bucket_map, sleep_hours, birth_date, weekly_earn_goal_krw, weekly_invest_goal_hours",
+    )
     .eq("id", userId)
     .single();
   const incomeType = (data?.income_type as IncomeType | null) ?? null;
@@ -90,7 +95,31 @@ export async function getIncomeSettings(userId: string): Promise<{
     ),
     sleepHoursPerDay:
       data?.sleep_hours != null ? Number(data.sleep_hours) : DEFAULT_SLEEP_HOURS,
+    birthDate: (data?.birth_date as string | null) ?? null,
+    weeklyEarnGoalKrw:
+      data?.weekly_earn_goal_krw != null ? Number(data.weekly_earn_goal_krw) : null,
+    weeklyInvestGoalHours:
+      data?.weekly_invest_goal_hours != null
+        ? Number(data.weekly_invest_goal_hours)
+        : null,
   };
+}
+
+/** 주간 목표 저장 — undefined 는 유지, null 은 해제. */
+export async function saveWeeklyGoals(
+  userId: string,
+  goals: { earnKrw?: number | null; investHours?: number | null },
+) {
+  const db = getAdminClient();
+  const patch: Record<string, unknown> = {};
+  if (goals.earnKrw !== undefined) patch.weekly_earn_goal_krw = goals.earnKrw;
+  if (goals.investHours !== undefined) {
+    patch.weekly_invest_goal_hours = goals.investHours;
+  }
+  if (Object.keys(patch).length === 0) return { ok: true as const };
+  const { error } = await db.from("users").update(patch).eq("id", userId);
+  if (error) return { error: "목표를 저장하지 못했어요." };
+  return { ok: true as const };
 }
 
 /** 수면 기본값 (시간/일) — 설정 전에도 미기록 시간을 의미 있게 쪼개기 위함. */
@@ -372,6 +401,32 @@ export type TimeAssetSummary = {
     /** 내 기준 시급 대비 판매 단가 배수 (둘 다 있을 때만) */
     vsIncomeRatio: number | null;
   };
+  /** 지난주 리포트 — 완결된 최근 주를 그 전주와 비교 */
+  report: {
+    weekStart: string;
+    earnedKrw: number | null;
+    investHours: number;
+    spendHours: number;
+    scheduledHours: number;
+    lostHours: number;
+    deltaEarnedKrw: number | null;
+    deltaInvestHours: number;
+    deltaLostHours: number;
+  };
+  /** 남은 시간 자산 (생일 미설정이면 null) — 만 85세, 수면 제외 기준 */
+  lifetime: {
+    ageYears: number;
+    assumedLifespanYears: number;
+    remainingAwakeHours: number;
+    remainingValueKrw: number | null;
+  } | null;
+  /** 주간 목표와 이번 주 진행률 (목표 미설정이면 null) */
+  goals: {
+    earnKrw: number | null;
+    investHours: number | null;
+    progressEarnKrw: number;
+    progressInvestHours: number;
+  } | null;
   /** 행동 추천 — 진단을 다음 행동(슬롯 판매·투자·설정)으로 잇는 카드 */
   actions: Array<{
     key: string;
@@ -498,24 +553,23 @@ export async function getTimeAssetSummary(
   // 4주 추이: 주 단위로 겹치는 구간만 잘라 정밀 집계. 마지막 주가 이번 주.
   const trend: Array<{ weekStart: string; hoursByBucket: Record<BucketKey, number> }> = [];
   let currentWeekAcc = emptyBuckets();
-  // A2: 이번 주 수입 버킷 금액 — 캘린더 단가가 있으면 그 단가로, 없으면 기준 시급.
+  // 주별 수입 금액 (수동 기록 우선, 없으면 캘린더 단가 → 기준 시급) — 주간 리포트용.
+  const weekEarnValues: number[] = [];
   let currentWeekEarnValue = 0;
   let earnRateApplied = false;
   for (let i = 0; i < TREND_WEEKS; i++) {
     const ws = new Date(trendStart.getTime() + i * 7 * 24 * 60 * 60_000);
     const we = new Date(ws.getTime() + 7 * 24 * 60 * 60_000);
     const acc = emptyBuckets();
+    let weekEarnValue = 0;
     for (const b of trendBlocks) {
-      // 수동 수익 기록은 "실제 번 돈"이므로 버킷·종일 여부와 무관하게 이번 주
-      // 수입 금액에 합산한다 (시간 비례가 아니라 이벤트 단위 — 시작 시각이
-      // 이번 주에 속할 때 한 번만).
-      if (i === TREND_WEEKS - 1) {
-        const manual = earningFor(b.id);
-        if (manual != null) {
-          earnRateApplied = true;
-          if (b.start.getTime() >= ws.getTime() && b.start.getTime() < we.getTime()) {
-            currentWeekEarnValue += manual;
-          }
+      // 수동 수익 기록은 "실제 번 돈"이므로 버킷·종일 여부와 무관하게 해당 주
+      // 수입 금액에 합산한다 (시간 비례가 아니라 이벤트 단위 — 시작 시각 기준 1회).
+      const manual = earningFor(b.id);
+      if (manual != null) {
+        if (i === TREND_WEEKS - 1) earnRateApplied = true;
+        if (b.start.getTime() >= ws.getTime() && b.start.getTime() < we.getTime()) {
+          weekEarnValue += manual;
         }
       }
       if (b.all_day) continue;
@@ -526,13 +580,17 @@ export async function getTimeAssetSummary(
       const bucket = bucketOf(b);
       acc[bucket] += overlap / 3_600_000;
       // 자동 계산(캘린더 단가 → 기준 시급)은 수동 기록이 없는 수입 일정만.
-      if (i === TREND_WEEKS - 1 && bucket === "earn" && earningFor(b.id) == null) {
+      if (bucket === "earn" && manual == null) {
         const rate = rateByCalendar.get(b.calendar_id);
-        if (rate != null) earnRateApplied = true;
-        currentWeekEarnValue += (overlap / 3_600_000) * (rate ?? hourly ?? 0);
+        if (i === TREND_WEEKS - 1 && rate != null) earnRateApplied = true;
+        weekEarnValue += (overlap / 3_600_000) * (rate ?? hourly ?? 0);
       }
     }
-    if (i === TREND_WEEKS - 1) currentWeekAcc = acc;
+    weekEarnValues.push(weekEarnValue);
+    if (i === TREND_WEEKS - 1) {
+      currentWeekAcc = acc;
+      currentWeekEarnValue = weekEarnValue;
+    }
     trend.push({
       weekStart: ws.toISOString(),
       hoursByBucket: {
@@ -630,6 +688,69 @@ export async function getTimeAssetSummary(
   if (scheduled > 0 && earnRatio > 0.7) {
     messages.push("기록 시간의 70% 이상이 수입 활동이에요. 소비·투자 균형도 챙겨보세요.");
   }
+
+  // 주간 리포트 — 지난주(완결된 주)를 그 전주와 비교한다.
+  const pricingAvailable =
+    hourly != null || rateByCalendar.size > 0 || earnings.size > 0;
+  const weekStat = (i: number) => {
+    const hb = trend[i].hoursByBucket;
+    const scheduledW = hb.earn + hb.invest + hb.spend + hb.life;
+    return {
+      weekStart: trend[i].weekStart,
+      earnedKrw: pricingAvailable ? Math.round(weekEarnValues[i]) : null,
+      investHours: hb.invest,
+      spendHours: hb.spend,
+      scheduledHours: Math.round(scheduledW * 10) / 10,
+      lostHours: Math.max(
+        0,
+        Math.round((168 - scheduledW - income.sleepHoursPerDay * 7) * 10) / 10,
+      ),
+    };
+  };
+  const lastWeek = weekStat(TREND_WEEKS - 2);
+  const priorWeek = weekStat(TREND_WEEKS - 3);
+  const report = {
+    ...lastWeek,
+    deltaEarnedKrw:
+      lastWeek.earnedKrw != null && priorWeek.earnedKrw != null
+        ? lastWeek.earnedKrw - priorWeek.earnedKrw
+        : null,
+    deltaInvestHours:
+      Math.round((lastWeek.investHours - priorWeek.investHours) * 10) / 10,
+    deltaLostHours:
+      Math.round((lastWeek.lostHours - priorWeek.lostHours) * 10) / 10,
+  };
+
+  // 남은 시간 자산 — 생일이 있으면 만 85세 기준, 수면 제외한 깨어있는 시간.
+  let lifetime: TimeAssetSummary["lifetime"] = null;
+  if (income.birthDate) {
+    const birth = new Date(income.birthDate);
+    if (!Number.isNaN(birth.getTime())) {
+      const LIFE_YEARS = 85;
+      const ageYears = (anchor.getTime() - birth.getTime()) / (365.25 * 24 * 3_600_000);
+      const remainYears = Math.max(0, LIFE_YEARS - ageYears);
+      const awakePerDay = 24 - income.sleepHoursPerDay;
+      const remainingAwakeHours = Math.round(remainYears * 365.25 * awakePerDay);
+      lifetime = {
+        ageYears: Math.floor(ageYears),
+        assumedLifespanYears: LIFE_YEARS,
+        remainingAwakeHours,
+        remainingValueKrw:
+          hourly != null ? Math.round(remainingAwakeHours * hourly) : null,
+      };
+    }
+  }
+
+  // 주간 목표 진행률 — 목표가 하나라도 설정돼 있을 때만.
+  const goals: TimeAssetSummary["goals"] =
+    income.weeklyEarnGoalKrw != null || income.weeklyInvestGoalHours != null
+      ? {
+          earnKrw: income.weeklyEarnGoalKrw,
+          investHours: income.weeklyInvestGoalHours,
+          progressEarnKrw: Math.round(currentWeekEarnValue),
+          progressInvestHours: Math.round(hoursByBucket.invest * 10) / 10,
+        }
+      : null;
 
   // 행동 추천 — "시간 진단"을 실제 다음 행동으로 연결한다 (우선순위 순, 최대 3개).
   const { count: slotCount } = await db
@@ -732,6 +853,9 @@ export async function getTimeAssetSummary(
     },
     messages,
     actions: actions.slice(0, 3),
+    report,
+    lifetime,
+    goals,
     incomeType: income.incomeType,
     freelance,
   };

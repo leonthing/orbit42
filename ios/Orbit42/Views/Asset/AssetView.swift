@@ -7,6 +7,7 @@ struct AssetView: View {
     @Environment(TabRouter.self) private var router
     @State private var viewModel = AssetViewModel()
     @State private var showingSettingsSheet = false
+    @State private var showingGoalsSheet = false
     @State private var showingBucketMapSheet = false
 
     var body: some View {
@@ -127,6 +128,13 @@ struct AssetView: View {
                         conversions: summary.conversions
                     )
                 }
+                if let lifetime = summary.lifetime {
+                    lifetimeCard(lifetime)
+                }
+                if let report = summary.report {
+                    reportCard(report)
+                }
+                goalsCard(summary.goals)
                 weekUsageCard(summary)
                 if let actions = summary.actions, !actions.isEmpty {
                     actionsCard(actions)
@@ -357,6 +365,188 @@ struct AssetView: View {
         }
         let sleepPerDay = AssetFormat.hours(summary.sleepHoursPerDay ?? sleepWeek / 7)
         return "기록 \(recorded)시간 · 수면(설정 \(sleepPerDay)시간/일) \(AssetFormat.hours(sleepWeek))시간 · 그 외 미기록 \(unrecorded)시간"
+    }
+
+    // MARK: 1.5 남은 시간 자산
+
+    /// 큰 금액 축약 — 1억 이상은 "₩9.7억", 1만 이상은 "₩3,200만".
+    private func compactWon(_ value: Int) -> String {
+        if value >= 100_000_000 {
+            let eok = Double(value) / 100_000_000
+            return eok >= 100 ? "₩\(Int(eok.rounded()))억" : "₩\(String(format: "%.1f", eok))억"
+        }
+        if value >= 10_000_000 {
+            return "₩\(AssetFormat.grouped(value / 10_000))만"
+        }
+        return AssetFormat.won(value)
+    }
+
+    private func lifetimeCard(_ lifetime: TimeAssetLifetime) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("남은 시간 자산")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Theme.secondaryText)
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("약 \(AssetFormat.grouped(lifetime.remainingAwakeHours))시간")
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(.white)
+                    .monospacedDigit()
+                if let value = lifetime.remainingValueKrw {
+                    Text("≈ \(compactWon(value))")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.accent)
+                }
+            }
+            Text("만 \(lifetime.assumedLifespanYears)세까지, 수면을 뺀 깨어있는 시간 기준 — 지금 이 순간에도 줄고 있어요.")
+                .font(.caption)
+                .foregroundStyle(Theme.secondaryText)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    // MARK: 1.6 지난주 리포트
+
+    private func reportCard(_ report: TimeAssetWeeklyReport) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("지난주 리포트")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Theme.secondaryText)
+                Spacer()
+                Text(AssetFormat.weekLabel(report.weekStart))
+                    .font(.caption)
+                    .foregroundStyle(Theme.secondaryText)
+            }
+
+            if let earned = report.earnedKrw {
+                reportRow(
+                    label: "수입",
+                    value: AssetFormat.won(earned),
+                    delta: report.deltaEarnedKrw.map { d in
+                        (text: "\(d >= 0 ? "+" : "−")\(AssetFormat.won(abs(d)))", positiveIsGood: true, raw: d)
+                    }
+                )
+            }
+            reportRow(
+                label: "투자 시간",
+                value: "\(AssetFormat.hours(report.investHours))시간",
+                delta: (
+                    text: "\(report.deltaInvestHours >= 0 ? "+" : "−")\(AssetFormat.hours(abs(report.deltaInvestHours)))시간",
+                    positiveIsGood: true,
+                    raw: report.deltaInvestHours == 0 ? 0 : (report.deltaInvestHours > 0 ? 1 : -1)
+                )
+            )
+            reportRow(
+                label: "잃어버린 시간",
+                value: "\(AssetFormat.hours(report.lostHours))시간",
+                delta: (
+                    text: "\(report.deltaLostHours >= 0 ? "+" : "−")\(AssetFormat.hours(abs(report.deltaLostHours)))시간",
+                    positiveIsGood: false,
+                    raw: report.deltaLostHours == 0 ? 0 : (report.deltaLostHours > 0 ? 1 : -1)
+                )
+            )
+        }
+        .padding(16)
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func reportRow(
+        label: String,
+        value: String,
+        delta: (text: String, positiveIsGood: Bool, raw: Int)?
+    ) -> some View {
+        HStack {
+            Text(label)
+                .font(.subheadline)
+                .foregroundStyle(Theme.secondaryText)
+            Spacer()
+            Text(value)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+                .monospacedDigit()
+            if let delta, delta.raw != 0 {
+                let improved = (delta.raw > 0) == delta.positiveIsGood
+                Text(delta.text)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(improved ? .green : .orange)
+                    .monospacedDigit()
+            }
+        }
+    }
+
+    // MARK: 1.7 주간 목표
+
+    @ViewBuilder
+    private func goalsCard(_ goals: TimeAssetGoals?) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("주간 목표")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Theme.secondaryText)
+                Spacer()
+                Button {
+                    showingGoalsSheet = true
+                } label: {
+                    Text(goals == nil ? "목표 설정" : "수정")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Theme.accent)
+                }
+            }
+
+            if let goals {
+                if let target = goals.earnKrw, target > 0 {
+                    goalGauge(
+                        label: "수입",
+                        progressText: "\(AssetFormat.won(goals.progressEarnKrw)) / \(AssetFormat.won(target))",
+                        ratio: min(1, Double(goals.progressEarnKrw) / Double(target))
+                    )
+                }
+                if let target = goals.investHours, target > 0 {
+                    goalGauge(
+                        label: "투자 시간",
+                        progressText: "\(AssetFormat.hours(goals.progressInvestHours)) / \(AssetFormat.hours(target))시간",
+                        ratio: min(1, goals.progressInvestHours / target)
+                    )
+                }
+            } else {
+                Text("이번 주 수입·투자 시간 목표를 정하면 진행률이 여기 표시돼요.")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.secondaryText)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16))
+        .sheet(isPresented: $showingGoalsSheet) {
+            WeeklyGoalsSheet(viewModel: viewModel)
+                .preferredColorScheme(.dark)
+        }
+    }
+
+    private func goalGauge(label: String, progressText: String, ratio: Double) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack {
+                Text(label)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.white)
+                Spacer()
+                Text(progressText)
+                    .font(.caption)
+                    .foregroundStyle(Theme.secondaryText)
+                    .monospacedDigit()
+            }
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.white.opacity(0.08))
+                    Capsule()
+                        .fill(ratio >= 1 ? Color.green : Theme.accent)
+                        .frame(width: max(4, proxy.size.width * ratio))
+                }
+            }
+            .frame(height: 6)
+        }
     }
 
     // MARK: 2.5 행동 추천 — 진단을 다음 행동으로

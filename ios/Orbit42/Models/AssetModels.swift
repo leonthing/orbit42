@@ -21,6 +21,9 @@ struct TimeAssetSettings: Decodable {
     let purposes: [PurposeMeta]?
     /// 버킷 선택지 (수입/투자/소비/생활 + 색)
     let bucketOptions: [BucketOptionMeta]?
+    /// 주간 목표 (미설정이면 null)
+    let weeklyEarnGoalKrw: Int?
+    let weeklyInvestGoalHours: Double?
 }
 
 struct PurposeMeta: Decodable, Identifiable {
@@ -157,6 +160,41 @@ struct TimeAssetSummary: Decodable {
     let messages: [String]
     /// 행동 추천 카드 (구 서버 응답에는 없음)
     let actions: [TimeAssetAction]?
+    /// 지난주 리포트 (구 서버 응답에는 없음)
+    let report: TimeAssetWeeklyReport?
+    /// 남은 시간 자산 — 생일 미설정이면 null
+    let lifetime: TimeAssetLifetime?
+    /// 주간 목표 + 이번 주 진행률 — 목표 미설정이면 null
+    let goals: TimeAssetGoals?
+}
+
+/// 지난주(완결된 주) 리포트 — 전주 대비 변화 포함.
+struct TimeAssetWeeklyReport: Decodable {
+    let weekStart: String
+    let earnedKrw: Int?
+    let investHours: Double
+    let spendHours: Double
+    let scheduledHours: Double
+    let lostHours: Double
+    let deltaEarnedKrw: Int?
+    let deltaInvestHours: Double
+    let deltaLostHours: Double
+}
+
+/// 남은 시간 자산 — 만 85세, 수면 제외 기준.
+struct TimeAssetLifetime: Decodable {
+    let ageYears: Int
+    let assumedLifespanYears: Int
+    let remainingAwakeHours: Int
+    let remainingValueKrw: Int?
+}
+
+/// 주간 목표와 이번 주 진행률.
+struct TimeAssetGoals: Decodable {
+    let earnKrw: Int?
+    let investHours: Double?
+    let progressEarnKrw: Int
+    let progressInvestHours: Double
 }
 
 /// 진단 → 행동 연결 카드. target: "slots" | "calendar" | "profile" | "asset-settings"
