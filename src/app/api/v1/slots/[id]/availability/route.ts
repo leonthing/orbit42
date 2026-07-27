@@ -8,6 +8,44 @@ import {
 
 export const dynamic = "force-dynamic";
 
+/** "7월 16일" — KST 기준 표시. */
+function kstDay(iso: string): string {
+  return new Date(iso).toLocaleDateString("ko-KR", {
+    timeZone: "Asia/Seoul",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+/** 예약 가능 시간이 0개일 때 호스트에게 보여줄 원인 진단 (우선순위 순). */
+function diagnoseEmpty(
+  slot: Awaited<ReturnType<typeof listMySlots>>[number],
+  windowCount: number,
+): string {
+  if (!slot.active) {
+    return "슬롯이 꺼져 있어요. 활성화하면 다시 예약을 받을 수 있어요.";
+  }
+  const now = Date.now();
+  if (slot.valid_until && Date.parse(slot.valid_until) < now) {
+    return `판매 기간이 ${kstDay(slot.valid_until)}에 끝났어요. 판매 기간을 비우거나 연장하면 다시 열려요.`;
+  }
+  if (slot.valid_from && Date.parse(slot.valid_from) > now) {
+    return `판매 시작일이 ${kstDay(slot.valid_from)}이라 아직 열리기 전이에요.`;
+  }
+  if (slot.mode === "manual") {
+    return windowCount === 0
+      ? "등록된 시간 창이 없어요. 시간 창을 추가하면 그 시간에 예약을 받아요."
+      : "등록된 시간 창이 모두 지났거나 마감됐어요. 새 시간 창을 추가해 보세요.";
+  }
+  const hasHours =
+    slot.working_hours &&
+    Object.values(slot.working_hours).some((ranges) => (ranges ?? []).length > 0);
+  if (!hasHours) {
+    return "요일별 근무시간이 비어 있어요. 근무시간을 설정하면 그 안에서 빈 시간이 자동으로 열려요.";
+  }
+  return "근무시간 안의 시간이 기존 일정·이동시간 버퍼·최소 통보 시간과 모두 겹쳐요. 캘린더 일정이나 버퍼·통보 조건을 확인해 보세요.";
+}
+
 // GET — 예약 가능 시간 미리보기(options) + 수동 시간 창 목록(windows)
 export async function GET(
   request: Request,
@@ -42,6 +80,8 @@ export async function GET(
       capacity: w.capacity,
       bookedCount: w.booked_count,
     })),
+    // 왜 비었는지 — 호스트가 원인을 바로 알 수 있도록 (옵션이 있으면 null)
+    emptyReason: options.length === 0 ? diagnoseEmpty(slot, windows.length) : null,
   });
 }
 

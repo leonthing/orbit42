@@ -514,9 +514,24 @@ struct SlotDetailView: View {
                     .padding(.vertical, 4)
                 }
             } else {
-                Text("지금 조건으로는 예약 가능한 시간이 없어요")
-                    .font(.subheadline)
-                    .foregroundStyle(Theme.secondaryText)
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.subheadline)
+                            .foregroundStyle(.orange)
+                        Text("지금 조건으로는 예약 가능한 시간이 없어요")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                    }
+                    // 서버 진단 — 어느 설정이 막고 있는지 바로 알려준다.
+                    if let reason = viewModel.availability?.emptyReason {
+                        Text(reason)
+                            .font(.footnote)
+                            .foregroundStyle(Theme.secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .padding(.vertical, 2)
             }
         } header: {
             HStack {

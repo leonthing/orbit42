@@ -101,15 +101,18 @@ struct SlotAvailabilityResponse: Decodable, Sendable {
     let options: [AvailabilityOption]
     /// manual 슬롯의 시간 창. auto 슬롯이면 빈 배열.
     let windows: [AvailabilityWindow]
+    /// 옵션이 0개일 때 서버가 진단한 원인 (구 서버 응답에는 없음)
+    let emptyReason: String?
 
     private enum CodingKeys: String, CodingKey {
-        case options, windows
+        case options, windows, emptyReason
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         options = try container.decodeIfPresent([AvailabilityOption].self, forKey: .options) ?? []
         windows = try container.decodeIfPresent([AvailabilityWindow].self, forKey: .windows) ?? []
+        emptyReason = try container.decodeIfPresent(String.self, forKey: .emptyReason)
     }
 }
 
