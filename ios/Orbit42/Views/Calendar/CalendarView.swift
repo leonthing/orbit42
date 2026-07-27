@@ -127,6 +127,9 @@ struct CalendarView: View {
                 .font(.subheadline.weight(.medium))
             }
             ToolbarItem(placement: .topBarTrailing) {
+                calendarFilterMenu
+            }
+            ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     showingAddSheet = true
                 } label: {
@@ -135,6 +138,28 @@ struct CalendarView: View {
                 .accessibilityLabel("일정 추가")
             }
         }
+    }
+
+    /// 표시할 캘린더 선택 — 체크 해제한 캘린더의 일정은 그리드·리스트에서 숨겨진다.
+    private var calendarFilterMenu: some View {
+        Menu {
+            ForEach(viewModel.calendars) { calendarInfo in
+                Button {
+                    viewModel.toggleCalendarVisibility(calendarInfo.id)
+                } label: {
+                    if viewModel.isCalendarVisible(calendarInfo.id) {
+                        Label(calendarInfo.name, systemImage: "checkmark")
+                    } else {
+                        Text(calendarInfo.name)
+                    }
+                }
+            }
+        } label: {
+            Image(systemName: viewModel.hiddenCalendarIds.isEmpty
+                ? "line.3.horizontal.decrease.circle"
+                : "line.3.horizontal.decrease.circle.fill")
+        }
+        .accessibilityLabel("표시할 캘린더 선택")
     }
 
     // MARK: - 월 헤더

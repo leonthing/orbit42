@@ -52,10 +52,35 @@ final class CalendarViewModel {
 
     var calendars: [CalendarInfo] { currentMonthData?.calendars ?? [] }
 
+    // MARK: - 표시 캘린더 필터
+
+    /// 캘린더 탭에서 숨긴 캘린더 id — 기기별 설정으로 유지된다.
+    private(set) var hiddenCalendarIds: Set<String> = Set(
+        UserDefaults.standard.stringArray(forKey: "hiddenCalendarIds") ?? []
+    )
+
+    func isCalendarVisible(_ id: String) -> Bool {
+        !hiddenCalendarIds.contains(id)
+    }
+
+    func toggleCalendarVisibility(_ id: String) {
+        if hiddenCalendarIds.contains(id) {
+            hiddenCalendarIds.remove(id)
+        } else {
+            hiddenCalendarIds.insert(id)
+        }
+        UserDefaults.standard.set(Array(hiddenCalendarIds), forKey: "hiddenCalendarIds")
+    }
+
     /// 선택된 날짜의 이벤트 — 종일 먼저, 그다음 시작 시각 순.
+    /// 숨긴 캘린더의 이벤트는 제외한다 (calendarId 없는 이벤트는 항상 표시).
     func events(on date: Date) -> [CalendarEvent] {
         guard let data = currentMonthData else { return [] }
         return data.events
+            .filter { event in
+                guard let calendarId = event.calendarId else { return true }
+                return !hiddenCalendarIds.contains(calendarId)
+            }
             .filter { $0.occurs(on: date, calendar: Self.calendar) }
             .sorted { lhs, rhs in
                 if lhs.allDay != rhs.allDay { return lhs.allDay }
