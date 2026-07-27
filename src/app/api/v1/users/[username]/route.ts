@@ -21,7 +21,9 @@ export async function GET(
   const db = getAdminClient();
   const { data: user } = await db
     .from("users")
-    .select("id, username, display_name, avatar_url, bio, interests, is_private")
+    .select(
+      "id, username, display_name, avatar_url, bio, interests, is_private, social_links, education, experience",
+    )
     .eq("username", params.username)
     .maybeSingle();
   if (!user) {
@@ -64,6 +66,16 @@ export async function GET(
       avatarUrl: (user.avatar_url as string | null) ?? null,
       bio: blockedByMe ? null : ((user.bio as string | null) ?? null),
       interests: blockedByMe ? [] : ((user.interests as string[] | null) ?? []),
+      // "어떤 사람인지" — 웹 프로필에 이미 공개 중인 정보를 앱에도 노출
+      socialLinks: blockedByMe
+        ? {}
+        : ((user.social_links as Record<string, string> | null) ?? {}),
+      education: blockedByMe
+        ? []
+        : ((user.education as unknown[] | null) ?? []),
+      experience: blockedByMe
+        ? []
+        : ((user.experience as unknown[] | null) ?? []),
     },
     orbiters: stats.followers,
     orbiting: stats.following,
