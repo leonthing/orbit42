@@ -33,7 +33,10 @@ struct AssetView: View {
             } message: {
                 Text(viewModel.actionMessage ?? "")
             }
-            .task { await viewModel.load() }
+            // 탭에 들어올 때마다 조용히 새로 계산 — 캘린더 용도·이벤트 분류를
+            // 바꾼 뒤 자산 탭이 예전 숫자를 보여주는 혼란을 막는다.
+            // (이미 요약이 있으면 그대로 보여주며 뒤에서 갱신)
+            .task { await viewModel.load(force: viewModel.summary != nil) }
         }
     }
 

@@ -71,6 +71,33 @@ export async function PATCH(
   }
 
   const patch = buildEventPatch(body);
+
+  // 캘린더 이동 — 로컬 이벤트를 다른 로컬 캘린더로만.
+  // (gcal_* 이벤트의 calendarId 는 이동이 아니라 "현재 소속" 해석용 그대로 둔다.
+  //  Google 이벤트는 Google 쪽에 실체가 있어 계정/캘린더 간 이동을 지원하지 않는다.)
+  if (body.calendarId !== undefined && !params.id.startsWith("gcal_")) {
+    const userId = await apiUserId(request);
+    if (!userId) {
+      return Response.json({ error: "로그인이 필요해요." }, { status: 401 });
+    }
+    const { data: target } = await getAdminClient()
+      .from("calendars")
+      .select("id, source")
+      .eq("id", String(body.calendarId))
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!target) {
+      return Response.json({ error: "캘린더를 찾을 수 없어요." }, { status: 400 });
+    }
+    if (target.source !== "native") {
+      return Response.json(
+        { error: "Google 캘린더로는 옮길 수 없어요. 로컬 캘린더만 선택할 수 있어요." },
+        { status: 400 },
+      );
+    }
+    patch.calendar_id = target.id as string;
+  }
+
   if (Object.keys(patch).length === 0) {
     return Response.json({ error: "변경할 내용이 없어요." }, { status: 400 });
   }

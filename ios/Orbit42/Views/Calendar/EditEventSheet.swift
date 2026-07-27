@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// 이벤트 수정 시트 — PATCH /api/v1/calendar/events/{id}
-/// AddEventSheet 와 같은 폼을 프리필하되, 캘린더 이동은 미지원이라 캘린더 Picker 는 없다.
+/// AddEventSheet 와 같은 폼을 프리필한다. 로컬 이벤트는 다른 로컬 캘린더로
+/// 이동할 수 있다 (Google 이벤트는 Google 쪽에 실체가 있어 이동 미지원).
 /// 바뀐 필드만 보내고, 시작/종료는 서버 요구대로 항상 쌍으로 보낸다.
 struct EditEventSheet: View {
     @Environment(\.dismiss) private var dismiss
@@ -16,8 +17,14 @@ struct EditEventSheet: View {
     @State private var allDay: Bool
     @State private var start: Date
     @State private var end: Date
+    @State private var selectedCalendarId: String?
     @State private var isSaving = false
     @State private var errorMessage: String?
+
+    /// 이동 가능한 대상 — 로컬 캘린더만 (Google 이벤트는 이동 미지원).
+    private var movableCalendars: [CalendarInfo] {
+        viewModel.calendars.filter(\.isNative)
+    }
 
     /// 변경 감지용 원본 값
     private let originalStart: Date
@@ -39,6 +46,7 @@ struct EditEventSheet: View {
             : event.endAt
         _start = State(initialValue: event.startAt)
         _end = State(initialValue: initialEnd)
+        _selectedCalendarId = State(initialValue: event.calendarId)
         originalStart = event.startAt
         originalEnd = initialEnd
     }
@@ -72,6 +80,24 @@ struct EditEventSheet: View {
                     )
                 }
                 .listRowBackground(Theme.surface)
+
+                if !event.isGoogle, movableCalendars.count > 1 {
+                    Section {
+                        Picker("캘린더", selection: $selectedCalendarId) {
+                            ForEach(movableCalendars) { calendar in
+                                HStack(spacing: 8) {
+                                    Circle()
+                                        .fill(calendar.displayColor)
+                                        .frame(width: 10, height: 10)
+                                    Text(calendar.name)
+                                }
+                                .tag(Optional(calendar.id))
+                            }
+                        }
+                        .tint(Theme.secondaryText)
+                    }
+                    .listRowBackground(Theme.surface)
+                }
 
                 Section {
                     TextField("메모 (선택)", text: $memo, axis: .vertical)
@@ -146,8 +172,14 @@ struct EditEventSheet: View {
             body.allDay = allDay
         }
 
+        // 캘린더 이동 (로컬 이벤트만)
+        if !event.isGoogle, let selectedCalendarId, selectedCalendarId != event.calendarId {
+            body.calendarId = selectedCalendarId
+        }
+
         // 바뀐 것이 없으면 네트워크 없이 닫는다
-        if body.title == nil, body.description == nil, body.startAt == nil, body.allDay == nil {
+        if body.title == nil, body.description == nil, body.startAt == nil,
+           body.allDay == nil, body.calendarId == nil {
             dismiss()
             return
         }
