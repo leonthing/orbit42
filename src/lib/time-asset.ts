@@ -337,19 +337,6 @@ function emptyBuckets(): Record<BucketKey, number> {
   return { earn: 0, invest: 0, spend: 0, life: 0 };
 }
 
-function bucketize(
-  byPurpose: Array<{ purpose: CalendarPurpose | "null"; hours: number }>,
-  map: Record<CalendarPurpose, BucketKey>,
-): Record<BucketKey, number> {
-  const acc = emptyBuckets();
-  for (const p of byPurpose) {
-    const key: BucketKey =
-      p.purpose === "null" ? "life" : map[p.purpose] ?? "life";
-    acc[key] += p.hours;
-  }
-  return acc;
-}
-
 export async function getTimeAssetSummary(
   userId: string,
   username: string,
