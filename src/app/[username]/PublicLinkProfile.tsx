@@ -204,13 +204,16 @@ export function PublicLinkProfile({
           </div>
         )}
 
-        {/* 액션 (팔로우 · 공유) */}
+        {/* 액션 — 비로그인 방문자에게는 로그인 유도 대신 공유만.
+            가입 동선은 페이지 하단의 "나도 예약 링크 만들기" 가 담당한다. */}
         <div className="mt-5 flex justify-center gap-2">
-          <FollowButton
-            targetUsername={username}
-            initiallyFollowing={viewerFollowing}
-            loggedIn={loggedIn}
-          />
+          {loggedIn && (
+            <FollowButton
+              targetUsername={username}
+              initiallyFollowing={viewerFollowing}
+              loggedIn
+            />
+          )}
           <ShareMenu
             url={profileUrl}
             title={`${displayName} (@${username}) | Orbit42`}

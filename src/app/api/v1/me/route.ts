@@ -18,7 +18,7 @@ async function fullUser(username: string) {
     getFollowStats(username),
     getAdminClient()
       .from("users")
-      .select("is_private, apple_sub, share_image_url")
+      .select("is_private, apple_sub, share_image_url, link_theme")
       .eq("username", username)
       .maybeSingle(),
   ]);
@@ -38,6 +38,8 @@ async function fullUser(username: string) {
     appleLinked: privacyRow.data?.apple_sub != null,
     // 프로필 공유(OG) 헤더 이미지 — 없으면 자동 명함 카드
     shareImageUrl: (privacyRow.data?.share_image_url as string | null) ?? null,
+    // 공개 링크 페이지 테마 (lib/link-themes 의 key)
+    linkTheme: (privacyRow.data?.link_theme as string | null) ?? "default",
   };
 }
 
@@ -68,6 +70,7 @@ export async function PATCH(request: Request) {
     socialLinks?: Record<string, string>;
     interests?: string[];
     isPrivate?: boolean;
+    linkTheme?: string;
   };
   try {
     body = await request.json();
@@ -96,6 +99,28 @@ export async function PATCH(request: Request) {
       body.socialLinks === undefined &&
       body.interests === undefined;
     if (onlyPrivacy) {
+      return Response.json({ user: await fullUser(session.username) });
+    }
+  }
+
+  // 공개 링크 페이지 테마
+  if (body.linkTheme !== undefined) {
+    const { LINK_THEMES } = await import("@/lib/link-themes");
+    if (!LINK_THEMES.some((t) => t.key === body.linkTheme)) {
+      return Response.json({ error: "알 수 없는 테마예요." }, { status: 400 });
+    }
+    const { getAdminClient } = await import("@/lib/supabase");
+    await getAdminClient()
+      .from("users")
+      .update({ link_theme: body.linkTheme, updated_at: new Date().toISOString() })
+      .eq("username", session.username);
+    if (
+      body.displayName === undefined &&
+      body.bio === undefined &&
+      body.birthDate === undefined &&
+      body.socialLinks === undefined &&
+      body.interests === undefined
+    ) {
       return Response.json({ user: await fullUser(session.username) });
     }
   }

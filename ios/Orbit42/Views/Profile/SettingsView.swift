@@ -104,6 +104,12 @@ struct SettingsView: View {
             }
 
             NavigationLink {
+                LinkThemeView()
+            } label: {
+                menuRow(icon: "paintpalette", title: "공개 링크 테마")
+            }
+
+            NavigationLink {
                 BlockedUsersView()
             } label: {
                 menuRow(icon: "hand.raised", title: "차단 관리")
