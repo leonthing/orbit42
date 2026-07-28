@@ -26,6 +26,31 @@ final class AssetViewModel {
 
     // MARK: - 요약 로딩
 
+    /// 목표 캘린더 진행 상황 — 자산 탭 카드용.
+    private(set) var goals: [CalendarGoal] = []
+
+    func loadGoals() async {
+        if let response: CalendarGoalsResponse = try? await api.get("/api/v1/calendars/goals") {
+            goals = response.goals
+        }
+    }
+
+    /// 목표 달성 → 캘린더 아카이브.
+    func archiveGoal(_ goal: CalendarGoal) async -> Bool {
+        struct ArchiveRequest: Encodable { let archived: Bool }
+        do {
+            let _: CalendarsResponse = try await api.patch(
+                "/api/v1/calendars/\(goal.calendarId)",
+                body: ArchiveRequest(archived: true)
+            )
+            await loadGoals()
+            return true
+        } catch {
+            actionMessage = "아카이브하지 못했어요. 잠시 후 다시 시도해 주세요."
+            return false
+        }
+    }
+
     /// 요약을 불러온다. 이미 로딩된 상태면 `force` 가 아닌 한 네트워크를 타지 않는다.
     func load(force: Bool = false) async {
         if !force, summary != nil { return }

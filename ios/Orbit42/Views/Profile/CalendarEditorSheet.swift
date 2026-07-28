@@ -21,6 +21,14 @@ struct CalendarEditorSheet: View {
     @State private var linkGoogle = false
     /// 시간당 단가 입력 (콤마 포맷, 편집 모드 전용 — 서버 POST 는 단가를 받지 않음)
     @State private var rateText = ""
+    // 목표 캘린더
+    @State private var goalTitle: String
+    @State private var goalHoursText: String
+    @State private var hasDeadline: Bool
+    @State private var goalDeadline: Date
+    private let initialGoalTitle: String
+    private let initialGoalHours: Double?
+    private let initialGoalDeadline: String?
     /// onAppear 시점 단가 — 바뀌었을 때만 PATCH 에 담는다
     @State private var initialRate: Int?
     @State private var isSaving = false
@@ -29,19 +37,45 @@ struct CalendarEditorSheet: View {
     init(mode: Mode, viewModel: CalendarSettingsViewModel) {
         self.mode = mode
         self.viewModel = viewModel
+        let existing: CalendarInfo?
         switch mode {
         case .create:
             _name = State(initialValue: "")
             _purpose = State(initialValue: .personal)
             _colorHex = State(initialValue: CalendarPalette.hexes[0])
             _visibility = State(initialValue: .private)
+            existing = nil
         case .edit(let calendar):
             _name = State(initialValue: calendar.name)
             _purpose = State(initialValue: CalendarPurpose(rawValue: calendar.purpose ?? "") ?? .other)
             _colorHex = State(initialValue: calendar.color)
             _visibility = State(initialValue: CalendarVisibility(rawValue: calendar.visibility ?? "") ?? .private)
+            existing = calendar
         }
+
+        // 목표 프리필
+        let title = existing?.goalTitle ?? ""
+        let hours = existing?.goalTargetHours
+        let deadline = existing?.goalDeadline
+        initialGoalTitle = title
+        initialGoalHours = hours
+        initialGoalDeadline = deadline
+        _goalTitle = State(initialValue: title)
+        _goalHoursText = State(initialValue: hours.map { $0 == $0.rounded() ? String(Int($0)) : String($0) } ?? "")
+        _hasDeadline = State(initialValue: deadline != nil)
+        _goalDeadline = State(
+            initialValue: deadline.flatMap { Self.dateFormatter.date(from: $0) }
+                ?? Calendar.current.date(byAdding: .month, value: 3, to: Date())
+                ?? Date()
+        )
     }
+
+    private static let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        return formatter
+    }()
 
     private var original: CalendarInfo? {
         if case .edit(let calendar) = mode { return calendar }
@@ -91,6 +125,8 @@ struct CalendarEditorSheet: View {
                         .foregroundStyle(Theme.secondaryText)
                 }
                 .listRowBackground(Theme.surface)
+
+                goalSection
 
                 if !isCreate {
                     Section {
@@ -205,6 +241,54 @@ struct CalendarEditorSheet: View {
         .padding(.vertical, 4)
     }
 
+    // MARK: - 목표
+
+    private var goalSection: some View {
+        Section {
+            TextField("목표 (예: 토익 900점, 앱 출시)", text: $goalTitle)
+                .foregroundStyle(Theme.primaryText)
+
+            if !goalTitle.trimmingCharacters(in: .whitespaces).isEmpty {
+                HStack {
+                    Text("목표 시간")
+                        .foregroundStyle(Theme.primaryText)
+                    Spacer()
+                    TextField("예: 200", text: $goalHoursText)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: 100)
+                        .foregroundStyle(Theme.primaryText)
+                    Text("시간")
+                        .foregroundStyle(Theme.secondaryText)
+                }
+
+                Toggle("기한 정하기", isOn: $hasDeadline)
+                    .tint(Theme.accent)
+                if hasDeadline {
+                    DatePicker("기한", selection: $goalDeadline, displayedComponents: .date)
+                }
+            }
+        } header: {
+            Text("목표")
+        } footer: {
+            Text(goalTitle.trimmingCharacters(in: .whitespaces).isEmpty
+                 ? "목표를 정하면 이 캘린더에 쌓이는 시간이 목표 달성률로 계산돼요. 학습·사이드 프로젝트·운동 캘린더에 좋아요."
+                 : "이 캘린더의 일정 시간이 목표를 향해 쌓여요. 달성하면 캘린더를 아카이브할 수 있어요.")
+                .foregroundStyle(Theme.secondaryText)
+        }
+        .listRowBackground(Theme.surface)
+    }
+
+    private var goalHoursValue: Double? {
+        let digits = goalHoursText.filter { $0.isNumber || $0 == "." }
+        guard let value = Double(digits), value > 0 else { return nil }
+        return value
+    }
+
+    private var goalDeadlineString: String? {
+        hasDeadline ? Self.dateFormatter.string(from: goalDeadline) : nil
+    }
+
     // MARK: - 저장
 
     private func save() {
@@ -232,6 +316,16 @@ struct CalendarEditorSheet: View {
                         // 값 입력 → 설정, 지움 → 명시적 null 로 해제
                         request.hourlyRateKrw = rateValue.map(PatchValue.value) ?? .null
                     }
+                    let trimmedGoal = goalTitle.trimmingCharacters(in: .whitespaces)
+                    if trimmedGoal != initialGoalTitle {
+                        request.goalTitle = trimmedGoal.isEmpty ? .null : .value(trimmedGoal)
+                    }
+                    if goalHoursValue != initialGoalHours {
+                        request.goalTargetHours = goalHoursValue.map(PatchValue.value) ?? .null
+                    }
+                    if goalDeadlineString != initialGoalDeadline {
+                        request.goalDeadline = goalDeadlineString.map(PatchValue.value) ?? .null
+                    }
                     if request.isEmpty {
                         dismiss()
                         return
@@ -244,7 +338,11 @@ struct CalendarEditorSheet: View {
                             purpose: purpose.rawValue,
                             color: colorHex,
                             visibility: visibility.rawValue,
-                            linkGoogle: linkGoogle
+                            linkGoogle: linkGoogle,
+                            goalTitle: goalTitle.trimmingCharacters(in: .whitespaces).isEmpty
+                                ? nil : goalTitle.trimmingCharacters(in: .whitespaces),
+                            goalTargetHours: goalHoursValue,
+                            goalDeadline: goalDeadlineString
                         )
                     )
                 }

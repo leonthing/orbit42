@@ -32,8 +32,46 @@ export async function PATCH(
   }
 
   const patch: Partial<
-    Pick<Calendar, "name" | "purpose" | "color" | "visibility" | "hourly_rate_krw">
+    Pick<
+      Calendar,
+      | "name" | "purpose" | "color" | "visibility" | "hourly_rate_krw"
+      | "goal_title" | "goal_target_hours" | "goal_deadline"
+      | "goal_started_at" | "archived_at"
+    >
   > = {};
+
+  // ── 목표 캘린더 ──
+  if (body.goalTitle !== undefined) {
+    const title = body.goalTitle === null ? "" : String(body.goalTitle).trim();
+    patch.goal_title = title ? title.slice(0, 100) : null;
+    // 목표를 새로 붙이면 그 시점부터 집계 시작, 해제하면 시작점도 비운다.
+    patch.goal_started_at = title ? new Date().toISOString() : null;
+  }
+  if (body.goalTargetHours !== undefined) {
+    if (body.goalTargetHours === null) {
+      patch.goal_target_hours = null;
+    } else {
+      const v = Number(body.goalTargetHours);
+      if (!Number.isFinite(v) || v <= 0 || v > 100_000) {
+        return Response.json({ error: "목표 시간이 올바르지 않아요." }, { status: 400 });
+      }
+      patch.goal_target_hours = v;
+    }
+  }
+  if (body.goalDeadline !== undefined) {
+    if (body.goalDeadline === null || body.goalDeadline === "") {
+      patch.goal_deadline = null;
+    } else {
+      const d = String(body.goalDeadline);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+        return Response.json({ error: "목표 기한이 올바르지 않아요." }, { status: 400 });
+      }
+      patch.goal_deadline = d;
+    }
+  }
+  if (body.archived !== undefined) {
+    patch.archived_at = body.archived ? new Date().toISOString() : null;
+  }
   if (body.hourlyRateKrw !== undefined) {
     if (body.hourlyRateKrw === null) {
       patch.hourly_rate_krw = null;

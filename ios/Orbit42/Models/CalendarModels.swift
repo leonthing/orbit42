@@ -73,8 +73,15 @@ struct CalendarInfo: Decodable, Identifiable, Hashable, Sendable {
     let visibility: String?
     let source: String        // "native" | "google"
     let isDefault: Bool
+    /// 목표 캘린더 — 이 캘린더의 시간이 하나의 목표를 향한다 (구 응답 호환 옵셔널)
+    let goalTitle: String?
+    let goalTargetHours: Double?
+    let goalDeadline: String?
+    let archivedAt: String?
 
     var isNative: Bool { source == "native" }
+    var hasGoal: Bool { !(goalTitle ?? "").isEmpty }
+    var isArchived: Bool { archivedAt != nil }
 
     var displayColor: Color {
         Color(hexString: color) ?? Theme.accent

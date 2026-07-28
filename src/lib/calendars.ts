@@ -33,11 +33,16 @@ export async function createNativeCalendar(args: {
   purpose: CalendarPurpose;
   color: string;
   visibility?: CalendarVisibility;
+  goalTitle?: string | null;
+  goalTargetHours?: number | null;
+  goalDeadline?: string | null;
 }) {
   const userId = await requireUserId();
   if (!args.name.trim()) return { error: "이름을 입력해주세요." };
 
   const db = getAdminClient();
+  const hasGoal =
+    !!args.goalTitle || args.goalTargetHours != null || !!args.goalDeadline;
   const { error } = await db.from("calendars").insert({
     user_id: userId,
     name: args.name.trim(),
@@ -45,6 +50,11 @@ export async function createNativeCalendar(args: {
     color: args.color,
     visibility: args.visibility ?? "private",
     source: "native",
+    goal_title: args.goalTitle?.trim() || null,
+    goal_target_hours: args.goalTargetHours ?? null,
+    goal_deadline: args.goalDeadline ?? null,
+    // 목표가 설정된 채로 만들어지면 그 순간부터 집계 시작.
+    goal_started_at: hasGoal ? new Date().toISOString() : null,
   });
   if (error) {
     console.error("createNativeCalendar", error);

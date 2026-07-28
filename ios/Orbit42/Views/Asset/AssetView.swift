@@ -38,7 +38,10 @@ struct AssetView: View {
             // 탭에 들어올 때마다 조용히 새로 계산 — 캘린더 용도·이벤트 분류를
             // 바꾼 뒤 자산 탭이 예전 숫자를 보여주는 혼란을 막는다.
             // (이미 요약이 있으면 그대로 보여주며 뒤에서 갱신)
-            .task { await viewModel.load(force: viewModel.summary != nil) }
+            .task {
+                await viewModel.load(force: viewModel.summary != nil)
+                await viewModel.loadGoals()
+            }
         }
     }
 
@@ -133,6 +136,9 @@ struct AssetView: View {
                         caption: nil,
                         conversions: summary.conversions
                     )
+                }
+                if !viewModel.goals.isEmpty {
+                    goalsCard(viewModel.goals)
                 }
                 if let yearRemaining = summary.yearRemaining {
                     yearRemainingCard(yearRemaining)
@@ -489,6 +495,113 @@ struct AssetView: View {
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    // MARK: 1.4 목표 캘린더 진행
+
+    private func goalsCard(_ goals: [CalendarGoal]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("목표")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Theme.secondaryText)
+
+            ForEach(goals) { goal in
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(goal.displayColor)
+                            .frame(width: 8, height: 8)
+                        Text(goal.title)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Theme.primaryText)
+                            .lineLimit(1)
+                        if goal.achieved {
+                            Image(systemName: "checkmark.seal.fill")
+                                .font(.caption)
+                                .foregroundStyle(.green)
+                        }
+                        Spacer(minLength: 0)
+                        if let deadlineText = goal.deadlineText {
+                            Text(deadlineText)
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(
+                                    (goal.daysLeft ?? 1) < 0 ? .orange : Theme.secondaryText
+                                )
+                        }
+                    }
+
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        Text("\(AssetFormat.hours(goal.spentHours))시간")
+                            .font(.title3.weight(.bold))
+                            .foregroundStyle(Theme.primaryText)
+                            .monospacedDigit()
+                        if let target = goal.targetHours {
+                            Text("/ \(AssetFormat.hours(target))시간")
+                                .font(.subheadline)
+                                .foregroundStyle(Theme.secondaryText)
+                                .monospacedDigit()
+                        }
+                        Spacer(minLength: 0)
+                        if let ratio = goal.ratio {
+                            Text(AssetFormat.percent(ratio))
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(goal.achieved ? .green : Theme.accent)
+                                .monospacedDigit()
+                        }
+                    }
+
+                    if let ratio = goal.ratio {
+                        GeometryReader { proxy in
+                            ZStack(alignment: .leading) {
+                                Capsule().fill(Theme.fill(0.08))
+                                Capsule()
+                                    .fill(goal.achieved ? Color.green : goal.displayColor)
+                                    .frame(width: max(4, proxy.size.width * ratio))
+                            }
+                        }
+                        .frame(height: 6)
+                    }
+
+                    Text(goalCaption(goal))
+                        .font(.caption)
+                        .foregroundStyle(Theme.secondaryText)
+
+                    if goal.achieved {
+                        Button {
+                            Task { await viewModel.archiveGoal(goal) }
+                        } label: {
+                            Text("목표 달성 · 아카이브하기")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.green)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(Color.green.opacity(0.15), in: Capsule())
+                        }
+                        .padding(.top, 2)
+                    }
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Theme.fill(0.04), in: RoundedRectangle(cornerRadius: 12))
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    /// 페이스 안내 — 남은 기한 안에 목표를 채우려면 주당 몇 시간이 필요한지.
+    private func goalCaption(_ goal: CalendarGoal) -> String {
+        if goal.achieved { return "목표를 채웠어요. 축하해요!" }
+        if let needed = goal.neededWeeklyHours, needed > 0 {
+            let pace = goal.weeklyPaceHours ?? 0
+            let status = pace >= needed ? "지금 속도면 충분해요" : "지금보다 조금 더 필요해요"
+            return "주 \(AssetFormat.hours(needed))시간이면 기한 내 달성 · 현재 주 \(AssetFormat.hours(pace))시간 — \(status)"
+        }
+        if let remaining = goal.remainingHours, remaining > 0 {
+            return "\(AssetFormat.hours(remaining))시간 남았어요 · 현재 주 \(AssetFormat.hours(goal.weeklyPaceHours ?? 0))시간 페이스"
+        }
+        return "이 캘린더에 쌓인 시간이에요 · 주 \(AssetFormat.hours(goal.weeklyPaceHours ?? 0))시간 페이스"
     }
 
     // MARK: 1.5 남은 시간 자산

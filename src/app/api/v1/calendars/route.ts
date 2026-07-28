@@ -37,6 +37,9 @@ export async function POST(request: Request) {
     color?: string;
     visibility?: string;
     linkGoogle?: boolean;
+    goalTitle?: string | null;
+    goalTargetHours?: number | null;
+    goalDeadline?: string | null;
   };
   try {
     body = await request.json();
@@ -61,10 +64,28 @@ export async function POST(request: Request) {
     return Response.json({ error: "공개 범위가 올바르지 않아요." }, { status: 400 });
   }
 
+  const goalTargetHours =
+    body.goalTargetHours == null ? null : Number(body.goalTargetHours);
+  if (
+    goalTargetHours != null &&
+    (!Number.isFinite(goalTargetHours) || goalTargetHours <= 0 || goalTargetHours > 100_000)
+  ) {
+    return Response.json({ error: "목표 시간이 올바르지 않아요." }, { status: 400 });
+  }
+  const goalDeadline = body.goalDeadline?.trim() || null;
+  if (goalDeadline && !/^\d{4}-\d{2}-\d{2}$/.test(goalDeadline)) {
+    return Response.json({ error: "목표 기한이 올바르지 않아요." }, { status: 400 });
+  }
+
   const args = { name, purpose, color, visibility };
   const result = body.linkGoogle
     ? await createGoogleLinkedCalendar(args)
-    : await createNativeCalendar(args);
+    : await createNativeCalendar({
+        ...args,
+        goalTitle: body.goalTitle?.trim() || null,
+        goalTargetHours,
+        goalDeadline,
+      });
   if ("error" in result && result.error) {
     return Response.json({ error: result.error }, { status: 400 });
   }

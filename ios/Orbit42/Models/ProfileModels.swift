@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 // MARK: - 프로필 편집 (PATCH /api/v1/me)
 
@@ -106,10 +107,17 @@ struct UpdateCalendarRequest: Encodable {
     var color: String?
     var visibility: String?
     var hourlyRateKrw: PatchValue<Int>?
+    /// 목표 — 해제는 명시적 null
+    var goalTitle: PatchValue<String>?
+    var goalTargetHours: PatchValue<Double>?
+    var goalDeadline: PatchValue<String>?
+    /// 아카이브 토글
+    var archived: Bool?
 
     var isEmpty: Bool {
         name == nil && purpose == nil && color == nil && visibility == nil
-            && hourlyRateKrw == nil
+            && hourlyRateKrw == nil && goalTitle == nil && goalTargetHours == nil
+            && goalDeadline == nil && archived == nil
     }
 }
 
@@ -120,6 +128,46 @@ struct CreateCalendarRequest: Encodable {
     let color: String
     let visibility: String
     let linkGoogle: Bool
+    var goalTitle: String?
+    var goalTargetHours: Double?
+    var goalDeadline: String?
+}
+
+// MARK: - 목표 진행 (GET /api/v1/calendars/goals)
+
+struct CalendarGoalsResponse: Decodable, Sendable {
+    let goals: [CalendarGoal]
+}
+
+/// 목표 캘린더의 누적 시간·달성률·페이스.
+struct CalendarGoal: Decodable, Identifiable, Sendable {
+    let calendarId: String
+    let calendarName: String
+    let color: String
+    let title: String
+    let targetHours: Double?
+    let deadline: String?
+    let archivedAt: String?
+    let spentHours: Double
+    let ratio: Double?
+    let remainingHours: Double?
+    let daysLeft: Int?
+    let weeklyPaceHours: Double?
+    let neededWeeklyHours: Double?
+    let achieved: Bool
+
+    var id: String { calendarId }
+    var isArchived: Bool { archivedAt != nil }
+
+    var displayColor: Color { Color(hexString: color) ?? Theme.accent }
+
+    /// "D-14" / "기한 지남" / nil(기한 없음)
+    var deadlineText: String? {
+        guard let daysLeft else { return nil }
+        if daysLeft < 0 { return "기한 지남" }
+        if daysLeft == 0 { return "오늘까지" }
+        return "D-\(daysLeft)"
+    }
 }
 
 /// 캘린더 용도 (API v1 계약의 purpose 값)
