@@ -13,11 +13,13 @@ export function PublicChrome({
   if (navAtBottom) {
     // 배경은 페이지(테마)가 칠하므로 셸은 투명하게 두고, 링크만 아래에 얹는다.
     return (
-      <div className="min-h-screen">
-        <main className="mx-auto max-w-5xl px-4 py-8 md:px-8 md:py-10">
+      // flex-col + flex-1 로 "본문 + 하단 링크 = 정확히 한 화면 이상"이 되게 한다.
+      // (min-h-screen 을 본문에 주면 하단 링크만큼 화면이 더 늘어난다)
+      <div className="flex min-h-screen flex-col">
+        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 md:px-8 md:py-10">
           {children}
         </main>
-        <footer className="relative z-10 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 pb-8 text-[11px] text-charcoal-500">
+        <footer className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 pb-8 pt-4 text-[11px] text-charcoal-500">
           <Link href="/explore" className="hover:text-charcoal-300">
             둘러보기
           </Link>
