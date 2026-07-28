@@ -6,8 +6,6 @@ struct SearchView: View {
     @State private var viewModel = SearchViewModel()
     /// 팔로우 추천 — 오르빗 아래 섹션 (온보딩과 같은 API·행 공용).
     @State private var suggestions = FollowSuggestionsViewModel()
-    /// 스트림의 시간 로그 카드 탭 → 뷰어
-    @State private var selectedStreamPost: TimelogPost?
     @FocusState private var isSearchFocused: Bool
 
     var body: some View {
@@ -25,9 +23,6 @@ struct SearchView: View {
             async let stream: Void = viewModel.loadStream()
             async let suggested: Void = suggestions.load()
             _ = await (orbit, stream, suggested)
-        }
-        .sheet(item: $selectedStreamPost) { post in
-            TimelogViewerSheet(post: post)
         }
     }
 
@@ -262,42 +257,7 @@ struct SearchView: View {
     /// 스트림 카드 — 시간 로그(사진) 또는 새 타임슬롯.
     @ViewBuilder
     private func streamCard(_ item: OrbitStreamItem) -> some View {
-        if item.type == "timelog", let post = item.post {
-            Button {
-                selectedStreamPost = post
-            } label: {
-                VStack(alignment: .leading, spacing: 8) {
-                    streamHeader(item, action: "시간 로그")
-                    if let cover = post.coverURL {
-                        AsyncImage(url: cover) { phase in
-                            if let image = phase.image {
-                                image.resizable().scaledToFill()
-                            } else {
-                                Theme.fill(0.05)
-                            }
-                        }
-                        .frame(height: 170)
-                        .frame(maxWidth: .infinity)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                        .overlay(alignment: .topTrailing) {
-                            if post.imageUrls.count > 1 {
-                                Image(systemName: "square.on.square")
-                                    .font(.caption)
-                                    .foregroundStyle(.white)
-                                    .padding(6)
-                            }
-                        }
-                    }
-                    Text(post.title)
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(Theme.primaryText)
-                        .lineLimit(1)
-                }
-                .padding(12)
-                .background(Theme.surface, in: RoundedRectangle(cornerRadius: 14))
-            }
-            .buttonStyle(.plain)
-        } else if item.type == "slot", let slot = item.slot {
+        if item.type == "slot", let slot = item.slot {
             NavigationLink {
                 SlotBookingView(username: item.username, slug: slot.slug)
             } label: {

@@ -64,7 +64,8 @@ final class SearchViewModel {
         if !force, stream != nil { return }
         do {
             let response: OrbitStreamResponse = try await api.get("/api/v1/orbit/stream")
-            stream = response.items
+            // 이번 버전은 시간 로그를 노출하지 않는다 — 새 슬롯 소식만.
+            stream = response.items.filter { $0.type == "slot" }
         } catch {
             if stream == nil { stream = [] }
         }
