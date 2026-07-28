@@ -130,11 +130,15 @@ export function PublicLinkProfile({
 
   return (
     <div style={{ color: theme.text }}>
-      {/* 배경 — 화면 전체를 덮는 고정 레이어. 셸 여백·하단 링크 뒤까지 칠해진다. */}
-      <div
-        className="fixed inset-0 -z-10"
-        style={{ background: theme.background }}
-        aria-hidden
+      {/*
+        배경은 body 에 직접 칠한다. 고정 레이어(z-index)로는 셸 배경에 가려질 수
+        있고, body 배경은 캔버스로 전파돼 스크롤·하단 링크 영역까지 항상 덮는다.
+        이 페이지를 벗어나면 style 태그가 사라져 원래 배경으로 돌아온다.
+      */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `body{background:${theme.background} !important;background-attachment:fixed !important;}`,
+        }}
       />
       <div className="mx-auto w-full max-w-lg text-center">
         {/* 아바타 */}
