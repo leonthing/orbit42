@@ -22,6 +22,8 @@ export type LinkTheme = {
   accent: string;
   /** 강조색 위 텍스트 */
   onAccent: string;
+  /** 페이지 캔버스(스크롤 영역 전체) 단색 — 그라디언트 끝색과 같게 둔다 */
+  canvas: string;
 };
 
 export const LINK_THEMES: LinkTheme[] = [
@@ -34,6 +36,7 @@ export const LINK_THEMES: LinkTheme[] = [
     text: "#f5f5f7",
     muted: "rgba(245,245,247,0.55)",
     accent: "#6366f1",
+    canvas: "#16161f",
     onAccent: "#ffffff",
   },
   {
@@ -45,6 +48,7 @@ export const LINK_THEMES: LinkTheme[] = [
     text: "#16161d",
     muted: "rgba(22,22,29,0.55)",
     accent: "#6366f1",
+    canvas: "#f3f4f8",
     onAccent: "#ffffff",
   },
   {
@@ -56,6 +60,7 @@ export const LINK_THEMES: LinkTheme[] = [
     text: "#eef0ff",
     muted: "rgba(238,240,255,0.55)",
     accent: "#818cf8",
+    canvas: "#0d1030",
     onAccent: "#0b0d1f",
   },
   {
@@ -67,6 +72,7 @@ export const LINK_THEMES: LinkTheme[] = [
     text: "#ffffff",
     muted: "rgba(255,255,255,0.75)",
     accent: "#ffffff",
+    canvas: "#ea580c",
     onAccent: "#c2410c",
   },
   {
@@ -78,6 +84,7 @@ export const LINK_THEMES: LinkTheme[] = [
     text: "#ecfdf5",
     muted: "rgba(236,253,245,0.65)",
     accent: "#34d399",
+    canvas: "#022c22",
     onAccent: "#022c22",
   },
   {
@@ -89,6 +96,7 @@ export const LINK_THEMES: LinkTheme[] = [
     text: "#4a044e",
     muted: "rgba(74,4,78,0.55)",
     accent: "#db2777",
+    canvas: "#fce7f3",
     onAccent: "#ffffff",
   },
   {
@@ -100,6 +108,7 @@ export const LINK_THEMES: LinkTheme[] = [
     text: "#e0f2fe",
     muted: "rgba(224,242,254,0.65)",
     accent: "#38bdf8",
+    canvas: "#082f49",
     onAccent: "#082f49",
   },
   {
@@ -111,6 +120,7 @@ export const LINK_THEMES: LinkTheme[] = [
     text: "#111113",
     muted: "rgba(17,17,19,0.55)",
     accent: "#111113",
+    canvas: "#e7e7e9",
     onAccent: "#ffffff",
   },
 ];

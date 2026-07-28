@@ -185,8 +185,7 @@ private struct MyProfileContent: View {
                         Button {
                             openURL(link.url)
                         } label: {
-                            Image(systemName: link.kind.systemImage)
-                                .font(.subheadline.weight(.medium))
+                            SocialIcon(kind: link.kind, size: 18)
                                 .foregroundStyle(Theme.accent)
                                 .frame(width: 34, height: 34)
                                 .background(Theme.fill(0.08), in: Circle())

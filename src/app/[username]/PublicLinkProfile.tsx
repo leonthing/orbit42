@@ -126,16 +126,26 @@ export function PublicLinkProfile({
   };
 
   return (
-    <div style={{ color: theme.text }}>
+    <div className="relative" style={{ color: theme.text }}>
       {/*
         배경은 body 에 직접 칠한다. 고정 레이어(z-index)로는 셸 배경에 가려질 수
         있고, body 배경은 캔버스로 전파돼 스크롤·하단 링크 영역까지 항상 덮는다.
         이 페이지를 벗어나면 style 태그가 사라져 원래 배경으로 돌아온다.
       */}
+      {/*
+        html 에는 단색(그라디언트 끝색)을 깔아 스크롤 영역 전체를 확실히 덮고,
+        그라디언트는 아래 콘텐츠 블록이 그린다. 끝색이 같아 이어짐이 자연스럽다.
+        (그라디언트를 html 에 직접 주면 iOS 에서 뷰포트 밖이 비어 흰 여백이 남는다)
+      */}
       <style
         dangerouslySetInnerHTML={{
-          __html: `html{background:${theme.background} !important;background-repeat:no-repeat !important;min-height:100%;}body{background:transparent !important;}`,
+          __html: `html{background:${theme.canvas} !important;}body{background:transparent !important;}`,
         }}
+      />
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[100svh]"
+        style={{ background: theme.background }}
+        aria-hidden
       />
       <div className="mx-auto w-full max-w-lg text-center">
         {/* 아바타 */}
@@ -203,15 +213,7 @@ export function PublicLinkProfile({
 
         {/* 액션 — 방문자의 시선이 예약 카드로 바로 가도록 버튼을 두지 않는다.
             로그인한 방문자에게만 팔로우를 보여주고, 공유는 브라우저 공유 기능으로. */}
-        {loggedIn && (
-          <div className="mt-5 flex justify-center">
-            <FollowButton
-              targetUsername={username}
-              initiallyFollowing={viewerFollowing}
-              loggedIn
-            />
-          </div>
-        )}
+
 
         {/* 신뢰 신호 */}
         {((rating && rating.count > 0) || totalBookings > 0) && (
@@ -311,6 +313,17 @@ export function PublicLinkProfile({
             />
           )}
         </div>
+
+        {/* 로그인한 방문자용 팔로우 — 예약이 먼저 보이도록 맨 아래에 둔다 */}
+        {loggedIn && (
+          <div className="mt-8 flex justify-center">
+            <FollowButton
+              targetUsername={username}
+              initiallyFollowing={viewerFollowing}
+              loggedIn
+            />
+          </div>
+        )}
 
         {/* 가입 CTA */}
         {!loggedIn && (
