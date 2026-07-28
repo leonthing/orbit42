@@ -137,7 +137,7 @@ export function PublicLinkProfile({
       */}
       <style
         dangerouslySetInnerHTML={{
-          __html: `body{background:${theme.background} !important;background-attachment:fixed !important;}`,
+          __html: `html{background:${theme.background} !important;background-repeat:no-repeat !important;min-height:100%;}body{background:transparent !important;}`,
         }}
       />
       <div className="mx-auto w-full max-w-lg text-center">
