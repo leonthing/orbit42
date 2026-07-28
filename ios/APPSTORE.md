@@ -12,8 +12,21 @@
 - [x] v1.0.0 (빌드 1) 업로드 완료 — TestFlight 처리 중
 - [x] 스크린샷 촬영: `~/Desktop/orbit42-screenshots/` (라이트 6장 + dark/ 다크 6장,
   iPhone 17 Pro Max 6.9" 1320×2868) — 마음에 드는 세트를 ASC에 드래그 업로드
-- [ ] ASC 메타데이터 입력 (아래 초안 복붙) + App Privacy 신고
-- [ ] 심사 제출
+- [x] ASC 메타데이터·연령등급·가격(무료)·저작권·심사정보 API 입력 완료
+- [x] App Privacy 게시 (Leo, 브라우저 — API 미지원 항목)
+- [x] **심사 제출 완료 (2026-07-28) — WAITING_FOR_REVIEW**
+
+## ASC API 자동화 (다음 버전에도 재사용)
+- 키: `~/.appstoreconnect/private_keys/AuthKey_Q5CMWT72A8.p8` (맛cal과 공용)
+- Key ID `Q5CMWT72A8` / Issuer `86dc8cf1-c3fe-4a19-839b-1bcb416d6a5f`
+- App ID `6795434941` (bundle org.orbit42.app, SKU orbit42-ios)
+- JWT(ES256) 헬퍼 스크립트는 세션 스크래치패드의 `asc.py` 패턴 참고 —
+  cryptography 로 서명, `/v1/apps`, `/v1/appStoreVersions`, `/v1/appScreenshotSets`,
+  `/v1/reviewSubmissions` 순으로 처리
+- **API로 불가능한 항목**: App Privacy(데이터 수집 신고)는 브라우저에서 입력 후
+  반드시 **"게시" 버튼**까지 눌러야 심사 제출이 풀린다 (저장만으로는 409)
+- 저작권은 `© 2026 N.THING Inc.` 유지 (약관·개인정보처리방침의 운영 주체와 일치).
+  개발자 계정 명의는 HYEYEON KIM — 법인 계정 준비 시 App Transfer 고려
 
 ## 업로드 명령 (레코드 생성 후)
 ```bash
