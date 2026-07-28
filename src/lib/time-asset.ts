@@ -413,13 +413,14 @@ export type TimeAssetSummary = {
     deltaInvestHours: number;
     deltaLostHours: number;
   };
-  /** 남은 시간 자산 (생일 미설정이면 null) — 만 85세, 수면 제외 기준 */
-  lifetime: {
-    ageYears: number;
-    assumedLifespanYears: number;
+  /** 올해 남은 시간 자산 — 12/31까지, 수면 제외 기준 */
+  yearRemaining: {
+    year: number;
     remainingAwakeHours: number;
     remainingValueKrw: number | null;
-  } | null;
+    /** 올해가 얼마나 지났는지 (0~1) */
+    progressRatio: number;
+  };
   /** 주간 목표와 이번 주 진행률 (목표 미설정이면 null) */
   goals: {
     earnKrw: number | null;
@@ -721,25 +722,25 @@ export async function getTimeAssetSummary(
       Math.round((lastWeek.lostHours - priorWeek.lostHours) * 10) / 10,
   };
 
-  // 남은 시간 자산 — 생일이 있으면 만 85세 기준, 수면 제외한 깨어있는 시간.
-  let lifetime: TimeAssetSummary["lifetime"] = null;
-  if (income.birthDate) {
-    const birth = new Date(income.birthDate);
-    if (!Number.isNaN(birth.getTime())) {
-      const LIFE_YEARS = 85;
-      const ageYears = (anchor.getTime() - birth.getTime()) / (365.25 * 24 * 3_600_000);
-      const remainYears = Math.max(0, LIFE_YEARS - ageYears);
-      const awakePerDay = 24 - income.sleepHoursPerDay;
-      const remainingAwakeHours = Math.round(remainYears * 365.25 * awakePerDay);
-      lifetime = {
-        ageYears: Math.floor(ageYears),
-        assumedLifespanYears: LIFE_YEARS,
-        remainingAwakeHours,
-        remainingValueKrw:
-          hourly != null ? Math.round(remainingAwakeHours * hourly) : null,
-      };
-    }
-  }
+  // 올해 남은 시간 자산 — 12/31까지 깨어있는 시간 (수면 제외).
+  // 평생(기대수명) 환산은 고령 사용자에게 불쾌할 수 있어 1년 단위로 잡는다.
+  const yearStart = new Date(anchor.getFullYear(), 0, 1);
+  const yearEnd = new Date(anchor.getFullYear() + 1, 0, 1);
+  const remainDays = Math.max(0, yearEnd.getTime() - anchor.getTime()) / 86_400_000;
+  const awakePerDay = 24 - income.sleepHoursPerDay;
+  const remainingAwakeHours = Math.round(remainDays * awakePerDay);
+  const yearRemaining: TimeAssetSummary["yearRemaining"] = {
+    year: anchor.getFullYear(),
+    remainingAwakeHours,
+    remainingValueKrw:
+      hourly != null ? Math.round(remainingAwakeHours * hourly) : null,
+    progressRatio:
+      Math.round(
+        ((anchor.getTime() - yearStart.getTime()) /
+          (yearEnd.getTime() - yearStart.getTime())) *
+          1000,
+      ) / 1000,
+  };
 
   // 주간 목표 진행률 — 목표가 하나라도 설정돼 있을 때만.
   const goals: TimeAssetSummary["goals"] =
@@ -854,7 +855,7 @@ export async function getTimeAssetSummary(
     messages,
     actions: actions.slice(0, 3),
     report,
-    lifetime,
+    yearRemaining,
     goals,
     incomeType: income.incomeType,
     freelance,

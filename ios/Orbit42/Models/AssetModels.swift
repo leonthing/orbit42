@@ -162,8 +162,8 @@ struct TimeAssetSummary: Decodable {
     let actions: [TimeAssetAction]?
     /// 지난주 리포트 (구 서버 응답에는 없음)
     let report: TimeAssetWeeklyReport?
-    /// 남은 시간 자산 — 생일 미설정이면 null
-    let lifetime: TimeAssetLifetime?
+    /// 올해 남은 시간 자산 (구 서버 응답에는 없음)
+    let yearRemaining: TimeAssetYearRemaining?
     /// 주간 목표 + 이번 주 진행률 — 목표 미설정이면 null
     let goals: TimeAssetGoals?
 }
@@ -181,12 +181,13 @@ struct TimeAssetWeeklyReport: Decodable {
     let deltaLostHours: Double
 }
 
-/// 남은 시간 자산 — 만 85세, 수면 제외 기준.
-struct TimeAssetLifetime: Decodable {
-    let ageYears: Int
-    let assumedLifespanYears: Int
+/// 올해 남은 시간 자산 — 12/31까지, 수면 제외 기준.
+struct TimeAssetYearRemaining: Decodable {
+    let year: Int
     let remainingAwakeHours: Int
     let remainingValueKrw: Int?
+    /// 올해가 얼마나 지났는지 (0~1)
+    let progressRatio: Double
 }
 
 /// 주간 목표와 이번 주 진행률.

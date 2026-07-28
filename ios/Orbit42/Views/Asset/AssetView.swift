@@ -128,8 +128,8 @@ struct AssetView: View {
                         conversions: summary.conversions
                     )
                 }
-                if let lifetime = summary.lifetime {
-                    lifetimeCard(lifetime)
+                if let yearRemaining = summary.yearRemaining {
+                    yearRemainingCard(yearRemaining)
                 }
                 if let report = summary.report {
                     reportCard(report)
@@ -381,23 +381,32 @@ struct AssetView: View {
         return AssetFormat.won(value)
     }
 
-    private func lifetimeCard(_ lifetime: TimeAssetLifetime) -> some View {
+    private func yearRemainingCard(_ year: TimeAssetYearRemaining) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("남은 시간 자산")
+            Text("올해 남은 시간")
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(Theme.secondaryText)
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text("약 \(AssetFormat.grouped(lifetime.remainingAwakeHours))시간")
+                Text("약 \(AssetFormat.grouped(year.remainingAwakeHours))시간")
                     .font(.title2.weight(.bold))
                     .foregroundStyle(Theme.primaryText)
                     .monospacedDigit()
-                if let value = lifetime.remainingValueKrw {
+                if let value = year.remainingValueKrw {
                     Text("≈ \(compactWon(value))")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Theme.accent)
                 }
             }
-            Text("만 \(lifetime.assumedLifespanYears)세까지, 수면을 뺀 깨어있는 시간 기준 — 지금 이 순간에도 줄고 있어요.")
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Theme.fill(0.08))
+                    Capsule()
+                        .fill(Theme.accent)
+                        .frame(width: max(4, proxy.size.width * year.progressRatio))
+                }
+            }
+            .frame(height: 5)
+            Text("\(String(year.year))년이 \(Int(year.progressRatio * 100))% 지났어요 · 수면 제외 — 남은 시간을 어디에 쓸지가 올해의 자산을 정해요.")
                 .font(.caption)
                 .foregroundStyle(Theme.secondaryText)
         }
