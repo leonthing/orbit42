@@ -71,8 +71,6 @@ private struct MyProfileContent: View {
     @Environment(\.openURL) private var openURL
     @State private var viewModel: PersonProfileViewModel
     @State private var showingEditProfile = false
-    /// 내 캘린더 목록 — nil 이면 로딩 전. 실패해도 섹션만 숨긴다 (부가 콘텐츠).
-    @State private var calendars: [CalendarInfo]?
 
     init(username: String) {
         _viewModel = State(initialValue: PersonProfileViewModel(username: username))
@@ -88,14 +86,13 @@ private struct MyProfileContent: View {
                     header
                     actionButtons
                     bookingsLink
-                    calendarsSection
+                    CalendarCardsSection(username: username, isMe: true)
                     slotsSection
                 }
                 .padding(16)
             }
             .refreshable {
                 await viewModel.load(force: true)
-                await loadCalendars()
             }
         }
         .sheet(isPresented: $showingEditProfile, onDismiss: {
@@ -108,16 +105,6 @@ private struct MyProfileContent: View {
         }
         .task {
             await viewModel.load()
-            await loadCalendars()
-        }
-    }
-
-    private func loadCalendars() async {
-        do {
-            let response: CalendarsResponse = try await APIClient.shared.get("/api/v1/calendars")
-            calendars = response.calendars
-        } catch {
-            // 캘린더 섹션은 부가 콘텐츠 — 실패하면 그냥 숨긴다.
         }
     }
 
@@ -348,79 +335,6 @@ private struct MyProfileContent: View {
             .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(.plain)
-    }
-
-    // MARK: - 내 캘린더
-
-    @ViewBuilder
-    private var calendarsSection: some View {
-        if let calendars, !calendars.isEmpty {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Text("내 캘린더")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(Theme.secondaryText)
-                    Spacer()
-                    NavigationLink {
-                        CalendarSettingsView()
-                    } label: {
-                        Text("관리")
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(Theme.accent)
-                    }
-                    .buttonStyle(.plain)
-                }
-
-                VStack(spacing: 0) {
-                    ForEach(calendars) { calendar in
-                        calendarRow(calendar)
-                        if calendar.id != calendars.last?.id {
-                            Divider().overlay(Theme.fill(0.06))
-                        }
-                    }
-                }
-                .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
-            }
-        }
-    }
-
-    private func calendarRow(_ calendar: CalendarInfo) -> some View {
-        HStack(spacing: 10) {
-            Circle()
-                .fill(calendar.displayColor)
-                .frame(width: 10, height: 10)
-            Text(calendar.name)
-                .font(.subheadline)
-                .foregroundStyle(Theme.primaryText)
-                .lineLimit(1)
-            if !calendar.isNative {
-                Text("Google")
-                    .font(.caption2)
-                    .foregroundStyle(Theme.secondaryText)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Theme.fill(0.08), in: Capsule())
-            }
-            Spacer(minLength: 8)
-            if let purposeLabel = calendar.purpose.flatMap({ CalendarPurpose(rawValue: $0)?.label }) {
-                Text(purposeLabel)
-                    .font(.caption)
-                    .foregroundStyle(Theme.secondaryText)
-            }
-            Text(visibilityLabel(calendar.visibility))
-                .font(.caption)
-                .foregroundStyle(Theme.secondaryText)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 11)
-    }
-
-    private func visibilityLabel(_ visibility: String?) -> String {
-        switch visibility {
-        case "public": return "전체 공개"
-        case "followers": return "팔로워 공개"
-        default: return "비공개"
-        }
     }
 
     // MARK: - 내 타임슬롯

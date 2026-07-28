@@ -25,7 +25,28 @@ export async function listMyCalendars(): Promise<Calendar[]> {
     .eq("user_id", userId)
     .order("is_default", { ascending: false })
     .order("created_at", { ascending: true });
-  return (data ?? []) as Calendar[];
+  const owned = (data ?? []) as Calendar[];
+
+  // 공유받은 캘린더를 뒤에 붙인다 (sharedRole/sharedBy 로 표시 구분).
+  const { sharedCalendarsFor } = await import("@/lib/calendar-members");
+  const shared = await sharedCalendarsFor(userId);
+  if (shared.size === 0) return owned;
+
+  const { data: sharedRows } = await db
+    .from("calendars")
+    .select("*")
+    .in("id", Array.from(shared.keys()))
+    .order("created_at", { ascending: true });
+  const sharedCals = (sharedRows ?? []).map((c) => {
+    const meta = shared.get(c.id as string);
+    return {
+      ...(c as Calendar),
+      shared_role: meta?.role ?? "viewer",
+      shared_by_username: meta?.ownerUsername ?? null,
+      shared_by_name: meta?.ownerName ?? null,
+    } as Calendar;
+  });
+  return [...owned, ...sharedCals];
 }
 
 export async function createNativeCalendar(args: {

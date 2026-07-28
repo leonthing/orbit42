@@ -129,6 +129,7 @@ struct PersonProfileView: View {
                     if !data.isMe {
                         actionButtons(data)
                     }
+                    CalendarCardsSection(username: viewModel.username, isMe: data.isMe)
                     slotsSection(data)
                 }
             }

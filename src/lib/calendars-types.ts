@@ -31,4 +31,8 @@ export type Calendar = {
   /** 아카이브된 캘린더 (달성/종료) — 목록·필터에서 접힘 */
   archived_at: string | null;
   created_at: string;
+  /** 공유받은 캘린더일 때만 채워진다 (listMyCalendars 가 덧붙임) */
+  shared_role?: "editor" | "viewer";
+  shared_by_username?: string | null;
+  shared_by_name?: string | null;
 };

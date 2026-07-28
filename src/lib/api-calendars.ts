@@ -26,5 +26,9 @@ export function toApiCalendar(c: Calendar & { hourly_rate_krw?: number | null })
     goalDeadline: c.goal_deadline ?? null,
     goalStartedAt: c.goal_started_at ?? null,
     archivedAt: c.archived_at ?? null,
+    // 공유 캘린더 — 내가 공유받은 것이면 역할과 소유자가 온다
+    sharedRole: c.shared_role ?? null,
+    sharedByUsername: c.shared_by_username ?? null,
+    sharedByName: c.shared_by_name ?? null,
   };
 }

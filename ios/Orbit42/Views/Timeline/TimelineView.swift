@@ -31,6 +31,12 @@ struct TimelineItem: Decodable, Identifiable, Sendable {
     let goalTitle: String?
     let imageUrls: [String]
     let note: String?
+    /// 팔로잉 스코프이거나 공유 캘린더에서 남이 만든 일정일 때
+    let authorUsername: String?
+    let authorName: String?
+    let authorAvatarUrl: String?
+
+    var authorAvatarURL: URL? { authorAvatarUrl.flatMap(URL.init(string:)) }
 
     var startDate: Date? { APIDateParser.parse(startAt) }
     var displayColor: Color { Color(hexString: calendarColor ?? "") ?? Theme.accent }
@@ -50,6 +56,8 @@ final class TimelineViewModel {
     var selectedCalendarId: String?
     /// 사진이 있는 기록만 보기
     var onlyPhotos = false
+    /// "me" | "following"
+    var scope = "me"
 
     private let api: APIClient
 
@@ -59,8 +67,10 @@ final class TimelineViewModel {
 
     func load(force: Bool = false) async {
         if !force, items != nil { return }
-        var path = "/api/v1/timeline?months=6"
-        if let selectedCalendarId { path += "&calendarId=\(selectedCalendarId)" }
+        var path = "/api/v1/timeline?months=6&scope=\(scope)"
+        if scope == "me", let selectedCalendarId {
+            path += "&calendarId=\(selectedCalendarId)"
+        }
         if onlyPhotos { path += "&onlyPhotos=1" }
         do {
             let response: TimelineResponse = try await api.get(path)
@@ -107,9 +117,21 @@ struct TimelineView: View {
             }
             .navigationTitle("타임라인")
             .navigationBarTitleDisplayMode(.inline)
+            .safeAreaInset(edge: .top) {
+                Picker("보기", selection: scopeBinding) {
+                    Text("내 기록").tag("me")
+                    Text("팔로잉").tag("following")
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 6)
+                .background(Theme.background)
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    filterMenu
+                    if viewModel.scope == "me" {
+                        filterMenu
+                    }
                 }
             }
             .task { await viewModel.load() }
@@ -117,6 +139,17 @@ struct TimelineView: View {
                 TimelinePhotoViewer(item: item)
             }
         }
+    }
+
+    private var scopeBinding: Binding<String> {
+        Binding(
+            get: { viewModel.scope },
+            set: { newValue in
+                guard newValue != viewModel.scope else { return }
+                viewModel.scope = newValue
+                Task { await viewModel.load(force: true) }
+            }
+        )
     }
 
     private var filterMenu: some View {
@@ -212,7 +245,9 @@ struct TimelineView: View {
             Text("아직 기록이 없어요")
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(Theme.primaryText)
-            Text("지나간 일정이 여기에 쌓여요.\n일정에 사진을 붙이면 기록이 더 선명해져요.")
+            Text(viewModel.scope == "following"
+                 ? "팔로우한 사람들의 공개 캘린더 일정이 여기에 보여요.\n오르빗 탭에서 관심 가는 사람을 팔로우해 보세요."
+                 : "지나간 일정이 여기에 쌓여요.\n일정에 사진을 붙이면 기록이 더 선명해져요.")
                 .font(.footnote)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(Theme.secondaryText)
@@ -228,6 +263,15 @@ struct TimelineView: View {
         let inner = VStack(alignment: .leading, spacing: 8) {
             if item.hasPhotos {
                 photoStrip(item)
+            }
+            if let authorName = item.authorName {
+                HStack(spacing: 6) {
+                    DiscoverAvatar(url: item.authorAvatarURL, name: authorName, size: 22)
+                    Text(authorName)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.primaryText)
+                    Spacer(minLength: 0)
+                }
             }
             HStack(spacing: 8) {
                 RoundedRectangle(cornerRadius: 2)

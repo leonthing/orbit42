@@ -78,8 +78,14 @@ struct CalendarInfo: Decodable, Identifiable, Hashable, Sendable {
     let goalTargetHours: Double?
     let goalDeadline: String?
     let archivedAt: String?
+    /// 공유받은 캘린더면 "editor"|"viewer", 내 캘린더면 nil
+    let sharedRole: String?
+    let sharedByUsername: String?
+    let sharedByName: String?
 
     var isNative: Bool { source == "native" }
+    var isSharedWithMe: Bool { sharedRole != nil }
+    var canEdit: Bool { sharedRole == nil || sharedRole == "editor" }
     var hasGoal: Bool { !(goalTitle ?? "").isEmpty }
     var isArchived: Bool { archivedAt != nil }
 

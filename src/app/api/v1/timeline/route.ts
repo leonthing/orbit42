@@ -25,6 +25,8 @@ export async function GET(request: Request) {
   const months = Math.min(12, Math.max(1, Number(url.searchParams.get("months") ?? 3)));
   const calendarId = url.searchParams.get("calendarId");
   const onlyPhotos = url.searchParams.get("onlyPhotos") === "1";
+  // scope: "me"(기본) | "following" — 팔로우한 사람들의 공개 캘린더 일정
+  const scope = url.searchParams.get("scope") === "following" ? "following" : "me";
 
   const now = new Date();
   const rangeStart = new Date(now.getFullYear(), now.getMonth() - months + 1, 1);
@@ -96,6 +98,99 @@ export async function GET(request: Request) {
     .filter((item) => !onlyPhotos || item.imageUrls.length > 0)
     .sort((a, b) => (a.startAt < b.startAt ? 1 : -1))
     .slice(0, 200);
+
+  if (scope === "following") {
+    const { listFollowing } = await import("@/lib/follows");
+    const people = await listFollowing(session.username);
+    const peopleById = new Map(
+      people.map((p) => {
+        const person = p as {
+          id: string;
+          username: string;
+          display_name: string | null;
+          avatar_url: string | null;
+        };
+        return [person.id, person] as const;
+      }),
+    );
+    if (peopleById.size === 0) return Response.json({ items: [], calendars: [] });
+
+    // 팔로워/전체 공개 캘린더만 (나는 팔로워이므로 followers 도 포함), 비공개 사용자 제외.
+    const [calsRes, privRes] = await Promise.all([
+      db
+        .from("calendars")
+        .select("id, user_id, name, color, goal_title, visibility")
+        .in("user_id", Array.from(peopleById.keys()))
+        .in("visibility", ["followers", "public"]),
+      db.from("users").select("id, is_private").in("id", Array.from(peopleById.keys())),
+    ]);
+    const privateIds = new Set(
+      (privRes.data ?? []).filter((r) => r.is_private).map((r) => r.id as string),
+    );
+    const visibleCals = (calsRes.data ?? []).filter(
+      (c) => !privateIds.has(c.user_id as string),
+    );
+    if (visibleCals.length === 0) return Response.json({ items: [], calendars: [] });
+
+    const calMetaById = new Map(visibleCals.map((c) => [c.id as string, c]));
+    const { data: rows } = await db
+      .from("events")
+      .select("id, title, start_at, end_at, all_day, calendar_id, user_id")
+      .in("calendar_id", Array.from(calMetaById.keys()))
+      .gte("start_at", rangeStart.toISOString())
+      .lte("start_at", now.toISOString())
+      .order("start_at", { ascending: false })
+      .limit(200);
+
+    const keys = (rows ?? []).map((r) => r.id as string);
+    const photoByEvent = new Map<string, { image_urls: string[]; note: string | null }>();
+    if (keys.length > 0) {
+      const { data: postRows } = await db
+        .from("event_posts")
+        .select("event_key, image_urls, note, visibility, user_id")
+        .in("event_key", keys)
+        .in("visibility", ["followers", "public"]);
+      for (const p of postRows ?? []) {
+        photoByEvent.set(p.event_key as string, {
+          image_urls: (p.image_urls as string[] | null) ?? [],
+          note: (p.note as string | null) ?? null,
+        });
+      }
+    }
+
+    const followingItems = (rows ?? []).map((r) => {
+      const cal = calMetaById.get(r.calendar_id as string);
+      const person = peopleById.get(r.user_id as string);
+      const photo = photoByEvent.get(r.id as string);
+      const start = new Date(r.start_at as string);
+      const end = new Date((r.end_at as string | null) ?? (r.start_at as string));
+      return {
+        id: r.id as string,
+        title: r.title as string,
+        startAt: start.toISOString(),
+        endAt: end.toISOString(),
+        allDay: Boolean(r.all_day),
+        hours: r.all_day
+          ? null
+          : Math.round(((end.getTime() - start.getTime()) / 3_600_000) * 10) / 10,
+        calendarId: r.calendar_id as string,
+        calendarName: (cal?.name as string) ?? null,
+        calendarColor: (cal?.color as string) ?? "#6366f1",
+        goalTitle: (cal?.goal_title as string | null) ?? null,
+        imageUrls: photo?.image_urls ?? [],
+        note: photo?.note ?? null,
+        visibility: (cal?.visibility as string) ?? null,
+        authorUsername: person?.username ?? null,
+        authorName: person?.display_name ?? person?.username ?? null,
+        authorAvatarUrl: person?.avatar_url ?? null,
+      };
+    });
+
+    return Response.json({
+      items: followingItems.filter((i) => !onlyPhotos || i.imageUrls.length > 0),
+      calendars: [],
+    });
+  }
 
   return Response.json({
     items,

@@ -32,6 +32,9 @@ export type CalendarEvent = {
   location_lng?: number | null;
   /** 시작 전 이동시간(분) — 예약 가능 시간 계산에서 그만큼 앞을 막는다. */
   travel_min?: number | null;
+  /** 공유 캘린더에서 남이 만든 일정일 때의 작성자 */
+  authorUsername?: string | null;
+  authorName?: string | null;
 };
 
 export type CalendarEventInput = {
@@ -73,10 +76,16 @@ export async function listEventsForUser(
   const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59, 999).toISOString();
 
   // Resolve the user's calendars so we can translate the filter.
+  const { sharedCalendarsFor: sharedFor } = await import("@/lib/calendar-members");
+  const myShared = await sharedFor(userId);
   const { data: allCalsData } = await db
     .from("calendars")
     .select("id, source, google_calendar_id")
-    .eq("user_id", userId);
+    .or(
+      myShared.size > 0
+        ? `user_id.eq.${userId},id.in.(${Array.from(myShared.keys()).join(",")})`
+        : `user_id.eq.${userId}`,
+    );
   const allCals = (allCalsData ?? []) as Array<{
     id: string;
     source: "native" | "google";
@@ -92,14 +101,22 @@ export async function listEventsForUser(
     .filter((c) => c.source === "google" && c.google_calendar_id)
     .map((c) => c.google_calendar_id as string);
 
+  // 공유받은 캘린더 id — 그 캘린더의 일정은 누가 만들었든 함께 본다.
+  const { sharedCalendarsFor } = await import("@/lib/calendar-members");
+  const sharedMap = await sharedCalendarsFor(userId);
+  const sharedIds = Array.from(sharedMap.keys());
+
   // Local events (optionally filtered by calendar_id).
   let localQuery = db
     .from("events")
     .select("*")
-    .eq("user_id", userId)
     .gte("start_at", startOfMonth)
     .lte("start_at", endOfMonth)
     .order("start_at", { ascending: true });
+  localQuery =
+    sharedIds.length > 0
+      ? localQuery.or(`user_id.eq.${userId},calendar_id.in.(${sharedIds.join(",")})`)
+      : localQuery.eq("user_id", userId);
   if (hasExplicitFilter) {
     const nativeIds = selectedCals
       .filter((c) => c.source === "native")
@@ -117,6 +134,38 @@ export async function listEventsForUser(
       source: "local" as const,
     }),
   ) as CalendarEvent[];
+
+  // 공유 캘린더에서 남이 만든 일정은 작성자를 표시한다.
+  const otherAuthorIds = Array.from(
+    new Set(
+      localEvents
+        .map((e) => (e as unknown as { user_id?: string }).user_id)
+        .filter((id): id is string => !!id && id !== userId),
+    ),
+  );
+  if (otherAuthorIds.length > 0) {
+    const { data: authors } = await db
+      .from("users")
+      .select("id, username, display_name")
+      .in("id", otherAuthorIds);
+    const byId = new Map(
+      (authors ?? []).map((a) => [
+        a.id as string,
+        {
+          username: a.username as string,
+          name: (a.display_name as string | null) ?? (a.username as string),
+        },
+      ]),
+    );
+    for (const e of localEvents) {
+      const authorId = (e as unknown as { user_id?: string }).user_id;
+      if (authorId && authorId !== userId) {
+        const author = byId.get(authorId);
+        e.authorUsername = author?.username ?? null;
+        e.authorName = author?.name ?? null;
+      }
+    }
+  }
 
   // Google Calendar events — only for the selected google-backed calendars.
   let googleEvents: CalendarEvent[] = [];
@@ -209,8 +258,13 @@ export async function createEventForUser(
       .select("id, user_id, source, google_calendar_id")
       .eq("id", calendarId)
       .single();
-    if (!cal || cal.user_id !== userId) {
-      throw new Error("선택한 캘린더에 권한이 없어요.");
+    if (!cal) throw new Error("선택한 캘린더에 권한이 없어요.");
+    if (cal.user_id !== userId) {
+      // 공유받은 캘린더면 editor 권한이 있어야 쓸 수 있다.
+      const { canEditCalendar } = await import("@/lib/calendar-members");
+      if (!(await canEditCalendar(userId, calendarId))) {
+        throw new Error("선택한 캘린더에 권한이 없어요.");
+      }
     }
     targetCal = { source: cal.source, google_calendar_id: cal.google_calendar_id };
   } else {
