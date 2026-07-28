@@ -106,6 +106,10 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
     let inviteId: String?
     let inviteStatus: String?
     let inviterName: String?
+    /// 위치 — 자유 텍스트. 주소 검색으로 고르면 좌표(lat/lng)도 온다.
+    let location: String?
+    let locationLat: Double?
+    let locationLng: Double?
     /// endAt 이 "2026-07-26" 처럼 날짜만으로 왔는지 (종일 이벤트의 마지막 날 포함 여부 판단용)
     let endWasDateOnly: Bool
 
@@ -117,6 +121,7 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
         case id, title, description, startAt, endAt, allDay, calendarId, source, tentative
         case bucketOverride, earningKrw, autoValueKrw, completed
         case inviteId, inviteStatus, inviterName
+        case location, locationLat, locationLng
     }
 
     init(from decoder: Decoder) throws {
@@ -135,6 +140,9 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
         inviteId = try container.decodeIfPresent(String.self, forKey: .inviteId)
         inviteStatus = try container.decodeIfPresent(String.self, forKey: .inviteStatus)
         inviterName = try container.decodeIfPresent(String.self, forKey: .inviterName)
+        location = try container.decodeIfPresent(String.self, forKey: .location)
+        locationLat = try container.decodeIfPresent(Double.self, forKey: .locationLat)
+        locationLng = try container.decodeIfPresent(Double.self, forKey: .locationLng)
 
         let startRaw = try container.decode(String.self, forKey: .startAt)
         let endRaw = try container.decode(String.self, forKey: .endAt)
@@ -201,6 +209,9 @@ struct CreateEventRequest: Encodable {
     let endAt: String
     let allDay: Bool
     let calendarId: String?
+    var location: String?
+    var locationLat: Double?
+    var locationLng: Double?
 }
 
 struct CreateEventResponse: Decodable {
@@ -216,6 +227,10 @@ struct UpdateEventRequest: Encodable {
     var startAt: String?
     var endAt: String?
     var allDay: Bool?
+    /// 위치 변경 — "" 를 보내면 해제
+    var location: String?
+    var locationLat: Double?
+    var locationLng: Double?
     /// 캘린더 이동 대상 (변경 시에만 전송)
     var calendarId: String?
     /// gcal_* 이벤트의 현재 소속 native 캘린더 uuid (서버가 소속 계정 해석에 사용)

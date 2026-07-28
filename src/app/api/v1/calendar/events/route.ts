@@ -19,6 +19,9 @@ function toApiEvent(e: CalendarEvent) {
     calendarId: e.calendar_id,
     source: e.source,
     tentative: e.tentative,
+    location: e.location ?? null,
+    locationLat: e.location_lat ?? null,
+    locationLng: e.location_lng ?? null,
   };
 }
 
@@ -158,6 +161,9 @@ export async function POST(request: Request) {
     endAt?: string;
     allDay?: boolean;
     calendarId?: string | null;
+    location?: string | null;
+    locationLat?: number | null;
+    locationLng?: number | null;
   };
   try {
     body = await request.json();
@@ -195,6 +201,15 @@ export async function POST(request: Request) {
       end_at: body.endAt as string,
       all_day: Boolean(body.allDay),
       calendar_id: body.calendarId ?? null,
+      location: body.location?.trim().slice(0, 300) || null,
+      location_lat:
+        typeof body.locationLat === "number" && Number.isFinite(body.locationLat)
+          ? body.locationLat
+          : null,
+      location_lng:
+        typeof body.locationLng === "number" && Number.isFinite(body.locationLng)
+          ? body.locationLng
+          : null,
     });
     return Response.json({ event: toApiEvent(event) });
   } catch (err) {

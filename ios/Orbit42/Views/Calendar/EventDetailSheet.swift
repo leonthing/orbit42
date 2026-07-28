@@ -1,3 +1,4 @@
+import MapKit
 import PhotosUI
 import SwiftUI
 import UIKit
@@ -141,10 +142,24 @@ struct EventDetailSheet: View {
                                     .frame(width: 10, height: 10)
                             }
                         }
+
+                        if let location = event.location, !location.isEmpty {
+                            Label {
+                                Text(location)
+                                    .font(.subheadline)
+                                    .foregroundStyle(Theme.secondaryText)
+                            } icon: {
+                                Image(systemName: "mappin.and.ellipse")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Theme.secondaryText)
+                            }
+                        }
                     }
                     .padding(.vertical, 4)
                 }
                 .listRowBackground(Theme.surface)
+
+                locationMapSection
 
                 if let description = event.description, !description.isEmpty {
                     Section("메모") {
@@ -490,6 +505,46 @@ struct EventDetailSheet: View {
                 earningErrorMessage = "수익을 저장하지 못했어요. 잠시 후 다시 시도해 주세요."
             }
         }
+    }
+
+    // MARK: - 위치 지도
+
+    /// 좌표가 있는 위치만 지도로 표시. 탭하면 애플 지도로 연다.
+    @ViewBuilder
+    private var locationMapSection: some View {
+        if let lat = event.locationLat, let lng = event.locationLng {
+            let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lng)
+            Section {
+                Map(initialPosition: .region(
+                    MKCoordinateRegion(
+                        center: coordinate,
+                        span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+                    )
+                )) {
+                    Marker(event.location ?? event.title, coordinate: coordinate)
+                        .tint(Theme.accent)
+                }
+                .frame(height: 150)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .listRowInsets(EdgeInsets(top: 6, leading: 6, bottom: 6, trailing: 6))
+                .allowsHitTesting(false)
+
+                Button {
+                    openInMaps(coordinate: coordinate)
+                } label: {
+                    Label("지도 앱에서 열기", systemImage: "arrow.triangle.turn.up.right.diamond")
+                        .foregroundStyle(Theme.accent)
+                }
+            }
+            .listRowBackground(Theme.surface)
+        }
+    }
+
+    private func openInMaps(coordinate: CLLocationCoordinate2D) {
+        let placemark = MKPlacemark(coordinate: coordinate)
+        let item = MKMapItem(placemark: placemark)
+        item.name = event.location ?? event.title
+        item.openInMaps()
     }
 
     // MARK: - 시간 로그 (사진 + 공개 범위)

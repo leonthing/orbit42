@@ -26,6 +26,10 @@ export type CalendarEvent = {
   tentative: boolean;
   created_at: string;
   updated_at: string;
+  /** 위치 — 자유 텍스트. 주소 검색으로 고르면 좌표도 함께 저장된다. */
+  location?: string | null;
+  location_lat?: number | null;
+  location_lng?: number | null;
 };
 
 export type CalendarEventInput = {
@@ -36,6 +40,9 @@ export type CalendarEventInput = {
   all_day: boolean;
   business_id?: string | null;
   calendar_id?: string | null;
+  location?: string | null;
+  location_lat?: number | null;
+  location_lng?: number | null;
 };
 
 /**
@@ -148,6 +155,9 @@ export async function listEventsForUser(
         all_day: !!item.start?.date,
         calendar_id: gcalToNative.get(calId) ?? null,
         business_id: null,
+        location: item.location || null,
+        location_lat: null,
+        location_lng: null,
         source: "google" as const,
         tentative: item.status === "tentative",
         created_at: item.created || "",
@@ -217,6 +227,7 @@ export async function createEventForUser(
     const event: Record<string, unknown> = {
       summary: input.title,
       description: input.description || undefined,
+      location: input.location || undefined,
     };
     if (input.all_day) {
       event.start = { date: input.start_at.split("T")[0] };
@@ -239,6 +250,9 @@ export async function createEventForUser(
       all_day: input.all_day,
       business_id: null,
       calendar_id: calendarId,
+      location: input.location ?? null,
+      location_lat: null,
+      location_lng: null,
       source: "google",
       tentative: false,
       created_at: now,
@@ -257,6 +271,9 @@ export async function createEventForUser(
       end_at: input.end_at,
       all_day: input.all_day,
       business_id: input.business_id ?? null,
+      location: input.location ?? null,
+      location_lat: input.location_lat ?? null,
+      location_lng: input.location_lng ?? null,
     })
     .select()
     .single();
@@ -318,10 +335,12 @@ function googleEventBody(input: {
   start_at: string;
   end_at: string;
   all_day: boolean;
+  location?: string | null;
 }): Record<string, unknown> {
   const body: Record<string, unknown> = {
     summary: input.title,
     description: input.description || undefined,
+    location: input.location || undefined,
   };
   if (input.all_day) {
     body.start = { date: input.start_at.split("T")[0] };
@@ -363,7 +382,7 @@ export async function moveEventToCalendar(
   if (!isGoogleEvent) {
     const { data: row } = await db
       .from("events")
-      .select("id, title, description, start_at, end_at, all_day")
+      .select("id, title, description, start_at, end_at, all_day, location")
       .eq("id", eventId)
       .eq("user_id", userId)
       .maybeSingle();
@@ -398,6 +417,7 @@ export async function moveEventToCalendar(
       start_at: patch.start_at ?? (row.start_at as string),
       end_at: patch.end_at ?? ((row.end_at as string | null) || (row.start_at as string)),
       all_day: patch.all_day ?? Boolean(row.all_day),
+      location: (row.location as string | null) ?? null,
     };
     let createdId: string | null | undefined;
     try {
@@ -503,6 +523,7 @@ export async function moveEventToCalendar(
     start_at: patch.start_at ?? startIso,
     end_at: patch.end_at ?? (endIso as string),
     all_day: patch.all_day ?? allDay,
+    location: ((g as { location?: string | null }).location ?? null) as string | null,
   };
   const { data: inserted, error: insErr } = await db
     .from("events")
@@ -514,6 +535,7 @@ export async function moveEventToCalendar(
       start_at: merged.start_at,
       end_at: merged.end_at,
       all_day: merged.all_day,
+      location: merged.location,
     })
     .select("id")
     .single();

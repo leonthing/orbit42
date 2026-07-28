@@ -49,6 +49,19 @@ function buildEventPatch(body: Record<string, unknown>): Partial<EventInput> {
   if (body.startAt !== undefined) patch.start_at = String(body.startAt);
   if (body.endAt !== undefined) patch.end_at = String(body.endAt);
   if (body.allDay !== undefined) patch.all_day = Boolean(body.allDay);
+  // 위치: 빈 문자열/null 은 해제. 좌표는 위치 텍스트와 함께 온 값만 신뢰한다.
+  if (body.location !== undefined) {
+    const text = body.location === null ? "" : String(body.location).trim();
+    patch.location = text ? text.slice(0, 300) : null;
+    patch.location_lat =
+      text && typeof body.locationLat === "number" && Number.isFinite(body.locationLat)
+        ? body.locationLat
+        : null;
+    patch.location_lng =
+      text && typeof body.locationLng === "number" && Number.isFinite(body.locationLng)
+        ? body.locationLng
+        : null;
+  }
   return patch;
 }
 

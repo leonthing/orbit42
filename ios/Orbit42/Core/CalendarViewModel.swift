@@ -179,7 +179,10 @@ final class CalendarViewModel {
         allDay: Bool,
         start: Date,
         end: Date,
-        calendarId: String?
+        calendarId: String?,
+        location: String? = nil,
+        locationLat: Double? = nil,
+        locationLng: Double? = nil
     ) async throws {
         let body = CreateEventRequest(
             title: title,
@@ -187,7 +190,10 @@ final class CalendarViewModel {
             startAt: allDay ? APIDateParser.encodeDateOnly(start) : APIDateParser.encodeDateTime(start),
             endAt: allDay ? APIDateParser.encodeDateOnly(end) : APIDateParser.encodeDateTime(end),
             allDay: allDay,
-            calendarId: calendarId
+            calendarId: calendarId,
+            location: location,
+            locationLat: locationLat,
+            locationLng: locationLng
         )
         let _: CreateEventResponse = try await api.post("/api/v1/calendar/events", body: body)
 

@@ -35,6 +35,9 @@ export type EventInput = {
   all_day: boolean;
   business_id?: string | null;
   calendar_id?: string | null;
+  location?: string | null;
+  location_lat?: number | null;
+  location_lng?: number | null;
 };
 
 export type GoogleCalendarInfo = {
@@ -192,6 +195,7 @@ export async function updateGoogleEvent(
   const body: Record<string, unknown> = {};
   if (input.title !== undefined) body.summary = input.title;
   if (input.description !== undefined) body.description = input.description ?? "";
+  if (input.location !== undefined) body.location = input.location ?? "";
   if (input.start_at !== undefined && input.end_at !== undefined) {
     if (input.all_day) {
       body.start = { date: input.start_at.split("T")[0] };

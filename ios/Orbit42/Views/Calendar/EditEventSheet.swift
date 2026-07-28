@@ -18,6 +18,10 @@ struct EditEventSheet: View {
     @State private var start: Date
     @State private var end: Date
     @State private var selectedCalendarId: String?
+    /// 위치 — 자유 텍스트 + (주소 검색 시) 좌표
+    @State private var locationText: String
+    @State private var locationLat: Double?
+    @State private var locationLng: Double?
     @State private var isSaving = false
     @State private var errorMessage: String?
 
@@ -51,6 +55,9 @@ struct EditEventSheet: View {
         _start = State(initialValue: event.startAt)
         _end = State(initialValue: initialEnd)
         _selectedCalendarId = State(initialValue: event.calendarId)
+        _locationText = State(initialValue: event.location ?? "")
+        _locationLat = State(initialValue: event.locationLat)
+        _locationLng = State(initialValue: event.locationLng)
         originalStart = event.startAt
         originalEnd = initialEnd
     }
@@ -107,6 +114,12 @@ struct EditEventSheet: View {
                     }
                     .listRowBackground(Theme.surface)
                 }
+
+                EventLocationSection(
+                    locationText: $locationText,
+                    locationLat: $locationLat,
+                    locationLng: $locationLng
+                )
 
                 Section {
                     TextField("메모 (선택)", text: $memo, axis: .vertical)
@@ -191,9 +204,19 @@ struct EditEventSheet: View {
             body.calendarId = selectedCalendarId
         }
 
+        // 위치 변경 — 빈 문자열은 해제로 처리된다
+        let trimmedLocation = locationText.trimmingCharacters(in: .whitespaces)
+        if trimmedLocation != (event.location ?? "")
+            || locationLat != event.locationLat
+            || locationLng != event.locationLng {
+            body.location = trimmedLocation
+            body.locationLat = locationLat
+            body.locationLng = locationLng
+        }
+
         // 바뀐 것이 없으면 네트워크 없이 닫는다
         if body.title == nil, body.description == nil, body.startAt == nil,
-           body.allDay == nil, body.calendarId == nil {
+           body.allDay == nil, body.calendarId == nil, body.location == nil {
             dismiss()
             return
         }

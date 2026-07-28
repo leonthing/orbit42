@@ -40,6 +40,11 @@ struct AddEventSheet: View {
     /// 새로 만든 캘린더를 모를 수 있어, 열릴 때 서버에서 다시 받아 덮어쓴다.
     @State private var freshCalendars: [CalendarInfo]?
 
+    /// 위치 — 자유 텍스트 + (주소 검색 시) 좌표
+    @State private var locationText = ""
+    @State private var locationLat: Double?
+    @State private var locationLng: Double?
+
     private var writableCalendars: [CalendarInfo] {
         freshCalendars ?? viewModel.calendars
     }
@@ -104,6 +109,12 @@ struct AddEventSheet: View {
                     .listRowBackground(Theme.surface)
                 }
 
+                EventLocationSection(
+                    locationText: $locationText,
+                    locationLat: $locationLat,
+                    locationLng: $locationLng
+                )
+
                 Section {
                     TextField("메모 (선택)", text: $memo, axis: .vertical)
                         .lineLimit(3...6)
@@ -164,7 +175,11 @@ struct AddEventSheet: View {
                     allDay: allDay,
                     start: start,
                     end: max(end, start),
-                    calendarId: selectedCalendarId
+                    calendarId: selectedCalendarId,
+                    location: locationText.trimmingCharacters(in: .whitespaces).isEmpty
+                        ? nil : locationText.trimmingCharacters(in: .whitespaces),
+                    locationLat: locationLat,
+                    locationLng: locationLng
                 )
                 dismiss()
             } catch let apiError as APIError {
