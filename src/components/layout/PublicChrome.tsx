@@ -3,24 +3,50 @@ import Link from "next/link";
 export function PublicChrome({
   children,
   viewerUsername,
-  /** 공개 프로필처럼 "사람"이 먼저 보여야 하는 화면은 네비를 아래로 내린다. */
+  /** 공개 프로필처럼 "사람"이 먼저 보여야 하는 화면은 상단 바 대신 하단 텍스트 링크. */
   navAtBottom = false,
-  /** 배경을 자식(테마)이 직접 칠할 때 — 셸 배경/여백을 비운다. */
-  bare = false,
 }: {
   children: React.ReactNode;
   viewerUsername: string | null;
   navAtBottom?: boolean;
-  bare?: boolean;
 }) {
-  const nav = (
-      <header
-        className={`flex h-14 items-center justify-between px-4 backdrop-blur md:px-8 ${
-          navAtBottom
-            ? "border-t border-charcoal-800/40 bg-[rgb(var(--bg-base))]/85"
-            : "sticky top-0 z-30 border-b border-charcoal-800/40 bg-[rgb(var(--bg-base))]/85"
-        }`}
-      >
+  if (navAtBottom) {
+    // 배경은 페이지(테마)가 칠하므로 셸은 투명하게 두고, 링크만 아래에 얹는다.
+    return (
+      <div className="min-h-screen">
+        <main className="mx-auto max-w-5xl px-4 py-8 md:px-8 md:py-10">
+          {children}
+        </main>
+        <footer className="relative z-10 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 pb-8 text-[11px] text-charcoal-500">
+          <Link href="/explore" className="hover:text-charcoal-300">
+            둘러보기
+          </Link>
+          <span aria-hidden>·</span>
+          {viewerUsername ? (
+            <Link href={`/${viewerUsername}`} className="hover:text-charcoal-300">
+              내 orbit
+            </Link>
+          ) : (
+            <Link href="/?mode=signin#auth" className="hover:text-charcoal-300">
+              로그인
+            </Link>
+          )}
+          <span aria-hidden>·</span>
+          <Link href="/terms" className="hover:text-charcoal-300">
+            이용약관
+          </Link>
+          <span aria-hidden>·</span>
+          <Link href="/privacy" className="hover:text-charcoal-300">
+            개인정보처리방침
+          </Link>
+        </footer>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[rgb(var(--bg-base))]">
+      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-charcoal-800/40 bg-[rgb(var(--bg-base))]/85 px-4 backdrop-blur md:px-8">
         <Link href="/" className="text-sm font-semibold tracking-tight text-charcoal-100">
           Orbit42
         </Link>
@@ -65,15 +91,8 @@ export function PublicChrome({
           )}
         </div>
       </header>
-  );
 
-  return (
-    <div className={bare ? "min-h-screen" : "min-h-screen bg-[rgb(var(--bg-base))]"}>
-      {!navAtBottom && nav}
-      <main className={bare ? "" : "mx-auto max-w-5xl px-4 py-8 md:px-8 md:py-10"}>
-        {children}
-      </main>
-      {navAtBottom && nav}
+      <main className="mx-auto max-w-5xl px-4 py-8 md:px-8 md:py-10">{children}</main>
     </div>
   );
 }

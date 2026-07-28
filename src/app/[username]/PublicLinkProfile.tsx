@@ -129,11 +129,14 @@ export function PublicLinkProfile({
   };
 
   return (
-    <div
-      className="min-h-screen w-full"
-      style={{ background: theme.background, color: theme.text }}
-    >
-      <div className="mx-auto w-full max-w-lg px-5 pb-16 pt-10 text-center">
+    <div style={{ color: theme.text }}>
+      {/* 배경 — 화면 전체를 덮는 고정 레이어. 셸 여백·하단 링크 뒤까지 칠해진다. */}
+      <div
+        className="fixed inset-0 -z-10"
+        style={{ background: theme.background }}
+        aria-hidden
+      />
+      <div className="mx-auto w-full max-w-lg text-center">
         {/* 아바타 */}
         <div className="flex justify-center">
           {avatarUrl ? (

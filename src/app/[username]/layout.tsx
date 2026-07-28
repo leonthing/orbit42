@@ -23,7 +23,7 @@ export default async function UsernameLayout({
   // 배경은 사용자가 고른 링크 테마가 칠한다.
   if (!session) {
     return (
-      <PublicChrome viewerUsername={null} navAtBottom bare>
+      <PublicChrome viewerUsername={null} navAtBottom>
         {children}
       </PublicChrome>
     );
