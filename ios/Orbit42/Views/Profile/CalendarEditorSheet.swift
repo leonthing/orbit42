@@ -128,6 +128,8 @@ struct CalendarEditorSheet: View {
 
                 goalSection
 
+                shareSection
+
                 if !isCreate {
                     Section {
                         HStack {
@@ -239,6 +241,38 @@ struct CalendarEditorSheet: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 4)
+    }
+
+    // MARK: - 함께 쓰기 (공유)
+
+    @ViewBuilder
+    private var shareSection: some View {
+        if let original, original.isNative {
+            Section {
+                NavigationLink {
+                    CalendarShareView(calendar: original)
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "person.2")
+                            .foregroundStyle(Theme.accent)
+                            .frame(width: 24)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("함께 쓰기")
+                                .foregroundStyle(Theme.primaryText)
+                            Text(original.isSharedWithMe
+                                 ? "공유받은 캘린더예요"
+                                 : "친구·가족과 같이 기록하기")
+                                .font(.caption)
+                                .foregroundStyle(Theme.secondaryText)
+                        }
+                    }
+                }
+            } footer: {
+                Text("초대한 사람도 이 캘린더에 일정을 기록할 수 있어요. 가족 일정, 커플 기록, 팀 프로젝트에 좋아요.")
+                    .foregroundStyle(Theme.secondaryText)
+            }
+            .listRowBackground(Theme.surface)
+        }
     }
 
     // MARK: - 목표

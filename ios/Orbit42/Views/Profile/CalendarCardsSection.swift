@@ -78,7 +78,16 @@ struct CalendarCardsSection: View {
                     spacing: 10
                 ) {
                     ForEach(response.calendars) { calendar in
-                        card(calendar, year: response.year, month: response.month)
+                        NavigationLink {
+                            CalendarDetailView(
+                                username: username,
+                                calendarId: calendar.id,
+                                calendarName: calendar.name
+                            )
+                        } label: {
+                            card(calendar, year: response.year, month: response.month)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -134,6 +143,9 @@ struct CalendarCardsSection: View {
                 Spacer(minLength: 0)
                 Text(calendar.visibilityLabel)
                     .font(.system(size: 9))
+                    .foregroundStyle(Theme.secondaryText)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 8, weight: .semibold))
                     .foregroundStyle(Theme.secondaryText)
             }
         }

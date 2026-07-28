@@ -4,7 +4,6 @@ import SwiftUI
 struct CalendarSettingsView: View {
     @State private var viewModel = CalendarSettingsViewModel()
     @State private var editingCalendar: CalendarInfo?
-    @State private var sharingCalendar: CalendarInfo?
     @State private var showingCreate = false
 
     var body: some View {
@@ -23,9 +22,6 @@ struct CalendarSettingsView: View {
                 }
                 .accessibilityLabel("캘린더 추가")
             }
-        }
-        .navigationDestination(item: $sharingCalendar) { calendar in
-            CalendarShareView(calendar: calendar)
         }
         .sheet(item: $editingCalendar) { calendar in
             CalendarEditorSheet(mode: .edit(calendar), viewModel: viewModel)
@@ -114,18 +110,10 @@ struct CalendarSettingsView: View {
                                 Label("삭제", systemImage: "trash")
                             }
                         }
-                        if calendar.isNative {
-                            Button {
-                                sharingCalendar = calendar
-                            } label: {
-                                Label("함께 쓰기", systemImage: "person.2")
-                            }
-                            .tint(Theme.accent)
-                        }
                     }
                 }
             } footer: {
-                Text("행을 탭하면 이름·용도·색·공개범위를 바꿀 수 있어요. 왼쪽으로 밀면 함께 쓰기(공유)를 설정할 수 있어요.")
+                Text("행을 탭하면 이름·용도·색·공개범위와 함께 쓰기(공유)를 설정할 수 있어요.")
                     .foregroundStyle(Theme.secondaryText)
             }
             .listRowBackground(Theme.surface)
