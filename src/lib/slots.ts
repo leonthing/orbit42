@@ -157,11 +157,14 @@ export async function listPublicSlotsByUsername(username: string): Promise<TimeS
 export async function getSlotBySlug(
   username: string,
   slug: string,
-): Promise<{ slot: TimeSlot; host: { username: string; display_name: string | null } } | null> {
+): Promise<{
+  slot: TimeSlot;
+  host: { username: string; display_name: string | null; avatar_url: string | null };
+} | null> {
   const db = getAdminClient();
   const { data: user } = await db
     .from("users")
-    .select("id, username, display_name")
+    .select("id, username, display_name, avatar_url")
     .eq("username", username)
     .single();
   if (!user) return null;
@@ -177,7 +180,11 @@ export async function getSlotBySlug(
 
   return {
     slot: slot as TimeSlot,
-    host: { username: user.username as string, display_name: user.display_name as string | null },
+    host: {
+      username: user.username as string,
+      display_name: user.display_name as string | null,
+      avatar_url: (user.avatar_url as string | null) ?? null,
+    },
   };
 }
 

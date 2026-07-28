@@ -131,16 +131,42 @@ export default async function SlotPage({
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <JsonLd data={productSchema} />
-      <Link
-        href={
-          isOwner
-            ? `/${params.username}/slots`
-            : `/${params.username}`
-        }
-        className="inline-flex items-center gap-1 text-xs text-charcoal-500 hover:text-charcoal-300"
-      >
-        ← {isOwner ? "Timeslots" : host.display_name || host.username}
-      </Link>
+      {isOwner ? (
+        <Link
+          href={`/${params.username}/slots`}
+          className="inline-flex items-center gap-1 text-xs text-charcoal-500 hover:text-charcoal-300"
+        >
+          ← Timeslots
+        </Link>
+      ) : (
+        // 방문자에게는 "누구의 시간인지"를 먼저 보여준다 (SNS 에서 바로 들어오는 링크)
+        <Link
+          href={`/${params.username}`}
+          className="flex items-center gap-3 rounded-2xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] px-4 py-3 transition-colors hover:border-charcoal-700"
+        >
+          {host.avatar_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={host.avatar_url as string}
+              alt=""
+              className="h-10 w-10 rounded-full object-cover"
+            />
+          ) : (
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-navy-500/20 text-sm font-bold text-navy-400">
+              {(host.display_name || host.username).slice(0, 1).toUpperCase()}
+            </span>
+          )}
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-semibold text-charcoal-100">
+              {host.display_name || host.username}
+            </span>
+            <span className="block truncate text-xs text-charcoal-500">
+              @{host.username} · 다른 시간도 보기
+            </span>
+          </span>
+          <span className="text-charcoal-600">›</span>
+        </Link>
+      )}
 
       <header className="overflow-hidden rounded-2xl border border-charcoal-800/60 bg-charcoal-900/30">
         {slot.image_urls && slot.image_urls.length > 0 && (
@@ -175,15 +201,17 @@ export default async function SlotPage({
                 OFF
               </span>
             )}
-            <span
-              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
-                isAuction
-                  ? "bg-navy-400/20 text-navy-300"
-                  : "bg-charcoal-800/60 text-charcoal-400"
-              }`}
-            >
-              {isAuction ? "경매" : slot.mode === "auto" ? "자동" : "직접"}
-            </span>
+            {(isAuction || isOwner) && (
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
+                  isAuction
+                    ? "bg-navy-400/20 text-navy-300"
+                    : "bg-charcoal-800/60 text-charcoal-400"
+                }`}
+              >
+                {isAuction ? "경매" : slot.mode === "auto" ? "자동" : "직접"}
+              </span>
+            )}
             <CopyLinkButton url={`${SITE.url}/${params.username}/s/${slot.slug}`} />
           </div>
         </div>
@@ -320,6 +348,20 @@ export default async function SlotPage({
       )}
 
       {!session && <PoweredByCta hostUsername={params.username} />}
+
+      {!isOwner && !session && (
+        <div className="pt-2 text-center">
+          <Link
+            href={`/signup?ref=${params.username}`}
+            className="inline-block rounded-full bg-charcoal-100 px-6 py-3 text-sm font-bold text-charcoal-950 transition-transform hover:scale-[1.02]"
+          >
+            나도 예약 링크 만들기
+          </Link>
+          <p className="mt-3 text-[11px] text-charcoal-600">
+            orbit42 · 링크 하나로 내 시간을 예약받아요
+          </p>
+        </div>
+      )}
     </div>
   );
 }

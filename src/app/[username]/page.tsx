@@ -5,6 +5,7 @@ import { getProfile, getSession } from "@/lib/auth";
 import type { SocialLinks, Education, Experience } from "@/lib/auth";
 import { getFollowStats, isFollowing } from "@/lib/follows";
 import { listPublicSlotsByUsername } from "@/lib/slots";
+import { listVisibleCalendars } from "@/lib/calendars";
 import { getReactionsForMany } from "@/lib/reactions";
 import { SlotPanelProvider } from "@/components/SlotPanel";
 import { AllSlotsGrid } from "@/components/AllSlotsGrid";
@@ -25,6 +26,7 @@ import { Markdown } from "@/components/Markdown";
 import { ComingUpCard } from "./ComingUpCard";
 import { InsightsCard } from "./InsightsCard";
 import { ProfileCalendarCards } from "./ProfileCalendarCards";
+import { PublicLinkProfile } from "./PublicLinkProfile";
 import { ProfileTabs } from "./ProfileTabs";
 import { ShareMenu } from "@/components/ShareMenu";
 import { JsonLd } from "@/components/JsonLd";
@@ -112,6 +114,10 @@ export default async function PublicProfile({
   );
 
   const isOwner = session?.username === params.username;
+  // 링크트리형 화면에서 "캘린더 보기" 카드를 띄울지 — 방문자에게 보이는 캘린더가 있는지
+  const hasPublicCalendar = !isOwner
+    ? (await listVisibleCalendars(params.username)).length > 0
+    : false;
 
   const now = new Date();
   const upcomingEnd = new Date(now.getTime() + 7 * 24 * 60 * 60_000);
@@ -196,6 +202,41 @@ export default async function PublicProfile({
       },
     ],
   };
+
+  // 방문자에게는 SNS 바이오에 걸어두기 좋은 링크트리형 화면을 보여준다.
+  // (소유자는 아래의 대시보드 화면을 그대로 쓴다)
+  if (!isOwner) {
+    return (
+      <>
+        <JsonLd data={[personSchema, breadcrumbSchema]} />
+        <PublicLinkProfile
+          username={params.username}
+          displayName={profile.display_name || profile.username}
+          avatarUrl={(profile.avatar_url as string | null) ?? null}
+          bio={(profile.bio as string | null) ?? null}
+          interests={interests}
+          socialLinks={socialLinks}
+          slots={slots.map((s) => ({
+            slug: s.slug,
+            title: s.title,
+            description: s.description,
+            duration_min: s.duration_min,
+            price_cents: s.price_cents,
+            pricing_model: s.pricing_model,
+            current_high_bid_cents: s.current_high_bid_cents ?? null,
+            reserve_price_cents: s.reserve_price_cents ?? null,
+          }))}
+          hasPublicCalendar={hasPublicCalendar}
+          hasPosts={myFeedPosts.length > 0}
+          profileUrl={profileUrl}
+          loggedIn={!!session}
+          viewerFollowing={viewerFollowing}
+          rating={hostRating}
+          totalBookings={value?.total_bookings ?? 0}
+        />
+      </>
+    );
+  }
 
   return (
     <div className="space-y-6">
