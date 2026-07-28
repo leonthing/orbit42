@@ -172,7 +172,7 @@ export function MiniMonth({ username }: { username: string }) {
                   i === 5
                     ? "text-blue-400/70"
                     : i === 6
-                      ? "text-red-400/70"
+                      ? "text-navy-400/70"
                       : "text-charcoal-500"
                 }`}
               >
@@ -196,17 +196,17 @@ export function MiniMonth({ username }: { username: string }) {
                   href={`/${username}/calendar?d=${key}`}
                   className={`relative flex h-6 items-center justify-center rounded text-[10px] font-medium transition-colors ${
                     isToday
-                      ? "bg-red-600 text-white"
+                      ? "bg-navy-500 text-white"
                       : colIdx === 5
                         ? "text-blue-400/80 hover:bg-charcoal-800/60"
                         : colIdx === 6
-                          ? "text-red-400/80 hover:bg-charcoal-800/60"
+                          ? "text-navy-400/80 hover:bg-charcoal-800/60"
                           : "text-charcoal-300 hover:bg-charcoal-800/60"
                   }`}
                 >
                   {day}
                   {hasEvent && !isToday && (
-                    <span className="absolute bottom-[1px] h-[3px] w-[3px] rounded-full bg-red-400" />
+                    <span className="absolute bottom-[1px] h-[3px] w-[3px] rounded-full bg-navy-400" />
                   )}
                 </Link>
               );

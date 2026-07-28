@@ -43,7 +43,7 @@ export function TimeAssetCard({
   };
 
   return (
-    <section className="rounded-xl border border-red-500/30 bg-gradient-to-br from-red-600/10 to-charcoal-900/40 p-5">
+    <section className="rounded-xl border border-navy-400/30 bg-gradient-to-br from-navy-500/10 to-charcoal-900/40 p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-sm font-semibold text-charcoal-100">
@@ -65,7 +65,7 @@ export function TimeAssetCard({
           <button
             type="button"
             onClick={copyCard}
-            className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500"
+            className="rounded-md bg-navy-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-400"
           >
             {copied ? "복사됨!" : "공유 카드 복사"}
           </button>
@@ -119,7 +119,7 @@ function AssetStat({
       </p>
       <p
         className={`mt-1 truncate text-lg font-bold ${
-          accent ? "text-red-700 dark:text-red-300" : "text-charcoal-100"
+          accent ? "text-navy-600 dark:text-navy-300" : "text-charcoal-100"
         }`}
         title={value}
       >

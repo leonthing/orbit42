@@ -237,10 +237,10 @@ export default async function ExplorePage() {
                 <Link
                   key={a.id as string}
                   href={`/${host.username}/s/${a.slug}`}
-                  className="rounded-xl border border-red-500/30 bg-red-500/5 p-5 transition-colors hover:border-red-500/60"
+                  className="rounded-xl border border-navy-400/30 bg-navy-400/5 p-5 transition-colors hover:border-navy-400/60"
                 >
                   <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wider">
-                    <span className="text-red-400">Auction</span>
+                    <span className="text-navy-400">Auction</span>
                     <span className="text-charcoal-500">
                       {hoursLeft >= 48
                         ? `${Math.round(hoursLeft / 24)}일 남음`
@@ -253,7 +253,7 @@ export default async function ExplorePage() {
                   <p className="mt-1 text-xs text-charcoal-500">
                     {host.display_name || host.username} · {a.duration_min as number}분
                   </p>
-                  <p className="mt-2 text-sm font-bold text-red-700 dark:text-red-300">
+                  <p className="mt-2 text-sm font-bold text-navy-600 dark:text-navy-300">
                     {high > 0
                       ? `현재가 ₩${(high / 100).toLocaleString("ko-KR")}`
                       : `시작가 ₩${(reserve / 100).toLocaleString("ko-KR")}`}
@@ -335,7 +335,7 @@ export default async function ExplorePage() {
                   href={`/${s.host.username}/s/${s.slug}`}
                   className="mt-2 block"
                 >
-                  <p className="text-sm font-semibold text-charcoal-100 hover:text-red-300">
+                  <p className="text-sm font-semibold text-charcoal-100 hover:text-navy-300">
                     {s.title}
                   </p>
                   <p className="mt-1 text-xs text-charcoal-500">
@@ -393,7 +393,7 @@ function PersonCard({
   loggedIn: boolean;
 }) {
   return (
-    <div className="group rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5 transition-colors hover:border-red-500/60">
+    <div className="group rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5 transition-colors hover:border-navy-400/60">
       <div className="flex items-start gap-3">
         <Link href={`/${username}`} className="shrink-0" aria-label={username}>
           <Avatar url={avatarUrl} name={displayName || username} size={44} />
@@ -401,7 +401,7 @@ function PersonCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <Link href={`/${username}`} className="min-w-0">
-              <p className="truncate text-sm font-semibold text-charcoal-100 group-hover:text-red-700 dark:group-hover:text-red-300">
+              <p className="truncate text-sm font-semibold text-charcoal-100 group-hover:text-navy-600 dark:group-hover:text-navy-300">
                 {displayName || username}
               </p>
               <p className="truncate text-xs text-charcoal-500">@{username}</p>

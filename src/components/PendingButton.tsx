@@ -5,11 +5,11 @@ export type ButtonSize = "sm" | "md" | "lg";
 
 const VARIANT_CLASS: Record<ButtonVariant, string> = {
   primary:
-    "bg-red-600 text-white hover:bg-red-500 disabled:bg-charcoal-800 disabled:text-charcoal-500",
+    "bg-navy-500 text-white hover:bg-navy-400 disabled:bg-charcoal-800 disabled:text-charcoal-500",
   secondary:
     "border border-charcoal-700/60 bg-charcoal-800/40 text-charcoal-200 hover:border-charcoal-600 hover:bg-charcoal-800 hover:text-white disabled:opacity-50",
   danger:
-    "border border-red-500/50 bg-red-500/10 text-red-300 hover:bg-red-500/20 disabled:opacity-50",
+    "border border-navy-400/50 bg-navy-400/10 text-navy-300 hover:bg-navy-400/20 disabled:opacity-50",
   ghost:
     "text-charcoal-300 hover:bg-charcoal-800/50 hover:text-white disabled:opacity-50",
 };

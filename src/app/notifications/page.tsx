@@ -50,7 +50,7 @@ export default async function NotificationsPage() {
         <ul className="divide-y divide-charcoal-800/40 overflow-hidden rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))]">
           {items.map((n) => {
             const rowClass = `flex items-start gap-3 p-4 ${
-              !n.read_at ? "bg-red-600/5" : ""
+              !n.read_at ? "bg-navy-500/5" : ""
             }`;
             const inner = (
               <>
@@ -61,7 +61,7 @@ export default async function NotificationsPage() {
                     size={36}
                   />
                 ) : (
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-600/15 text-red-400">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-navy-500/15 text-navy-400">
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31" />
                     </svg>
@@ -79,7 +79,7 @@ export default async function NotificationsPage() {
                   </p>
                 </div>
                 {!n.read_at && (
-                  <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-red-500" />
+                  <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-navy-400" />
                 )}
               </>
             );

@@ -80,7 +80,7 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
   };
 
   const input =
-    "w-full rounded-md border border-charcoal-700 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-500 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500/40";
+    "w-full rounded-md border border-charcoal-700 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-500 focus:border-navy-400 focus:outline-none focus:ring-1 focus:ring-navy-400/40";
 
   return (
     <div
@@ -93,7 +93,7 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
         <button
           type="button"
           onClick={() => setExpanded(true)}
-          className="flex w-full items-center justify-between rounded-md bg-red-600/10 px-3 py-2 text-sm font-semibold text-red-300 hover:bg-red-600/20 md:hidden"
+          className="flex w-full items-center justify-between rounded-md bg-navy-500/10 px-3 py-2 text-sm font-semibold text-navy-300 hover:bg-navy-500/20 md:hidden"
         >
           <span>로그인 · 가입하기</span>
           <svg
@@ -199,7 +199,7 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
           <p className="-mt-0.5 text-[11px] text-charcoal-500">
             {username ? (
               <>
-                orbit42.org/<span className="text-red-500">{username}</span>
+                orbit42.org/<span className="text-navy-400">{username}</span>
               </>
             ) : (
               "영문 소문자·숫자만 사용할 수 있어요."
@@ -259,7 +259,7 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
         <button
           type="submit"
           disabled={loading || !username || !password}
-          className="!mt-3 w-full rounded-md bg-red-600 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 disabled:cursor-not-allowed disabled:bg-charcoal-800 disabled:text-charcoal-500"
+          className="!mt-3 w-full rounded-md bg-navy-500 py-2 text-sm font-semibold text-white shadow-sm hover:bg-navy-400 disabled:cursor-not-allowed disabled:bg-charcoal-800 disabled:text-charcoal-500"
         >
           {loading
             ? "처리 중…"
@@ -308,7 +308,7 @@ function TabButton({
       onClick={onClick}
       className={`flex-1 rounded-[5px] px-3 py-1 text-xs font-semibold transition-colors ${
         active
-          ? "bg-red-600 text-white shadow-sm"
+          ? "bg-navy-500 text-white shadow-sm"
           : "text-charcoal-500 hover:text-charcoal-900 dark:text-charcoal-400 dark:hover:text-charcoal-100"
       }`}
     >

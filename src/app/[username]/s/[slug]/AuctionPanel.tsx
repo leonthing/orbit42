@@ -71,10 +71,10 @@ export default function AuctionPanel({
 
   return (
     <section className="space-y-4">
-      <div className="rounded-2xl border border-red-500/40 bg-gradient-to-br from-red-500/10 to-red-600/5 p-6">
+      <div className="rounded-2xl border border-navy-400/40 bg-gradient-to-br from-navy-400/10 to-navy-500/5 p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-red-400">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-navy-400">
               {ended ? "Closed" : "Live auction"}
             </p>
             <p className="mt-2 text-3xl font-bold text-charcoal-100">
@@ -110,7 +110,7 @@ export default function AuctionPanel({
             {!loggedIn && (
               <p className="mt-5 rounded-lg border border-charcoal-700/60 bg-charcoal-800/30 px-3 py-2 text-xs text-charcoal-400">
                 입찰하려면 로그인이 필요해요.{" "}
-                <Link href="/login" className="font-semibold text-red-400 underline">
+                <Link href="/login" className="font-semibold text-navy-400 underline">
                   로그인하기
                 </Link>
               </p>
@@ -128,14 +128,14 @@ export default function AuctionPanel({
                   onChange={(e) => setBidInput(e.target.value)}
                   disabled={!loggedIn}
                   placeholder={`${(minNext / 100).toLocaleString("ko-KR")} 이상`}
-                  className="w-full rounded-lg border border-charcoal-700 bg-charcoal-900/40 py-3 pl-7 pr-3 text-base text-charcoal-100 placeholder:text-charcoal-500 focus:border-red-500/60 focus:outline-none disabled:opacity-60"
+                  className="w-full rounded-lg border border-charcoal-700 bg-charcoal-900/40 py-3 pl-7 pr-3 text-base text-charcoal-100 placeholder:text-charcoal-500 focus:border-navy-400/60 focus:outline-none disabled:opacity-60"
                 />
               </div>
               <button
                 type="button"
                 onClick={submit}
                 disabled={pending || !loggedIn}
-                className="rounded-lg bg-red-500 px-5 py-3 text-sm font-semibold text-charcoal-950 hover:bg-red-400 disabled:opacity-60"
+                className="rounded-lg bg-navy-400 px-5 py-3 text-sm font-semibold text-charcoal-950 hover:bg-navy-400 disabled:opacity-60"
               >
                 {pending ? "입찰 중…" : loggedIn ? "입찰" : "로그인 후 입찰"}
               </button>
@@ -150,7 +150,7 @@ export default function AuctionPanel({
         )}
         {!loggedIn && !ended && (
           <p className="mt-3 text-center text-xs text-charcoal-500">
-            <Link href="/login" className="text-red-400 hover:underline">
+            <Link href="/login" className="text-navy-400 hover:underline">
               로그인
             </Link>{" "}
             후 입찰할 수 있어요.
@@ -171,7 +171,7 @@ export default function AuctionPanel({
                 key={b.id}
                 className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm ${
                   i === 0
-                    ? "bg-red-500/10 text-red-200"
+                    ? "bg-navy-400/10 text-navy-200"
                     : "text-charcoal-400"
                 }`}
               >
@@ -218,7 +218,7 @@ function Countdown({
       <p className="text-[10px] font-semibold uppercase tracking-wider text-charcoal-500">
         {ended ? "Ended" : "마감까지"}
       </p>
-      <p className="mt-1 text-2xl font-bold tabular-nums text-red-300">
+      <p className="mt-1 text-2xl font-bold tabular-nums text-navy-300">
         {ended
           ? "—"
           : d > 0

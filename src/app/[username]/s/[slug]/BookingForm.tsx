@@ -207,8 +207,8 @@ export default function BookingForm({
         </div>
 
         {!loggedIn && (
-          <div className="rounded-2xl border border-red-500/30 bg-gradient-to-br from-red-600/10 to-charcoal-900/40 p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-red-400">
+          <div className="rounded-2xl border border-navy-400/30 bg-gradient-to-br from-navy-500/10 to-charcoal-900/40 p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-navy-400">
               Orbit42
             </p>
             <h3 className="mt-1 text-lg font-bold text-charcoal-50">
@@ -220,19 +220,19 @@ export default function BookingForm({
             </p>
             <ul className="mt-4 space-y-1.5 text-xs text-charcoal-400">
               <li className="flex gap-2">
-                <span className="text-red-400">◦</span> 구글 캘린더 연동 → 가능한 시간 자동 계산
+                <span className="text-navy-400">◦</span> 구글 캘린더 연동 → 가능한 시간 자동 계산
               </li>
               <li className="flex gap-2">
-                <span className="text-red-400">◦</span> 링크 하나로 예약받기 (무료/유료/경매)
+                <span className="text-navy-400">◦</span> 링크 하나로 예약받기 (무료/유료/경매)
               </li>
               <li className="flex gap-2">
-                <span className="text-red-400">◦</span> 시간 인사이트 · 업무/개인 시간 분석
+                <span className="text-navy-400">◦</span> 시간 인사이트 · 업무/개인 시간 분석
               </li>
             </ul>
             <div className="mt-5 flex flex-wrap items-center gap-2">
               <a
                 href={`/?mode=signup&ref=${encodeURIComponent(hostUsername)}#auth`}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-navy-500 px-4 py-2 text-sm font-semibold text-white hover:bg-navy-400"
               >
                 내 궤도 만들기 →
               </a>
@@ -281,7 +281,7 @@ export default function BookingForm({
                   disabled={locPending || locations.length === 1}
                   className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                     active
-                      ? "border-red-500 bg-red-500/15 text-red-700 dark:text-red-300"
+                      ? "border-navy-400 bg-navy-400/15 text-navy-600 dark:text-navy-300"
                       : "border-charcoal-800/60 bg-charcoal-800/20 text-charcoal-300 hover:border-charcoal-700"
                   }`}
                 >
@@ -309,7 +309,7 @@ export default function BookingForm({
             type="checkbox"
             checked={onlyMyFree}
             onChange={(e) => setOnlyMyFree(e.target.checked)}
-            className="h-3.5 w-3.5 accent-red-500"
+            className="h-3.5 w-3.5 accent-navy-400"
           />
           내가 비는 시간만 보기
           {conflictsLoading && (
@@ -389,7 +389,7 @@ export default function BookingForm({
       <button
         type="submit"
         disabled={pending || !selectedKey}
-        className="w-full rounded-lg bg-red-600 px-4 py-3 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-60"
+        className="w-full rounded-lg bg-navy-500 px-4 py-3 text-sm font-medium text-white hover:bg-navy-400 disabled:opacity-60"
       >
         {pending
           ? "예약 중…"
@@ -401,7 +401,7 @@ export default function BookingForm({
       {!loggedIn && (
         <p className="text-center text-xs text-charcoal-500">
           이미 가입했나요?{" "}
-          <a href="/login" className="text-red-400 hover:text-red-300">
+          <a href="/login" className="text-navy-400 hover:text-navy-300">
             로그인하고 예약
           </a>
         </p>
@@ -474,7 +474,7 @@ function PaymentStep({
           type="checkbox"
           checked={acknowledged}
           onChange={(e) => setAcknowledged(e.target.checked)}
-          className="mt-0.5 accent-red-500"
+          className="mt-0.5 accent-navy-400"
         />
         <span>
           {paymentMethod === "offline"
@@ -496,7 +496,7 @@ function PaymentStep({
           type="button"
           onClick={onPay}
           disabled={pending || !acknowledged}
-          className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:bg-charcoal-800 disabled:text-charcoal-500"
+          className="flex-1 rounded-lg bg-navy-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-navy-400 disabled:cursor-not-allowed disabled:bg-charcoal-800 disabled:text-charcoal-500"
         >
           {pending ? "예약 중…" : "예약 확정"}
         </button>
@@ -552,7 +552,7 @@ function BookingMenuPicker({
                     onClick={() => toggle(m.id)}
                     className={`flex w-full items-start justify-between gap-3 rounded-md border px-3 py-2 text-left transition-colors ${
                       active
-                        ? "border-red-500 bg-red-500/10"
+                        ? "border-navy-400 bg-navy-400/10"
                         : "border-charcoal-800/60 bg-charcoal-800/10 hover:border-charcoal-700"
                     }`}
                   >
@@ -560,7 +560,7 @@ function BookingMenuPicker({
                       <span
                         aria-hidden
                         className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
-                          active ? "border-red-500 bg-red-500" : "border-charcoal-600"
+                          active ? "border-navy-400 bg-navy-400" : "border-charcoal-600"
                         }`}
                       >
                         {active && (

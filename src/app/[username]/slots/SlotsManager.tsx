@@ -201,7 +201,7 @@ export default function SlotsManager({
 }
 
 const INPUT =
-  "w-full rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500/60 focus:outline-none focus:ring-1 focus:ring-red-500/40";
+  "w-full rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-400/60 focus:outline-none focus:ring-1 focus:ring-navy-400/40";
 
 function NewSlotForm({
   onSaved,
@@ -673,7 +673,7 @@ function NewSlotForm({
               type="checkbox"
               checked={showOnFeed}
               onChange={(e) => setShowOnFeed(e.target.checked)}
-              className="h-4 w-4 accent-red-500"
+              className="h-4 w-4 accent-navy-400"
             />
             피드에 노출
           </label>
@@ -750,14 +750,14 @@ function ChoiceCard({
       disabled={disabled}
       className={`flex w-full items-start gap-3 rounded-lg border px-4 py-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
         active
-          ? "border-red-500 bg-red-500/10"
+          ? "border-navy-400 bg-navy-400/10"
           : "border-charcoal-800/60 bg-charcoal-800/10 hover:border-charcoal-700 hover:bg-charcoal-800/30"
       }`}
     >
       <span
         aria-hidden
         className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
-          active ? "border-red-500 bg-red-500" : "border-charcoal-600"
+          active ? "border-navy-400 bg-navy-400" : "border-charcoal-600"
         }`}
       >
         {active && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
@@ -901,7 +901,7 @@ function ManualWindows({
                 type="button"
                 onClick={() => setWindows((arr) => arr.filter((_, j) => j !== i))}
                 aria-label="Remove"
-                className="flex h-6 w-6 items-center justify-center rounded text-charcoal-500 hover:bg-charcoal-800 hover:text-red-400"
+                className="flex h-6 w-6 items-center justify-center rounded text-charcoal-500 hover:bg-charcoal-800 hover:text-navy-400"
               >
                 ✕
               </button>
@@ -975,7 +975,7 @@ function AutoConfig({
                   onClick={() => toggleDay(d.key)}
                   className={`flex h-8 w-10 shrink-0 items-center justify-center rounded-md text-xs font-bold transition-colors ${
                     enabled
-                      ? "bg-red-600 text-white"
+                      ? "bg-navy-500 text-white"
                       : "bg-charcoal-800/60 text-charcoal-500 hover:bg-charcoal-800"
                   }`}
                 >
@@ -1081,9 +1081,9 @@ function PresetCard({
       type="button"
       onClick={onClick}
       disabled={pending}
-      className="group flex h-full flex-col items-start gap-1.5 rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 p-4 text-left transition-colors hover:border-red-500/60 hover:bg-red-500/5 disabled:opacity-60"
+      className="group flex h-full flex-col items-start gap-1.5 rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 p-4 text-left transition-colors hover:border-navy-400/60 hover:bg-navy-400/5 disabled:opacity-60"
     >
-      <p className="text-sm font-semibold text-charcoal-100 group-hover:text-red-300">
+      <p className="text-sm font-semibold text-charcoal-100 group-hover:text-navy-300">
         {title}
       </p>
       <p className="text-[11px] leading-relaxed text-charcoal-400">{hint}</p>
@@ -1125,13 +1125,13 @@ function LocationsInput({
         {value.map((v, i) => (
           <span
             key={`${v}-${i}`}
-            className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2.5 py-0.5 text-xs font-medium text-red-700 dark:text-red-300"
+            className="inline-flex items-center gap-1 rounded-full bg-navy-400/15 px-2.5 py-0.5 text-xs font-medium text-navy-600 dark:text-navy-300"
           >
             {v}
             <button
               type="button"
               onClick={() => remove(i)}
-              className="text-red-400 hover:text-red-200"
+              className="text-navy-400 hover:text-navy-200"
               aria-label={`${v} 제거`}
             >
               ×
@@ -1170,7 +1170,7 @@ function LocationsInput({
               key={p}
               type="button"
               onClick={() => add(p)}
-              className="rounded-full border border-charcoal-800/60 bg-charcoal-900/40 px-2.5 py-0.5 text-[11px] text-charcoal-300 hover:border-red-500/40 hover:text-red-300"
+              className="rounded-full border border-charcoal-800/60 bg-charcoal-900/40 px-2.5 py-0.5 text-[11px] text-charcoal-300 hover:border-navy-400/40 hover:text-navy-300"
             >
               + {p}
             </button>
@@ -1295,7 +1295,7 @@ function SlotCard({
             <span className="rounded-full bg-charcoal-800/60 px-2 py-0.5 text-[10px] font-medium text-charcoal-400">
               {row.slot.mode === "auto" ? "자동" : "직접"}
             </span>
-            <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-bold text-red-300">
+            <span className="rounded-full bg-navy-400/15 px-2 py-0.5 text-[10px] font-bold text-navy-300">
               {priceLabel}
             </span>
             {cal && (
@@ -1363,7 +1363,7 @@ function SlotCard({
             onClick={() => setEditing((v) => !v)}
             className={`rounded-md border px-2.5 py-1.5 text-xs ${
               editing
-                ? "border-red-500/60 bg-red-500/10 text-red-200"
+                ? "border-navy-400/60 bg-navy-400/10 text-navy-200"
                 : "border-charcoal-800 text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
             }`}
           >
@@ -1429,13 +1429,13 @@ function SlotCard({
               type="datetime-local"
               value={newWindow}
               onChange={(e) => setNewWindow(e.target.value)}
-              className="flex-1 rounded-md border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2 text-sm text-charcoal-100 focus:border-red-500/60 focus:outline-none"
+              className="flex-1 rounded-md border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2 text-sm text-charcoal-100 focus:border-navy-400/60 focus:outline-none"
             />
             <button
               type="button"
               onClick={addWindow}
               disabled={pending || !newWindow}
-              className="shrink-0 rounded-md bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-500 disabled:opacity-50"
+              className="shrink-0 rounded-md bg-navy-500 px-4 py-2 text-xs font-semibold text-white hover:bg-navy-400 disabled:opacity-50"
             >
               + 추가
             </button>
@@ -1469,7 +1469,7 @@ function SlotCard({
                       })
                     }
                     aria-label="Remove"
-                    className="flex h-6 w-6 items-center justify-center rounded text-charcoal-500 hover:bg-charcoal-800 hover:text-red-400"
+                    className="flex h-6 w-6 items-center justify-center rounded text-charcoal-500 hover:bg-charcoal-800 hover:text-navy-400"
                   >
                     ✕
                   </button>
@@ -1782,7 +1782,7 @@ function EditSlotForm({
           type="checkbox"
           checked={showOnFeed}
           onChange={(e) => setShowOnFeed(e.target.checked)}
-          className="h-4 w-4 accent-red-500"
+          className="h-4 w-4 accent-navy-400"
         />
         <span>
           <span className="block">피드에 노출</span>
@@ -1829,7 +1829,7 @@ function MenuPicker({
         등록된 서비스가 없어요.{' '}
         <a
           href={`/${username}/services`}
-          className="font-semibold text-red-500 hover:underline"
+          className="font-semibold text-navy-400 hover:underline"
         >
           Services 페이지
         </a>
@@ -1866,7 +1866,7 @@ function MenuPicker({
                   onClick={() => toggle(m.id)}
                   className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left transition-colors ${
                     active
-                      ? 'border-red-500 bg-red-500/10'
+                      ? 'border-navy-400 bg-navy-400/10'
                       : 'border-charcoal-800/60 bg-charcoal-800/10 hover:border-charcoal-700'
                   }`}
                 >
@@ -1874,7 +1874,7 @@ function MenuPicker({
                     <span
                       aria-hidden
                       className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
-                        active ? 'border-red-500 bg-red-500' : 'border-charcoal-600'
+                        active ? 'border-navy-400 bg-navy-400' : 'border-charcoal-600'
                       }`}
                     >
                       {active && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
@@ -1950,7 +1950,7 @@ function ValidityPicker({
             onClick={() => setPreset(p.value)}
             className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition-colors ${
               preset === p.value
-                ? "bg-red-600 text-white"
+                ? "bg-navy-500 text-white"
                 : "bg-charcoal-800/40 text-charcoal-700 hover:text-charcoal-900 dark:text-charcoal-300 dark:hover:text-charcoal-100"
             }`}
           >

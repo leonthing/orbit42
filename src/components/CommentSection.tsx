@@ -100,7 +100,7 @@ export function CommentSection({
             />
           ) : (
             <p className="text-xs text-charcoal-500">
-              <Link href="/login" className="text-red-400 hover:text-red-300">
+              <Link href="/login" className="text-navy-400 hover:text-navy-300">
                 로그인
               </Link>{" "}
               후 댓글을 남길 수 있어요.
@@ -283,7 +283,7 @@ function CommentItem({
                 type="button"
                 onClick={() => onLike(node.id)}
                 className={`inline-flex items-center gap-0.5 hover:text-charcoal-200 ${
-                  heart?.by_me ? "text-red-400" : "text-charcoal-500"
+                  heart?.by_me ? "text-navy-400" : "text-charcoal-500"
                 }`}
               >
                 <span>❤️</span>

@@ -74,7 +74,7 @@ export default async function BlogRootPage() {
         <div className="flex flex-col items-center rounded-xl border border-dashed border-charcoal-700 py-16">
           <p className="text-sm text-charcoal-500">아직 게시된 글이 없습니다.</p>
           <p className="mt-1 text-xs text-charcoal-600">
-            <a href="https://orbit42.org" className="text-red-400 hover:underline">Orbit42</a>에서 첫 글을 작성해보세요.
+            <a href="https://orbit42.org" className="text-navy-400 hover:underline">Orbit42</a>에서 첫 글을 작성해보세요.
           </p>
         </div>
       )}

@@ -44,7 +44,7 @@ export function TimeRequestsInbox({ requests }: { requests: TimeRequestRow[] }) 
   return (
     <section className="space-y-3">
       <div className="flex items-baseline justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-red-400">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-navy-400">
           시간 요청
         </h2>
         <span className="text-xs text-charcoal-500">{requests.length}</span>
@@ -53,7 +53,7 @@ export function TimeRequestsInbox({ requests }: { requests: TimeRequestRow[] }) 
         {requests.map((r) => (
           <li
             key={r.id}
-            className="rounded-xl border border-red-500/30 bg-red-500/5 p-4"
+            className="rounded-xl border border-navy-400/30 bg-navy-400/5 p-4"
           >
             <div className="flex items-start gap-3">
               {r.requester && (
@@ -122,7 +122,7 @@ export function TimeRequestsInbox({ requests }: { requests: TimeRequestRow[] }) 
                       type="button"
                       onClick={() => decline(r.id)}
                       disabled={pending}
-                      className="rounded-md border border-charcoal-700 px-3 py-1 text-xs text-charcoal-400 hover:border-red-500/60 hover:text-red-500 disabled:opacity-50"
+                      className="rounded-md border border-charcoal-700 px-3 py-1 text-xs text-charcoal-400 hover:border-navy-400/60 hover:text-navy-400 disabled:opacity-50"
                     >
                       거절
                     </button>

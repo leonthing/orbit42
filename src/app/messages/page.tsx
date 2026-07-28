@@ -75,7 +75,7 @@ export default async function MessagesPage() {
                       {c.last_message_preview || "대화를 시작해보세요"}
                     </p>
                     {c.unread && (
-                      <span className="h-2 w-2 shrink-0 rounded-full bg-red-500" />
+                      <span className="h-2 w-2 shrink-0 rounded-full bg-navy-400" />
                     )}
                   </div>
                 </div>

@@ -9,7 +9,7 @@ export default function PrivacyPage() {
       <header className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4 sm:px-6">
         <Link
           href="/"
-          className="text-base font-semibold tracking-tight text-charcoal-100 hover:text-red-400"
+          className="text-base font-semibold tracking-tight text-charcoal-100 hover:text-navy-400"
         >
           Orbit42
         </Link>
@@ -169,7 +169,7 @@ export default function PrivacyPage() {
               </li>
               <li>
                 개인정보 열람·정정·삭제·처리정지 요구는{" "}
-                <a href="mailto:orbit42@nthing.net" className="text-red-500 hover:underline">
+                <a href="mailto:orbit42@nthing.net" className="text-navy-500 hover:underline">
                   orbit42@nthing.net
                 </a>
                 로 요청할 수 있으며, 회사는 관련 법령에 따라 지체 없이 조치합니다.
@@ -180,7 +180,7 @@ export default function PrivacyPage() {
                   href="https://myaccount.google.com/permissions"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-red-500 hover:underline"
+                  className="text-navy-400 hover:underline"
                 >
                   Google 계정 권한 페이지
                 </a>
@@ -218,13 +218,13 @@ export default function PrivacyPage() {
               <li>개인정보 보호책임자: 주식회사 엔씽 대표이사</li>
               <li>
                 문의:{" "}
-                <a href="mailto:orbit42@nthing.net" className="text-red-500 hover:underline">
+                <a href="mailto:orbit42@nthing.net" className="text-navy-400 hover:underline">
                   orbit42@nthing.net
                 </a>
               </li>
               <li>
                 일반 문의:{" "}
-                <a href="mailto:orbit42@nthing.net" className="text-red-500 hover:underline">
+                <a href="mailto:orbit42@nthing.net" className="text-navy-400 hover:underline">
                   orbit42@nthing.net
                 </a>
               </li>

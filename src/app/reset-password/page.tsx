@@ -46,7 +46,7 @@ function ResetPasswordInner() {
       </p>
 
       {!token ? (
-        <p className="mt-6 rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-700 dark:text-red-200">
+        <p className="mt-6 rounded-lg border border-navy-400/30 bg-navy-400/10 p-4 text-sm text-navy-600 dark:text-navy-200">
           토큰이 없어요. 이메일의 재설정 링크를 통해 다시 접속해주세요.
         </p>
       ) : (
@@ -57,7 +57,7 @@ function ResetPasswordInner() {
             onChange={(e) => setPw(e.target.value)}
             placeholder="새 비밀번호 (6자 이상)"
             required
-            className="w-full rounded-md border border-charcoal-700 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-500 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500/40"
+            className="w-full rounded-md border border-charcoal-700 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-500 focus:border-navy-400 focus:outline-none focus:ring-1 focus:ring-navy-400/40"
           />
           <input
             type="password"
@@ -65,9 +65,9 @@ function ResetPasswordInner() {
             onChange={(e) => setConfirm(e.target.value)}
             placeholder="새 비밀번호 확인"
             required
-            className="w-full rounded-md border border-charcoal-700 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-500 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500/40"
+            className="w-full rounded-md border border-charcoal-700 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-500 focus:border-navy-400 focus:outline-none focus:ring-1 focus:ring-navy-400/40"
           />
-          {err && <p className="text-xs text-red-500">{err}</p>}
+          {err && <p className="text-xs text-navy-400">{err}</p>}
           <PendingButton
             type="submit"
             pending={loading}
@@ -81,7 +81,7 @@ function ResetPasswordInner() {
       )}
 
       <p className="mt-4 text-center text-xs text-charcoal-500">
-        <Link href="/" className="text-red-500 hover:underline">
+        <Link href="/" className="text-navy-400 hover:underline">
           ← 홈으로
         </Link>
       </p>

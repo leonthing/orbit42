@@ -49,13 +49,13 @@ export default async function LandingPage() {
         {/* Hero */}
         <section className="flex flex-col gap-8 md:grid md:grid-cols-2 md:items-start md:gap-12">
           <div className="order-1 min-w-0 md:col-start-1 md:row-start-1">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-red-700 dark:text-red-400">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-navy-600 dark:text-navy-400">
               Book time, not tables
             </p>
             <h1 className="mt-3 text-3xl font-bold leading-[1.15] tracking-tight text-charcoal-100 sm:text-4xl md:text-5xl lg:text-[56px]">
               미팅 일정을
               <br />
-              <span className="bg-gradient-to-r from-red-600 to-red-400 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-navy-500 to-navy-400 bg-clip-text text-transparent">
                 맛집 예약처럼
               </span>
               <br />
@@ -70,7 +70,7 @@ export default async function LandingPage() {
             <div className="mt-7 flex justify-center md:justify-start">
               <Link
                 href="/explore"
-                className="group inline-flex w-full items-center justify-center gap-2.5 rounded-full bg-red-600 px-6 py-3.5 text-base font-semibold text-white shadow-lg shadow-red-500/20 transition-all hover:bg-red-500 hover:shadow-red-500/30 sm:w-auto md:py-3 md:text-sm"
+                className="group inline-flex w-full items-center justify-center gap-2.5 rounded-full bg-navy-500 px-6 py-3.5 text-base font-semibold text-white shadow-lg shadow-navy-400/20 transition-all hover:bg-navy-400 hover:shadow-navy-400/30 sm:w-auto md:py-3 md:text-sm"
               >
                 <svg className="h-5 w-5 md:h-4 md:w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                   <circle cx="11" cy="11" r="7" />
@@ -84,7 +84,7 @@ export default async function LandingPage() {
 
           <div className="relative order-2 min-w-0 md:col-start-2 md:row-span-2 md:row-start-1">
             <AuthCard initialMode="signup" />
-            <div className="pointer-events-none absolute -inset-4 -z-10 rounded-3xl bg-gradient-to-br from-red-500/10 via-transparent to-red-600/20 blur-3xl" />
+            <div className="pointer-events-none absolute -inset-4 -z-10 rounded-3xl bg-gradient-to-br from-navy-400/10 via-transparent to-navy-500/20 blur-3xl" />
           </div>
         </section>
 
@@ -203,7 +203,7 @@ export default async function LandingPage() {
         </section>
 
         {/* CTA bottom */}
-        <section className="mt-20 overflow-hidden rounded-3xl border border-charcoal-800/60 bg-gradient-to-br from-red-600/15 via-charcoal-900/60 to-charcoal-900/30 p-6 text-center sm:p-8 md:mt-28 md:p-12">
+        <section className="mt-20 overflow-hidden rounded-3xl border border-charcoal-800/60 bg-gradient-to-br from-navy-500/15 via-charcoal-900/60 to-charcoal-900/30 p-6 text-center sm:p-8 md:mt-28 md:p-12">
           <h2 className="text-xl font-bold leading-tight text-charcoal-100 sm:text-2xl md:text-3xl">
             시간은 가장 중요한 자산입니다
           </h2>
@@ -213,7 +213,7 @@ export default async function LandingPage() {
           </p>
           <Link
             href="/explore"
-            className="mt-5 inline-flex items-center gap-2 rounded-full bg-red-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-500"
+            className="mt-5 inline-flex items-center gap-2 rounded-full bg-navy-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-navy-400"
           >
             먼저 구경해볼게요
             <span>→</span>
@@ -249,7 +249,7 @@ function FeatureHeader({
 }) {
   return (
     <div className="max-w-2xl">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-red-700 dark:text-red-400">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-navy-600 dark:text-navy-400">
         {eyebrow}
       </p>
       <h2 className="mt-2 text-2xl font-bold text-charcoal-100 sm:text-3xl">
@@ -265,7 +265,7 @@ function FeatureHeader({
 function Step({ n, title, body }: { n: number; title: string; body: string }) {
   return (
     <div className="relative rounded-2xl border border-charcoal-800/60 bg-charcoal-900/30 p-5">
-      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-red-600 text-xs font-bold text-white">
+      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-navy-500 text-xs font-bold text-white">
         {n}
       </div>
       <p className="mt-3 text-sm font-semibold text-charcoal-100">{title}</p>
@@ -286,7 +286,7 @@ function ValueCard({
   return (
     <div className="rounded-2xl border border-charcoal-800/60 bg-charcoal-900/30 p-5">
       {icon && (
-        <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-red-600/15 text-red-400">
+        <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-navy-500/15 text-navy-400">
           {icon}
         </div>
       )}
@@ -333,7 +333,7 @@ function DemoBookingPage() {
           <h3 className="text-base font-bold text-charcoal-100">
             프로덕트 멘토링
           </h3>
-          <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-bold text-red-400">
+          <span className="rounded-full bg-navy-400/15 px-2 py-0.5 text-[10px] font-bold text-navy-400">
             ₩50,000
           </span>
         </div>
@@ -360,7 +360,7 @@ function DemoBookingPage() {
             {weekdays.map((w, i) => (
               <span
                 key={w}
-                className={i === 0 ? "text-red-500/70" : i === 6 ? "text-blue-400/70" : ""}
+                className={i === 0 ? "text-navy-400/70" : i === 6 ? "text-blue-400/70" : ""}
               >
                 {w}
               </span>
@@ -377,9 +377,9 @@ function DemoBookingPage() {
                   key={i}
                   className={`flex aspect-square items-center justify-center rounded-md text-xs ${
                     isSelected
-                      ? "bg-red-600 font-bold text-white"
+                      ? "bg-navy-500 font-bold text-white"
                       : isToday
-                        ? "ring-1 ring-red-500/60 text-charcoal-200"
+                        ? "ring-1 ring-navy-400/60 text-charcoal-200"
                         : has
                           ? "text-charcoal-100"
                           : "text-charcoal-600"
@@ -388,7 +388,7 @@ function DemoBookingPage() {
                   <div className="flex flex-col items-center">
                     <span>{d}</span>
                     {has && !isSelected && (
-                      <span className="mt-0.5 h-1 w-1 rounded-full bg-red-500" />
+                      <span className="mt-0.5 h-1 w-1 rounded-full bg-navy-400" />
                     )}
                   </div>
                 </div>
@@ -405,7 +405,7 @@ function DemoBookingPage() {
               key={t}
               className={`rounded-md border px-2 py-1.5 text-center text-xs tabular-nums ${
                 i === 2
-                  ? "border-red-500 bg-red-600/15 font-semibold text-charcoal-100"
+                  ? "border-navy-400 bg-navy-500/15 font-semibold text-charcoal-100"
                   : "border-charcoal-800/60 bg-charcoal-800/20 text-charcoal-200"
               }`}
             >
@@ -417,7 +417,7 @@ function DemoBookingPage() {
         <button
           type="button"
           disabled
-          className="mt-4 w-full rounded-lg bg-red-600 py-2.5 text-sm font-semibold text-white"
+          className="mt-4 w-full rounded-lg bg-navy-500 py-2.5 text-sm font-semibold text-white"
         >
           ₩50,000 · 예약 진행
         </button>
@@ -464,7 +464,7 @@ function DemoTodoDay() {
               aria-hidden
               className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border ${
                 it.done
-                  ? "border-red-500 bg-red-500 text-white"
+                  ? "border-navy-400 bg-navy-400 text-white"
                   : "border-charcoal-600 bg-charcoal-900"
               }`}
             >
@@ -491,7 +491,7 @@ function DemoTodoDay() {
               {it.title}
             </span>
             {it.now && (
-              <span className="shrink-0 rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-semibold text-red-400">
+              <span className="shrink-0 rounded-full bg-navy-400/15 px-2 py-0.5 text-[10px] font-semibold text-navy-400">
                 NOW
               </span>
             )}
@@ -523,7 +523,7 @@ function DemoCalendar() {
             일정 2
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-red-500" />
+            <span className="h-2 w-2 rounded-full bg-navy-400" />
             예약가능 3
           </span>
         </div>
@@ -544,7 +544,7 @@ function DemoCalendar() {
                 className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[10px] font-bold ${
                   item.auction
                     ? "bg-amber-500/15 text-amber-800 ring-1 ring-amber-500/40 dark:text-amber-200 dark:ring-0"
-                    : "bg-red-500/15 text-red-800 ring-1 ring-red-500/30 dark:text-red-200 dark:ring-0"
+                    : "bg-navy-400/15 text-navy-700 ring-1 ring-navy-400/30 dark:text-navy-200 dark:ring-0"
                 }`}
               >
                 {item.auction ? "경매" : "슬롯"}
@@ -561,7 +561,7 @@ function DemoCalendar() {
                 className={`shrink-0 rounded-md px-2 py-0.5 text-xs font-bold ${
                   item.auction
                     ? "bg-amber-500/15 text-amber-800 dark:text-amber-200"
-                    : "bg-red-500/15 text-red-800 dark:text-red-200"
+                    : "bg-navy-400/15 text-navy-700 dark:text-navy-200"
                 }`}
               >
                 {item.price}

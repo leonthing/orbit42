@@ -93,7 +93,7 @@ export function WorkHoursForm({ initial }: Props) {
                 onClick={() => toggle(d)}
                 className={`flex h-7 w-10 shrink-0 items-center justify-center rounded-md text-xs font-semibold transition-colors ${
                   enabled
-                    ? "bg-red-600 text-white"
+                    ? "bg-navy-500 text-white"
                     : "bg-charcoal-800/60 text-charcoal-500 hover:text-charcoal-200"
                 }`}
               >

@@ -177,8 +177,8 @@ export default function LifeCalendarView({
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2 text-[10px] text-charcoal-500 sm:gap-3">
-              <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-red-400" />Born</span>
-              <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-red-400" />Lived</span>
+              <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-navy-400" />Born</span>
+              <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-navy-400" />Lived</span>
               <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />Now</span>
               <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-violet-400" />Memory</span>
               <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full border border-charcoal-700" />Future</span>
@@ -209,7 +209,7 @@ export default function LifeCalendarView({
                   {/* Year label */}
                   <div className="shrink-0 text-right pr-1" style={{ width: LABEL_W }}>
                     {(i === 0 || i % 5 === 0 || isCurrentYear) && (
-                      <span className={`text-[8px] leading-none ${isCurrentYear ? "font-bold text-red-400" : isDecade ? "text-charcoal-400" : "text-charcoal-600"}`}>
+                      <span className={`text-[8px] leading-none ${isCurrentYear ? "font-bold text-navy-400" : isDecade ? "text-charcoal-400" : "text-charcoal-600"}`}>
                         {yr}
                       </span>
                     )}
@@ -231,13 +231,13 @@ export default function LifeCalendarView({
                     } else if (isSelected) {
                       cls = "bg-white ring-1 ring-white ring-offset-1 ring-offset-[rgb(var(--bg-base))]";
                     } else if (isBirth) {
-                      cls = "bg-red-400";
+                      cls = "bg-navy-400";
                     } else if (isCurrent) {
                       cls = "bg-emerald-400";
                     } else if (hasMemory) {
                       cls = "bg-violet-400";
                     } else if (isLived) {
-                      cls = "bg-red-500/50";
+                      cls = "bg-navy-400/50";
                     } else {
                       cls = "border border-charcoal-800/60 bg-transparent";
                     }
@@ -256,7 +256,7 @@ export default function LifeCalendarView({
                   {/* Age */}
                   <div className="shrink-0 pl-1" style={{ width: LABEL_W - 4 }}>
                     {(i === 0 || i % 10 === 0 || isCurrentYear) && (
-                      <span className={`text-[8px] leading-none ${isCurrentYear ? "font-bold text-red-400" : "text-charcoal-600"}`}>
+                      <span className={`text-[8px] leading-none ${isCurrentYear ? "font-bold text-navy-400" : "text-charcoal-600"}`}>
                         {i}
                       </span>
                     )}
@@ -271,7 +271,7 @@ export default function LifeCalendarView({
         <div className="mt-3 flex items-center gap-2 md:mt-4 md:gap-3">
           <span className="text-[10px] text-charcoal-600">{birthYear}</span>
           <div className="h-1 flex-1 overflow-hidden rounded-full bg-charcoal-800">
-            <div className="h-full rounded-full bg-gradient-to-r from-red-600 to-red-400" style={{ width: `${Math.min(100, (weeksLived / totalWeeks) * 100)}%` }} />
+            <div className="h-full rounded-full bg-gradient-to-r from-navy-500 to-navy-400" style={{ width: `${Math.min(100, (weeksLived / totalWeeks) * 100)}%` }} />
           </div>
           <span className="text-[10px] text-charcoal-500">{Math.round((weeksLived / totalWeeks) * 100)}%</span>
           <span className="text-[10px] text-charcoal-600">{endYear}</span>
@@ -297,7 +297,7 @@ export default function LifeCalendarView({
                     {!isEditing && (
                       <button
                         onClick={startNew}
-                        className="rounded-lg px-2 py-1 text-xs text-red-400 hover:bg-red-600/10"
+                        className="rounded-lg px-2 py-1 text-xs text-navy-400 hover:bg-navy-500/10"
                       >
                         + 추가
                       </button>
@@ -323,7 +323,7 @@ export default function LifeCalendarView({
                       value={editTitle}
                       onChange={(e) => setEditTitle(e.target.value)}
                       placeholder="제목"
-                      className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none"
+                      className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-400 focus:outline-none"
                       autoFocus
                     />
                     <textarea
@@ -331,7 +331,7 @@ export default function LifeCalendarView({
                       onChange={(e) => setEditContent(e.target.value)}
                       placeholder="이 주에 대한 기억을 기록하세요..."
                       rows={4}
-                      className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none"
+                      className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-400 focus:outline-none"
                     />
                     <div className="flex items-center justify-between">
                       <button
@@ -343,7 +343,7 @@ export default function LifeCalendarView({
                       <button
                         onClick={editingId ? handleUpdate : handleCreate}
                         disabled={isPending || !editTitle.trim()}
-                        className="rounded-lg bg-red-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-red-500 disabled:opacity-40"
+                        className="rounded-lg bg-navy-500 px-4 py-1.5 text-xs font-medium text-white hover:bg-navy-400 disabled:opacity-40"
                       >
                         {isPending ? "저장 중..." : editingId ? "수정" : "저장"}
                       </button>
@@ -396,7 +396,7 @@ export default function LifeCalendarView({
                     <p className="text-sm text-charcoal-500">기록이 없습니다</p>
                     <button
                       onClick={startNew}
-                      className="mt-3 rounded-lg bg-red-600 px-4 py-2 text-xs font-medium text-white hover:bg-red-500"
+                      className="mt-3 rounded-lg bg-navy-500 px-4 py-2 text-xs font-medium text-white hover:bg-navy-400"
                     >
                       기억 기록하기
                     </button>

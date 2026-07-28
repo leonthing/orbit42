@@ -382,13 +382,13 @@ export default async function FeedPage() {
           <h3 className="text-sm font-semibold text-charcoal-200">
             궤도 ({following.length})
           </h3>
-          <Link href="/explore" className="text-xs text-red-400 hover:text-red-300">
+          <Link href="/explore" className="text-xs text-navy-400 hover:text-navy-300">
             더 찾기 →
           </Link>
         </div>
         {following.length === 0 ? (
           <p className="mt-3 text-xs text-charcoal-500">
-            아직 팔로우한 사람이 없어요. <Link href="/explore" className="text-red-400 hover:underline">탐색</Link>에서 찾아보세요.
+            아직 팔로우한 사람이 없어요. <Link href="/explore" className="text-navy-400 hover:underline">탐색</Link>에서 찾아보세요.
           </p>
         ) : (
           <div className="mt-3 flex flex-wrap gap-2">
@@ -495,14 +495,14 @@ function DayCard({
     <article
       className={`overflow-hidden rounded-2xl border bg-charcoal-900/30 ${
         isToday
-          ? "border-red-500/50 shadow-[0_0_0_1px_rgb(245_158_11_/_0.2)]"
+          ? "border-navy-400/50 shadow-[0_0_0_1px_rgb(245_158_11_/_0.2)]"
           : "border-charcoal-800/60"
       }`}
     >
       <header
         className={`flex items-baseline justify-between border-b px-5 py-3 ${
           isToday
-            ? "border-red-500/30 bg-red-500/5"
+            ? "border-navy-400/30 bg-navy-400/5"
             : "border-charcoal-800/50"
         }`}
       >
@@ -519,10 +519,10 @@ function DayCard({
         <span
           className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
             isToday
-              ? "bg-red-600 text-white"
+              ? "bg-navy-500 text-white"
               : isPast
                 ? "bg-charcoal-800/40 text-charcoal-500 ring-1 ring-charcoal-300 dark:ring-0"
-                : "bg-red-500/15 text-red-800 ring-1 ring-red-500/40 dark:text-red-200 dark:ring-red-500/30"
+                : "bg-navy-400/15 text-navy-700 ring-1 ring-navy-400/40 dark:text-navy-200 dark:ring-navy-400/30"
           }`}
         >
           {relative}
@@ -637,7 +637,7 @@ function EntryBody({
               />
             </div>
           )}
-          <p className="text-base font-semibold text-charcoal-100 hover:text-red-300">
+          <p className="text-base font-semibold text-charcoal-100 hover:text-navy-300">
             {item.title}
           </p>
           {item.excerpt && (
@@ -743,12 +743,12 @@ function KindBadge({ kind }: { kind: FeedItem["kind"] }) {
     post: {
       label: "긴 글",
       color:
-        "bg-red-500/15 text-red-800 ring-1 ring-red-500/40 dark:text-red-200 dark:ring-red-500/30",
+        "bg-navy-400/15 text-navy-700 ring-1 ring-navy-400/40 dark:text-navy-200 dark:ring-navy-400/30",
     },
     slot: {
       label: "슬롯",
       color:
-        "bg-red-500/15 text-red-800 ring-1 ring-red-500/40 dark:text-red-200 dark:ring-red-500/30",
+        "bg-navy-400/15 text-navy-700 ring-1 ring-navy-400/40 dark:text-navy-200 dark:ring-navy-400/30",
     },
   };
   const m = map[kind];
@@ -842,13 +842,13 @@ function FeedSlotCard({
     return (
       <Link
         href={`/${username}/s/${item.slug}`}
-        className="mt-3 block rounded-lg border border-red-500/30 bg-red-500/5 p-3 hover:border-red-500/60"
+        className="mt-3 block rounded-lg border border-navy-400/30 bg-navy-400/5 p-3 hover:border-navy-400/60"
       >
         <div className="flex items-center justify-between gap-2">
           <p className="truncate text-sm font-semibold text-charcoal-100">
             {item.title}
           </p>
-          <span className="shrink-0 rounded-md bg-red-500/15 px-2 py-0.5 text-xs font-bold text-red-700 dark:text-red-300">
+          <span className="shrink-0 rounded-md bg-navy-400/15 px-2 py-0.5 text-xs font-bold text-navy-600 dark:text-navy-300">
             {item.price_cents === 0
               ? "무료"
               : `₩${(item.price_cents / 100).toLocaleString("ko-KR")}`}

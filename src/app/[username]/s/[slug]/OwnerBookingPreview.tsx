@@ -66,7 +66,7 @@ export default function OwnerBookingPreview({
                   disabled={pending || locations.length === 1}
                   className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                     active
-                      ? "border-red-500 bg-red-500/15 text-red-700 dark:text-red-300"
+                      ? "border-navy-400 bg-navy-400/15 text-navy-600 dark:text-navy-300"
                       : "border-charcoal-800/60 bg-charcoal-800/20 text-charcoal-300 hover:border-charcoal-700"
                   }`}
                 >

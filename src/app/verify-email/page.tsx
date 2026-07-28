@@ -22,7 +22,7 @@ export default async function VerifyEmailPage({
           className={`mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full ${
             ok
               ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
-              : "bg-red-500/15 text-red-700 dark:text-red-300"
+              : "bg-navy-400/15 text-navy-600 dark:text-navy-300"
           }`}
         >
           {ok ? "✓" : "!"}

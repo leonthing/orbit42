@@ -15,7 +15,7 @@ function typeStyles(type: string): { bg: string; fg: string } {
   if (type.startsWith("booking")) return { bg: "bg-emerald-500/80", fg: "text-white" };
   if (type === "new_message") return { bg: "bg-sky-500/80", fg: "text-white" };
   if (type === "new_follower" || type === "invite_used")
-    return { bg: "bg-red-500/80", fg: "text-white" };
+    return { bg: "bg-navy-400/80", fg: "text-white" };
   if (type === "reaction") return { bg: "bg-pink-500/80", fg: "text-white" };
   if (type === "bid_placed") return { bg: "bg-amber-500/80", fg: "text-white" };
   if (type.startsWith("comment") || type.startsWith("reply"))
@@ -178,7 +178,7 @@ export function NotificationBell({ initialUnread }: { initialUnread: number }) {
           <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
         </svg>
         {unread > 0 && (
-          <span className="absolute right-1 top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-600 px-1 text-[9px] font-bold text-white">
+          <span className="absolute right-1 top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-navy-500 px-1 text-[9px] font-bold text-white">
             {unread > 99 ? "99+" : unread}
           </span>
         )}
@@ -210,7 +210,7 @@ export function NotificationBell({ initialUnread }: { initialUnread: number }) {
               <ul className="divide-y divide-charcoal-800/40">
                 {items.map((n) => {
                   const rowClass = `flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-charcoal-800/40 ${
-                    !n.read_at ? "bg-red-600/5" : ""
+                    !n.read_at ? "bg-navy-500/5" : ""
                   }`;
                   const inner = (
                     <>
@@ -255,7 +255,7 @@ export function NotificationBell({ initialUnread }: { initialUnread: number }) {
                         </p>
                       </div>
                       {!n.read_at && (
-                        <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-red-500" />
+                        <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-navy-400" />
                       )}
                     </>
                   );

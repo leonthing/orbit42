@@ -37,7 +37,7 @@ export function LocationBuffersForm({ initial }: Props) {
         <button
           type="button"
           onClick={() => setShowNew((v) => !v)}
-          className="shrink-0 whitespace-nowrap rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500"
+          className="shrink-0 whitespace-nowrap rounded-lg bg-navy-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-400"
         >
           {showNew ? "닫기" : "+ 추가"}
         </button>
@@ -187,7 +187,7 @@ function Row({
         <button
           type="button"
           onClick={save}
-          className="rounded-md bg-red-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-red-500 disabled:opacity-50"
+          className="rounded-md bg-navy-500 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-navy-400 disabled:opacity-50"
           disabled={pending}
         >
           {pending ? "저장 중…" : "저장"}
@@ -268,7 +268,7 @@ function NewRow({ onDone }: { onDone: () => void }) {
         <button
           type="submit"
           disabled={pending}
-          className="rounded-md bg-red-600 px-3 py-1 text-xs font-semibold text-white hover:bg-red-500 disabled:opacity-50"
+          className="rounded-md bg-navy-500 px-3 py-1 text-xs font-semibold text-white hover:bg-navy-400 disabled:opacity-50"
         >
           {pending ? "추가 중…" : "추가"}
         </button>

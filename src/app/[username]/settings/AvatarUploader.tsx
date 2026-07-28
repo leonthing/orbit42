@@ -72,7 +72,7 @@ export function AvatarUploader({
               type="button"
               onClick={() => inputRef.current?.click()}
               disabled={pending}
-              className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-charcoal-950 hover:bg-red-400 disabled:opacity-60"
+              className="rounded-lg bg-navy-400 px-4 py-2 text-sm font-semibold text-charcoal-950 hover:bg-navy-400 disabled:opacity-60"
             >
               {pending ? "업로드 중…" : url ? "사진 변경" : "사진 올리기"}
             </button>
@@ -81,7 +81,7 @@ export function AvatarUploader({
                 type="button"
                 onClick={onClear}
                 disabled={pending}
-                className="rounded-lg border border-charcoal-700 px-4 py-2 text-sm text-charcoal-300 hover:border-red-500/60 hover:text-red-400"
+                className="rounded-lg border border-charcoal-700 px-4 py-2 text-sm text-charcoal-300 hover:border-navy-400/60 hover:text-navy-400"
               >
                 제거
               </button>

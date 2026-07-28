@@ -74,7 +74,7 @@ export function MobileBottomNav({ username }: { username: string }) {
           key={it.href}
           href={it.href}
           className={`relative flex flex-1 flex-col items-center justify-center gap-1 text-[11px] font-medium ${
-            it.active ? "text-red-400" : "text-charcoal-500"
+            it.active ? "text-navy-400" : "text-charcoal-500"
           }`}
         >
           <span className="relative">

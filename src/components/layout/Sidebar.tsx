@@ -110,20 +110,20 @@ function NavLink({
       onClick={onClick}
       className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
         active
-          ? "bg-red-600/15 text-red-400"
+          ? "bg-navy-500/15 text-navy-400"
           : "text-charcoal-400 hover:bg-charcoal-800/50 hover:text-charcoal-200"
       }`}
       title={collapsed ? label : undefined}
     >
-      <span className={`relative ${active ? "text-red-400" : "text-charcoal-500"}`}>
+      <span className={`relative ${active ? "text-navy-400" : "text-charcoal-500"}`}>
         {icon}
         {badge > 0 && collapsed && (
-          <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-red-500" />
+          <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-navy-400" />
         )}
       </span>
       <span className={`flex-1 ${collapsed ? "hidden" : ""}`}>{label}</span>
       {!collapsed && badge > 0 && (
-        <span className="rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+        <span className="rounded-full bg-navy-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
           {badge > 99 ? "99+" : badge}
         </span>
       )}

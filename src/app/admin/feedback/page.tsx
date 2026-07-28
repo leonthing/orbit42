@@ -93,7 +93,7 @@ export default async function AdminFeedbackPage() {
                           <div className="min-w-0">
                             <Link
                               href={`/${f.user.username}`}
-                              className="truncate text-sm font-semibold text-charcoal-100 hover:text-red-400"
+                              className="truncate text-sm font-semibold text-charcoal-100 hover:text-navy-400"
                             >
                               {f.user.display_name || f.user.username}
                             </Link>

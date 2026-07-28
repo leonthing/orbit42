@@ -63,7 +63,7 @@ export function GoogleAccountsSection({
         </div>
         <a
           href="/api/google?return=settings&add=1"
-          className="shrink-0 whitespace-nowrap rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500"
+          className="shrink-0 whitespace-nowrap rounded-lg bg-navy-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-400"
         >
           + 계정 추가
         </a>
@@ -74,7 +74,7 @@ export function GoogleAccountsSection({
             <p className="text-sm font-medium text-charcoal-100">
               {primaryConnected ? primaryEmail ?? "Primary account" : "연결되지 않음"}
               {primaryConnected && (
-                <span className="ml-2 rounded-full bg-red-600/25 px-2 py-0.5 text-[10px] font-semibold text-red-300">
+                <span className="ml-2 rounded-full bg-navy-500/25 px-2 py-0.5 text-[10px] font-semibold text-navy-300">
                   PRIMARY
                 </span>
               )}
@@ -90,7 +90,7 @@ export function GoogleAccountsSection({
               type="button"
               onClick={disconnectPrimary}
               disabled={pending}
-              className="shrink-0 whitespace-nowrap rounded-lg border border-charcoal-700 px-3 py-1.5 text-xs text-charcoal-400 hover:border-red-500/60 hover:text-red-500"
+              className="shrink-0 whitespace-nowrap rounded-lg border border-charcoal-700 px-3 py-1.5 text-xs text-charcoal-400 hover:border-navy-400/60 hover:text-navy-400"
             >
               해제
             </button>
@@ -122,7 +122,7 @@ export function GoogleAccountsSection({
               type="button"
               onClick={() => disconnect(acc.id)}
               disabled={pending}
-              className="rounded-lg border border-charcoal-700 px-3 py-1.5 text-xs text-charcoal-400 hover:border-red-500/60 hover:text-red-400"
+              className="rounded-lg border border-charcoal-700 px-3 py-1.5 text-xs text-charcoal-400 hover:border-navy-400/60 hover:text-navy-400"
             >
               해제
             </button>

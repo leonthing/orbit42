@@ -26,7 +26,7 @@ export default async function SignupPage({
         <div className="flex-1 space-y-6">
           <Link
             href="/"
-            className="inline-block text-sm font-semibold tracking-tight text-charcoal-100 hover:text-red-400"
+            className="inline-block text-sm font-semibold tracking-tight text-charcoal-100 hover:text-navy-400"
           >
             Orbit42
           </Link>
@@ -113,7 +113,7 @@ export default async function SignupPage({
               이미 계정이 있으신가요?{" "}
               <Link
                 href="/?mode=signin#auth"
-                className="text-red-400 hover:text-red-300"
+                className="text-navy-400 hover:text-navy-300"
               >
                 로그인
               </Link>
@@ -144,8 +144,8 @@ function InvitePerks() {
     <ul className="space-y-3">
       {items.map((i) => (
         <li key={i.title} className="flex gap-3">
-          <span className="mt-1 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-red-600/20">
-            <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
+          <span className="mt-1 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-navy-500/20">
+            <span className="h-1.5 w-1.5 rounded-full bg-navy-400" />
           </span>
           <div>
             <p className="text-sm font-semibold text-charcoal-100">

@@ -63,11 +63,11 @@ export function ProfileAvatar({
         onClick={() => inputRef.current?.click()}
         disabled={pending}
         aria-label="프로필 사진 변경"
-        className="group block rounded-full focus:outline-none focus:ring-2 focus:ring-red-500/50"
+        className="group block rounded-full focus:outline-none focus:ring-2 focus:ring-navy-400/50"
       >
         <Avatar url={url} name={name} size={size} />
         <span
-          className={`pointer-events-none absolute flex items-center justify-center rounded-full bg-[rgb(var(--bg-base))] text-red-500 shadow-sm ring-1 ring-charcoal-800/50 transition-colors group-hover:text-red-400 ${
+          className={`pointer-events-none absolute flex items-center justify-center rounded-full bg-[rgb(var(--bg-base))] text-navy-400 shadow-sm ring-1 ring-charcoal-800/50 transition-colors group-hover:text-navy-400 ${
             pending ? "opacity-60" : ""
           }`}
           style={{

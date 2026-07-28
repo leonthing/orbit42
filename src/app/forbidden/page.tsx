@@ -8,7 +8,7 @@ export default function ForbiddenPage() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-[rgb(var(--bg-base))] px-4 py-12">
       <Link
         href="/"
-        className="mb-10 text-base font-semibold tracking-tight text-charcoal-100 hover:text-red-400"
+        className="mb-10 text-base font-semibold tracking-tight text-charcoal-100 hover:text-navy-400"
       >
         Orbit42
       </Link>

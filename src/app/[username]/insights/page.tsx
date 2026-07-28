@@ -17,10 +17,13 @@ import {
   type PurposeGroup,
 } from "@/lib/calendar-settings-types";
 import { getValueStats } from "@/lib/value-stats";
+import { getTimeAssetSummary } from "@/lib/time-asset";
+import { listCalendarGoals } from "@/lib/calendar-goals";
+import { TimeAssetDashboard } from "./TimeAssetDashboard";
 import { getProfile } from "@/lib/auth";
 import { TimeAssetCard } from "./TimeAssetCard";
 
-export const metadata: Metadata = { title: "시간 인사이트" };
+export const metadata: Metadata = { title: "시간 자산" };
 export const dynamic = "force-dynamic";
 
 const TZ = "Asia/Seoul";
@@ -80,12 +83,15 @@ export default async function InsightsPage({
   const isCurrent = weekKey(weekStart) === weekKey(thisWeek);
 
   const workHours = await getWorkHours(userId);
-  const [insights, trend, valueStats, profile] = await Promise.all([
-    getWeekInsights(userId, weekStart, workHours),
-    getWeeklyTrend(userId, 4, workHours, new Date()),
-    getValueStats(params.username),
-    getProfile(params.username),
-  ]);
+  const [insights, trend, valueStats, profile, assetSummary, goals] =
+    await Promise.all([
+      getWeekInsights(userId, weekStart, workHours),
+      getWeeklyTrend(userId, 4, workHours, new Date()),
+      getValueStats(params.username),
+      getProfile(params.username),
+      getTimeAssetSummary(userId, params.username).catch(() => null),
+      listCalendarGoals(userId).catch(() => []),
+    ]);
 
   const hasWorkingHours = insights.working_hours_total > 0;
   const utilization = hasWorkingHours
@@ -109,7 +115,7 @@ export default async function InsightsPage({
     <div className="space-y-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-charcoal-100">시간 인사이트</h1>
+          <h1 className="text-2xl font-bold text-charcoal-100">시간 자산</h1>
           <p className="mt-1 text-xs text-charcoal-500">
             {fmtRange(weekStart, weekEnd)} · 근무시간 {workDays || "설정 안 됨"}
           </p>
@@ -135,6 +141,17 @@ export default async function InsightsPage({
           />
         </div>
       </header>
+
+      {assetSummary && (
+        <TimeAssetDashboard
+          summary={assetSummary}
+          goals={goals}
+          username={params.username}
+        />
+      )}
+
+      <h2 className="pt-2 text-sm font-semibold text-charcoal-400">주간 상세</h2>
+
 
       {(valueStats.total_bookings > 0 ||
         valueStats.total_revenue_cents > 0) && (
@@ -181,7 +198,7 @@ export default async function InsightsPage({
           </div>
           <div className="mt-3 h-3 w-full overflow-hidden rounded-full bg-charcoal-800/60">
             <div
-              className="h-full rounded-full bg-red-500"
+              className="h-full rounded-full bg-navy-400"
               style={{ width: `${utilization}%` }}
             />
           </div>
@@ -324,7 +341,7 @@ export default async function InsightsPage({
           에 따라 자동으로 구분돼요.{" "}
           <Link
             href={`/${params.username}/settings`}
-            className="text-red-400 hover:underline"
+            className="text-navy-400 hover:underline"
           >
             설정에서 변경
           </Link>

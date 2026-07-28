@@ -46,7 +46,7 @@ export function SectionNav({ items }: { items: Item[] }) {
                 href={`#${item.id}`}
                 className={`block rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                   active === item.id
-                    ? "bg-red-600/15 text-red-400"
+                    ? "bg-navy-500/15 text-navy-400"
                     : "text-charcoal-500 hover:bg-charcoal-800/40 hover:text-charcoal-200"
                 }`}
               >
@@ -66,7 +66,7 @@ export function SectionNav({ items }: { items: Item[] }) {
               href={`#${item.id}`}
               className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${
                 active === item.id
-                  ? "bg-red-600/15 text-red-400"
+                  ? "bg-navy-500/15 text-navy-400"
                   : "bg-charcoal-900/40 text-charcoal-400 hover:text-charcoal-200"
               }`}
             >

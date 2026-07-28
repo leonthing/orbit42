@@ -129,7 +129,7 @@ export default function BlogPostList({ initialPosts }: { initialPosts: BlogPost[
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="제목, 내용, 태그로 검색..."
-          className="w-full rounded-lg border border-charcoal-800 bg-charcoal-900/40 py-2.5 pl-10 pr-4 text-sm text-charcoal-200 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500/50"
+          className="w-full rounded-lg border border-charcoal-800 bg-charcoal-900/40 py-2.5 pl-10 pr-4 text-sm text-charcoal-200 placeholder:text-charcoal-600 focus:border-navy-400 focus:outline-none focus:ring-1 focus:ring-navy-400/50"
         />
       </div>
 
@@ -148,7 +148,7 @@ export default function BlogPostList({ initialPosts }: { initialPosts: BlogPost[
               onClick={() => setFilter(tab.value)}
               className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                 filter === tab.value
-                  ? "bg-red-600/15 text-red-400"
+                  ? "bg-navy-500/15 text-navy-400"
                   : "text-charcoal-500 hover:bg-charcoal-800/50 hover:text-charcoal-300"
               }`}
             >

@@ -202,7 +202,7 @@ export function SettingsForm({
     setInterests((prev) => prev.filter((t) => t !== tag));
   }
 
-  const inputClass = "w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-4 py-2.5 text-sm text-charcoal-100 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500/50";
+  const inputClass = "w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-4 py-2.5 text-sm text-charcoal-100 focus:border-navy-400 focus:outline-none focus:ring-1 focus:ring-navy-400/50";
 
   return (
     <div className="w-full min-w-0 space-y-8">
@@ -272,7 +272,7 @@ export function SettingsForm({
           </div>
 
           {profileMsg && (
-            <p className={`text-sm ${profileMsg.type === "success" ? "text-emerald-400" : "text-red-400"}`}>
+            <p className={`text-sm ${profileMsg.type === "success" ? "text-emerald-400" : "text-navy-400"}`}>
               {profileMsg.text}
             </p>
           )}
@@ -294,7 +294,7 @@ export function SettingsForm({
           <button
             type="button"
             onClick={addEducation}
-            className="text-xs font-medium text-red-400 hover:text-red-300"
+            className="text-xs font-medium text-navy-400 hover:text-navy-300"
           >
             + 추가
           </button>
@@ -368,7 +368,7 @@ export function SettingsForm({
           <button
             type="button"
             onClick={addExperience}
-            className="text-xs font-medium text-red-400 hover:text-red-300"
+            className="text-xs font-medium text-navy-400 hover:text-navy-300"
           >
             + 추가
           </button>
@@ -438,7 +438,7 @@ export function SettingsForm({
                       updateExperience(i, "current", e.target.checked);
                       if (e.target.checked) updateExperience(i, "endYear", "");
                     }}
-                    className="h-3.5 w-3.5 accent-red-500"
+                    className="h-3.5 w-3.5 accent-navy-400"
                   />
                   현재 재직 중
                 </label>
@@ -482,13 +482,13 @@ export function SettingsForm({
               {interests.map((tag) => (
                 <span
                   key={tag}
-                  className="flex items-center gap-1 rounded-full bg-red-600/15 px-3 py-1 text-xs font-medium text-red-400"
+                  className="flex items-center gap-1 rounded-full bg-navy-500/15 px-3 py-1 text-xs font-medium text-navy-400"
                 >
                   {tag}
                   <button
                     type="button"
                     onClick={() => removeInterest(tag)}
-                    className="ml-0.5 text-red-400/60 hover:text-red-400"
+                    className="ml-0.5 text-navy-400/60 hover:text-navy-400"
                   >
                     ×
                   </button>
@@ -519,7 +519,7 @@ export function SettingsForm({
                     setSocialLinks((prev) => ({ ...prev, [field.key]: e.target.value }))
                   }
                   placeholder={field.placeholder}
-                  className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500/50"
+                  className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-400 focus:outline-none focus:ring-1 focus:ring-navy-400/50"
                 />
               </div>
             </div>
@@ -551,7 +551,7 @@ export function SettingsForm({
           </div>
 
           {pwMsg && (
-            <p className={`text-sm ${pwMsg.type === "success" ? "text-emerald-400" : "text-red-400"}`}>
+            <p className={`text-sm ${pwMsg.type === "success" ? "text-emerald-400" : "text-navy-400"}`}>
               {pwMsg.text}
             </p>
           )}
@@ -614,7 +614,7 @@ function ThemeSection() {
             onClick={() => setTheme(opt.value)}
             className={`flex flex-1 flex-col items-center gap-2 rounded-lg border px-4 py-4 transition-colors ${
               theme === opt.value
-                ? "border-red-500 bg-red-600/10 text-red-400"
+                ? "border-navy-400 bg-navy-500/10 text-navy-400"
                 : "border-charcoal-800/60 text-charcoal-500 hover:border-charcoal-700 hover:text-charcoal-300"
             }`}
           >

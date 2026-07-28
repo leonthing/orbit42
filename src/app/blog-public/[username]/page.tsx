@@ -54,7 +54,7 @@ export default async function BlogHomePage({
             href={`/blog-public/${params.username}/rss.xml`}
             aria-label="RSS 피드"
             title="RSS 피드"
-            className="mt-1 text-charcoal-500 hover:text-red-400"
+            className="mt-1 text-charcoal-500 hover:text-navy-400"
           >
             <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
               <path d="M6.18 17.82a2.18 2.18 0 1 1-4.36 0 2.18 2.18 0 0 1 4.36 0ZM1.82 8.91v3.05c5.65 0 10.22 4.57 10.22 10.22h3.05c0-7.33-5.94-13.27-13.27-13.27Zm0-6.09v3.05c9.01 0 16.31 7.3 16.31 16.31h3.05C21.18 11.46 12.54 2.82 1.82 2.82Z" />
@@ -87,7 +87,7 @@ export default async function BlogHomePage({
                     className="mb-3 max-h-56 w-full rounded-xl border border-charcoal-800/60 object-cover"
                   />
                 )}
-                <h2 className="text-xl font-semibold text-charcoal-100 group-hover:text-red-400 transition-colors">
+                <h2 className="text-xl font-semibold text-charcoal-100 group-hover:text-navy-400 transition-colors">
                   {post.title}
                 </h2>
                 {(post.excerpt || post.content) && (

@@ -175,7 +175,7 @@ function TabButton({
       onClick={onClick}
       className={`flex-1 rounded-[5px] px-3 py-1.5 text-xs font-semibold transition-colors ${
         active
-          ? "bg-red-600 text-white shadow-sm"
+          ? "bg-navy-500 text-white shadow-sm"
           : "text-charcoal-500 hover:text-charcoal-900 dark:text-charcoal-400 dark:hover:text-charcoal-100"
       }`}
     >
@@ -203,7 +203,7 @@ function Stat({
       <p
         className={`mt-0.5 text-lg font-bold tabular-nums ${
           accent
-            ? "text-red-700 dark:text-red-300"
+            ? "text-navy-600 dark:text-navy-300"
             : muted
               ? "text-charcoal-500"
               : "text-charcoal-100"
@@ -340,7 +340,7 @@ function HostSection({
                         {b.selected_menus.map((m) => (
                           <span
                             key={m.id}
-                            className="inline-flex items-center gap-1 rounded-md bg-red-500/10 px-2 py-0.5 text-[11px] text-red-700 ring-1 ring-red-500/30 dark:text-red-200 dark:ring-0"
+                            className="inline-flex items-center gap-1 rounded-md bg-navy-400/10 px-2 py-0.5 text-[11px] text-navy-600 ring-1 ring-navy-400/30 dark:text-navy-200 dark:ring-0"
                           >
                             {m.name}
                             <span className="text-charcoal-500">
@@ -372,7 +372,7 @@ function HostSection({
                       <button
                         onClick={() => update(b.id, "canceled")}
                         disabled={pending}
-                        className="rounded-md border border-charcoal-700 px-3 py-1 text-xs text-charcoal-400 hover:border-red-500/60 hover:text-red-500"
+                        className="rounded-md border border-charcoal-700 px-3 py-1 text-xs text-charcoal-400 hover:border-navy-400/60 hover:text-navy-400"
                       >
                         취소
                       </button>
@@ -502,7 +502,7 @@ function GuestSection({
                             type="button"
                             onClick={() => onCancel(b.id)}
                             disabled={pending}
-                            className="rounded-md border border-charcoal-800 px-2.5 py-1 text-xs text-charcoal-400 hover:border-red-500/60 hover:text-red-500 disabled:opacity-50"
+                            className="rounded-md border border-charcoal-800 px-2.5 py-1 text-xs text-charcoal-400 hover:border-navy-400/60 hover:text-navy-400 disabled:opacity-50"
                           >
                             취소
                           </button>
@@ -612,7 +612,7 @@ function ReviewPanel({
           type="button"
           onClick={submit}
           disabled={rating === 0 || saving}
-          className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-md bg-navy-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-400 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {saving ? "등록 중…" : "후기 등록"}
         </button>
@@ -702,7 +702,7 @@ function ReschedulePanel({
             type="button"
             onClick={submit}
             disabled={!picked || saving}
-            className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-md bg-navy-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-400 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saving ? "변경 중…" : "변경"}
           </button>

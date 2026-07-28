@@ -39,7 +39,7 @@ export default function ForgotPasswordPage() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="이메일"
               required
-              className="w-full rounded-md border border-charcoal-700 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-500 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500/40"
+              className="w-full rounded-md border border-charcoal-700 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-500 focus:border-navy-400 focus:outline-none focus:ring-1 focus:ring-navy-400/40"
             />
             <PendingButton
               type="submit"
@@ -54,7 +54,7 @@ export default function ForgotPasswordPage() {
         )}
 
         <p className="mt-4 text-center text-xs text-charcoal-500">
-          <Link href="/" className="text-red-500 hover:underline">
+          <Link href="/" className="text-navy-400 hover:underline">
             ← 로그인으로 돌아가기
           </Link>
         </p>

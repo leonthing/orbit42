@@ -232,7 +232,7 @@ export default async function PublicProfile({
               </Link>
               {totalSlotWindows > 0 && (
                 <span>
-                  <strong className="text-red-700 dark:text-red-300">{totalSlotWindows}</strong>{" "}
+                  <strong className="text-navy-600 dark:text-navy-300">{totalSlotWindows}</strong>{" "}
                   <span className="text-charcoal-500">예약가능</span>
                 </span>
               )}
@@ -301,7 +301,7 @@ export default async function PublicProfile({
               {interests.map((tag) => (
                 <span
                   key={tag}
-                  className="rounded-full bg-red-500/15 px-2.5 py-0.5 text-xs font-medium text-red-800 ring-1 ring-red-500/30 dark:text-red-200 dark:ring-0"
+                  className="rounded-full bg-navy-400/15 px-2.5 py-0.5 text-xs font-medium text-navy-700 ring-1 ring-navy-400/30 dark:text-navy-200 dark:ring-0"
                 >
                   {tag}
                 </span>
@@ -318,7 +318,7 @@ export default async function PublicProfile({
                     href={v as string}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded-lg border border-charcoal-300 bg-charcoal-800/20 px-3 py-1.5 text-xs font-semibold text-charcoal-200 transition-colors hover:border-red-400/70 hover:text-red-500 dark:border-charcoal-700 dark:hover:text-red-300"
+                    className="rounded-lg border border-charcoal-300 bg-charcoal-800/20 px-3 py-1.5 text-xs font-semibold text-charcoal-200 transition-colors hover:border-navy-400/70 hover:text-navy-400 dark:border-charcoal-700 dark:hover:text-navy-300"
                   >
                     {k.charAt(0).toUpperCase() + k.slice(1)}
                   </a>
@@ -354,7 +354,7 @@ export default async function PublicProfile({
                     </h2>
                     <Link
                       href={`/${params.username}/insights`}
-                      className="text-[11px] text-red-400 hover:text-red-300"
+                      className="text-[11px] text-navy-400 hover:text-navy-300"
                     >
                       자세히 →
                     </Link>
@@ -438,7 +438,7 @@ export default async function PublicProfile({
                 아직 만든 슬롯이 없어요.{" "}
                 <Link
                   href={`/${params.username}/slots`}
-                  className="text-red-400 hover:underline"
+                  className="text-navy-400 hover:underline"
                 >
                   첫 슬롯 만들기 →
                 </Link>
@@ -457,7 +457,7 @@ export default async function PublicProfile({
             ) : (
               <p className="rounded-xl border border-dashed border-charcoal-800/60 bg-charcoal-900/20 px-6 py-12 text-center text-sm text-charcoal-500">
                 아직 쓴 글이 없어요.{" "}
-                <Link href="/feed" className="text-red-400 hover:underline">
+                <Link href="/feed" className="text-navy-400 hover:underline">
                   피드에서 한 마디 남겨보기 →
                 </Link>
               </p>
@@ -754,7 +754,7 @@ function ValueStat({
       <p className="text-[10px] font-medium text-charcoal-500">{label}</p>
       <p
         className={`truncate text-sm font-bold ${
-          accent ? "text-red-700 dark:text-red-300" : "text-charcoal-100"
+          accent ? "text-navy-600 dark:text-navy-300" : "text-charcoal-100"
         }`}
         title={value}
       >
@@ -778,7 +778,7 @@ function ActionTile({
       href={href}
       className={`flex items-center justify-center rounded-lg border px-2 py-2.5 text-center text-xs font-medium transition-colors ${
         highlight
-          ? "border-red-500/40 bg-red-500/10 text-red-700 hover:bg-red-500/20 dark:text-red-300"
+          ? "border-navy-400/40 bg-navy-400/10 text-navy-600 hover:bg-navy-400/20 dark:text-navy-300"
           : "border-charcoal-800/60 bg-charcoal-900/30 text-charcoal-700 hover:border-charcoal-700 hover:text-charcoal-100 dark:text-charcoal-300"
       }`}
     >

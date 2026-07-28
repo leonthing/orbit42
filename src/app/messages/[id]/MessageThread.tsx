@@ -135,7 +135,7 @@ export function MessageThread({
                       <div
                         className={`whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm ${
                           mine
-                            ? "bg-red-600 text-white"
+                            ? "bg-navy-500 text-white"
                             : "bg-charcoal-800/60 text-charcoal-100"
                         }`}
                       >

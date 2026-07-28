@@ -103,7 +103,7 @@ export function TimeRequestButton({
                     onClick={() => setDuration(d)}
                     className={`rounded-full px-3 py-1 text-xs font-medium ${
                       duration === d
-                        ? "bg-red-600/15 text-red-400 ring-1 ring-red-500/40"
+                        ? "bg-navy-500/15 text-navy-400 ring-1 ring-navy-400/40"
                         : "bg-charcoal-800/50 text-charcoal-400 hover:text-charcoal-200"
                     }`}
                   >

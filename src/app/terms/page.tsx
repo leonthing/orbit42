@@ -9,7 +9,7 @@ export default function TermsPage() {
       <header className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4 sm:px-6">
         <Link
           href="/"
-          className="text-base font-semibold tracking-tight text-charcoal-100 hover:text-red-400"
+          className="text-base font-semibold tracking-tight text-charcoal-100 hover:text-navy-400"
         >
           Orbit42
         </Link>
@@ -206,11 +206,11 @@ export default function TermsPage() {
               <li>서비스명: 오르빗42 (orbit42)</li>
               <li>사이트: https://orbit42.org</li>
               <li>
-                고객 지원: <a href="mailto:orbit42@nthing.net" className="text-red-500 hover:underline">orbit42@nthing.net</a>
+                고객 지원: <a href="mailto:orbit42@nthing.net" className="text-navy-400 hover:underline">orbit42@nthing.net</a>
               </li>
               <li>
                 개인정보 담당:{" "}
-                <a href="mailto:orbit42@nthing.net" className="text-red-500 hover:underline">orbit42@nthing.net</a>
+                <a href="mailto:orbit42@nthing.net" className="text-navy-400 hover:underline">orbit42@nthing.net</a>
               </li>
             </List>
           </Section>

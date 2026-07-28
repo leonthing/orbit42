@@ -31,7 +31,7 @@ export function PublicChrome({
               </Link>
               <Link
                 href={`/${viewerUsername}`}
-                className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-500"
+                className="rounded-lg bg-navy-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-navy-400"
               >
                 My Orbit
               </Link>
@@ -46,7 +46,7 @@ export function PublicChrome({
               </Link>
               <Link
                 href="/?mode=signup#auth"
-                className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-500"
+                className="rounded-lg bg-navy-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-navy-400"
               >
                 Get started
               </Link>

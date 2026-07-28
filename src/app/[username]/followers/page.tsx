@@ -102,7 +102,7 @@ function PeopleList({
             <li key={p.id}>
               <Link
                 href={`/${p.username}`}
-                className="flex items-center gap-3 rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-4 hover:border-red-500/60"
+                className="flex items-center gap-3 rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-4 hover:border-navy-400/60"
               >
                 <Avatar url={p.avatar_url ?? null} name={p.display_name || p.username} size={40} />
                 <div className="min-w-0">

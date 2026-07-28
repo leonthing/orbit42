@@ -56,7 +56,7 @@ export function OnboardingChecklist({ steps }: { steps: OnboardingStep[] }) {
 
       <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-charcoal-800/60">
         <div
-          className="h-full rounded-full bg-red-500 transition-all"
+          className="h-full rounded-full bg-navy-400 transition-all"
           style={{ width: `${(doneCount / steps.length) * 100}%` }}
         />
       </div>
@@ -81,9 +81,9 @@ export function OnboardingChecklist({ steps }: { steps: OnboardingStep[] }) {
                 href={s.href}
                 className="group flex items-center gap-2.5 text-sm text-charcoal-300 hover:text-charcoal-100"
               >
-                <span className="h-5 w-5 shrink-0 rounded-full border border-charcoal-700 group-hover:border-red-500/60" />
+                <span className="h-5 w-5 shrink-0 rounded-full border border-charcoal-700 group-hover:border-navy-400/60" />
                 {s.label}
-                <svg className="h-3.5 w-3.5 text-charcoal-600 group-hover:text-red-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <svg className="h-3.5 w-3.5 text-charcoal-600 group-hover:text-navy-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
                 </svg>
               </Link>

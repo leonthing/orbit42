@@ -46,7 +46,7 @@ export function MyCalendars({
         <button
           type="button"
           onClick={() => setShowNew((v) => !v)}
-          className="shrink-0 whitespace-nowrap rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500"
+          className="shrink-0 whitespace-nowrap rounded-lg bg-navy-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-400"
         >
           {showNew ? "닫기" : "+ 새 캘린더"}
         </button>
@@ -140,7 +140,7 @@ function CalendarRow({ calendar }: { calendar: Calendar }) {
             <p className="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-charcoal-100">
               <span className="truncate">{calendar.name}</span>
               {calendar.is_default && (
-                <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-semibold text-red-700 ring-1 ring-red-500/30 dark:text-red-200 dark:ring-0">
+                <span className="rounded-full bg-navy-400/15 px-2 py-0.5 text-[10px] font-semibold text-navy-600 ring-1 ring-navy-400/30 dark:text-navy-200 dark:ring-0">
                   기본
                 </span>
               )}
@@ -164,7 +164,7 @@ function CalendarRow({ calendar }: { calendar: Calendar }) {
               disabled={pending}
               className={`shrink-0 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
                 calendar.visibility === v.value
-                  ? "bg-red-600 text-white"
+                  ? "bg-navy-500 text-white"
                   : "text-charcoal-500 hover:text-charcoal-900 dark:text-charcoal-400 dark:hover:text-charcoal-200"
               }`}
             >
@@ -196,7 +196,7 @@ function CalendarRow({ calendar }: { calendar: Calendar }) {
             onClick={() => changePurpose(p.value)}
             className={`shrink-0 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] transition-colors ${
               calendar.purpose === p.value
-                ? "bg-red-600 text-white"
+                ? "bg-navy-500 text-white"
                 : "bg-charcoal-900/50 text-charcoal-700 hover:text-charcoal-900 dark:text-charcoal-400 dark:hover:text-charcoal-200"
             }`}
           >
@@ -213,7 +213,7 @@ function CalendarRow({ calendar }: { calendar: Calendar }) {
             type="button"
             onClick={() => changeColor(c)}
             className={`h-5 w-5 rounded-full ${
-              color === c ? "ring-2 ring-red-400 ring-offset-1 ring-offset-charcoal-900" : ""
+              color === c ? "ring-2 ring-navy-400 ring-offset-1 ring-offset-charcoal-900" : ""
             }`}
             style={{ backgroundColor: c }}
           />
@@ -278,7 +278,7 @@ function NewCalendarForm({
             onClick={() => setPurpose(p.value)}
             className={`whitespace-nowrap rounded-full px-3 py-1 text-xs transition-colors ${
               purpose === p.value
-                ? "bg-red-600 text-white"
+                ? "bg-navy-500 text-white"
                 : "bg-charcoal-800/40 text-charcoal-700 hover:text-charcoal-900 dark:text-charcoal-400 dark:hover:text-charcoal-200"
             }`}
           >
@@ -295,7 +295,7 @@ function NewCalendarForm({
             type="button"
             onClick={() => setColor(c)}
             className={`h-6 w-6 rounded-full ${
-              color === c ? "ring-2 ring-red-400 ring-offset-1 ring-offset-charcoal-900" : ""
+              color === c ? "ring-2 ring-navy-400 ring-offset-1 ring-offset-charcoal-900" : ""
             }`}
             style={{ backgroundColor: c }}
           />
@@ -310,7 +310,7 @@ function NewCalendarForm({
             onClick={() => setVisibility(v.value)}
             className={`rounded-md px-2.5 py-1 text-xs font-medium ${
               visibility === v.value
-                ? "bg-red-600 text-white"
+                ? "bg-navy-500 text-white"
                 : "text-charcoal-400 hover:text-charcoal-200"
             }`}
           >
@@ -330,7 +330,7 @@ function NewCalendarForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-lg bg-red-500 px-4 py-1.5 text-sm font-semibold text-charcoal-950 hover:bg-red-400 disabled:opacity-60"
+          className="rounded-lg bg-navy-400 px-4 py-1.5 text-sm font-semibold text-charcoal-950 hover:bg-navy-400 disabled:opacity-60"
         >
           {pending ? "만드는 중…" : "생성"}
         </button>

@@ -52,7 +52,7 @@ export function ProfileTabs({ tabs, overview, slots, posts }: Props) {
               {typeof t.count === "number" && t.count > 0 && (
                 <span
                   className={`ml-1.5 text-[11px] ${
-                    isActive ? "text-red-400" : "text-charcoal-600"
+                    isActive ? "text-navy-400" : "text-charcoal-600"
                   }`}
                 >
                   {t.count}
@@ -61,7 +61,7 @@ export function ProfileTabs({ tabs, overview, slots, posts }: Props) {
               {isActive && (
                 <span
                   aria-hidden
-                  className="absolute inset-x-0 -bottom-px h-0.5 rounded-t bg-red-500"
+                  className="absolute inset-x-0 -bottom-px h-0.5 rounded-t bg-navy-400"
                 />
               )}
             </button>

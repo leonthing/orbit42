@@ -44,7 +44,7 @@ export function TopBar({
           </svg>
           {unreadMessages > 0 && (
             <span
-              className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500"
+              className="absolute right-1 top-1 h-2 w-2 rounded-full bg-navy-400"
               aria-label={`안 읽은 메시지 ${unreadMessages}개`}
             />
           )}
@@ -98,7 +98,7 @@ export function TopBar({
               <div className="my-1 border-t border-charcoal-800/40" />
               <button
                 onClick={handleLogout}
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-charcoal-300 hover:bg-charcoal-800/50 hover:text-red-400"
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-charcoal-300 hover:bg-charcoal-800/50 hover:text-navy-400"
               >
                 <svg className="h-4 w-4 text-charcoal-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />

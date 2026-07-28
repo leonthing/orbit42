@@ -111,7 +111,7 @@ export function FeedbackBox({ collapsed, loggedIn }: Props) {
                   rows={6}
                   maxLength={4000}
                   required
-                  className="w-full resize-none rounded-lg border border-charcoal-700 bg-charcoal-900/60 px-3 py-2.5 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500/40"
+                  className="w-full resize-none rounded-lg border border-charcoal-700 bg-charcoal-900/60 px-3 py-2.5 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-400 focus:outline-none focus:ring-1 focus:ring-navy-400/40"
                   autoFocus
                 />
                 {!loggedIn && (
@@ -120,7 +120,7 @@ export function FeedbackBox({ collapsed, loggedIn }: Props) {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="이메일 (회신 받으실 주소, 선택)"
-                    className="w-full rounded-lg border border-charcoal-700 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500/40"
+                    className="w-full rounded-lg border border-charcoal-700 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-400 focus:outline-none focus:ring-1 focus:ring-navy-400/40"
                   />
                 )}
 

@@ -40,7 +40,7 @@ export function SignupForm({ initialRef }: { initialRef: string }) {
   };
 
   const input =
-    "w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2.5 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500/40";
+    "w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2.5 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-400 focus:outline-none focus:ring-1 focus:ring-navy-400/40";
 
   return (
     <>
@@ -92,7 +92,7 @@ export function SignupForm({ initialRef }: { initialRef: string }) {
         <p className="-mt-1 text-[11px] text-charcoal-500">
           {username ? (
             <>
-              orbit42.org/<span className="text-red-400">{username}</span>
+              orbit42.org/<span className="text-navy-400">{username}</span>
             </>
           ) : (
             "영문 소문자·숫자만 사용할 수 있어요."

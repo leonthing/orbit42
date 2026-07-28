@@ -639,7 +639,7 @@ export default function CalendarView({
           onClick={() => switchView(mode)}
           className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
             viewMode === mode
-              ? "bg-red-600 text-white"
+              ? "bg-navy-500 text-white"
               : "text-charcoal-400 hover:text-charcoal-200"
           }`}
         >
@@ -737,7 +737,7 @@ export default function CalendarView({
                             type="checkbox"
                             checked={selectedCalendars.includes(cal.id)}
                             onChange={() => toggleCalendar(cal.id)}
-                            className="h-3.5 w-3.5 rounded border-charcoal-600 bg-charcoal-800 text-red-500 focus:ring-red-500/50"
+                            className="h-3.5 w-3.5 rounded border-charcoal-600 bg-charcoal-800 text-navy-400 focus:ring-navy-400/50"
                           />
                           <span
                             className="h-3 w-3 shrink-0 rounded-full"
@@ -775,7 +775,7 @@ export default function CalendarView({
           ) : null}
           <button
             onClick={() => openCreateForm()}
-            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500"
+            className="rounded-lg bg-navy-500 px-4 py-2 text-sm font-medium text-white hover:bg-navy-400"
           >
             + 새 일정
           </button>
@@ -826,7 +826,7 @@ export default function CalendarView({
                 <div
                   key={d}
                   className={`py-2 text-center text-xs font-medium ${
-                    i === 5 ? "text-blue-400/70" : i === 6 ? "text-red-400/70" : "text-charcoal-500"
+                    i === 5 ? "text-blue-400/70" : i === 6 ? "text-navy-400/70" : "text-charcoal-500"
                   }`}
                 >
                   {d}
@@ -885,7 +885,7 @@ export default function CalendarView({
                         !day
                           ? ""
                           : isToday
-                            ? "bg-red-600/10"
+                            ? "bg-navy-500/10"
                             : isSelected
                               ? "bg-charcoal-800/60"
                               : "hover:bg-charcoal-800/50"
@@ -896,9 +896,9 @@ export default function CalendarView({
                           <span
                             className={`flex h-6 w-6 shrink-0 items-center justify-center text-xs font-medium ${
                               isToday
-                                ? "rounded-full bg-red-600 text-white"
+                                ? "rounded-full bg-navy-500 text-white"
                                 : isSunday
-                                  ? "text-red-400/70"
+                                  ? "text-navy-400/70"
                                   : isSaturday
                                     ? "text-blue-400/70"
                                     : "text-charcoal-300"
@@ -984,7 +984,7 @@ export default function CalendarView({
                     </h3>
                     <button
                       onClick={() => openCreateForm(selectedDay)}
-                      className="rounded-md bg-red-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-red-500"
+                      className="rounded-md bg-navy-500 px-2.5 py-1 text-xs font-medium text-white hover:bg-navy-400"
                     >
                       + 추가
                     </button>
@@ -1152,7 +1152,7 @@ export default function CalendarView({
                   required
                   value={form.title}
                   onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-                  className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder-charcoal-600 focus:border-red-500 focus:outline-none"
+                  className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder-charcoal-600 focus:border-navy-400 focus:outline-none"
                   placeholder="일정 제목"
                 />
               </div>
@@ -1164,7 +1164,7 @@ export default function CalendarView({
                   rows={2}
                   value={form.description}
                   onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                  className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder-charcoal-600 focus:border-red-500 focus:outline-none resize-none"
+                  className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder-charcoal-600 focus:border-navy-400 focus:outline-none resize-none"
                   placeholder="메모 (선택)"
                 />
               </div>
@@ -1189,7 +1189,7 @@ export default function CalendarView({
                       onChange={(e) =>
                         setForm((f) => ({ ...f, calendarId: e.target.value }))
                       }
-                      className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 focus:border-red-500 focus:outline-none"
+                      className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 focus:border-navy-400 focus:outline-none"
                     >
                       {myCalendars.map((c) => (
                         <option key={c.id} value={c.id}>
@@ -1215,7 +1215,7 @@ export default function CalendarView({
                   required
                   value={form.date}
                   onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
-                  className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 focus:border-red-500 focus:outline-none"
+                  className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 focus:border-navy-400 focus:outline-none"
                 />
               </div>
 
@@ -1225,7 +1225,7 @@ export default function CalendarView({
                   type="checkbox"
                   checked={form.allDay}
                   onChange={(e) => setForm((f) => ({ ...f, allDay: e.target.checked }))}
-                  className="h-4 w-4 rounded border-charcoal-700 bg-charcoal-800/50 text-red-600 focus:ring-red-500"
+                  className="h-4 w-4 rounded border-charcoal-700 bg-charcoal-800/50 text-navy-500 focus:ring-navy-400"
                 />
                 종일
               </label>
@@ -1241,7 +1241,7 @@ export default function CalendarView({
                       type="time"
                       value={form.startTime}
                       onChange={(e) => setForm((f) => ({ ...f, startTime: e.target.value }))}
-                      className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 focus:border-red-500 focus:outline-none"
+                      className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 focus:border-navy-400 focus:outline-none"
                     />
                   </div>
                   <div>
@@ -1252,7 +1252,7 @@ export default function CalendarView({
                       type="time"
                       value={form.endTime}
                       onChange={(e) => setForm((f) => ({ ...f, endTime: e.target.value }))}
-                      className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 focus:border-red-500 focus:outline-none"
+                      className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 focus:border-navy-400 focus:outline-none"
                     />
                   </div>
                 </div>
@@ -1270,7 +1270,7 @@ export default function CalendarView({
                 <button
                   type="submit"
                   disabled={isPending}
-                  className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-50"
+                  className="rounded-lg bg-navy-500 px-4 py-2 text-sm font-medium text-white hover:bg-navy-400 disabled:opacity-50"
                 >
                   {isPending ? "저장 중..." : editingEvent ? "수정" : "저장"}
                 </button>
@@ -1508,7 +1508,7 @@ function QuickEditPopover({
               type="button"
               onClick={handleSave}
               disabled={pending || !title.trim()}
-              className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-500 disabled:opacity-50"
+              className="rounded-md bg-navy-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-navy-400 disabled:opacity-50"
             >
               {pending ? "저장 중..." : "저장"}
             </button>
@@ -1554,7 +1554,7 @@ function EventList({
               aria-label={isDone ? "미완료로 표시" : "완료로 표시"}
               className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
                 isDone
-                  ? "border-red-500 bg-red-600 text-white"
+                  ? "border-navy-400 bg-navy-500 text-white"
                   : "border-charcoal-600 hover:border-charcoal-400"
               }`}
             >
@@ -1677,7 +1677,7 @@ function YearView({
           >
             <h3
               className={`mb-2 text-sm font-semibold ${
-                isCurrentMonth ? "text-red-400" : "text-charcoal-300"
+                isCurrentMonth ? "text-navy-400" : "text-charcoal-300"
               }`}
             >
               {MONTH_NAMES[monthIdx]}
@@ -1688,7 +1688,7 @@ function YearView({
                 <div
                   key={d}
                   className={`text-center text-[8px] font-medium ${
-                    i === 5 ? "text-blue-400/50" : i === 6 ? "text-red-400/50" : "text-charcoal-600"
+                    i === 5 ? "text-blue-400/50" : i === 6 ? "text-navy-400/50" : "text-charcoal-600"
                   }`}
                 >
                   {d}
@@ -1710,14 +1710,14 @@ function YearView({
                         <span
                           className={`text-[9px] leading-none ${
                             isToday
-                              ? "flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-600 text-white"
+                              ? "flex h-3.5 w-3.5 items-center justify-center rounded-full bg-navy-500 text-white"
                               : "text-charcoal-500"
                           }`}
                         >
                           {day}
                         </span>
                         {hasEvents && !isToday && (
-                          <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 h-0.5 w-0.5 rounded-full bg-red-400" />
+                          <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 h-0.5 w-0.5 rounded-full bg-navy-400" />
                         )}
                       </div>
                     )}
@@ -1765,7 +1765,7 @@ function QuarterView({
           >
             <h3
               className={`mb-3 text-center text-sm font-semibold ${
-                isCurrentMonth ? "text-red-400" : "text-charcoal-300"
+                isCurrentMonth ? "text-navy-400" : "text-charcoal-300"
               }`}
             >
               {MONTH_NAMES[monthIdx]}
@@ -1776,7 +1776,7 @@ function QuarterView({
                 <div
                   key={d}
                   className={`py-1 text-center text-[10px] font-medium ${
-                    i === 5 ? "text-blue-400/60" : i === 6 ? "text-red-400/60" : "text-charcoal-600"
+                    i === 5 ? "text-blue-400/60" : i === 6 ? "text-navy-400/60" : "text-charcoal-600"
                   }`}
                 >
                   {d}
@@ -1801,7 +1801,7 @@ function QuarterView({
                       !day
                         ? "cursor-default"
                         : isToday
-                          ? "bg-red-600/10 cursor-pointer"
+                          ? "bg-navy-500/10 cursor-pointer"
                           : "cursor-pointer hover:bg-charcoal-800/50"
                     }`}
                   >
@@ -1810,9 +1810,9 @@ function QuarterView({
                         <span
                           className={`flex h-5 w-5 items-center justify-center text-[11px] font-medium ${
                             isToday
-                              ? "rounded-full bg-red-600 text-white"
+                              ? "rounded-full bg-navy-500 text-white"
                               : isSun
-                                ? "text-red-400/70"
+                                ? "text-navy-400/70"
                                 : isSat
                                   ? "text-blue-400/70"
                                   : "text-charcoal-400"
@@ -1821,7 +1821,7 @@ function QuarterView({
                           {day}
                         </span>
                         {dayEvents.length > 0 && !isToday && (
-                          <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-red-400" />
+                          <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-navy-400" />
                         )}
                       </div>
                     )}
@@ -1923,7 +1923,7 @@ function EventDetailModal({
                 className={`rounded-lg px-3 py-2 text-sm font-medium ${
                   isCompleted
                     ? "bg-charcoal-800 text-charcoal-300 hover:bg-charcoal-700"
-                    : "bg-red-600 text-white hover:bg-red-500"
+                    : "bg-navy-500 text-white hover:bg-navy-400"
                 }`}
               >
                 {isCompleted ? "완료 취소" : "완료로 표시"}

@@ -91,12 +91,12 @@ function DayHeader({ day }: { day: WeekDay }) {
   return (
     <div
       className={`border-r border-charcoal-800/40 px-2 py-2 text-center last:border-r-0 ${
-        day.isToday ? "bg-red-600/5" : ""
+        day.isToday ? "bg-navy-500/5" : ""
       }`}
     >
       <p
         className={`text-[10px] font-semibold uppercase tracking-wider ${
-          day.isToday ? "text-red-400" : isWeekend ? "text-charcoal-500" : "text-charcoal-500"
+          day.isToday ? "text-navy-400" : isWeekend ? "text-charcoal-500" : "text-charcoal-500"
         }`}
       >
         {dow}
@@ -104,7 +104,7 @@ function DayHeader({ day }: { day: WeekDay }) {
       <p
         className={`mt-0.5 text-sm font-bold ${
           day.isToday
-            ? "inline-flex h-6 w-6 items-center justify-center rounded-full bg-red-600 text-white"
+            ? "inline-flex h-6 w-6 items-center justify-center rounded-full bg-navy-500 text-white"
             : isWeekend
               ? "text-charcoal-400"
               : "text-charcoal-100"
@@ -266,7 +266,7 @@ function DayColumn({
   return (
     <div
       className={`relative border-r border-charcoal-800/40 last:border-r-0 ${
-        isToday ? "bg-red-600/5" : ""
+        isToday ? "bg-navy-500/5" : ""
       }`}
     >
       {/* Hour grid lines */}
@@ -312,10 +312,10 @@ function NowLine() {
   const top = (min - START_MIN) * PX_PER_MIN;
   return (
     <div
-      className="pointer-events-none absolute inset-x-0 z-20 border-t-2 border-red-400/80"
+      className="pointer-events-none absolute inset-x-0 z-20 border-t-2 border-navy-400/80"
       style={{ top }}
     >
-      <span className="absolute -left-1 -top-1 h-2 w-2 rounded-full bg-red-400" />
+      <span className="absolute -left-1 -top-1 h-2 w-2 rounded-full bg-navy-400" />
     </div>
   );
 }
@@ -468,7 +468,7 @@ function ItemBlock({
     : item.auction_ends_at
       ? `경매중 · ${relativeTimeTo(item.auction_ends_at)}`
       : "경매중";
-  const accent = isAuction ? "#f59e0b" : "#ef4444"; // amber-500 / red-500
+  const accent = isAuction ? "#f59e0b" : "#ef4444"; // amber-500 / navy-400
   // Slots render as outlined "empty" boxes — the empty canvas represents
   // time that isn't committed yet. On hover we nudge in a faint fill,
   // hinting at what happens when the slot gets booked.

@@ -98,7 +98,7 @@ export function ReactionStrip({
             sm ? "px-2 py-0.5 text-[11px]" : "px-2.5 py-1 text-xs"
           } transition-colors ${
             r.by_me
-              ? "border-red-500/60 bg-red-600/20 text-red-200"
+              ? "border-navy-400/60 bg-navy-500/20 text-navy-200"
               : "border-charcoal-800/60 bg-charcoal-800/40 text-charcoal-300 hover:border-charcoal-700"
           }`}
         >

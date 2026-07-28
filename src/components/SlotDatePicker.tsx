@@ -209,9 +209,9 @@ export function SlotDatePicker({
             ? "cursor-pointer hover:bg-charcoal-800/40"
             : "cursor-default opacity-40";
           const selectedClass = isSelected
-            ? "bg-red-600 text-white hover:bg-red-600"
+            ? "bg-navy-500 text-white hover:bg-navy-500"
             : isToday
-              ? "ring-1 ring-red-500/60"
+              ? "ring-1 ring-navy-400/60"
               : "";
           return (
             <button
@@ -231,7 +231,7 @@ export function SlotDatePicker({
                 {d.getDate()}
               </span>
               {has && !isSelected && (
-                <span className="mt-0.5 h-1 w-1 rounded-full bg-red-500" />
+                <span className="mt-0.5 h-1 w-1 rounded-full bg-navy-400" />
               )}
             </button>
           );
@@ -294,7 +294,7 @@ function TimeGroup({
               onClick={() => onSelect(k)}
               className={`flex flex-col items-center rounded-md border px-3 py-2 text-sm transition-colors tabular-nums ${
                 active
-                  ? "border-red-500 bg-red-600/15 font-semibold text-charcoal-100"
+                  ? "border-navy-400 bg-navy-500/15 font-semibold text-charcoal-100"
                   : "border-charcoal-800/60 bg-charcoal-800/20 text-charcoal-200 hover:border-charcoal-700"
               }`}
             >

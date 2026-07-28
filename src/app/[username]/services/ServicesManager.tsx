@@ -8,7 +8,7 @@ import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 
 const INPUT =
-  "w-full rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500/60 focus:outline-none focus:ring-1 focus:ring-red-500/40";
+  "w-full rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-400/60 focus:outline-none focus:ring-1 focus:ring-navy-400/40";
 
 export default function ServicesManager({ initial }: { initial: Menu[] }) {
   const router = useRouter();
@@ -42,7 +42,7 @@ export default function ServicesManager({ initial }: { initial: Menu[] }) {
           <button
             type="button"
             onClick={() => setShowNew(true)}
-            className="shrink-0 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
+            className="shrink-0 rounded-lg bg-navy-500 px-4 py-2 text-sm font-semibold text-white hover:bg-navy-400"
           >
             새 서비스 추가
           </button>
@@ -70,7 +70,7 @@ export default function ServicesManager({ initial }: { initial: Menu[] }) {
           <button
             type="button"
             onClick={() => setShowNew(true)}
-            className="mt-5 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
+            className="mt-5 rounded-lg bg-navy-500 px-4 py-2 text-sm font-semibold text-white hover:bg-navy-400"
           >
             첫 서비스 추가하기
           </button>
@@ -195,7 +195,7 @@ function NewMenuForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-50"
+          className="rounded-lg bg-navy-500 px-5 py-2 text-sm font-semibold text-white hover:bg-navy-400 disabled:opacity-50"
         >
           {pending ? "저장 중…" : "추가"}
         </button>
@@ -255,7 +255,7 @@ function MenuRow({ menu, onChanged }: { menu: Menu; onChanged: () => void }) {
               OFF
             </span>
           )}
-          <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-bold text-red-800 ring-1 ring-red-500/30 dark:text-red-200 dark:ring-0">
+          <span className="rounded-full bg-navy-400/15 px-2 py-0.5 text-[10px] font-bold text-navy-700 ring-1 ring-navy-400/30 dark:text-navy-200 dark:ring-0">
             {menu.price_cents === 0
               ? "Free"
               : `₩${(menu.price_cents / 100).toLocaleString("ko-KR")}`}
@@ -378,7 +378,7 @@ function EditMenuForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-50"
+          className="rounded-lg bg-navy-500 px-5 py-2 text-sm font-semibold text-white hover:bg-navy-400 disabled:opacity-50"
         >
           {pending ? "저장 중…" : "저장"}
         </button>

@@ -169,8 +169,8 @@ export function ComposeBox({
           )}
 
           {addToCalendar && (
-            <div className="mt-2 flex items-center gap-2 rounded-lg border border-red-500/40 bg-red-500/5 px-3 py-2">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-red-400">
+            <div className="mt-2 flex items-center gap-2 rounded-lg border border-navy-400/40 bg-navy-400/5 px-3 py-2">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-navy-400">
                 캘린더
               </span>
               <input
@@ -254,7 +254,7 @@ export function ComposeBox({
               <button
                 type="submit"
                 disabled={pending || (!body.trim() && files.length === 0)}
-                className="rounded-full bg-red-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 disabled:cursor-not-allowed disabled:bg-charcoal-800 disabled:text-charcoal-500"
+                className="rounded-full bg-navy-500 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-navy-400 disabled:cursor-not-allowed disabled:bg-charcoal-800 disabled:text-charcoal-500"
               >
                 {pending ? "올리는 중…" : "게시"}
               </button>
@@ -287,7 +287,7 @@ function ToolButton({
       title={label}
       className={`flex h-9 w-9 items-center justify-center rounded-full text-base transition-colors ${
         active
-          ? "bg-red-500/20 text-red-700 dark:text-red-300"
+          ? "bg-navy-400/20 text-navy-600 dark:text-navy-300"
           : "text-charcoal-500 hover:bg-charcoal-800/10 hover:text-charcoal-100 dark:text-charcoal-400 dark:hover:bg-charcoal-800/60 dark:hover:text-charcoal-200"
       } disabled:cursor-not-allowed disabled:opacity-40`}
     >

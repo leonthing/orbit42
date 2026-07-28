@@ -78,7 +78,7 @@ export default async function EmailPreviewPage({
               href={`/admin/email-preview?template=${key}`}
               className={`rounded-full border px-3 py-1 text-xs ${
                 key === selected
-                  ? "border-red-500 bg-red-600/15 text-red-200"
+                  ? "border-navy-400 bg-navy-500/15 text-navy-200"
                   : "border-charcoal-800/60 text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
               }`}
             >

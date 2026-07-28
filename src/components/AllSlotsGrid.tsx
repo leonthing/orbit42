@@ -53,14 +53,14 @@ export function AllSlotsGrid({
           ? auctionEnded
             ? "shrink-0 rounded-md bg-charcoal-800/40 px-2 py-0.5 text-xs font-bold text-charcoal-500 ring-1 ring-charcoal-300 dark:ring-0"
             : "shrink-0 rounded-md bg-amber-500/15 px-2 py-0.5 text-xs font-bold text-amber-800 ring-1 ring-amber-500/40 dark:text-amber-200 dark:ring-0"
-          : "shrink-0 rounded-md bg-red-500/15 px-2 py-0.5 text-xs font-bold text-red-800 ring-1 ring-red-500/30 dark:text-red-300 dark:ring-0";
+          : "shrink-0 rounded-md bg-navy-400/15 px-2 py-0.5 text-xs font-bold text-navy-700 ring-1 ring-navy-400/30 dark:text-navy-300 dark:ring-0";
         const pillClass = auctionEnded
           ? "bg-charcoal-800/40 text-charcoal-500 ring-1 ring-charcoal-300 dark:ring-0"
           : "bg-amber-500/15 text-amber-800 ring-1 ring-amber-500/40 dark:text-amber-200 dark:ring-0";
         const cardInner = (
           <>
             <div className="flex items-baseline justify-between gap-2">
-              <h3 className="truncate text-sm font-semibold text-charcoal-100 group-hover:text-red-700 dark:group-hover:text-red-200">
+              <h3 className="truncate text-sm font-semibold text-charcoal-100 group-hover:text-navy-600 dark:group-hover:text-navy-200">
                 {s.title}
               </h3>
               <span className={badgeClass}>{priceLabel}</span>
@@ -86,7 +86,7 @@ export function AllSlotsGrid({
         return (
           <div
             key={s.id}
-            className="group rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5 transition-colors hover:border-red-500/50"
+            className="group rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5 transition-colors hover:border-navy-400/50"
           >
             {panel ? (
               <button

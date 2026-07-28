@@ -111,14 +111,14 @@ export function DeleteAccountSection({ username }: { username: string }) {
             value={confirmText}
             onChange={(e) => setConfirmText(e.target.value)}
             placeholder={username}
-            className="w-full rounded-md border border-charcoal-700 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500/40"
+            className="w-full rounded-md border border-charcoal-700 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-400 focus:outline-none focus:ring-1 focus:ring-navy-400/40"
           />
         </div>
         <button
           type="button"
           onClick={remove}
           disabled={pending || confirmText !== username}
-          className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:bg-charcoal-800 disabled:text-charcoal-500"
+          className="rounded-md bg-navy-500 px-4 py-2 text-sm font-semibold text-white hover:bg-navy-400 disabled:cursor-not-allowed disabled:bg-charcoal-800 disabled:text-charcoal-500"
         >
           {pending ? "처리 중…" : "탈퇴하기"}
         </button>
