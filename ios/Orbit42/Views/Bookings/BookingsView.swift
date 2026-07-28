@@ -9,17 +9,27 @@ struct BookingsView: View {
     /// "목록에서 삭제" 확인 다이얼로그 대상 예약 id
     @State private var deleteTargetId: String?
 
+    /// 프로필에서 push 할 때는 자체 NavigationStack 없이 쓴다 (중첩 방지).
+    var embedded = false
+
     var body: some View {
-        NavigationStack {
-            ZStack {
-                Theme.background.ignoresSafeArea()
-                VStack(spacing: 0) {
-                    segmentPicker
-                    content
-                }
+        if embedded {
+            inner
+        } else {
+            NavigationStack { inner }
+        }
+    }
+
+    private var inner: some View {
+        ZStack {
+            Theme.background.ignoresSafeArea()
+            VStack(spacing: 0) {
+                segmentPicker
+                content
             }
-            .navigationTitle("예약")
-            .navigationBarTitleDisplayMode(.inline)
+        }
+        .navigationTitle("예약")
+        .navigationBarTitleDisplayMode(.inline)
             .alert(
                 "안내",
                 isPresented: Binding(
@@ -66,7 +76,6 @@ struct BookingsView: View {
             .task {
                 await viewModel.load()
             }
-        }
     }
 
     // MARK: - 세그먼트

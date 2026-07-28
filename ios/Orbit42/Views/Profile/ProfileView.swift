@@ -87,6 +87,7 @@ private struct MyProfileContent: View {
                 VStack(alignment: .leading, spacing: 20) {
                     header
                     actionButtons
+                    bookingsLink
                     calendarsSection
                     slotsSection
                 }
@@ -317,6 +318,36 @@ private struct MyProfileContent: View {
                 .background(Theme.accent.opacity(0.15), in: Capsule())
             }
         }
+    }
+
+    // MARK: - 예약 (구 예약 탭)
+
+    private var bookingsLink: some View {
+        NavigationLink {
+            BookingsView(embedded: true)
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "checkmark.circle")
+                    .font(.body)
+                    .foregroundStyle(Theme.accent)
+                    .frame(width: 26)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("예약")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Theme.primaryText)
+                    Text("받은 예약과 내가 신청한 예약")
+                        .font(.caption)
+                        .foregroundStyle(Theme.secondaryText)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(Theme.secondaryText)
+            }
+            .padding(14)
+            .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - 내 캘린더

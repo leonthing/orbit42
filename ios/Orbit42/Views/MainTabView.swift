@@ -13,7 +13,13 @@ final class TabRouter {
 /// 메인 5탭: 캘린더(일정/타임슬롯) / 오르빗 / 예약 / 자산 / 프로필
 struct MainTabView: View {
     enum Tab: String {
-        case calendar, orbit, bookings, asset, profile
+        case calendar, timeline, orbit, asset, profile
+        /// 구 탭 이름 호환 (bookings → 프로필로 흡수)
+        static func from(raw: String) -> Tab? {
+            if raw == "bookings" { return .profile }
+            if raw == "slots" { return .calendar }
+            return Tab(rawValue: raw)
+        }
     }
 
     @Environment(TabRouter.self) private var router
@@ -23,13 +29,9 @@ struct MainTabView: View {
     /// 구 rawValue "slots" 는 캘린더 탭으로 통합되었으므로 calendar 로 매핑한다.
     static var initialTab: Tab {
         #if DEBUG
-        if let raw = ProcessInfo.processInfo.environment["DEMO_TAB"] {
-            if let tab = Tab(rawValue: raw) {
-                return tab
-            }
-            if raw == "slots" {
-                return .calendar
-            }
+        if let raw = ProcessInfo.processInfo.environment["DEMO_TAB"],
+           let tab = Tab.from(raw: raw) {
+            return tab
         }
         #endif
         return .calendar
@@ -42,15 +44,15 @@ struct MainTabView: View {
                 .tabItem { Label("캘린더", systemImage: "calendar") }
                 .tag(Tab.calendar)
 
+            TimelineView()
+                .tabItem { Label("타임라인", systemImage: "square.stack") }
+                .tag(Tab.timeline)
+
             NavigationStack {
                 SearchView()
             }
             .tabItem { Label("오르빗", systemImage: "circle.dotted.circle") }
             .tag(Tab.orbit)
-
-            BookingsView()
-                .tabItem { Label("예약", systemImage: "checkmark.circle") }
-                .tag(Tab.bookings)
 
             AssetView()
                 .tabItem { Label("자산", systemImage: "wonsign.circle") }
