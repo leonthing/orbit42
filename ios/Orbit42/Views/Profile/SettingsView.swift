@@ -8,6 +8,7 @@ struct SettingsView: View {
     @Environment(AuthViewModel.self) private var auth
 
     @State private var showingLogoutConfirm = false
+    @State private var showingFeedback = false
 
     // 프로필 비공개 토글 상태 — auth.user 값으로 최초 1회 동기화 후 로컬로 관리,
     // PATCH 실패 시 원복한다.
@@ -55,6 +56,9 @@ struct SettingsView: View {
                 didSyncPrivacy = true
             }
         }
+        .sheet(isPresented: $showingFeedback) {
+            FeedbackSheet()
+        }
     }
 
     // MARK: - 설정 메뉴
@@ -97,6 +101,12 @@ struct SettingsView: View {
                 BlockedUsersView()
             } label: {
                 menuRow(icon: "hand.raised", title: "차단 관리")
+            }
+
+            Button {
+                showingFeedback = true
+            } label: {
+                menuRow(icon: "paperplane", title: "피드백 보내기")
             }
 
             NavigationLink {
