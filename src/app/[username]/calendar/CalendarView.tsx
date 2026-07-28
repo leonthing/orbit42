@@ -1,5 +1,6 @@
 "use client";
 
+import { EventAssetPanel } from "./EventAssetPanel";
 import { useState, useTransition, useCallback, useMemo, useEffect, useRef } from "react";
 import {
   getCompletedKeys,
@@ -1961,6 +1962,16 @@ function EventDetailModal({
             )}
           </div>
         </div>
+
+        {canToggleComplete && (
+          <EventAssetPanel
+            eventId={item.id}
+            title={item.title}
+            startAt={item.start_at}
+            endAt={item.end_at}
+            allDay={item.all_day}
+          />
+        )}
 
         <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">

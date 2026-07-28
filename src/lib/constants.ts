@@ -34,6 +34,7 @@ export function slotTypeLabel(t: string | null | undefined): string {
 
 export const NAV_ITEMS = [
   { href: "/calendar", label: "캘린더", icon: "calendar" },
+  { href: "/timeline", label: "타임라인", icon: "blog" },
   { href: "/slots", label: "타임슬롯", icon: "clock" },
   { href: "/services", label: "서비스", icon: "ticket" },
   { href: "/bookings", label: "예약", icon: "schedule" },

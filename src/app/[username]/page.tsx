@@ -24,6 +24,7 @@ import { CommentSection } from "@/components/CommentSection";
 import { Markdown } from "@/components/Markdown";
 import { ComingUpCard } from "./ComingUpCard";
 import { InsightsCard } from "./InsightsCard";
+import { ProfileCalendarCards } from "./ProfileCalendarCards";
 import { ProfileTabs } from "./ProfileTabs";
 import { ShareMenu } from "@/components/ShareMenu";
 import { JsonLd } from "@/components/JsonLd";
@@ -386,6 +387,8 @@ export default async function PublicProfile({
                   </div>
                 </div>
               )}
+
+              <ProfileCalendarCards username={params.username} isOwner />
 
               {weekInsights && (
                 <InsightsCard username={params.username} insights={weekInsights} />
