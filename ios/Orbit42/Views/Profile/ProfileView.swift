@@ -7,6 +7,8 @@ import SwiftUI
 /// 설정은 우상단 톱니 → SettingsView.
 struct ProfileView: View {
     @Environment(AuthViewModel.self) private var auth
+    /// 안 읽은 알림 수 — 벨 뱃지 (탭 진입 시 갱신)
+    @State private var unreadCount = 0
 
     var body: some View {
         NavigationStack {
@@ -23,12 +25,39 @@ struct ProfileView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink {
+                        NotificationsView { unreadCount = 0 }
+                    } label: {
+                        Image(systemName: "bell")
+                            .foregroundStyle(Theme.accent)
+                            .overlay(alignment: .topTrailing) {
+                                if unreadCount > 0 {
+                                    Text(unreadCount > 9 ? "9+" : "\(unreadCount)")
+                                        .font(.system(size: 9, weight: .bold))
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 4)
+                                        .padding(.vertical, 1.5)
+                                        .background(.red, in: Capsule())
+                                        .offset(x: 8, y: -6)
+                                }
+                            }
+                    }
+                    .accessibilityLabel("알림")
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink {
                         SettingsView()
                     } label: {
                         Image(systemName: "gearshape")
                             .foregroundStyle(Theme.accent)
                     }
                     .accessibilityLabel("설정")
+                }
+            }
+            .task {
+                if let response: NotificationsResponse = try? await APIClient.shared.get(
+                    "/api/v1/notifications"
+                ) {
+                    unreadCount = response.unreadCount
                 }
             }
         }

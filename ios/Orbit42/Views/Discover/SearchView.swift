@@ -8,8 +8,6 @@ struct SearchView: View {
     @State private var suggestions = FollowSuggestionsViewModel()
     /// 스트림의 시간 로그 카드 탭 → 뷰어
     @State private var selectedStreamPost: TimelogPost?
-    /// 안 읽은 알림 수 — 벨 뱃지
-    @State private var unreadCount = 0
     @FocusState private var isSearchFocused: Bool
 
     var body: some View {
@@ -22,37 +20,11 @@ struct SearchView: View {
         }
         .navigationTitle("오르빗")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                NavigationLink {
-                    NotificationsView { unreadCount = 0 }
-                } label: {
-                    Image(systemName: "bell")
-                        .overlay(alignment: .topTrailing) {
-                            if unreadCount > 0 {
-                                Text(unreadCount > 9 ? "9+" : "\(unreadCount)")
-                                    .font(.system(size: 9, weight: .bold))
-                                    .foregroundStyle(.white)
-                                    .padding(.horizontal, 4)
-                                    .padding(.vertical, 1.5)
-                                    .background(.red, in: Capsule())
-                                    .offset(x: 8, y: -6)
-                            }
-                        }
-                }
-                .accessibilityLabel("알림")
-            }
-        }
         .task {
             async let orbit: Void = viewModel.loadOrbit()
             async let stream: Void = viewModel.loadStream()
             async let suggested: Void = suggestions.load()
             _ = await (orbit, stream, suggested)
-            if let response: NotificationsResponse = try? await APIClient.shared.get(
-                "/api/v1/notifications"
-            ) {
-                unreadCount = response.unreadCount
-            }
         }
         .sheet(item: $selectedStreamPost) { post in
             TimelogViewerSheet(post: post)
