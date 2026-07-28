@@ -52,6 +52,12 @@ export type CalendarEventInput = {
  *   When provided, filters BOTH local events (by calendar_id) AND Google
  *   events (by resolving each native calendar's `google_calendar_id`).
  */
+function parseCoord(raw: string | null | undefined): number | null {
+  if (!raw) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
 export async function listEventsForUser(
   userId: string,
   year: number,
@@ -156,8 +162,8 @@ export async function listEventsForUser(
         calendar_id: gcalToNative.get(calId) ?? null,
         business_id: null,
         location: item.location || null,
-        location_lat: null,
-        location_lng: null,
+        location_lat: parseCoord(item.extendedProperties?.private?.orbit42Lat),
+        location_lng: parseCoord(item.extendedProperties?.private?.orbit42Lng),
         source: "google" as const,
         tentative: item.status === "tentative",
         created_at: item.created || "",
@@ -229,6 +235,15 @@ export async function createEventForUser(
       description: input.description || undefined,
       location: input.location || undefined,
     };
+    // 구글 이벤트에는 좌표 컬럼이 없어 extendedProperties 에 심어 왕복한다.
+    if (input.location_lat != null && input.location_lng != null) {
+      event.extendedProperties = {
+        private: {
+          orbit42Lat: String(input.location_lat),
+          orbit42Lng: String(input.location_lng),
+        },
+      };
+    }
     if (input.all_day) {
       event.start = { date: input.start_at.split("T")[0] };
       event.end = { date: input.end_at.split("T")[0] };
@@ -251,8 +266,8 @@ export async function createEventForUser(
       business_id: null,
       calendar_id: calendarId,
       location: input.location ?? null,
-      location_lat: null,
-      location_lng: null,
+      location_lat: input.location_lat ?? null,
+      location_lng: input.location_lng ?? null,
       source: "google",
       tentative: false,
       created_at: now,
@@ -336,12 +351,22 @@ function googleEventBody(input: {
   end_at: string;
   all_day: boolean;
   location?: string | null;
+  location_lat?: number | null;
+  location_lng?: number | null;
 }): Record<string, unknown> {
   const body: Record<string, unknown> = {
     summary: input.title,
     description: input.description || undefined,
     location: input.location || undefined,
   };
+  if (input.location_lat != null && input.location_lng != null) {
+    body.extendedProperties = {
+      private: {
+        orbit42Lat: String(input.location_lat),
+        orbit42Lng: String(input.location_lng),
+      },
+    };
+  }
   if (input.all_day) {
     body.start = { date: input.start_at.split("T")[0] };
     body.end = { date: input.end_at.split("T")[0] };
@@ -382,7 +407,7 @@ export async function moveEventToCalendar(
   if (!isGoogleEvent) {
     const { data: row } = await db
       .from("events")
-      .select("id, title, description, start_at, end_at, all_day, location")
+      .select("id, title, description, start_at, end_at, all_day, location, location_lat, location_lng")
       .eq("id", eventId)
       .eq("user_id", userId)
       .maybeSingle();
@@ -418,6 +443,8 @@ export async function moveEventToCalendar(
       end_at: patch.end_at ?? ((row.end_at as string | null) || (row.start_at as string)),
       all_day: patch.all_day ?? Boolean(row.all_day),
       location: (row.location as string | null) ?? null,
+      location_lat: (row.location_lat as number | null) ?? null,
+      location_lng: (row.location_lng as number | null) ?? null,
     };
     let createdId: string | null | undefined;
     try {
@@ -524,6 +551,14 @@ export async function moveEventToCalendar(
     end_at: patch.end_at ?? (endIso as string),
     all_day: patch.all_day ?? allDay,
     location: ((g as { location?: string | null }).location ?? null) as string | null,
+    location_lat: parseCoord(
+      (g as { extendedProperties?: { private?: Record<string, string> } })
+        .extendedProperties?.private?.orbit42Lat,
+    ),
+    location_lng: parseCoord(
+      (g as { extendedProperties?: { private?: Record<string, string> } })
+        .extendedProperties?.private?.orbit42Lng,
+    ),
   };
   const { data: inserted, error: insErr } = await db
     .from("events")
@@ -536,6 +571,8 @@ export async function moveEventToCalendar(
       end_at: merged.end_at,
       all_day: merged.all_day,
       location: merged.location,
+      location_lat: merged.location_lat,
+      location_lng: merged.location_lng,
     })
     .select("id")
     .single();
