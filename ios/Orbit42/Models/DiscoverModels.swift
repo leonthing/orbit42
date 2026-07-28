@@ -373,6 +373,21 @@ struct SlotBookingResponse: Decodable, Sendable {
     let slot: BookableSlot
     let options: [BookingOption]
     let auctionNotice: String?
+    /// 이 슬롯에 연결된 서비스(메뉴) — 예약 시 함께 고를 수 있다
+    let menus: [BookableMenu]?
+}
+
+/// 예약 화면에서 고를 수 있는 서비스 항목.
+struct BookableMenu: Decodable, Identifiable, Sendable {
+    let id: String
+    let name: String
+    let category: String?
+    let description: String?
+    let priceCents: Int
+
+    var priceText: String {
+        priceCents == 0 ? "무료" : DiscoverFormat.priceText(cents: priceCents)
+    }
 }
 
 /// 예약 화면의 slot 객체 (내 슬롯 관리용 SlotDetail 과 계약이 다르다).
@@ -394,6 +409,8 @@ struct BookableSlot: Decodable, Sendable {
 
     /// 내 슬롯이면 예약 버튼을 숨긴다.
     let isMine: Bool
+    /// 결제 방식 — "offline"(만나서 결제)
+    let paymentMethod: String?
 
     var hostDisplayName: String {
         if let hostName, !hostName.isEmpty { return hostName }
@@ -450,6 +467,7 @@ struct BookSlotRequest: Encodable {
     let availabilityId: String?
     let message: String?
     let location: String?
+    var selectedMenuIds: [String]?
 }
 
 /// `{"ok":true,"status":"confirmed"|"pending"}`

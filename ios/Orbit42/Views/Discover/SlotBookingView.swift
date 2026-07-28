@@ -97,6 +97,8 @@ struct SlotBookingView: View {
                     if data.slot.locations.count > 1 {
                         locationPicker(data.slot.locations)
                     }
+                    servicesSection(data)
+                    paymentNotice(data)
                     optionsSection(data)
                 }
             }
@@ -217,6 +219,81 @@ struct SlotBookingView: View {
                 .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
             }
             .disabled(viewModel.isReloadingOptions)
+        }
+    }
+
+    // MARK: - 서비스 · 결제 안내
+
+    @ViewBuilder
+    private func servicesSection(_ data: SlotBookingResponse) -> some View {
+        if let menus = data.menus, !menus.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("함께 예약할 서비스")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Theme.secondaryText)
+
+                ForEach(menus) { menu in
+                    Button {
+                        if viewModel.selectedMenuIds.contains(menu.id) {
+                            viewModel.selectedMenuIds.remove(menu.id)
+                        } else {
+                            viewModel.selectedMenuIds.insert(menu.id)
+                        }
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: viewModel.selectedMenuIds.contains(menu.id)
+                                  ? "checkmark.circle.fill" : "circle")
+                                .foregroundStyle(viewModel.selectedMenuIds.contains(menu.id)
+                                                 ? Theme.accent : Theme.secondaryText)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(menu.name)
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundStyle(Theme.primaryText)
+                                if let description = menu.description, !description.isEmpty {
+                                    Text(description)
+                                        .font(.caption)
+                                        .foregroundStyle(Theme.secondaryText)
+                                        .lineLimit(2)
+                                        .multilineTextAlignment(.leading)
+                                }
+                            }
+                            Spacer(minLength: 8)
+                            Text(menu.priceText)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Theme.accent)
+                        }
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    /// 유료 예약이면 "만나서 결제" 안내 — 앱에는 결제 모듈이 없다.
+    @ViewBuilder
+    private func paymentNotice(_ data: SlotBookingResponse) -> some View {
+        let total = data.slot.priceCents / 100 + viewModel.selectedMenusTotalKrw
+        if total > 0 {
+            HStack(spacing: 10) {
+                Image(systemName: "wonsign.circle")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.accent)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("만나서 결제")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.primaryText)
+                    Text("총 \(DiscoverFormat.priceText(cents: total * 100)) · 현장에서 호스트와 직접 결제해요.")
+                        .font(.caption)
+                        .foregroundStyle(Theme.secondaryText)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Theme.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
         }
     }
 

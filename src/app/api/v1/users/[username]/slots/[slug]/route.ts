@@ -44,7 +44,19 @@ export async function GET(
       hostUsername: host.username,
       hostName: host.display_name ?? host.username,
       isMine: session.username === host.username,
+      // 결제 방식 — 현재는 만나서 결제(offline)만 지원
+      paymentMethod: slot.payment_method ?? "offline",
     },
+    // 이 슬롯에 붙은 서비스(메뉴) — 예약할 때 추가로 고를 수 있다
+    menus: (await (await import("@/lib/menus")).listMenusForSlot(slot.id))
+      .filter((m) => m.active)
+      .map((m) => ({
+        id: m.id,
+        name: m.name,
+        category: m.category,
+        description: m.description,
+        priceCents: m.price_cents,
+      })),
     options: options.slice(0, 100).map((o) => ({
       startAt: o.start_at,
       endAt: o.end_at,
@@ -95,6 +107,8 @@ export async function POST(
     availabilityId?: string;
     message?: string;
     location?: string | null;
+    /** 함께 예약할 서비스(메뉴) id */
+    selectedMenuIds?: string[];
   };
   try {
     body = await request.json();
@@ -111,6 +125,9 @@ export async function POST(
     availabilityId: body.availabilityId,
     message: body.message?.slice(0, 1000),
     selected_location: body.location ?? null,
+    selected_menu_ids: Array.isArray(body.selectedMenuIds)
+      ? body.selectedMenuIds.map(String).slice(0, 20)
+      : undefined,
   });
   if ("error" in result && result.error) {
     return Response.json({ error: result.error }, { status: 400 });

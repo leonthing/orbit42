@@ -12,6 +12,16 @@ final class SlotBookingViewModel {
 
     /// nil 이면 아직 최초 로딩 전.
     private(set) var data: SlotBookingResponse?
+    /// 함께 예약할 서비스(메뉴)
+    var selectedMenuIds: Set<String> = []
+
+    /// 선택한 서비스 금액 합계 (원)
+    var selectedMenusTotalKrw: Int {
+        (data?.menus ?? [])
+            .filter { selectedMenuIds.contains($0.id) }
+            .reduce(0) { $0 + $1.priceCents / 100 }
+    }
+
     private(set) var isLoading = false
     /// 최초 로딩 실패 메시지 (전체 화면 에러 상태용)
     private(set) var errorMessage: String?
@@ -187,7 +197,8 @@ final class SlotBookingViewModel {
             startAt: option.availabilityId == nil ? option.startAtRaw : nil,
             availabilityId: option.availabilityId,
             message: trimmedMessage.isEmpty ? nil : trimmedMessage,
-            location: hasLocations ? selectedLocation ?? data?.slot.locations.first : nil
+            location: hasLocations ? selectedLocation ?? data?.slot.locations.first : nil,
+            selectedMenuIds: selectedMenuIds.isEmpty ? nil : Array(selectedMenuIds)
         )
 
         do {

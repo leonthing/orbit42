@@ -41,6 +41,10 @@ struct SlotDetail: Decodable, Identifiable, Sendable {
     let validUntil: String?
     /// 공유 링크(OG) 미리보기에 쓰이는 슬롯 이미지 (첫 장이 헤더)
     let imageUrls: [String]?
+    /// 이 슬롯에 연결된 서비스(메뉴) id
+    let menuIds: [String]?
+    /// 결제 방식 — 현재는 "offline"(만나서 결제)
+    let paymentMethod: String?
 
     var isAuction: Bool { pricingModel == "auction" }
 
@@ -61,6 +65,7 @@ struct SlotDetail: Decodable, Identifiable, Sendable {
         case shareUrl, createdAt
         case locations, workingHours, slotIntervalMin, minNoticeHours
         case maxAdvanceDays, bufferMin, validFrom, validUntil, imageUrls
+        case menuIds, paymentMethod
     }
 
     init(from decoder: Decoder) throws {
@@ -90,6 +95,8 @@ struct SlotDetail: Decodable, Identifiable, Sendable {
         validFrom = try container.decodeIfPresent(String.self, forKey: .validFrom)
         validUntil = try container.decodeIfPresent(String.self, forKey: .validUntil)
         imageUrls = try container.decodeIfPresent([String].self, forKey: .imageUrls)
+        menuIds = try container.decodeIfPresent([String].self, forKey: .menuIds)
+        paymentMethod = try container.decodeIfPresent(String.self, forKey: .paymentMethod)
     }
 }
 
@@ -195,13 +202,15 @@ struct SlotPatchRequest: Encodable, Sendable {
     var validFrom: PatchValue<String>?
     var validUntil: PatchValue<String>?
     var active: PatchValue<Bool>?
+    /// 연결할 서비스(메뉴) id — 통째로 교체
+    var menuIds: [String]?
 
     var isEmpty: Bool {
         title == nil && description == nil && durationMin == nil && priceCents == nil
             && capacity == nil && slotType == nil && autoApprove == nil && locations == nil
             && mode == nil && workingHours == nil && slotIntervalMin == nil
             && minNoticeHours == nil && maxAdvanceDays == nil && bufferMin == nil
-            && validFrom == nil && validUntil == nil && active == nil
+            && validFrom == nil && validUntil == nil && active == nil && menuIds == nil
     }
 }
 

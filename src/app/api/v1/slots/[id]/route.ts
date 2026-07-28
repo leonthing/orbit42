@@ -28,7 +28,11 @@ export async function GET(
   if (!slot) {
     return Response.json({ error: "슬롯을 찾을 수 없어요." }, { status: 404 });
   }
-  return Response.json({ slot: toApiSlotDetail(slot, session.username) });
+  const { listMenusForSlot } = await import("@/lib/menus");
+  const menus = await listMenusForSlot(slot.id);
+  return Response.json({
+    slot: toApiSlotDetail(slot, session.username, menus.map((m) => m.id)),
+  });
 }
 
 const SLOT_TYPES: SlotType[] = ["1on1", "companion", "group"];
@@ -178,8 +182,33 @@ export async function PATCH(
   const validUntil = parseIsoOrNull(body.validUntil);
   if (validUntil !== undefined) patch.valid_until = validUntil;
 
-  if (Object.keys(patch).length === 0) {
+  // 서비스(메뉴) 연결 — menuIds 배열을 통째로 교체한다.
+  let menuIdsPatch: string[] | null = null;
+  if (Array.isArray(body.menuIds)) {
+    menuIdsPatch = (body.menuIds as unknown[]).map(String);
+  }
+
+  if (Object.keys(patch).length === 0 && menuIdsPatch === null) {
     return Response.json({ error: "변경할 내용이 없어요." }, { status: 400 });
+  }
+
+  if (menuIdsPatch !== null) {
+    const { setSlotMenus } = await import("@/lib/menus");
+    const menuResult = await setSlotMenus(params.id, menuIdsPatch);
+    if (menuResult && "error" in menuResult && menuResult.error) {
+      return Response.json({ error: menuResult.error }, { status: 400 });
+    }
+    if (Object.keys(patch).length === 0) {
+      const only = await findMySlot(params.id);
+      if (!only) {
+        return Response.json({ error: "슬롯을 찾을 수 없어요." }, { status: 404 });
+      }
+      const { listMenusForSlot } = await import("@/lib/menus");
+      const menus = await listMenusForSlot(params.id);
+      return Response.json({
+        slot: toApiSlotDetail(only, session.username, menus.map((m) => m.id)),
+      });
+    }
   }
 
   const result = await updateSlot(params.id, patch);
@@ -191,5 +220,9 @@ export async function PATCH(
   if (!updated) {
     return Response.json({ error: "슬롯을 찾을 수 없어요." }, { status: 404 });
   }
-  return Response.json({ slot: toApiSlotDetail(updated, session.username) });
+  const { listMenusForSlot } = await import("@/lib/menus");
+  const attached = await listMenusForSlot(params.id);
+  return Response.json({
+    slot: toApiSlotDetail(updated, session.username, attached.map((m) => m.id)),
+  });
 }

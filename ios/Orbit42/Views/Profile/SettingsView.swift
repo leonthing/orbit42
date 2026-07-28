@@ -98,6 +98,12 @@ struct SettingsView: View {
             }
 
             NavigationLink {
+                ServicesView()
+            } label: {
+                menuRow(icon: "list.bullet.rectangle", title: "서비스")
+            }
+
+            NavigationLink {
                 BlockedUsersView()
             } label: {
                 menuRow(icon: "hand.raised", title: "차단 관리")

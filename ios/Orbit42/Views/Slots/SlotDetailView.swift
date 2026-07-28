@@ -30,6 +30,9 @@ struct SlotDetailView: View {
     @State private var sharePhotoItems: [PhotosPickerItem] = []
     @State private var isUploadingShareImages = false
     @State private var shareImageError: String?
+    /// 이 슬롯에 연결된 서비스(메뉴) id — nil 이면 서버 값 사용
+    @State private var linkedMenuIds: Set<String>?
+    @State private var allMenus: [ServiceMenu]?
 
     init(route: SlotRoute, listViewModel: SlotsViewModel) {
         self.route = route
@@ -148,6 +151,7 @@ struct SlotDetailView: View {
                 windowsSection
             }
             validitySection
+            servicesSection
             shareImagesSection
             previewSection
         }
@@ -446,6 +450,91 @@ struct SlotDetailView: View {
             Text("설정하지 않으면 기간 제한 없이 열려요")
         }
         .listRowBackground(Theme.surface)
+    }
+
+    // MARK: 서비스 (메뉴 연결)
+
+    private var currentMenuIds: Set<String> {
+        linkedMenuIds ?? Set(viewModel.detail?.menuIds ?? [])
+    }
+
+    private var servicesSection: some View {
+        Section {
+            if let allMenus {
+                if allMenus.isEmpty {
+                    NavigationLink {
+                        ServicesView()
+                    } label: {
+                        Label("서비스 만들러 가기", systemImage: "plus.circle")
+                            .foregroundStyle(Theme.accent)
+                    }
+                } else {
+                    ForEach(allMenus) { menu in
+                        Button {
+                            toggleMenu(menu)
+                        } label: {
+                            HStack(spacing: 10) {
+                                Image(systemName: currentMenuIds.contains(menu.id)
+                                      ? "checkmark.circle.fill" : "circle")
+                                    .foregroundStyle(currentMenuIds.contains(menu.id)
+                                                     ? Theme.accent : Theme.secondaryText)
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(menu.name)
+                                        .font(.subheadline)
+                                        .foregroundStyle(Theme.primaryText)
+                                    if let category = menu.category, !category.isEmpty {
+                                        Text(category)
+                                            .font(.caption2)
+                                            .foregroundStyle(Theme.secondaryText)
+                                    }
+                                }
+                                Spacer(minLength: 8)
+                                Text(menu.priceText)
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundStyle(Theme.secondaryText)
+                            }
+                        }
+                    }
+                    NavigationLink {
+                        ServicesView()
+                    } label: {
+                        Text("서비스 관리")
+                            .font(.footnote)
+                            .foregroundStyle(Theme.accent)
+                    }
+                }
+            } else {
+                HStack {
+                    Spacer()
+                    ProgressView().tint(Theme.secondaryText)
+                    Spacer()
+                }
+            }
+        } header: {
+            Text("서비스")
+        } footer: {
+            Text("연결한 서비스는 예약 화면에서 함께 고를 수 있어요. 결제는 만나서 진행해요.")
+        }
+        .listRowBackground(Theme.surface)
+        .task {
+            if allMenus == nil,
+               let response: MenusResponse = try? await APIClient.shared.get("/api/v1/menus") {
+                allMenus = response.menus.filter(\.active)
+            }
+        }
+    }
+
+    private func toggleMenu(_ menu: ServiceMenu) {
+        var next = currentMenuIds
+        if next.contains(menu.id) { next.remove(menu.id) } else { next.insert(menu.id) }
+        linkedMenuIds = next
+        Task {
+            struct MenuPatch: Encodable { let menuIds: [String] }
+            let _: SlotDetailResponse? = try? await APIClient.shared.patch(
+                "/api/v1/slots/\(route.id)",
+                body: MenuPatch(menuIds: Array(next))
+            )
+        }
     }
 
     // MARK: 공유 이미지 (OG)

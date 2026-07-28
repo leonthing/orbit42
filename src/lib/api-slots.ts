@@ -19,13 +19,19 @@ export function toApiSlot(s: TimeSlot, username: string) {
     pricingModel: s.pricing_model,
     active: s.active,
     autoApprove: s.auto_approve,
+    // 결제 방식 — 현재는 "offline"(만나서 결제)만. 결제 모듈은 이후 도입.
+    paymentMethod: s.payment_method ?? "offline",
     shareUrl: `${SITE_URL.replace(/\/$/, "")}/${username}/s/${s.slug}`,
     createdAt: s.created_at,
   };
 }
 
 /** 상세/편집 화면용 — 목록 필드에 편집 가능한 설정 전부를 더한다. */
-export function toApiSlotDetail(s: TimeSlot, username: string) {
+export function toApiSlotDetail(
+  s: TimeSlot,
+  username: string,
+  menuIds?: string[],
+) {
   return {
     ...toApiSlot(s, username),
     locations: s.locations ?? [],
@@ -37,5 +43,6 @@ export function toApiSlotDetail(s: TimeSlot, username: string) {
     validFrom: s.valid_from,
     validUntil: s.valid_until,
     imageUrls: s.image_urls ?? [],
+    menuIds: menuIds ?? [],
   };
 }
