@@ -1,5 +1,6 @@
 import PhotosUI
 import SwiftUI
+import UserNotifications
 import UIKit
 
 /// 가입 직후 온보딩 위저드.
@@ -9,7 +10,7 @@ struct OnboardingFlowView: View {
     @Environment(AuthViewModel.self) private var auth
 
     private enum Step: Int, CaseIterable {
-        case consent, profile, interests, wage, calendar, verifyEmail, follow
+        case consent, profile, interests, wage, calendar, notifications, verifyEmail, follow
     }
 
     @State private var steps: [Step] = []
@@ -60,6 +61,7 @@ struct OnboardingFlowView: View {
             case .interests: InterestsStep(onNext: advance)
             case .wage: WageStep(onNext: advance)
             case .calendar: CalendarStep(onNext: advance)
+            case .notifications: NotificationPermissionStep(onNext: advance)
             case .verifyEmail: VerifyEmailStep(onNext: advance)
             case .follow: FollowStep()
             }
@@ -687,6 +689,63 @@ private struct CalendarStep: View {
             }
         }
         .task { await google.load() }
+    }
+}
+
+// MARK: - 5.5 알림 권한
+
+private struct NotificationPermissionStep: View {
+    let onNext: () -> Void
+    @State private var isRequesting = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            stepHeader(
+                icon: "bell.badge",
+                title: "알림을 켜 주세요",
+                subtitle: "예약 요청·일정 초대·팔로우한 사람의\n새 타임슬롯 소식을 놓치지 않게 알려드려요."
+            )
+
+            VStack(alignment: .leading, spacing: 10) {
+                notificationExample(icon: "calendar.badge.clock", text: "새 예약 요청이 도착했어요")
+                notificationExample(icon: "person.2", text: "OO님이 일정에 초대했어요")
+                notificationExample(icon: "clock.badge.checkmark", text: "OO님이 커피챗 타임슬롯을 열었어요")
+            }
+            .padding(.horizontal, 24)
+
+            Spacer()
+
+            primaryButton("알림 허용", busy: isRequesting) {
+                requestPermission()
+            }
+            skipButton { onNext() }
+        }
+    }
+
+    private func notificationExample(icon: String, text: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.subheadline)
+                .foregroundStyle(Theme.accent)
+                .frame(width: 26)
+            Text(text)
+                .font(.subheadline)
+                .foregroundStyle(Theme.primaryText)
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func requestPermission() {
+        isRequesting = true
+        Task {
+            _ = try? await UNUserNotificationCenter.current().requestAuthorization(
+                options: [.alert, .badge, .sound]
+            )
+            isRequesting = false
+            onNext()
+        }
     }
 }
 

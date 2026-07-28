@@ -1,3 +1,4 @@
+import CoreLocation
 import MapKit
 import SwiftUI
 
@@ -126,16 +127,20 @@ struct EventLocationSection: View {
 // MARK: - 자동완성 모델
 
 /// MKLocalSearchCompleter 래퍼 — 300ms 디바운스 없이 완성기 자체 스로틀에 맡긴다.
+/// 첫 검색 시 위치 권한을 요청해, 허용되면 내 주변 결과를 우선 보여준다.
 @MainActor
 @Observable
-final class LocationSearchModel: NSObject, MKLocalSearchCompleterDelegate {
+final class LocationSearchModel: NSObject, MKLocalSearchCompleterDelegate, CLLocationManagerDelegate {
     private(set) var suggestions: [MKLocalSearchCompletion] = []
     private let completer = MKLocalSearchCompleter()
+    private let locationManager = CLLocationManager()
+    private var didRequestLocation = false
 
     override init() {
         super.init()
         completer.delegate = self
         completer.resultTypes = [.address, .pointOfInterest]
+        locationManager.delegate = self
     }
 
     func update(query: String) {
@@ -143,9 +148,51 @@ final class LocationSearchModel: NSObject, MKLocalSearchCompleterDelegate {
         if trimmed.isEmpty {
             suggestions = []
         } else {
+            requestLocationIfNeeded()
             completer.queryFragment = trimmed
         }
     }
+
+    /// 첫 검색에서 한 번만 — 권한 요청 + 현재 위치로 검색 지역 바이어스.
+    private func requestLocationIfNeeded() {
+        guard !didRequestLocation else { return }
+        didRequestLocation = true
+        switch locationManager.authorizationStatus {
+        case .notDetermined:
+            locationManager.requestWhenInUseAuthorization()
+        case .authorizedWhenInUse, .authorizedAlways:
+            locationManager.requestLocation()
+        default:
+            break
+        }
+    }
+
+    nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        let status = manager.authorizationStatus
+        Task { @MainActor in
+            if status == .authorizedWhenInUse || status == .authorizedAlways {
+                self.locationManager.requestLocation()
+            }
+        }
+    }
+
+    nonisolated func locationManager(
+        _ manager: CLLocationManager,
+        didUpdateLocations locations: [CLLocation]
+    ) {
+        guard let coordinate = locations.first?.coordinate else { return }
+        Task { @MainActor in
+            self.completer.region = MKCoordinateRegion(
+                center: coordinate,
+                span: MKCoordinateSpan(latitudeDelta: 0.5, longitudeDelta: 0.5)
+            )
+        }
+    }
+
+    nonisolated func locationManager(
+        _ manager: CLLocationManager,
+        didFailWithError error: Error
+    ) {}
 
     func clear() {
         suggestions = []
