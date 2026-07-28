@@ -31,6 +31,9 @@ struct CalendarEditorSheet: View {
     private let initialGoalDeadline: String?
     /// onAppear 시점 단가 — 바뀌었을 때만 PATCH 에 담는다
     @State private var initialRate: Int?
+    /// 생성 모드에서 미리 고른 "함께 쓸 사람" — 저장 후 초대한다
+    @State private var pendingInvites: [SearchUser] = []
+    @State private var inviteRole = "editor"
     @State private var isSaving = false
     @State private var errorMessage: String?
 
@@ -155,6 +158,10 @@ struct CalendarEditorSheet: View {
                     Section {
                         Toggle("Google 캘린더로도 만들기", isOn: $linkGoogle)
                             .tint(Theme.accent)
+                            // Google 캘린더는 orbit42 공유 대상이 아니라 고른 사람을 비운다
+                            .onChange(of: linkGoogle) { _, isOn in
+                                if isOn { pendingInvites = [] }
+                            }
                     } footer: {
                         Text("연결된 Google 계정에 같은 이름의 캘린더를 함께 만들어요")
                             .foregroundStyle(Theme.secondaryText)
@@ -198,6 +205,32 @@ struct CalendarEditorSheet: View {
                     initialRate = rate
                 }
             }
+        }
+    }
+
+    // MARK: - 생성 직후 초대
+
+    /// 캘린더가 만들어진 뒤에야 멤버를 넣을 수 있으므로 여기서 몰아서 초대한다.
+    /// 캘린더 자체는 이미 만들어졌으니 초대가 실패해도 되돌리지 않고 알리기만 한다.
+    private func inviteSelected(to calendar: CalendarInfo?) async {
+        guard !linkGoogle, !pendingInvites.isEmpty else { return }
+        guard let calendar else {
+            viewModel.actionMessage = "캘린더는 만들었어요. 함께 쓸 사람은 캘린더 편집에서 추가해 주세요."
+            return
+        }
+        var failed: [String] = []
+        for user in pendingInvites {
+            do {
+                let _: CalendarMembersResponse = try await APIClient.shared.post(
+                    "/api/v1/calendars/\(calendar.id)/members",
+                    body: AddMemberRequest(username: user.username, role: inviteRole)
+                )
+            } catch {
+                failed.append(user.preferredName)
+            }
+        }
+        if !failed.isEmpty {
+            viewModel.actionMessage = "\(failed.joined(separator: ", "))님은 초대하지 못했어요. 캘린더 편집에서 다시 시도해 주세요."
         }
     }
 
@@ -247,7 +280,12 @@ struct CalendarEditorSheet: View {
 
     @ViewBuilder
     private var shareSection: some View {
-        if let original, original.isNative {
+        if isCreate {
+            // Google 캘린더로 만들면 orbit42 안의 공유 대상이 아니므로 숨긴다.
+            if !linkGoogle {
+                CalendarInvitePicker(selected: $pendingInvites, role: $inviteRole)
+            }
+        } else if let original, original.isNative {
             Section {
                 NavigationLink {
                     CalendarShareView(calendar: original)
@@ -366,7 +404,7 @@ struct CalendarEditorSheet: View {
                     }
                     try await viewModel.update(id: original.id, request: request)
                 } else {
-                    try await viewModel.create(
+                    let created = try await viewModel.create(
                         CreateCalendarRequest(
                             name: trimmedName,
                             purpose: purpose.rawValue,
@@ -379,6 +417,7 @@ struct CalendarEditorSheet: View {
                             goalDeadline: goalDeadlineString
                         )
                     )
+                    await inviteSelected(to: created)
                 }
                 dismiss()
             } catch let apiError as APIError {

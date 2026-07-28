@@ -243,8 +243,19 @@ function NewCalendarForm({
   const [purpose, setPurpose] = useState<CalendarPurpose>("personal");
   const [color, setColor] = useState(CALENDAR_COLORS[0]);
   const [visibility, setVisibility] = useState<CalendarVisibility>("private");
+  // 만들면서 같이 초대할 사람들 — 캘린더가 생긴 뒤에야 초대할 수 있어 모아둔다
+  const [invites, setInvites] = useState<string[]>([]);
+  const [inviteHandle, setInviteHandle] = useState("");
+  const [inviteRole, setInviteRole] = useState("editor");
   const [pending, startTransition] = useTransition();
   const toast = useToast();
+
+  const addInvite = () => {
+    const handle = inviteHandle.trim().replace(/^@/, "");
+    if (!handle || invites.includes(handle)) return setInviteHandle("");
+    setInvites((prev) => [...prev, handle]);
+    setInviteHandle("");
+  };
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -257,7 +268,26 @@ function NewCalendarForm({
         visibility,
       });
       if (res.error) return toast.error(res.error);
-      toast.success("캘린더를 만들었어요.");
+
+      // 캘린더는 이미 만들어졌으므로, 초대가 실패해도 되돌리지 않고 알리기만 한다.
+      const failed: string[] = [];
+      if (res.id && invites.length > 0) {
+        for (const handle of invites) {
+          const invited = await fetch(`/api/v1/calendars/${res.id}/members`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: handle, role: inviteRole }),
+          });
+          if (!invited.ok) failed.push(handle);
+        }
+      }
+      if (failed.length > 0) {
+        toast.error(
+          `캘린더는 만들었어요. @${failed.join(", @")} 초대는 실패해서 편집에서 다시 시도해 주세요.`,
+        );
+      } else {
+        toast.success("캘린더를 만들었어요.");
+      }
       onDone();
     });
   };
@@ -320,6 +350,65 @@ function NewCalendarForm({
             {v.label}
           </button>
         ))}
+      </div>
+
+      <div className="space-y-2 border-t border-charcoal-800/40 pt-3">
+        <p className="text-[11px] text-charcoal-500">
+          함께 쓸 사람(선택) — 초대한 사람도 이 캘린더에 일정을 기록할 수 있어요.
+          만든 뒤에도 추가할 수 있어요.
+        </p>
+        {invites.length > 0 && (
+          <ul className="flex flex-wrap gap-1.5">
+            {invites.map((handle) => (
+              <li
+                key={handle}
+                className="flex items-center gap-1.5 rounded-full bg-charcoal-900/60 px-2.5 py-1 text-xs text-charcoal-200"
+              >
+                @{handle}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setInvites((prev) => prev.filter((h) => h !== handle))
+                  }
+                  className="text-charcoal-600 hover:text-charcoal-300"
+                  aria-label={`@${handle} 빼기`}
+                >
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="flex gap-2">
+          <input
+            value={inviteHandle}
+            onChange={(e) => setInviteHandle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addInvite();
+              }
+            }}
+            placeholder="@핸들로 초대"
+            className="flex-1 rounded-md border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-500/60 focus:outline-none"
+          />
+          <select
+            value={inviteRole}
+            onChange={(e) => setInviteRole(e.target.value)}
+            className="rounded-md border border-charcoal-800/60 bg-charcoal-900/40 px-2 text-xs text-charcoal-200 focus:outline-none"
+          >
+            <option value="editor">함께 기록</option>
+            <option value="viewer">보기만</option>
+          </select>
+          <button
+            type="button"
+            onClick={addInvite}
+            disabled={!inviteHandle.trim()}
+            className="rounded-md border border-charcoal-700 px-3 py-1.5 text-xs text-charcoal-300 hover:border-charcoal-600 disabled:opacity-50"
+          >
+            추가
+          </button>
+        </div>
       </div>
 
       <div className="flex justify-end gap-2 pt-1">

@@ -64,25 +64,30 @@ export async function createNativeCalendar(args: {
   const db = getAdminClient();
   const hasGoal =
     !!args.goalTitle || args.goalTargetHours != null || !!args.goalDeadline;
-  const { error } = await db.from("calendars").insert({
-    user_id: userId,
-    name: args.name.trim(),
-    purpose: args.purpose,
-    color: args.color,
-    visibility: args.visibility ?? "private",
-    source: "native",
-    goal_title: args.goalTitle?.trim() || null,
-    goal_target_hours: args.goalTargetHours ?? null,
-    goal_deadline: args.goalDeadline ?? null,
-    // 목표가 설정된 채로 만들어지면 그 순간부터 집계 시작.
-    goal_started_at: hasGoal ? new Date().toISOString() : null,
-  });
+  // id 를 돌려준다 — 만들자마자 "함께 쓸 사람"을 초대하려면 새 캘린더 id 가 필요하다.
+  const { data, error } = await db
+    .from("calendars")
+    .insert({
+      user_id: userId,
+      name: args.name.trim(),
+      purpose: args.purpose,
+      color: args.color,
+      visibility: args.visibility ?? "private",
+      source: "native",
+      goal_title: args.goalTitle?.trim() || null,
+      goal_target_hours: args.goalTargetHours ?? null,
+      goal_deadline: args.goalDeadline ?? null,
+      // 목표가 설정된 채로 만들어지면 그 순간부터 집계 시작.
+      goal_started_at: hasGoal ? new Date().toISOString() : null,
+    })
+    .select("id")
+    .single();
   if (error) {
     console.error("createNativeCalendar", error);
     return { error: "생성에 실패했습니다." };
   }
   revalidatePath("/", "layout");
-  return { success: true };
+  return { success: true, id: data.id as string };
 }
 
 export async function createGoogleLinkedCalendar(args: {

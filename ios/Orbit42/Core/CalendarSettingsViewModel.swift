@@ -67,9 +67,14 @@ final class CalendarSettingsViewModel {
 
     // MARK: - 생성/수정 (시트에서 호출 — 실패 시 throw 해서 시트가 에러를 표시)
 
-    func create(_ request: CreateCalendarRequest) async throws {
+    /// 생성 후 만들어진 캘린더를 돌려준다 — 새 id 로 곧바로 멤버를 초대하기 위함.
+    /// (서버는 전체 목록만 주므로 생성 전에 없던 id 를 찾는다)
+    @discardableResult
+    func create(_ request: CreateCalendarRequest) async throws -> CalendarInfo? {
+        let before = Set((calendars ?? []).map(\.id))
         let response: CalendarsResponse = try await api.post("/api/v1/calendars", body: request)
         apply(response)
+        return (calendars ?? []).first { !before.contains($0.id) }
     }
 
     func update(id: String, request: UpdateCalendarRequest) async throws {
