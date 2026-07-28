@@ -12,6 +12,7 @@ struct AuthView: View {
     }
 
     @Environment(AuthViewModel.self) private var auth
+    @Environment(\.colorScheme) private var colorScheme
 
     @State private var mode: Mode
 
@@ -86,7 +87,7 @@ struct AuthView: View {
                 .foregroundStyle(Theme.accent)
             Text("orbit42")
                 .font(.largeTitle.weight(.bold))
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.primaryText)
             Text("시간을 자산으로 만드는 캘린더")
                 .font(.subheadline)
                 .foregroundStyle(Theme.secondaryText)
@@ -128,14 +129,14 @@ struct AuthView: View {
             .autocorrectionDisabled()
             .padding(14)
             .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
-            .foregroundStyle(.white)
+            .foregroundStyle(Theme.primaryText)
     }
 
     private func secureField(_ title: String, text: Binding<String>) -> some View {
         SecureField(title, text: text)
             .padding(14)
             .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
-            .foregroundStyle(.white)
+            .foregroundStyle(Theme.primaryText)
     }
 
     // MARK: - 제출
@@ -208,11 +209,11 @@ struct AuthView: View {
 
     private var divider: some View {
         HStack(spacing: 12) {
-            Rectangle().fill(Color.white.opacity(0.15)).frame(height: 1)
+            Rectangle().fill(Theme.fill(0.15)).frame(height: 1)
             Text("또는")
                 .font(.footnote)
                 .foregroundStyle(Theme.secondaryText)
-            Rectangle().fill(Color.white.opacity(0.15)).frame(height: 1)
+            Rectangle().fill(Theme.fill(0.15)).frame(height: 1)
         }
     }
 
@@ -224,7 +225,7 @@ struct AuthView: View {
         } onCompletion: { result in
             handleAppleResult(result)
         }
-        .signInWithAppleButtonStyle(.white)
+        .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
         .frame(height: 50)
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
@@ -255,6 +256,10 @@ struct AuthView: View {
             .frame(height: 50)
             .background(.white)
             .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(Theme.fill(0.15), lineWidth: 1)
+            )
         }
         .disabled(isSubmitting)
     }
@@ -303,6 +308,5 @@ struct AuthView: View {
 #Preview {
     AuthView()
         .environment(AuthViewModel())
-        .preferredColorScheme(.dark)
         .tint(Theme.accent)
 }

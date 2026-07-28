@@ -108,7 +108,7 @@ struct NotificationPrefsView: View {
         HStack(spacing: 8) {
             Text(pref.label)
                 .font(.subheadline)
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.primaryText)
                 .lineLimit(2)
 
             Spacer(minLength: 0)
@@ -148,6 +148,5 @@ struct NotificationPrefsView: View {
     NavigationStack {
         NotificationPrefsView()
     }
-    .preferredColorScheme(.dark)
     .tint(Theme.accent)
 }

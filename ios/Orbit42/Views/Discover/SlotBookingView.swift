@@ -113,7 +113,7 @@ struct SlotBookingView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text(slot.title)
                 .font(.title3.weight(.semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.primaryText)
 
             HStack(spacing: 6) {
                 Image(systemName: "person.circle")
@@ -154,10 +154,10 @@ struct SlotBookingView: View {
             Text(text)
         }
         .font(.caption.weight(.medium))
-        .foregroundStyle(.white.opacity(0.85))
+        .foregroundStyle(Theme.primaryText.opacity(0.85))
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
-        .background(Color.white.opacity(0.08), in: Capsule())
+        .background(Theme.fill(0.08), in: Capsule())
     }
 
     private func noteCard(icon: String, text: String) -> some View {
@@ -200,7 +200,7 @@ struct SlotBookingView: View {
                         .foregroundStyle(Theme.accent)
                     Text(viewModel.selectedLocation ?? locations[0])
                         .font(.subheadline)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                     Spacer(minLength: 0)
                     if viewModel.isReloadingOptions {
                         ProgressView()
@@ -236,7 +236,7 @@ struct SlotBookingView: View {
                         .foregroundStyle(Theme.secondaryText)
                     Text("지금은 예약 가능한 시간이 없어요")
                         .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                     Text("나중에 다시 확인해보세요")
                         .font(.footnote)
                         .foregroundStyle(Theme.secondaryText)
@@ -251,7 +251,7 @@ struct SlotBookingView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(dayText)
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Theme.primaryText)
                         LazyVGrid(
                             columns: [GridItem(.adaptive(minimum: 76), spacing: 8)],
                             alignment: .leading,
@@ -276,7 +276,7 @@ struct SlotBookingView: View {
             VStack(spacing: 2) {
                 Text(option.timeText)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.primaryText)
                 if option.remaining > 1 {
                     Text("\(option.remaining)자리")
                         .font(.caption2)
@@ -303,7 +303,7 @@ struct SlotBookingView: View {
                 .foregroundStyle(confirmed ? Color.green : Color.orange)
             Text(confirmed ? "예약이 확정됐어요" : "예약을 요청했어요")
                 .font(.title3.weight(.semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.primaryText)
             Text(
                 confirmed
                     ? "예약 탭 > 내가 한 예약에서 확인할 수 있어요"
@@ -377,7 +377,7 @@ private struct BookingMiniCalendar: View {
 
             Text(Self.monthTitleFormatter.string(from: viewModel.displayedMonth))
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.primaryText)
 
             Spacer()
 
@@ -445,7 +445,7 @@ private struct BookingMiniCalendar: View {
             VStack(spacing: 2) {
                 Text("\(calendar.component(.day, from: day))")
                     .font(.callout.weight(isSelected ? .semibold : .regular))
-                    .foregroundStyle(isAvailable ? .white : Theme.secondaryText.opacity(0.45))
+                    .foregroundStyle(isAvailable ? Theme.primaryText : Theme.secondaryText.opacity(0.45))
                     .frame(width: 32, height: 32)
                     .background {
                         if isSelected {
@@ -510,7 +510,7 @@ private struct BookingConfirmSheet: View {
                         if let slot = viewModel.data?.slot {
                             Text(slot.title)
                                 .font(.subheadline.weight(.medium))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(Theme.primaryText)
                         }
                         Label(
                             DiscoverFormat.dateTime.string(from: option.startAt),
@@ -531,7 +531,7 @@ private struct BookingConfirmSheet: View {
                 Section {
                     TextField("메시지 (선택)", text: $message, axis: .vertical)
                         .lineLimit(3...6)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                 } footer: {
                     Text("호스트에게 전할 말을 남길 수 있어요")
                         .foregroundStyle(Theme.secondaryText)
@@ -578,7 +578,6 @@ private struct BookingConfirmSheet: View {
             }
             .interactiveDismissDisabled(viewModel.isBooking)
         }
-        .preferredColorScheme(.dark)
     }
 
     private func book() {
@@ -598,6 +597,5 @@ private struct BookingConfirmSheet: View {
     NavigationStack {
         SlotBookingView(username: "leo", slug: "coffee")
     }
-    .preferredColorScheme(.dark)
     .tint(Theme.accent)
 }

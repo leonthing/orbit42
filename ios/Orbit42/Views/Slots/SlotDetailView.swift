@@ -465,7 +465,7 @@ struct SlotDetailView: View {
                                     image.resizable().scaledToFill()
                                 } else {
                                     ZStack {
-                                        Color.white.opacity(0.05)
+                                        Theme.fill(0.05)
                                         ProgressView().tint(Theme.secondaryText)
                                     }
                                 }
@@ -641,7 +641,7 @@ struct SlotDetailView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(Self.previewDayFormatter.string(from: day))
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Theme.primaryText)
                         LazyVGrid(
                             columns: [GridItem(.adaptive(minimum: 76), spacing: 8)],
                             alignment: .leading,
@@ -662,7 +662,7 @@ struct SlotDetailView: View {
                             .foregroundStyle(.orange)
                         Text("지금 조건으로는 예약 가능한 시간이 없어요")
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Theme.primaryText)
                     }
                     // 서버 진단 — 어느 설정이 막고 있는지 바로 알려준다.
                     if let reason = viewModel.availability?.emptyReason {
@@ -700,7 +700,7 @@ struct SlotDetailView: View {
                     .map(Self.previewTimeFormatter.string(from:)) ?? option.startAt
             )
             .font(.subheadline.weight(.semibold))
-            .foregroundStyle(.white)
+            .foregroundStyle(Theme.primaryText)
             if option.remaining > 1 {
                 Text("\(option.remaining)자리")
                     .font(.caption2)
@@ -709,7 +709,7 @@ struct SlotDetailView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
-        .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 10))
+        .background(Theme.fill(0.04), in: RoundedRectangle(cornerRadius: 10))
         .overlay(
             RoundedRectangle(cornerRadius: 10)
                 .strokeBorder(Theme.accent.opacity(0.4), lineWidth: 1)
@@ -786,7 +786,7 @@ private struct PreviewMiniCalendar: View {
             Spacer()
             Text(Self.monthFormatter.string(from: month))
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.primaryText)
             Spacer()
             Button {
                 shiftMonth(1)
@@ -842,7 +842,7 @@ private struct PreviewMiniCalendar: View {
                 Text("\(day)")
                     .font(.subheadline.weight(isAvailable ? .semibold : .regular))
                     .foregroundStyle(
-                        isSelected ? Color.white : (isAvailable ? .white : Theme.secondaryText.opacity(0.5))
+                        isSelected ? Color.white : (isAvailable ? Theme.primaryText : Theme.secondaryText.opacity(0.5))
                     )
                 Circle()
                     .fill(isAvailable ? Theme.accent : .clear)
@@ -873,6 +873,5 @@ private struct PreviewMiniCalendar: View {
             listViewModel: SlotsViewModel()
         )
     }
-    .preferredColorScheme(.dark)
     .tint(Theme.accent)
 }

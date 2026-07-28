@@ -28,7 +28,7 @@ struct AccountView: View {
                             .foregroundStyle(Theme.accent)
                             .frame(width: 26)
                         Text("비밀번호 변경")
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Theme.primaryText)
                     }
                 }
             }
@@ -41,10 +41,10 @@ struct AccountView: View {
                     HStack(spacing: 12) {
                         Image(systemName: "applelogo")
                             .font(.body)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Theme.primaryText)
                             .frame(width: 26)
                         Text("Apple 계정 연결됨")
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Theme.primaryText)
                         Spacer()
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundStyle(Color(red: 0x22 / 255, green: 0xC5 / 255, blue: 0x5E / 255))
@@ -59,11 +59,11 @@ struct AccountView: View {
                             } else {
                                 Image(systemName: "applelogo")
                                     .font(.body)
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(Theme.primaryText)
                                     .frame(width: 26)
                             }
                             Text("Apple 계정 연결")
-                                .foregroundStyle(.white)
+                                .foregroundStyle(Theme.primaryText)
                         }
                     }
                     .disabled(isLinkingApple)
@@ -265,6 +265,5 @@ final class AppleLinkCoordinator: NSObject,
         AccountView()
     }
     .environment(AuthViewModel())
-    .preferredColorScheme(.dark)
     .tint(Theme.accent)
 }

@@ -160,14 +160,14 @@ private struct LocationBufferRow: View {
                 HStack(spacing: 8) {
                     Text(buffer.name)
                         .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                         .lineLimit(1)
                     Text("이동 \(buffer.bufferMin)분")
                         .font(.caption2.weight(.medium))
                         .foregroundStyle(Theme.accent)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(Color.white.opacity(0.08), in: Capsule())
+                        .background(Theme.fill(0.08), in: Capsule())
                 }
                 if !buffer.aliases.isEmpty {
                     Text("별칭: \(buffer.aliases.joined(separator: ", "))")
@@ -242,7 +242,7 @@ private struct LocationBufferEditorSheet: View {
             Form {
                 Section("장소") {
                     TextField("장소 이름 (예: 강남 사무실)", text: $name)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                 }
                 .listRowBackground(Theme.surface)
 
@@ -388,6 +388,5 @@ private struct LocationBufferEditorSheet: View {
     NavigationStack {
         LocationBuffersView()
     }
-    .preferredColorScheme(.dark)
     .tint(Theme.accent)
 }

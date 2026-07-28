@@ -140,7 +140,7 @@ private struct CalendarSettingsRow: View {
                 HStack(spacing: 6) {
                     Text(calendar.name)
                         .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                         .lineLimit(1)
                     if calendar.source == "google" {
                         SettingBadge(text: "Google", color: Theme.secondaryText)
@@ -181,7 +181,7 @@ private struct SettingBadge: View {
             .foregroundStyle(color)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
-            .background(Color.white.opacity(0.08), in: Capsule())
+            .background(Theme.fill(0.08), in: Capsule())
     }
 }
 
@@ -189,6 +189,5 @@ private struct SettingBadge: View {
     NavigationStack {
         CalendarSettingsView()
     }
-    .preferredColorScheme(.dark)
     .tint(Theme.accent)
 }

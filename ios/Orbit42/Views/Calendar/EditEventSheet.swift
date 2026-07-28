@@ -73,7 +73,7 @@ struct EditEventSheet: View {
             Form {
                 Section {
                     TextField("제목", text: $title)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                 }
                 .listRowBackground(Theme.surface)
 
@@ -127,7 +127,7 @@ struct EditEventSheet: View {
                 Section {
                     TextField("메모 (선택)", text: $memo, axis: .vertical)
                         .lineLimit(3...6)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                 }
                 .listRowBackground(Theme.surface)
 

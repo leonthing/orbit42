@@ -90,7 +90,7 @@ struct BlockedUsersView: View {
                 .foregroundStyle(Theme.secondaryText)
             Text("차단한 사용자가 없어요")
                 .font(.subheadline.weight(.medium))
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.primaryText)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -115,7 +115,7 @@ struct BlockedUsersView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(user.preferredName)
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.primaryText)
                     .lineLimit(1)
                 Text("@\(user.username)")
                     .font(.footnote)
@@ -192,6 +192,5 @@ struct BlockedUsersView: View {
     NavigationStack {
         BlockedUsersView()
     }
-    .preferredColorScheme(.dark)
     .tint(Theme.accent)
 }

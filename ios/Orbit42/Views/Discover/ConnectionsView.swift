@@ -184,7 +184,7 @@ struct ConnectionsView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(user.preferredName)
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.primaryText)
                     .lineLimit(1)
                 Text("@\(user.username)")
                     .font(.footnote)
@@ -212,7 +212,7 @@ struct ConnectionsView: View {
                 .foregroundStyle(Theme.secondaryText)
             Text("아직 아무도 없어요")
                 .font(.subheadline.weight(.medium))
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.primaryText)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -222,6 +222,5 @@ struct ConnectionsView: View {
     NavigationStack {
         ConnectionsView(username: "leo", initialType: .orbiters)
     }
-    .preferredColorScheme(.dark)
     .tint(Theme.accent)
 }

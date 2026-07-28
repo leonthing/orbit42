@@ -67,6 +67,5 @@ struct MainTabView: View {
     MainTabView()
         .environment(AuthViewModel())
         .environment(TabRouter())
-        .preferredColorScheme(.dark)
         .tint(Theme.accent)
 }

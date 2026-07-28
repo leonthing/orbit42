@@ -34,7 +34,7 @@ struct SearchView: View {
                 .foregroundStyle(Theme.secondaryText)
             TextField("이름, @핸들, 슬롯 제목", text: $viewModel.query)
                 .focused($isSearchFocused)
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.primaryText)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .submitLabel(.search)
@@ -135,7 +135,7 @@ struct SearchView: View {
                 .foregroundStyle(Theme.accent)
             Text(title)
                 .font(.title3.weight(.semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.primaryText)
             Text(message)
                 .font(.subheadline)
                 .multilineTextAlignment(.center)
@@ -290,7 +290,7 @@ private struct OrbitPersonCard: View {
 
             if !person.slots.isEmpty {
                 Rectangle()
-                    .fill(Color.white.opacity(0.06))
+                    .fill(Theme.fill(0.06))
                     .frame(height: 1)
                     .padding(.horizontal, 12)
 
@@ -323,7 +323,7 @@ private struct OrbitPersonCard: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(person.preferredName)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.primaryText)
                     .lineLimit(1)
                 Text("@\(person.username)")
                     .font(.footnote)
@@ -354,7 +354,7 @@ private struct OrbitPersonCard: View {
                 .foregroundStyle(Theme.accent)
             Text(slot.title)
                 .font(.footnote.weight(.medium))
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.primaryText)
                 .lineLimit(1)
             Text("· \(slot.durationMin)분 · \(DiscoverFormat.priceText(cents: slot.priceCents))")
                 .font(.caption)
@@ -380,7 +380,7 @@ private struct PersonResultRow: View {
                 HStack(spacing: 6) {
                     Text(user.preferredName)
                         .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                         .lineLimit(1)
                     Text("@\(user.username)")
                         .font(.footnote)
@@ -413,7 +413,7 @@ private struct SlotResultRow: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(slot.title)
                 .font(.subheadline.weight(.medium))
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.primaryText)
                 .lineLimit(1)
             HStack(spacing: 6) {
                 Text(slot.hostDisplayName)
@@ -448,7 +448,7 @@ struct InterestTagStrip: View {
                         .foregroundStyle(Theme.secondaryText)
                         .padding(.horizontal, 7)
                         .padding(.vertical, 2.5)
-                        .background(Color.white.opacity(0.06), in: Capsule())
+                        .background(Theme.fill(0.06), in: Capsule())
                         .lineLimit(1)
                 }
             }
@@ -483,6 +483,5 @@ struct DiscoverAvatar: View {
     NavigationStack {
         SearchView()
     }
-    .preferredColorScheme(.dark)
     .tint(Theme.accent)
 }

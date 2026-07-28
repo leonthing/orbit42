@@ -40,7 +40,7 @@ struct PersonProfileView: View {
                         }
                     } label: {
                         Image(systemName: "ellipsis")
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Theme.primaryText)
                     }
                     .disabled(viewModel.isTogglingBlock)
                 }
@@ -165,7 +165,7 @@ struct PersonProfileView: View {
                 .foregroundStyle(Theme.secondaryText)
             Text("차단한 사용자예요")
                 .font(.subheadline.weight(.medium))
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.primaryText)
             Text("차단을 해제하면 프로필과 열린 시간을 다시 볼 수 있어요.")
                 .font(.footnote)
                 .multilineTextAlignment(.center)
@@ -175,10 +175,10 @@ struct PersonProfileView: View {
             } label: {
                 Text("차단 해제")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.primaryText)
                     .padding(.horizontal, 24)
                     .padding(.vertical, 10)
-                    .background(Color.white.opacity(0.08), in: Capsule())
+                    .background(Theme.fill(0.08), in: Capsule())
             }
             .disabled(viewModel.isTogglingBlock)
             .opacity(viewModel.isTogglingBlock ? 0.5 : 1)
@@ -199,7 +199,7 @@ struct PersonProfileView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(data.user.preferredName)
                         .font(.headline)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                     Text("@\(data.user.username)")
                         .font(.subheadline)
                         .foregroundStyle(Theme.accent)
@@ -268,7 +268,7 @@ struct PersonProfileView: View {
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(Theme.accent)
                         .frame(width: 34, height: 34)
-                        .background(Color.white.opacity(0.08), in: Circle())
+                        .background(Theme.fill(0.08), in: Circle())
                 }
                 .accessibilityLabel(link.kind.label)
             }
@@ -285,7 +285,7 @@ struct PersonProfileView: View {
                     HStack(spacing: 6) {
                         Text(item.company)
                             .font(.footnote.weight(.semibold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Theme.primaryText)
                         if let role = item.role, !role.isEmpty {
                             Text(role)
                                 .font(.footnote)
@@ -313,7 +313,7 @@ struct PersonProfileView: View {
                     HStack(spacing: 6) {
                         Text(item.school)
                             .font(.footnote.weight(.semibold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Theme.primaryText)
                         if let detail = item.detailText {
                             Text(detail)
                                 .font(.footnote)
@@ -359,12 +359,12 @@ struct PersonProfileView: View {
                     Text(data.isFollowing ? "팔로잉" : "팔로우")
                 }
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(data.isFollowing ? Theme.secondaryText : .white)
+                .foregroundStyle(data.isFollowing ? Theme.secondaryText : Theme.primaryText)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
                 .background(
                     data.isFollowing
-                        ? AnyShapeStyle(Color.white.opacity(0.08))
+                        ? AnyShapeStyle(Theme.fill(0.08))
                         : AnyShapeStyle(Theme.accent),
                     in: Capsule()
                 )
@@ -405,7 +405,7 @@ struct PersonProfileView: View {
                         .foregroundStyle(Theme.secondaryText)
                     Text("아직 열어둔 시간이 없어요")
                         .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                     Text(data.isMe ? "슬롯 탭에서 시간을 열어보세요" : "시간 요청을 보내보세요")
                         .font(.footnote)
                         .foregroundStyle(Theme.secondaryText)
@@ -431,7 +431,7 @@ struct PersonProfileView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(slot.title)
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.primaryText)
                     .lineLimit(1)
                 HStack(spacing: 6) {
                     Text(slot.durationText)
@@ -456,6 +456,5 @@ struct PersonProfileView: View {
     NavigationStack {
         PersonProfileView(username: "leo")
     }
-    .preferredColorScheme(.dark)
     .tint(Theme.accent)
 }

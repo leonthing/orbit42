@@ -23,17 +23,17 @@ struct ChangePasswordSheet: View {
             Form {
                 Section("현재 비밀번호") {
                     SecureField("현재 비밀번호", text: $currentPassword)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                         .textContentType(.password)
                 }
                 .listRowBackground(Theme.surface)
 
                 Section {
                     SecureField("새 비밀번호 (6자 이상)", text: $newPassword)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                         .textContentType(.newPassword)
                     SecureField("새 비밀번호 확인", text: $confirmPassword)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                         .textContentType(.newPassword)
                 } header: {
                     Text("새 비밀번호")
@@ -118,6 +118,5 @@ struct ChangePasswordSheet: View {
 
 #Preview {
     ChangePasswordSheet()
-        .preferredColorScheme(.dark)
         .tint(Theme.accent)
 }

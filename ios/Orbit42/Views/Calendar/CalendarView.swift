@@ -61,11 +61,9 @@ struct CalendarView: View {
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showingAddSheet) {
                 AddEventSheet(viewModel: viewModel, defaultDate: viewModel.selectedDate)
-                    .preferredColorScheme(.dark)
             }
             .sheet(item: $selectedEvent) { event in
                 EventDetailSheet(viewModel: viewModel, event: event)
-                    .preferredColorScheme(.dark)
             }
             .task(id: viewModel.currentMonthKey) {
                 await viewModel.loadDisplayedMonth()
@@ -129,14 +127,14 @@ struct CalendarView: View {
                 weekdayHeader
                 monthGrid
                 Divider()
-                    .overlay(Color.white.opacity(0.08))
+                    .overlay(Theme.fill(0.08))
                     .padding(.top, 8)
                 eventListSection
             case .week:
                 weekHeader
                 weekStrip
                 Divider()
-                    .overlay(Color.white.opacity(0.08))
+                    .overlay(Theme.fill(0.08))
                     .padding(.top, 8)
                 eventListSection
             }
@@ -207,7 +205,7 @@ struct CalendarView: View {
 
             Text(Self.monthTitleFormatter.string(from: viewModel.displayedMonth))
                 .font(.title3.weight(.semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.primaryText)
 
             Spacer()
 
@@ -268,7 +266,7 @@ struct CalendarView: View {
 
             Text("\(Self.weekRangeFormatter.string(from: weekStart)) ~ \(Self.weekRangeFormatter.string(from: calendar.date(byAdding: .day, value: 6, to: weekStart) ?? weekStart))")
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.primaryText)
 
             Spacer()
 
@@ -318,7 +316,7 @@ struct CalendarView: View {
                     .foregroundStyle(Theme.secondaryText)
                 Text("\(calendar.component(.day, from: date))")
                     .font(.subheadline.weight(isToday ? .bold : .medium))
-                    .foregroundStyle(isSelected ? .white : (isToday ? Theme.accent : .white.opacity(0.85)))
+                    .foregroundStyle(isSelected ? Theme.primaryText : (isToday ? Theme.accent : Theme.primaryText.opacity(0.85)))
                 HStack(spacing: 3) {
                     ForEach(Array(dots.prefix(3).enumerated()), id: \.offset) { _, color in
                         Circle().fill(color).frame(width: 4, height: 4)
@@ -364,7 +362,7 @@ struct CalendarView: View {
                 Spacer()
                 Text("\(String(displayedYear))년")
                     .font(.title3.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.primaryText)
                 Spacer()
                 Button {
                     withAnimation { shiftYear(1) }
@@ -417,7 +415,7 @@ struct CalendarView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("\(month)월")
                     .font(.footnote.weight(.semibold))
-                    .foregroundStyle(isCurrentMonth ? Theme.accent : .white)
+                    .foregroundStyle(isCurrentMonth ? Theme.accent : Theme.primaryText)
                 LazyVGrid(
                     columns: Array(repeating: GridItem(.flexible(), spacing: 1), count: 7),
                     spacing: 2
@@ -572,7 +570,7 @@ struct CalendarView: View {
                 HStack {
                     Text(Self.selectedDayFormatter.string(from: viewModel.selectedDate))
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                     if viewModel.isLoading {
                         ProgressView()
                             .controlSize(.small)
@@ -698,7 +696,7 @@ private struct DayCell: View {
     private var numberColor: Color {
         if isSelected { return .white }
         if isToday { return Theme.accent }
-        return .white.opacity(0.9)
+        return Theme.primaryText.opacity(0.9)
     }
 }
 
@@ -738,7 +736,7 @@ private struct EventRow: View {
                         HStack(spacing: 6) {
                             Text(event.title)
                                 .font(.subheadline.weight(.medium))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(Theme.primaryText)
                                 .strikethrough(event.completed)
                                 .lineLimit(2)
                             if event.isGoogle {
@@ -747,7 +745,7 @@ private struct EventRow: View {
                                     .foregroundStyle(Theme.secondaryText)
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
-                                    .background(Color.white.opacity(0.08), in: Capsule())
+                                    .background(Theme.fill(0.08), in: Capsule())
                             }
                             if event.isInvite {
                                 Text(event.inviteStatus == "accepted" ? "참여" : "초대")
@@ -841,6 +839,5 @@ private struct EventRow: View {
 
 #Preview {
     CalendarView()
-        .preferredColorScheme(.dark)
         .tint(Theme.accent)
 }

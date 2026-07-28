@@ -129,6 +129,5 @@ struct WorkHoursView: View {
     NavigationStack {
         WorkHoursView()
     }
-    .preferredColorScheme(.dark)
     .tint(Theme.accent)
 }

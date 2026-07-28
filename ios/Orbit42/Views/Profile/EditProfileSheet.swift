@@ -177,7 +177,7 @@ struct EditProfileSheet: View {
                         image.resizable().scaledToFill()
                     } else {
                         ZStack {
-                            Color.white.opacity(0.05)
+                            Theme.fill(0.05)
                             ProgressView().tint(Theme.secondaryText)
                         }
                     }
@@ -275,7 +275,7 @@ struct EditProfileSheet: View {
     private var nameSection: some View {
         Section("이름") {
             TextField("이름", text: $displayName)
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.primaryText)
         }
         .listRowBackground(Theme.surface)
     }
@@ -284,7 +284,7 @@ struct EditProfileSheet: View {
         Section {
             TextEditor(text: $bio)
                 .frame(minHeight: 120)
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.primaryText)
                 .scrollContentBackground(.hidden)
         } header: {
             Text("소개")
@@ -304,7 +304,7 @@ struct EditProfileSheet: View {
                 .tint(Theme.accent)
             if hasBirthDate {
                 DatePicker("생년월일", selection: $birthDate, displayedComponents: .date)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.primaryText)
             }
         } header: {
             Text("생년월일")
@@ -326,7 +326,7 @@ struct EditProfileSheet: View {
                         .foregroundStyle(Theme.secondaryText)
                         .frame(width: 72, alignment: .leading)
                     TextField(kind.placeholder, text: socialLinkBinding(kind))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                         .keyboardType(.URL)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
@@ -356,7 +356,7 @@ struct EditProfileSheet: View {
             ForEach(interests, id: \.self) { interest in
                 HStack {
                     Text(interest)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                     Spacer()
                     Button {
                         interests.removeAll { $0 == interest }
@@ -371,7 +371,7 @@ struct EditProfileSheet: View {
             if interests.count < Self.interestsLimit {
                 HStack(spacing: 12) {
                     TextField("관심사 추가 (예: 커피, 스타트업)", text: $newInterest)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                         .onSubmit { addInterest() }
                     Button("추가") { addInterest() }
                         .disabled(
@@ -554,6 +554,5 @@ struct EditProfileSheet: View {
         )
     )
     .environment(AuthViewModel())
-    .preferredColorScheme(.dark)
     .tint(Theme.accent)
 }

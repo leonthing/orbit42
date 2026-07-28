@@ -59,7 +59,7 @@ struct CalendarEditorSheet: View {
             Form {
                 Section("이름") {
                     TextField("캘린더 이름", text: $name)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                 }
                 .listRowBackground(Theme.surface)
 
@@ -97,7 +97,7 @@ struct CalendarEditorSheet: View {
                         HStack {
                             TextField("예: 50,000", text: $rateText)
                                 .keyboardType(.numberPad)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(Theme.primaryText)
                                 .onChange(of: rateText) { _, newValue in
                                     rateText = Self.formatRateInput(newValue)
                                 }
@@ -193,7 +193,7 @@ struct CalendarEditorSheet: View {
                         if colorHex.lowercased() == hex.lowercased() {
                             Image(systemName: "checkmark")
                                 .font(.caption.weight(.bold))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(Theme.primaryText)
                         }
                     }
                 }
@@ -260,6 +260,5 @@ struct CalendarEditorSheet: View {
 
 #Preview {
     CalendarEditorSheet(mode: .create, viewModel: CalendarSettingsViewModel())
-        .preferredColorScheme(.dark)
         .tint(Theme.accent)
 }

@@ -39,7 +39,7 @@ struct OnboardingFlowView: View {
         HStack(spacing: 6) {
             ForEach(steps.indices, id: \.self) { i in
                 Capsule()
-                    .fill(i <= index ? Theme.accent : Color.white.opacity(0.12))
+                    .fill(i <= index ? Theme.accent : Theme.fill(0.12))
                     .frame(height: 4)
             }
         }
@@ -85,7 +85,7 @@ private func stepHeader(icon: String, title: String, subtitle: String) -> some V
             .foregroundStyle(Theme.accent)
         Text(title)
             .font(.title3.weight(.semibold))
-            .foregroundStyle(.white)
+            .foregroundStyle(Theme.primaryText)
         Text(subtitle)
             .font(.subheadline)
             .multilineTextAlignment(.center)
@@ -164,7 +164,7 @@ private struct ConsentStep: View {
                         .foregroundStyle(agreed ? Theme.accent : Theme.secondaryText)
                     Text("이용약관과 개인정보처리방침에 모두 동의합니다")
                         .font(.subheadline)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                         .multilineTextAlignment(.leading)
                     Spacer(minLength: 0)
                 }
@@ -185,7 +185,7 @@ private struct ConsentStep: View {
             HStack {
                 Text(title)
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.primaryText)
                 Spacer()
                 Text("보기")
                     .font(.footnote)
@@ -242,7 +242,7 @@ private struct ProfileStep: View {
                 .autocorrectionDisabled()
                 .padding(14)
                 .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.primaryText)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
 
@@ -407,7 +407,7 @@ private struct InterestsStep: View {
                         TextField("직접 입력 (예: 클라이밍)", text: $custom)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Theme.primaryText)
                             .onSubmit { addCustom() }
                         Button("추가") { addCustom() }
                             .font(.subheadline.weight(.semibold))
@@ -496,7 +496,7 @@ private struct FlowChips: View {
                 } label: {
                     Text(tag)
                         .font(.subheadline)
-                        .foregroundStyle(on ? .white : Theme.secondaryText)
+                        .foregroundStyle(on ? Theme.primaryText : Theme.secondaryText)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 9)
                         .background(
@@ -546,7 +546,7 @@ private struct WageStep: View {
             HStack(spacing: 8) {
                 TextField(wageType == .hourly ? "예: 30000" : "예: 4000000", text: $amountText)
                     .keyboardType(.numberPad)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.primaryText)
                     .multilineTextAlignment(.trailing)
                 Text("원")
                     .foregroundStyle(Theme.secondaryText)
@@ -652,7 +652,7 @@ private struct CalendarStep: View {
                         .foregroundStyle(.green)
                     Text("Google 캘린더가 연결됐어요")
                         .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                 }
                 .padding(14)
                 .frame(maxWidth: .infinity)
@@ -737,7 +737,7 @@ private struct VerifyEmailStep: View {
                             .font(.subheadline.weight(.semibold))
                     }
                 }
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.primaryText)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
                 .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
@@ -838,7 +838,7 @@ private struct FollowStep: View {
                         .foregroundStyle(Theme.secondaryText)
                     Text("아직 추천할 사람이 없어요")
                         .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                     Text("오르빗 탭에서 언제든 찾아볼 수 있어요")
                         .font(.footnote)
                         .foregroundStyle(Theme.secondaryText)
@@ -872,6 +872,5 @@ private struct FollowStep: View {
 #Preview {
     OnboardingFlowView()
         .environment(AuthViewModel())
-        .preferredColorScheme(.dark)
         .tint(Theme.accent)
 }

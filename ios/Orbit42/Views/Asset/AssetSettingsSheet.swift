@@ -190,7 +190,6 @@ struct AssetSettingsSheet: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
     }
 
     private var isFreelance: Bool {

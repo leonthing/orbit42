@@ -20,7 +20,7 @@ struct WeeklyGoalsSheet: View {
                         HStack {
                             TextField("예: 500,000", text: $earnText)
                                 .keyboardType(.numberPad)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(Theme.primaryText)
                                 .multilineTextAlignment(.trailing)
                                 .onChange(of: earnText) { _, newValue in
                                     earnText = Self.formatInput(newValue)
@@ -39,7 +39,7 @@ struct WeeklyGoalsSheet: View {
                         HStack {
                             TextField("예: 5", text: $investText)
                                 .keyboardType(.decimalPad)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(Theme.primaryText)
                                 .multilineTextAlignment(.trailing)
                             Text("시간/주")
                                 .foregroundStyle(Theme.secondaryText)

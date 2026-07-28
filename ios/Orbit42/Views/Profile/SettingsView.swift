@@ -19,6 +19,7 @@ struct SettingsView: View {
     var body: some View {
         List {
             menuSection
+            appearanceSection
             privacySection
             legalSection
             logoutSection
@@ -126,7 +127,7 @@ struct SettingsView: View {
                 .foregroundStyle(Theme.accent)
                 .frame(width: 26)
             Text(title)
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.primaryText)
         }
     }
 
@@ -188,6 +189,24 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - 화면 모드
+
+    @AppStorage("appearanceMode") private var appearanceMode = "system"
+
+    private var appearanceSection: some View {
+        Section {
+            Picker(selection: $appearanceMode) {
+                Text("시스템 설정 따름").tag("system")
+                Text("라이트").tag("light")
+                Text("다크").tag("dark")
+            } label: {
+                menuRow(icon: "circle.lefthalf.filled", title: "화면 모드")
+            }
+            .tint(Theme.secondaryText)
+        }
+        .listRowBackground(Theme.surface)
+    }
+
     // MARK: - 약관·정책
 
     private var legalSection: some View {
@@ -245,6 +264,5 @@ private struct UpdatePrivacyRequest: Encodable {
         SettingsView()
     }
     .environment(AuthViewModel())
-    .preferredColorScheme(.dark)
     .tint(Theme.accent)
 }

@@ -46,7 +46,6 @@ struct TimeRequestSheet: View {
             }
             .interactiveDismissDisabled(viewModel.isSubmitting)
         }
-        .preferredColorScheme(.dark)
     }
 
     // MARK: - 입력 폼
@@ -55,7 +54,7 @@ struct TimeRequestSheet: View {
         Form {
             Section {
                 TextEditor(text: $viewModel.message)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.primaryText)
                     .scrollContentBackground(.hidden)
                     .frame(minHeight: 100)
                     .overlay(alignment: .topLeading) {
@@ -87,18 +86,18 @@ struct TimeRequestSheet: View {
             Section {
                 HStack {
                     Text("예산")
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                     Spacer()
                     TextField("금액 (선택)", text: $viewModel.budgetText)
                         .keyboardType(.numberPad)
                         .multilineTextAlignment(.trailing)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                         .frame(maxWidth: 140)
                     Text("원")
                         .foregroundStyle(Theme.secondaryText)
                 }
                 TextField("희망 시간대 (선택, 예: 평일 저녁)", text: $viewModel.preferredTimes)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.primaryText)
             }
             .listRowBackground(Theme.surface)
 
@@ -123,7 +122,7 @@ struct TimeRequestSheet: View {
                 .foregroundStyle(Theme.accent)
             Text("요청을 보냈어요")
                 .font(.title3.weight(.semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.primaryText)
             Text("\(displayName)님이 확인하면 알려드릴게요")
                 .font(.subheadline)
                 .multilineTextAlignment(.center)
@@ -157,6 +156,5 @@ struct TimeRequestSheet: View {
 
 #Preview {
     TimeRequestSheet(username: "leo", displayName: "Leo")
-        .preferredColorScheme(.dark)
         .tint(Theme.accent)
 }

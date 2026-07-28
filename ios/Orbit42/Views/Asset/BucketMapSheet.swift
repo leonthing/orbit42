@@ -25,7 +25,7 @@ struct BucketMapSheet: View {
                         ForEach(purposes) { purpose in
                             HStack {
                                 Text(purpose.label)
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(Theme.primaryText)
                                 Spacer()
                                 Picker("", selection: binding(for: purpose)) {
                                     ForEach(bucketOptions) { option in
@@ -94,7 +94,6 @@ struct BucketMapSheet: View {
                 )
             }
         }
-        .preferredColorScheme(.dark)
     }
 
     private func binding(for purpose: PurposeMeta) -> Binding<String> {

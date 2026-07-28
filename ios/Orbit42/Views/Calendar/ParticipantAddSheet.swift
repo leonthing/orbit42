@@ -34,7 +34,7 @@ struct ParticipantAddSheet: View {
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                             .keyboardType(.emailAddress)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Theme.primaryText)
                             .onChange(of: query) {
                                 queryChanged()
                             }
@@ -78,7 +78,7 @@ struct ParticipantAddSheet: View {
                                         VStack(alignment: .leading, spacing: 1) {
                                             Text(user.preferredName)
                                                 .font(.subheadline.weight(.medium))
-                                                .foregroundStyle(.white)
+                                                .foregroundStyle(Theme.primaryText)
                                             Text("@\(user.username)")
                                                 .font(.caption)
                                                 .foregroundStyle(Theme.accent)

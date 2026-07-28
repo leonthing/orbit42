@@ -37,7 +37,7 @@ struct EventLocationSection: View {
                 TextField("위치 (예: 강남 또는 주소 검색)", text: $locationText)
                     .focused($isFocused)
                     .autocorrectionDisabled()
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.primaryText)
                 if isResolving {
                     ProgressView().tint(Theme.secondaryText)
                 } else if !locationText.isEmpty {
@@ -78,7 +78,7 @@ struct EventLocationSection: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(suggestion.title)
                                 .font(.subheadline)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(Theme.primaryText)
                             if !suggestion.subtitle.isEmpty {
                                 Text(suggestion.subtitle)
                                     .font(.caption)

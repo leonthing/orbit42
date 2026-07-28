@@ -189,7 +189,7 @@ struct SlotsContent: View {
                         .foregroundStyle(Theme.accent)
                     Text("아직 열어둔 시간이 없어요")
                         .font(.title3.weight(.semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                     Text("프리셋으로 첫 타임슬롯을 만들어 보세요")
                         .font(.subheadline)
                         .foregroundStyle(Theme.secondaryText)
@@ -208,7 +208,7 @@ struct SlotsContent: View {
                                     .frame(width: 28)
                                 Text(preset.title)
                                     .font(.subheadline.weight(.medium))
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(Theme.primaryText)
                                 Spacer()
                                 Image(systemName: "plus.circle")
                                     .font(.body)
@@ -261,7 +261,7 @@ private struct SlotRow: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(slot.title)
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.primaryText)
                     .lineLimit(1)
 
                 HStack(spacing: 6) {
@@ -313,7 +313,7 @@ private struct SlotBadge: View {
             .foregroundStyle(color)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
-            .background(Color.white.opacity(0.08), in: Capsule())
+            .background(Theme.fill(0.08), in: Capsule())
     }
 }
 
@@ -339,6 +339,5 @@ struct SlotsView: View {
 
 #Preview {
     SlotsView()
-        .preferredColorScheme(.dark)
         .tint(Theme.accent)
 }

@@ -69,7 +69,7 @@ struct SuggestedPersonRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(user.preferredName)
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.primaryText)
                     .lineLimit(1)
                 Text("@\(user.username)")
                     .font(.footnote)
@@ -94,7 +94,7 @@ struct SuggestedPersonRow: View {
                 .padding(.horizontal, 14)
                 .padding(.vertical, 7)
                 .background(
-                    isFollowed ? Color.white.opacity(0.08) : Theme.accent,
+                    isFollowed ? Theme.fill(0.08) : Theme.accent,
                     in: Capsule()
                 )
         }

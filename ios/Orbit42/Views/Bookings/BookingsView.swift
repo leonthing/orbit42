@@ -161,7 +161,7 @@ struct BookingsView: View {
                     .foregroundStyle(Theme.accent)
                 Text(title)
                     .font(.title3.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.primaryText)
                 Text(message)
                     .font(.subheadline)
                     .multilineTextAlignment(.center)
@@ -371,7 +371,7 @@ private struct HostBookingRow: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(booking.slotTitle)
                         .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                         .lineLimit(1)
                     Text("\(booking.guestName) · \(booking.scheduledText)")
                         .font(.footnote)
@@ -427,7 +427,7 @@ private struct GuestBookingRow: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(booking.slotTitle)
                         .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                         .lineLimit(1)
                     Text("\(booking.hostName) · \(booking.scheduledText)")
                         .font(.footnote)
@@ -474,7 +474,7 @@ private struct BookingActionButton: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
                 .background(
-                    prominent ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(Color.white.opacity(0.08)),
+                    prominent ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(Theme.fill(0.08)),
                     in: Capsule()
                 )
         }
@@ -496,12 +496,11 @@ private struct StatusBadge: View {
             .foregroundStyle(color)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
-            .background(Color.white.opacity(0.08), in: Capsule())
+            .background(Theme.fill(0.08), in: Capsule())
     }
 }
 
 #Preview {
     BookingsView()
-        .preferredColorScheme(.dark)
         .tint(Theme.accent)
 }

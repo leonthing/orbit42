@@ -141,7 +141,7 @@ private struct MyProfileContent: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(displayName)
                         .font(.title3.weight(.semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                     Text("@\(username)")
                         .font(.subheadline)
                         .foregroundStyle(Theme.accent)
@@ -249,10 +249,10 @@ private struct MyProfileContent: View {
                     Text("프로필 편집")
                 }
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.primaryText)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
-                .background(Color.white.opacity(0.08), in: Capsule())
+                .background(Theme.fill(0.08), in: Capsule())
             }
 
             ShareLink(item: shareText) {
@@ -295,7 +295,7 @@ private struct MyProfileContent: View {
                     ForEach(calendars) { calendar in
                         calendarRow(calendar)
                         if calendar.id != calendars.last?.id {
-                            Divider().overlay(Color.white.opacity(0.06))
+                            Divider().overlay(Theme.fill(0.06))
                         }
                     }
                 }
@@ -311,7 +311,7 @@ private struct MyProfileContent: View {
                 .frame(width: 10, height: 10)
             Text(calendar.name)
                 .font(.subheadline)
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.primaryText)
                 .lineLimit(1)
             if !calendar.isNative {
                 Text("Google")
@@ -319,7 +319,7 @@ private struct MyProfileContent: View {
                     .foregroundStyle(Theme.secondaryText)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(Color.white.opacity(0.08), in: Capsule())
+                    .background(Theme.fill(0.08), in: Capsule())
             }
             Spacer(minLength: 8)
             if let purposeLabel = calendar.purpose.flatMap({ CalendarPurpose(rawValue: $0)?.label }) {
@@ -416,7 +416,7 @@ private struct MyProfileContent: View {
                 .foregroundStyle(Theme.secondaryText)
             Text("아직 열어둔 시간이 없어요")
                 .font(.subheadline.weight(.medium))
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.primaryText)
             Text("캘린더 탭의 타임슬롯에서 시간을 열어보세요")
                 .font(.footnote)
                 .foregroundStyle(Theme.secondaryText)
@@ -431,7 +431,7 @@ private struct MyProfileContent: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(slot.title)
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.primaryText)
                     .lineLimit(1)
                 HStack(spacing: 6) {
                     Text(slot.durationText)
@@ -455,6 +455,5 @@ private struct MyProfileContent: View {
 #Preview {
     ProfileView()
         .environment(AuthViewModel())
-        .preferredColorScheme(.dark)
         .tint(Theme.accent)
 }

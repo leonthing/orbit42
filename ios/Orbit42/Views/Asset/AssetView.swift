@@ -91,7 +91,7 @@ struct AssetView: View {
                 .foregroundStyle(Theme.accent)
             Text("내 시간의 가치를 알아보세요")
                 .font(.title3.weight(.bold))
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.primaryText)
             Text("월급이나 시급을 입력하면 내 1시간이 얼마인지,\n시간을 어디에 쓰는지 돈으로 환산해 보여드려요.")
                 .font(.subheadline)
                 .foregroundStyle(Theme.secondaryText)
@@ -196,7 +196,7 @@ struct AssetView: View {
                         .foregroundStyle(Theme.secondaryText)
                     Text("아직 계산할 수 없어요")
                         .font(.title3.weight(.bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                     Text("월 수입과 수입 시간을 기록하면 실효 시급이 나와요")
                         .font(.caption)
                         .foregroundStyle(Theme.secondaryText)
@@ -236,7 +236,7 @@ struct AssetView: View {
                     Text(AssetFormat.won(hourly))
                         .font(.system(size: 34, weight: .bold, design: .rounded))
                         .monospacedDigit()
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                     if let caption {
                         Text(caption)
                             .font(.caption)
@@ -250,7 +250,7 @@ struct AssetView: View {
             }
 
             if let conv = conversions {
-                Divider().overlay(Color.white.opacity(0.08))
+                Divider().overlay(Theme.fill(0.08))
                 LazyVGrid(
                     columns: [GridItem(.flexible()), GridItem(.flexible())],
                     spacing: 12
@@ -272,7 +272,7 @@ struct AssetView: View {
             Text(AssetFormat.won(value))
                 .font(.callout.weight(.semibold))
                 .monospacedDigit()
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.primaryText)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
         }
@@ -286,7 +286,7 @@ struct AssetView: View {
             HStack {
                 Text("이번 주 시간 사용")
                     .font(.headline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.primaryText)
                 Spacer()
                 Button {
                     showingBucketMapSheet = true
@@ -321,7 +321,7 @@ struct AssetView: View {
                         VStack(alignment: .leading, spacing: 1) {
                             Text(bucket.label)
                                 .font(.subheadline.weight(.medium))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(Theme.primaryText)
                             Text(bucket.description)
                                 .font(.caption2)
                                 .foregroundStyle(Theme.secondaryText)
@@ -332,7 +332,7 @@ struct AssetView: View {
                                 Text("\(AssetFormat.hours(bucket.hours))시간")
                                     .font(.subheadline.weight(.semibold))
                                     .monospacedDigit()
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(Theme.primaryText)
                                 Text(AssetFormat.percent(bucket.ratio))
                                     .font(.caption)
                                     .monospacedDigit()
@@ -389,7 +389,7 @@ struct AssetView: View {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text("약 \(AssetFormat.grouped(lifetime.remainingAwakeHours))시간")
                     .font(.title2.weight(.bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.primaryText)
                     .monospacedDigit()
                 if let value = lifetime.remainingValueKrw {
                     Text("≈ \(compactWon(value))")
@@ -464,7 +464,7 @@ struct AssetView: View {
             Spacer()
             Text(value)
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.primaryText)
                 .monospacedDigit()
             if let delta, delta.raw != 0 {
                 let improved = (delta.raw > 0) == delta.positiveIsGood
@@ -521,7 +521,6 @@ struct AssetView: View {
         .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16))
         .sheet(isPresented: $showingGoalsSheet) {
             WeeklyGoalsSheet(viewModel: viewModel)
-                .preferredColorScheme(.dark)
         }
     }
 
@@ -530,7 +529,7 @@ struct AssetView: View {
             HStack {
                 Text(label)
                     .font(.caption.weight(.medium))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.primaryText)
                 Spacer()
                 Text(progressText)
                     .font(.caption)
@@ -539,7 +538,7 @@ struct AssetView: View {
             }
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
-                    Capsule().fill(Color.white.opacity(0.08))
+                    Capsule().fill(Theme.fill(0.08))
                     Capsule()
                         .fill(ratio >= 1 ? Color.green : Theme.accent)
                         .frame(width: max(4, proxy.size.width * ratio))
@@ -565,7 +564,7 @@ struct AssetView: View {
                             .foregroundStyle(Theme.accent)
                         Text(action.title)
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Theme.primaryText)
                     }
                     Text(action.body)
                         .font(.footnote)
@@ -584,7 +583,7 @@ struct AssetView: View {
                 }
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
+                .background(Theme.fill(0.04), in: RoundedRectangle(cornerRadius: 12))
             }
         }
         .padding(16)
@@ -615,7 +614,7 @@ struct AssetView: View {
         card {
             Text("4주 추이")
                 .font(.headline)
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.primaryText)
 
             let maxTotal = max(trend.map(\.totalHours).max() ?? 1, 1)
             HStack(alignment: .bottom, spacing: 16) {
@@ -663,14 +662,14 @@ struct AssetView: View {
         card {
             Text("시간 거래")
                 .font(.headline)
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.primaryText)
             HStack(spacing: 0) {
                 tradedCell("판매된 시간", "\(AssetFormat.hours(traded.totalHours))시간")
                 tradedCell("누적 거래액", AssetFormat.won(traded.totalKrw))
                 tradedCell("예약", "\(traded.totalBookings)건")
             }
             if let implied = traded.impliedHourlyKrw {
-                Divider().overlay(Color.white.opacity(0.08))
+                Divider().overlay(Theme.fill(0.08))
                 HStack {
                     Text("판매 단가")
                         .font(.subheadline)
@@ -679,7 +678,7 @@ struct AssetView: View {
                     Text("\(AssetFormat.won(implied))/시간")
                         .font(.subheadline.weight(.semibold))
                         .monospacedDigit()
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                     if let ratio = traded.vsIncomeRatio {
                         Text("내 시급의 \(String(format: "%.1f", ratio))배")
                             .font(.caption.weight(.semibold))
@@ -698,7 +697,7 @@ struct AssetView: View {
             Text(value)
                 .font(.callout.weight(.semibold))
                 .monospacedDigit()
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.primaryText)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
         }
@@ -711,7 +710,7 @@ struct AssetView: View {
         card {
             Text("인사이트")
                 .font(.headline)
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.primaryText)
             ForEach(messages, id: \.self) { message in
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: "lightbulb.fill")
@@ -720,7 +719,7 @@ struct AssetView: View {
                         .padding(.top, 2)
                     Text(message)
                         .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.9))
+                        .foregroundStyle(Theme.primaryText.opacity(0.9))
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -730,6 +729,5 @@ struct AssetView: View {
 
 #Preview {
     AssetView()
-        .preferredColorScheme(.dark)
         .tint(Theme.accent)
 }

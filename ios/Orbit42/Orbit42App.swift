@@ -4,13 +4,19 @@ import SwiftUI
 struct Orbit42App: App {
     @State private var auth = AuthViewModel()
     @State private var router = TabRouter()
+    /// 화면 모드 — "system"(기본) | "light" | "dark"
+    @AppStorage("appearanceMode") private var appearanceMode = "system"
 
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environment(auth)
                 .environment(router)
-                .preferredColorScheme(.dark)
+                .preferredColorScheme(
+                    appearanceMode == "light" ? .light
+                        : appearanceMode == "dark" ? .dark
+                        : nil
+                )
                 .tint(Theme.accent)
         }
     }
@@ -63,7 +69,7 @@ struct RootView: View {
                     .foregroundStyle(Theme.accent)
                 Text("orbit42")
                     .font(.title2.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.primaryText)
                 ProgressView()
                     .padding(.top, 8)
             }

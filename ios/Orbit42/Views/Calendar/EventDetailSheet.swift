@@ -103,7 +103,7 @@ struct EventDetailSheet: View {
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
                             Text(event.title)
                                 .font(.title3.weight(.semibold))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(Theme.primaryText)
                                 .strikethrough(isCompleted)
                             if isCompleted {
                                 Image(systemName: "checkmark.circle.fill")
@@ -117,7 +117,7 @@ struct EventDetailSheet: View {
                                     .foregroundStyle(Theme.secondaryText)
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
-                                    .background(Color.white.opacity(0.08), in: Capsule())
+                                    .background(Theme.fill(0.08), in: Capsule())
                             }
                         }
 
@@ -177,7 +177,7 @@ struct EventDetailSheet: View {
                     Section("메모") {
                         Text(description)
                             .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.85))
+                            .foregroundStyle(Theme.primaryText.opacity(0.85))
                     }
                     .listRowBackground(Theme.surface)
                 }
@@ -200,7 +200,7 @@ struct EventDetailSheet: View {
                     } label: {
                         HStack {
                             Text("자산 분류")
-                                .foregroundStyle(.white)
+                                .foregroundStyle(Theme.primaryText)
                             Spacer()
                             if isSavingBucket {
                                 ProgressView()
@@ -319,7 +319,6 @@ struct EventDetailSheet: View {
                     // 수정 성공 → 상세 시트까지 닫는다 (표시 중인 이벤트가 낡은 상태이므로)
                     dismiss()
                 }
-                .preferredColorScheme(.dark)
             }
             .sheet(isPresented: $showingAddParticipant) {
                 ParticipantAddSheet(
@@ -328,7 +327,6 @@ struct EventDetailSheet: View {
                 ) { updated in
                     participants = updated
                 }
-                .preferredColorScheme(.dark)
             }
             .task {
                 guard !event.isInvite, participants == nil else { return }
@@ -430,7 +428,7 @@ struct EventDetailSheet: View {
             } label: {
                 HStack {
                     Text("수익 기록")
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                     Spacer()
                     if isSavingEarning {
                         ProgressView()
@@ -572,7 +570,7 @@ struct EventDetailSheet: View {
                                     image.resizable().scaledToFill()
                                 } else {
                                     ZStack {
-                                        Color.white.opacity(0.05)
+                                        Theme.fill(0.05)
                                         ProgressView().tint(Theme.secondaryText)
                                     }
                                 }
@@ -623,7 +621,7 @@ struct EventDetailSheet: View {
                 } label: {
                     HStack {
                         Text("공개 범위")
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Theme.primaryText)
                         Spacer()
                         if isSavingPostVisibility {
                             ProgressView().tint(Theme.secondaryText)
@@ -784,7 +782,7 @@ struct EventDetailSheet: View {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(event.title)
                         .font(.title3.weight(.semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                     Text(event.inviteStatus == "accepted" ? "참여 중" : "초대")
                         .font(.caption2.weight(.medium))
                         .foregroundStyle(Theme.accent)
@@ -898,7 +896,7 @@ struct EventDetailSheet: View {
                         )
                         Text(participant.label)
                             .font(.subheadline)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Theme.primaryText)
                             .lineLimit(1)
                         Spacer()
                         Text(participant.statusLabel)

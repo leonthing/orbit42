@@ -109,7 +109,7 @@ struct GoogleSettingsView: View {
                     .foregroundStyle(.green)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("연결됨")
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                     Text("Google 일정이 캘린더에 함께 표시돼요")
                         .font(.footnote)
                         .foregroundStyle(Theme.secondaryText)
@@ -127,7 +127,7 @@ struct GoogleSettingsView: View {
                             .foregroundStyle(Theme.secondaryText)
                         Text(account.email)
                             .font(.subheadline)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Theme.primaryText)
                     }
                 }
             }
@@ -159,7 +159,7 @@ struct GoogleSettingsView: View {
                     Image(systemName: "circle.dashed")
                         .foregroundStyle(Theme.secondaryText)
                     Text("연결 안 됨")
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                 }
                 Text("Google 캘린더를 연결하면 일정이 함께 표시되고, 캘린더도 양쪽에서 관리할 수 있어요")
                     .font(.footnote)
@@ -193,6 +193,5 @@ struct GoogleSettingsView: View {
     NavigationStack {
         GoogleSettingsView()
     }
-    .preferredColorScheme(.dark)
     .tint(Theme.accent)
 }

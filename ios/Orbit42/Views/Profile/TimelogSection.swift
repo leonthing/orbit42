@@ -25,7 +25,7 @@ struct TimelogSectionView: View {
                             .foregroundStyle(Theme.secondaryText)
                         Text("아직 기록이 없어요")
                             .font(.subheadline.weight(.medium))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Theme.primaryText)
                         Text("캘린더의 일정에 사진을 붙이면 시간 로그가 쌓여요")
                             .font(.footnote)
                             .foregroundStyle(Theme.secondaryText)
@@ -52,7 +52,6 @@ struct TimelogSectionView: View {
             }
             .sheet(item: $selectedPost) { post in
                 TimelogViewerSheet(post: post)
-                    .preferredColorScheme(.dark)
             }
         }
     }
@@ -76,7 +75,7 @@ struct TimelogSectionView: View {
                 if post.imageUrls.count > 1 {
                     Image(systemName: "square.on.square")
                         .font(.caption2)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.primaryText)
                         .padding(5)
                 }
             }
@@ -122,7 +121,7 @@ struct TimelogViewerSheet: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Text(post.title)
                             .font(.title3.weight(.semibold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Theme.primaryText)
                         if let date = post.startDate {
                             Text(Self.dayFormatter.string(from: date))
                                 .font(.subheadline)
@@ -131,7 +130,7 @@ struct TimelogViewerSheet: View {
                         if let note = post.note, !note.isEmpty {
                             Text(note)
                                 .font(.subheadline)
-                                .foregroundStyle(.white.opacity(0.85))
+                                .foregroundStyle(Theme.primaryText.opacity(0.85))
                         }
                     }
                     .padding(.horizontal, 20)

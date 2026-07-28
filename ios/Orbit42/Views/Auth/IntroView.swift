@@ -81,7 +81,7 @@ struct IntroView: View {
                                 .frame(height: 90)
                             Text(intro.title)
                                 .font(.title.weight(.bold))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(Theme.primaryText)
                             Text(intro.message)
                                 .font(.body)
                                 .foregroundStyle(Theme.secondaryText)
@@ -98,7 +98,7 @@ struct IntroView: View {
                 HStack(spacing: 8) {
                     ForEach(pages.indices, id: \.self) { index in
                         Capsule()
-                            .fill(index == page ? Theme.accent : Color.white.opacity(0.2))
+                            .fill(index == page ? Theme.accent : Theme.fill(0.2))
                             .frame(width: index == page ? 22 : 8, height: 8)
                             .animation(.spring(duration: 0.3), value: page)
                     }
@@ -128,5 +128,4 @@ struct IntroView: View {
 
 #Preview {
     IntroView(onFinish: { _ in })
-        .preferredColorScheme(.dark)
 }
