@@ -30,6 +30,8 @@ export type CalendarEvent = {
   location?: string | null;
   location_lat?: number | null;
   location_lng?: number | null;
+  /** 시작 전 이동시간(분) — 예약 가능 시간 계산에서 그만큼 앞을 막는다. */
+  travel_min?: number | null;
 };
 
 export type CalendarEventInput = {
@@ -43,6 +45,7 @@ export type CalendarEventInput = {
   location?: string | null;
   location_lat?: number | null;
   location_lng?: number | null;
+  travel_min?: number | null;
 };
 
 /**
@@ -164,6 +167,7 @@ export async function listEventsForUser(
         location: item.location || null,
         location_lat: parseCoord(item.extendedProperties?.private?.orbit42Lat),
         location_lng: parseCoord(item.extendedProperties?.private?.orbit42Lng),
+        travel_min: parseCoord(item.extendedProperties?.private?.orbit42TravelMin),
         source: "google" as const,
         tentative: item.status === "tentative",
         created_at: item.created || "",
@@ -235,14 +239,17 @@ export async function createEventForUser(
       description: input.description || undefined,
       location: input.location || undefined,
     };
-    // 구글 이벤트에는 좌표 컬럼이 없어 extendedProperties 에 심어 왕복한다.
+    // 구글 이벤트에는 좌표·이동시간 컬럼이 없어 extendedProperties 에 심어 왕복한다.
+    const privateProps: Record<string, string> = {};
     if (input.location_lat != null && input.location_lng != null) {
-      event.extendedProperties = {
-        private: {
-          orbit42Lat: String(input.location_lat),
-          orbit42Lng: String(input.location_lng),
-        },
-      };
+      privateProps.orbit42Lat = String(input.location_lat);
+      privateProps.orbit42Lng = String(input.location_lng);
+    }
+    if (input.travel_min != null && input.travel_min > 0) {
+      privateProps.orbit42TravelMin = String(input.travel_min);
+    }
+    if (Object.keys(privateProps).length > 0) {
+      event.extendedProperties = { private: privateProps };
     }
     if (input.all_day) {
       event.start = { date: input.start_at.split("T")[0] };
@@ -268,6 +275,7 @@ export async function createEventForUser(
       location: input.location ?? null,
       location_lat: input.location_lat ?? null,
       location_lng: input.location_lng ?? null,
+      travel_min: input.travel_min ?? null,
       source: "google",
       tentative: false,
       created_at: now,
@@ -289,6 +297,7 @@ export async function createEventForUser(
       location: input.location ?? null,
       location_lat: input.location_lat ?? null,
       location_lng: input.location_lng ?? null,
+      travel_min: input.travel_min ?? null,
     })
     .select()
     .single();
@@ -353,19 +362,23 @@ function googleEventBody(input: {
   location?: string | null;
   location_lat?: number | null;
   location_lng?: number | null;
+  travel_min?: number | null;
 }): Record<string, unknown> {
   const body: Record<string, unknown> = {
     summary: input.title,
     description: input.description || undefined,
     location: input.location || undefined,
   };
+  const privateProps: Record<string, string> = {};
   if (input.location_lat != null && input.location_lng != null) {
-    body.extendedProperties = {
-      private: {
-        orbit42Lat: String(input.location_lat),
-        orbit42Lng: String(input.location_lng),
-      },
-    };
+    privateProps.orbit42Lat = String(input.location_lat);
+    privateProps.orbit42Lng = String(input.location_lng);
+  }
+  if (input.travel_min != null && input.travel_min > 0) {
+    privateProps.orbit42TravelMin = String(input.travel_min);
+  }
+  if (Object.keys(privateProps).length > 0) {
+    body.extendedProperties = { private: privateProps };
   }
   if (input.all_day) {
     body.start = { date: input.start_at.split("T")[0] };
@@ -407,7 +420,7 @@ export async function moveEventToCalendar(
   if (!isGoogleEvent) {
     const { data: row } = await db
       .from("events")
-      .select("id, title, description, start_at, end_at, all_day, location, location_lat, location_lng")
+      .select("id, title, description, start_at, end_at, all_day, location, location_lat, location_lng, travel_min")
       .eq("id", eventId)
       .eq("user_id", userId)
       .maybeSingle();
@@ -445,6 +458,7 @@ export async function moveEventToCalendar(
       location: (row.location as string | null) ?? null,
       location_lat: (row.location_lat as number | null) ?? null,
       location_lng: (row.location_lng as number | null) ?? null,
+      travel_min: (row.travel_min as number | null) ?? null,
     };
     let createdId: string | null | undefined;
     try {
@@ -559,6 +573,10 @@ export async function moveEventToCalendar(
       (g as { extendedProperties?: { private?: Record<string, string> } })
         .extendedProperties?.private?.orbit42Lng,
     ),
+    travel_min: parseCoord(
+      (g as { extendedProperties?: { private?: Record<string, string> } })
+        .extendedProperties?.private?.orbit42TravelMin,
+    ),
   };
   const { data: inserted, error: insErr } = await db
     .from("events")
@@ -573,6 +591,7 @@ export async function moveEventToCalendar(
       location: merged.location,
       location_lat: merged.location_lat,
       location_lng: merged.location_lng,
+      travel_min: merged.travel_min,
     })
     .select("id")
     .single();

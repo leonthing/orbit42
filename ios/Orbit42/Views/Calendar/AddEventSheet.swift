@@ -44,6 +44,7 @@ struct AddEventSheet: View {
     @State private var locationText = ""
     @State private var locationLat: Double?
     @State private var locationLng: Double?
+    @State private var travelMin: Int?
 
     private var writableCalendars: [CalendarInfo] {
         freshCalendars ?? viewModel.calendars
@@ -112,7 +113,8 @@ struct AddEventSheet: View {
                 EventLocationSection(
                     locationText: $locationText,
                     locationLat: $locationLat,
-                    locationLng: $locationLng
+                    locationLng: $locationLng,
+                    travelMin: $travelMin
                 )
 
                 Section {
@@ -179,7 +181,8 @@ struct AddEventSheet: View {
                     location: locationText.trimmingCharacters(in: .whitespaces).isEmpty
                         ? nil : locationText.trimmingCharacters(in: .whitespaces),
                     locationLat: locationLat,
-                    locationLng: locationLng
+                    locationLng: locationLng,
+                    travelMin: travelMin
                 )
                 dismiss()
             } catch let apiError as APIError {

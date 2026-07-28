@@ -22,6 +22,7 @@ function toApiEvent(e: CalendarEvent) {
     location: e.location ?? null,
     locationLat: e.location_lat ?? null,
     locationLng: e.location_lng ?? null,
+    travelMin: e.travel_min ?? null,
   };
 }
 
@@ -147,7 +148,7 @@ export async function GET(request: Request) {
   });
 }
 
-// POST { title, description?, startAt, endAt, allDay, calendarId? }
+// POST { title, description?, startAt, endAt, allDay, calendarId?, location?, travelMin? }
 export async function POST(request: Request) {
   const userId = await apiUserId(request);
   if (!userId) {
@@ -164,6 +165,7 @@ export async function POST(request: Request) {
     location?: string | null;
     locationLat?: number | null;
     locationLng?: number | null;
+    travelMin?: number | null;
   };
   try {
     body = await request.json();
@@ -209,6 +211,12 @@ export async function POST(request: Request) {
       location_lng:
         typeof body.locationLng === "number" && Number.isFinite(body.locationLng)
           ? body.locationLng
+          : null,
+      travel_min:
+        typeof body.travelMin === "number" &&
+        Number.isFinite(body.travelMin) &&
+        body.travelMin > 0
+          ? Math.min(Math.round(body.travelMin), 480)
           : null,
     });
     return Response.json({ event: toApiEvent(event) });

@@ -154,6 +154,18 @@ struct EventDetailSheet: View {
                                     .foregroundStyle(Theme.secondaryText)
                             }
                         }
+
+                        if let travel = event.travelMin, travel > 0 {
+                            Label {
+                                Text("이동시간 \(travel >= 60 ? "\(travel / 60)시간\(travel % 60 == 0 ? "" : " \(travel % 60)분")" : "\(travel)분")")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Theme.secondaryText)
+                            } icon: {
+                                Image(systemName: "car")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Theme.secondaryText)
+                            }
+                        }
                     }
                     .padding(.vertical, 4)
                 }

@@ -22,6 +22,7 @@ struct EditEventSheet: View {
     @State private var locationText: String
     @State private var locationLat: Double?
     @State private var locationLng: Double?
+    @State private var travelMin: Int?
     @State private var isSaving = false
     @State private var errorMessage: String?
 
@@ -58,6 +59,7 @@ struct EditEventSheet: View {
         _locationText = State(initialValue: event.location ?? "")
         _locationLat = State(initialValue: event.locationLat)
         _locationLng = State(initialValue: event.locationLng)
+        _travelMin = State(initialValue: event.travelMin)
         originalStart = event.startAt
         originalEnd = initialEnd
     }
@@ -118,7 +120,8 @@ struct EditEventSheet: View {
                 EventLocationSection(
                     locationText: $locationText,
                     locationLat: $locationLat,
-                    locationLng: $locationLng
+                    locationLng: $locationLng,
+                    travelMin: $travelMin
                 )
 
                 Section {
@@ -214,9 +217,15 @@ struct EditEventSheet: View {
             body.locationLng = locationLng
         }
 
+        // 이동시간 변경 — 해제는 0 으로 전송
+        if travelMin != event.travelMin {
+            body.travelMin = travelMin ?? 0
+        }
+
         // 바뀐 것이 없으면 네트워크 없이 닫는다
         if body.title == nil, body.description == nil, body.startAt == nil,
-           body.allDay == nil, body.calendarId == nil, body.location == nil {
+           body.allDay == nil, body.calendarId == nil, body.location == nil,
+           body.travelMin == nil {
             dismiss()
             return
         }

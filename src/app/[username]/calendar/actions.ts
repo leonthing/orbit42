@@ -38,6 +38,7 @@ export type EventInput = {
   location?: string | null;
   location_lat?: number | null;
   location_lng?: number | null;
+  travel_min?: number | null;
 };
 
 export type GoogleCalendarInfo = {
@@ -196,14 +197,26 @@ export async function updateGoogleEvent(
   if (input.title !== undefined) body.summary = input.title;
   if (input.description !== undefined) body.description = input.description ?? "";
   if (input.location !== undefined) body.location = input.location ?? "";
-  if (input.location_lat !== undefined || input.location_lng !== undefined) {
-    // 좌표는 extendedProperties 로 왕복 — 해제 시 빈 문자열로 덮는다.
-    body.extendedProperties = {
-      private: {
-        orbit42Lat: input.location_lat != null ? String(input.location_lat) : "",
-        orbit42Lng: input.location_lng != null ? String(input.location_lng) : "",
-      },
-    };
+  if (
+    input.location_lat !== undefined ||
+    input.location_lng !== undefined ||
+    input.travel_min !== undefined
+  ) {
+    // 좌표·이동시간은 extendedProperties 로 왕복 — 해제 시 빈 문자열로 덮는다.
+    const privateProps: Record<string, string> = {};
+    if (input.location_lat !== undefined || input.location_lng !== undefined) {
+      privateProps.orbit42Lat =
+        input.location_lat != null ? String(input.location_lat) : "";
+      privateProps.orbit42Lng =
+        input.location_lng != null ? String(input.location_lng) : "";
+    }
+    if (input.travel_min !== undefined) {
+      privateProps.orbit42TravelMin =
+        input.travel_min != null && input.travel_min > 0
+          ? String(input.travel_min)
+          : "";
+    }
+    body.extendedProperties = { private: privateProps };
   }
   if (input.start_at !== undefined && input.end_at !== undefined) {
     if (input.all_day) {

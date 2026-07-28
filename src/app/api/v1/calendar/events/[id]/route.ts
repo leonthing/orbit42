@@ -62,6 +62,11 @@ function buildEventPatch(body: Record<string, unknown>): Partial<EventInput> {
         ? body.locationLng
         : null;
   }
+  if (body.travelMin !== undefined) {
+    const v = Number(body.travelMin);
+    patch.travel_min =
+      Number.isFinite(v) && v > 0 ? Math.min(Math.round(v), 480) : null;
+  }
   return patch;
 }
 

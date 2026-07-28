@@ -8,6 +8,20 @@ struct EventLocationSection: View {
     @Binding var locationText: String
     @Binding var locationLat: Double?
     @Binding var locationLng: Double?
+    /// 이동시간(분) — nil 이면 없음
+    @Binding var travelMin: Int?
+
+    private static let travelOptions: [Int?] = [nil, 15, 30, 45, 60, 90, 120]
+
+    private static func travelLabel(_ value: Int?) -> String {
+        guard let value else { return "없음" }
+        if value >= 60 {
+            let hours = value / 60
+            let minutes = value % 60
+            return minutes == 0 ? "\(hours)시간" : "\(hours)시간 \(minutes)분"
+        }
+        return "\(value)분"
+    }
 
     @State private var search = LocationSearchModel()
     @State private var isResolving = false
@@ -49,6 +63,13 @@ struct EventLocationSection: View {
                 search.update(query: newValue)
             }
 
+            Picker("이동시간", selection: $travelMin) {
+                ForEach(Self.travelOptions, id: \.self) { option in
+                    Text(Self.travelLabel(option)).tag(option)
+                }
+            }
+            .tint(Theme.secondaryText)
+
             if isFocused {
                 ForEach(search.suggestions, id: \.self) { suggestion in
                     Button {
@@ -70,7 +91,9 @@ struct EventLocationSection: View {
         } header: {
             Text("위치")
         } footer: {
-            if locationLat != nil {
+            if travelMin != nil {
+                Text("이동시간만큼 일정 시작 전이 예약 가능 시간에서 함께 막혀요.")
+            } else if locationLat != nil {
                 Text("지도에 위치가 지정됐어요. 일정 상세에서 지도로 표시돼요.")
             } else if !locationText.isEmpty {
                 Text("대략적인 위치로 저장돼요. 검색 결과를 고르면 지도에 표시할 수 있어요.")

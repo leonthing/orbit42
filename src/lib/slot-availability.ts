@@ -104,8 +104,15 @@ export async function computeAutoAvailability(
         const start = new Date(startIso);
         const end = new Date(endIso);
         if (end.getTime() <= start.getTime()) continue;
+        // 일정에 이동시간이 설정돼 있으면 그만큼 시작 전을 함께 막는다.
+        const travelMin = Number(
+          it.extendedProperties?.private?.orbit42TravelMin ?? 0,
+        );
         googleBlocks.push({
-          start,
+          start:
+            Number.isFinite(travelMin) && travelMin > 0
+              ? new Date(start.getTime() - travelMin * 60_000)
+              : start,
           end,
           title: (it.summary as string | null) ?? null,
           location: (it.location as string | null) ?? null,
@@ -164,18 +171,26 @@ export async function computeAutoAvailability(
   // an event during a would-be-bookable window, the slot should close.
   const { data: nativeEvents } = await db
     .from("events")
-    .select("title, start_at, end_at, all_day")
+    .select("title, start_at, end_at, all_day, travel_min")
     .eq("user_id", hostId)
     .gte("start_at", now.toISOString())
     .lte("start_at", horizon.toISOString());
   const nativeBlocks: Block[] = (nativeEvents ?? [])
     .filter((e) => !e.all_day)
-    .map((e) => ({
-      start: new Date(e.start_at as string),
-      end: new Date((e.end_at ?? e.start_at) as string),
-      title: (e.title as string | null) ?? null,
-      location: null,
-    }))
+    .map((e) => {
+      const start = new Date(e.start_at as string);
+      const travelMin = Number(e.travel_min ?? 0);
+      return {
+        // 이동시간이 있으면 그만큼 시작 전을 함께 막는다.
+        start:
+          Number.isFinite(travelMin) && travelMin > 0
+            ? new Date(start.getTime() - travelMin * 60_000)
+            : start,
+        end: new Date((e.end_at ?? e.start_at) as string),
+        title: (e.title as string | null) ?? null,
+        location: null,
+      };
+    })
     .filter((b) => b.end.getTime() > b.start.getTime());
 
   // If the slot itself has a location that matches a preset, a block
