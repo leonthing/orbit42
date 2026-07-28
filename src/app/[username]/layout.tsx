@@ -19,8 +19,14 @@ export default async function UsernameLayout({
 
   if (!profile) notFound();
 
+  // 공개 프로필은 "사람"이 먼저 보여야 하므로 네비를 아래로 내리고,
+  // 배경은 사용자가 고른 링크 테마가 칠한다.
   if (!session) {
-    return <PublicChrome viewerUsername={null}>{children}</PublicChrome>;
+    return (
+      <PublicChrome viewerUsername={null} navAtBottom bare>
+        {children}
+      </PublicChrome>
+    );
   }
 
   const [viewer, unread, unreadN] = await Promise.all([

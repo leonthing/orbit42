@@ -9,6 +9,7 @@ import { listExtraGoogleAccounts } from "@/lib/google";
 import { getUserId } from "@/lib/db";
 import { GoogleAccountsSection } from "./GoogleAccountsSection";
 import { MyCalendars } from "./MyCalendars";
+import { LinkThemePicker } from "./LinkThemePicker";
 import { WorkHoursForm } from "./WorkHoursForm";
 import { getWorkHours } from "@/lib/insights";
 import { LocationBuffersForm } from "./LocationBuffersForm";
@@ -91,6 +92,13 @@ export default async function SettingsPage({
                   (a as unknown as { created_at?: string }).created_at ??
                   new Date().toISOString(),
               }))}
+            />
+          </section>
+
+          <section id="link-theme" className="scroll-mt-16">
+            <LinkThemePicker
+              username={params.username}
+              current={(profile?.link_theme as string | null) ?? null}
             />
           </section>
 

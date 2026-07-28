@@ -233,6 +233,7 @@ export default async function PublicProfile({
           viewerFollowing={viewerFollowing}
           rating={hostRating}
           totalBookings={value?.total_bookings ?? 0}
+          themeKey={(profile.link_theme as string | null) ?? null}
         />
       </>
     );

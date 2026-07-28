@@ -3,13 +3,24 @@ import Link from "next/link";
 export function PublicChrome({
   children,
   viewerUsername,
+  /** 공개 프로필처럼 "사람"이 먼저 보여야 하는 화면은 네비를 아래로 내린다. */
+  navAtBottom = false,
+  /** 배경을 자식(테마)이 직접 칠할 때 — 셸 배경/여백을 비운다. */
+  bare = false,
 }: {
   children: React.ReactNode;
   viewerUsername: string | null;
+  navAtBottom?: boolean;
+  bare?: boolean;
 }) {
-  return (
-    <div className="min-h-screen bg-[rgb(var(--bg-base))]">
-      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-charcoal-800/40 bg-[rgb(var(--bg-base))]/85 px-4 backdrop-blur md:px-8">
+  const nav = (
+      <header
+        className={`flex h-14 items-center justify-between px-4 backdrop-blur md:px-8 ${
+          navAtBottom
+            ? "border-t border-charcoal-800/40 bg-[rgb(var(--bg-base))]/85"
+            : "sticky top-0 z-30 border-b border-charcoal-800/40 bg-[rgb(var(--bg-base))]/85"
+        }`}
+      >
         <Link href="/" className="text-sm font-semibold tracking-tight text-charcoal-100">
           Orbit42
         </Link>
@@ -54,8 +65,15 @@ export function PublicChrome({
           )}
         </div>
       </header>
+  );
 
-      <main className="mx-auto max-w-5xl px-4 py-8 md:px-8 md:py-10">{children}</main>
+  return (
+    <div className={bare ? "min-h-screen" : "min-h-screen bg-[rgb(var(--bg-base))]"}>
+      {!navAtBottom && nav}
+      <main className={bare ? "" : "mx-auto max-w-5xl px-4 py-8 md:px-8 md:py-10"}>
+        {children}
+      </main>
+      {navAtBottom && nav}
     </div>
   );
 }
