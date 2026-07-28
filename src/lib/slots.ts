@@ -358,8 +358,55 @@ export async function createSlot(input: SlotInput) {
     await db.from("slot_availabilities").insert(rows);
   }
 
+  // 팔로워에게 새 슬롯 알림 — 예약을 트리거하는 핵심 신호 (실패해도 생성은 유효).
+  try {
+    await notifyFollowersOfNewSlot(
+      userId,
+      slot.title as string,
+      slot.slug as string,
+    );
+  } catch (err) {
+    console.error("notifyFollowersOfNewSlot", err);
+  }
+
   revalidatePath("/", "layout");
   return { success: true, slug: slot.slug as string, id: slot.id as string };
+}
+
+/** 새 타임슬롯을 열면 팔로워(최대 200명)에게 인앱 알림을 보낸다. */
+async function notifyFollowersOfNewSlot(
+  hostId: string,
+  slotTitle: string,
+  slug: string,
+) {
+  const db = getAdminClient();
+  const { data: host } = await db
+    .from("users")
+    .select("username, display_name")
+    .eq("id", hostId)
+    .single();
+  if (!host) return;
+  const { data: followers } = await db
+    .from("follows")
+    .select("follower_id")
+    .eq("following_id", hostId)
+    .limit(200);
+  if (!followers || followers.length === 0) return;
+
+  const label = (host.display_name as string | null) || (host.username as string);
+  const { createNotification } = await import("@/lib/notifications");
+  await Promise.all(
+    followers.map((f) =>
+      createNotification({
+        userId: f.follower_id as string,
+        type: "new_slot",
+        title: `${label}님이 '${slotTitle}' 타임슬롯을 열었어요`,
+        body: "지금 예약할 수 있어요",
+        link: `/${host.username}/s/${slug}`,
+        actorId: hostId,
+      }),
+    ),
+  );
 }
 
 export async function updateSlot(id: string, patch: Partial<SlotInput>) {

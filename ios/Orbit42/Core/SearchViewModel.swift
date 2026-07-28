@@ -15,6 +15,8 @@ final class SearchViewModel {
 
     /// 내 오르빗 — 검색어가 없을 때 기본 콘텐츠로 보여준다. nil 이면 로딩 전.
     private(set) var orbit: [OrbitPerson]?
+    /// 오르빗 스트림 — 팔로우한 사람들의 최근 활동. nil 이면 로딩 전.
+    private(set) var stream: [OrbitStreamItem]?
 
     /// 디바운스 중인 검색 작업 — 새 입력이 오면 취소한다.
     private var pendingSearch: Task<Void, Never>?
@@ -54,6 +56,17 @@ final class SearchViewModel {
         } catch {
             // 오르빗은 부가 콘텐츠 — 실패해도 검색 안내만 보여주면 된다.
             if orbit == nil { orbit = [] }
+        }
+    }
+
+    /// 오르빗 스트림 — 팔로우한 사람들의 시간 로그·새 슬롯.
+    func loadStream(force: Bool = false) async {
+        if !force, stream != nil { return }
+        do {
+            let response: OrbitStreamResponse = try await api.get("/api/v1/orbit/stream")
+            stream = response.items
+        } catch {
+            if stream == nil { stream = [] }
         }
     }
 

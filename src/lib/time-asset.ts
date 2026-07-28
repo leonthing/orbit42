@@ -421,6 +421,23 @@ export type TimeAssetSummary = {
     /** 올해가 얼마나 지났는지 (0~1) */
     progressRatio: number;
   };
+  /** 시간 비즈니스 — 실제 번 돈(거래+수동 기록)과 이번 주 판매 퍼널 */
+  business: {
+    /** "YYYY-MM" */
+    monthLabel: string;
+    monthBookedKrw: number;
+    monthManualKrw: number;
+    monthTotalKrw: number;
+    /** 과거 → 현재 6개월 실수입 */
+    earnTrend: Array<{ month: string; krw: number }>;
+    /** 활성 슬롯이 없으면 null */
+    funnel: {
+      openHours: number;
+      bookedHours: number;
+      bookedKrw: number;
+      unsoldValueKrw: number;
+    } | null;
+  };
   /** 주간 목표와 이번 주 진행률 (목표 미설정이면 null) */
   goals: {
     earnKrw: number | null;
@@ -753,6 +770,145 @@ export async function getTimeAssetSummary(
         }
       : null;
 
+  // ── 시간 비즈니스: 실제 번 돈 + 이번 주 판매 퍼널 ──
+  const monthKeyOf = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  const sixMonthsAgo = new Date(anchor.getFullYear(), anchor.getMonth() - 5, 1);
+  const nextMonth = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1);
+
+  const [bookingRowsRes, slotRowsRes, earningRowsRes] = await Promise.all([
+    db
+      .from("bookings")
+      .select("slot_id, status, scheduled_at, scheduled_end_at")
+      .eq("host_id", userId)
+      .in("status", ["confirmed", "completed"])
+      .gte("scheduled_at", sixMonthsAgo.toISOString())
+      .lt("scheduled_at", nextMonth.toISOString()),
+    db
+      .from("time_slots")
+      .select("*")
+      .eq("host_id", userId),
+    db
+      .from("event_earnings")
+      .select("event_key, amount_krw, updated_at")
+      .eq("user_id", userId),
+  ]);
+  type SlotRowLite = {
+    id: string;
+    active: boolean;
+    price_cents: number | null;
+    duration_min: number | null;
+    pricing_model: string | null;
+    current_high_bid_cents: number | null;
+  };
+  const slotRows = (slotRowsRes.data ?? []) as SlotRowLite[];
+  const priceOf = (slotId: string): number => {
+    const slot = slotRows.find((r) => r.id === slotId);
+    if (!slot) return 0;
+    const cents =
+      slot.pricing_model === "auction"
+        ? (slot.current_high_bid_cents ?? slot.price_cents ?? 0)
+        : (slot.price_cents ?? 0);
+    return Math.round(cents / 100);
+  };
+
+  const bookedByMonth = new Map<string, number>();
+  for (const b of bookingRowsRes.data ?? []) {
+    const date = new Date(b.scheduled_at as string);
+    if (Number.isNaN(date.getTime())) continue;
+    const key = monthKeyOf(date);
+    bookedByMonth.set(key, (bookedByMonth.get(key) ?? 0) + priceOf(b.slot_id as string));
+  }
+
+  // 수동 수익 기록 — 로컬 이벤트는 시작일 기준, 구글 이벤트는 기록 시점 기준 달로 귀속.
+  const manualByMonth = new Map<string, number>();
+  const localEarningKeys = (earningRowsRes.data ?? [])
+    .map((r) => r.event_key as string)
+    .filter((k) => !k.startsWith("gcal_"));
+  const localStartById = new Map<string, Date>();
+  if (localEarningKeys.length > 0) {
+    const { data: localEventRows } = await db
+      .from("events")
+      .select("id, start_at")
+      .in("id", localEarningKeys);
+    for (const e of localEventRows ?? []) {
+      localStartById.set(e.id as string, new Date(e.start_at as string));
+    }
+  }
+  for (const r of earningRowsRes.data ?? []) {
+    const date =
+      localStartById.get(r.event_key as string) ?? new Date(r.updated_at as string);
+    if (Number.isNaN(date.getTime())) continue;
+    const key = monthKeyOf(date);
+    manualByMonth.set(key, (manualByMonth.get(key) ?? 0) + Number(r.amount_krw));
+  }
+
+  const monthLabel = monthKeyOf(anchor);
+  const earnTrend: Array<{ month: string; krw: number }> = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(anchor.getFullYear(), anchor.getMonth() - i, 1);
+    const key = monthKeyOf(d);
+    earnTrend.push({
+      month: key,
+      krw: (bookedByMonth.get(key) ?? 0) + (manualByMonth.get(key) ?? 0),
+    });
+  }
+
+  // 이번 주 판매 퍼널 — 활성 슬롯의 남은 예약 옵션(지금~일요일) 근사치.
+  let funnel: TimeAssetSummary["business"]["funnel"] = null;
+  const activeSlots = slotRows.filter((r) => r.active);
+  if (activeSlots.length > 0) {
+    try {
+      const { getBookableOptions } = await import("@/lib/slots");
+      const weekEndTs = weekStart.getTime() + 7 * 24 * 3_600_000;
+      let openHours = 0;
+      let unsoldValueKrw = 0;
+      for (const slot of activeSlots.slice(0, 5)) {
+        const fullSlot = (slotRowsRes.data ?? []).find((r) => r.id === slot.id);
+        if (!fullSlot) continue;
+        const options = await getBookableOptions(fullSlot as never);
+        for (const option of options as Array<{ start_at: string; remaining?: number }>) {
+          const ts = new Date(option.start_at).getTime();
+          if (ts >= anchor.getTime() && ts < weekEndTs) {
+            const seats = option.remaining ?? 1;
+            openHours += ((slot.duration_min ?? 60) / 60) * seats;
+            unsoldValueKrw += priceOf(slot.id) * seats;
+          }
+        }
+      }
+      let bookedHours = 0;
+      let bookedKrw = 0;
+      for (const b of bookingRowsRes.data ?? []) {
+        const ts = new Date(b.scheduled_at as string).getTime();
+        if (ts >= weekStart.getTime() && ts < weekEndTs) {
+          const endTs = b.scheduled_end_at
+            ? new Date(b.scheduled_end_at as string).getTime()
+            : ts;
+          bookedHours += Math.max(0, endTs - ts) / 3_600_000;
+          bookedKrw += priceOf(b.slot_id as string);
+        }
+      }
+      funnel = {
+        openHours: Math.round(openHours * 10) / 10,
+        bookedHours: Math.round(bookedHours * 10) / 10,
+        bookedKrw,
+        unsoldValueKrw,
+      };
+    } catch (err) {
+      console.error("funnel compute", err);
+    }
+  }
+
+  const business: TimeAssetSummary["business"] = {
+    monthLabel,
+    monthBookedKrw: bookedByMonth.get(monthLabel) ?? 0,
+    monthManualKrw: manualByMonth.get(monthLabel) ?? 0,
+    monthTotalKrw:
+      (bookedByMonth.get(monthLabel) ?? 0) + (manualByMonth.get(monthLabel) ?? 0),
+    earnTrend,
+    funnel,
+  };
+
   // 행동 추천 — "시간 진단"을 실제 다음 행동으로 연결한다 (우선순위 순, 최대 3개).
   const { count: slotCount } = await db
     .from("time_slots")
@@ -856,6 +1012,7 @@ export async function getTimeAssetSummary(
     actions: actions.slice(0, 3),
     report,
     yearRemaining,
+    business,
     goals,
     incomeType: income.incomeType,
     freelance,

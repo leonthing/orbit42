@@ -6,6 +6,8 @@ struct SearchView: View {
     @State private var viewModel = SearchViewModel()
     /// 팔로우 추천 — 오르빗 아래 섹션 (온보딩과 같은 API·행 공용).
     @State private var suggestions = FollowSuggestionsViewModel()
+    /// 스트림의 시간 로그 카드 탭 → 뷰어
+    @State private var selectedStreamPost: TimelogPost?
     @FocusState private var isSearchFocused: Bool
 
     var body: some View {
@@ -20,8 +22,12 @@ struct SearchView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task {
             async let orbit: Void = viewModel.loadOrbit()
+            async let stream: Void = viewModel.loadStream()
             async let suggested: Void = suggestions.load()
-            _ = await (orbit, suggested)
+            _ = await (orbit, stream, suggested)
+        }
+        .sheet(item: $selectedStreamPost) { post in
+            TimelogViewerSheet(post: post)
         }
     }
 
@@ -66,7 +72,8 @@ struct SearchView: View {
     private var content: some View {
         if viewModel.trimmedQuery.isEmpty {
             let orbit = viewModel.orbit ?? []
-            if orbit.isEmpty, suggestions.users?.isEmpty != false {
+            if orbit.isEmpty, suggestions.users?.isEmpty != false,
+               viewModel.stream?.isEmpty != false {
                 hintState(
                     icon: "sparkle.magnifyingglass",
                     title: "오르빗이 비어있어요",
@@ -218,6 +225,15 @@ struct SearchView: View {
                         .foregroundStyle(Theme.secondaryText)
                 }
 
+                if let stream = viewModel.stream, !stream.isEmpty {
+                    sectionHeader("최근 활동")
+                        .padding(.top, 14)
+
+                    ForEach(stream) { item in
+                        streamCard(item)
+                    }
+                }
+
                 if let suggested = suggestions.users, !suggested.isEmpty {
                     sectionHeader("추천")
                         .padding(.top, 14)
@@ -238,7 +254,91 @@ struct SearchView: View {
         .scrollDismissesKeyboard(.immediately)
         .refreshable {
             await viewModel.loadOrbit(force: true)
+            await viewModel.loadStream(force: true)
             await suggestions.load(force: true)
+        }
+    }
+
+    /// 스트림 카드 — 시간 로그(사진) 또는 새 타임슬롯.
+    @ViewBuilder
+    private func streamCard(_ item: OrbitStreamItem) -> some View {
+        if item.type == "timelog", let post = item.post {
+            Button {
+                selectedStreamPost = post
+            } label: {
+                VStack(alignment: .leading, spacing: 8) {
+                    streamHeader(item, action: "시간 로그")
+                    if let cover = post.coverURL {
+                        AsyncImage(url: cover) { phase in
+                            if let image = phase.image {
+                                image.resizable().scaledToFill()
+                            } else {
+                                Theme.fill(0.05)
+                            }
+                        }
+                        .frame(height: 170)
+                        .frame(maxWidth: .infinity)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .overlay(alignment: .topTrailing) {
+                            if post.imageUrls.count > 1 {
+                                Image(systemName: "square.on.square")
+                                    .font(.caption)
+                                    .foregroundStyle(.white)
+                                    .padding(6)
+                            }
+                        }
+                    }
+                    Text(post.title)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Theme.primaryText)
+                        .lineLimit(1)
+                }
+                .padding(12)
+                .background(Theme.surface, in: RoundedRectangle(cornerRadius: 14))
+            }
+            .buttonStyle(.plain)
+        } else if item.type == "slot", let slot = item.slot {
+            NavigationLink {
+                SlotBookingView(username: item.username, slug: slot.slug)
+            } label: {
+                VStack(alignment: .leading, spacing: 8) {
+                    streamHeader(item, action: "새 타임슬롯")
+                    HStack(spacing: 8) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(slot.title)
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(Theme.primaryText)
+                                .lineLimit(1)
+                            Text("\(slot.durationMin)분 · \(slot.priceCents == 0 ? "무료" : DiscoverFormat.priceText(cents: slot.priceCents))")
+                                .font(.caption)
+                                .foregroundStyle(Theme.secondaryText)
+                        }
+                        Spacer()
+                        Text("예약")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Theme.accent, in: Capsule())
+                    }
+                }
+                .padding(12)
+                .background(Theme.surface, in: RoundedRectangle(cornerRadius: 14))
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func streamHeader(_ item: OrbitStreamItem, action: String) -> some View {
+        HStack(spacing: 8) {
+            DiscoverAvatar(url: item.avatarURL, name: item.preferredName, size: 26)
+            Text(item.preferredName)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Theme.primaryText)
+            Text(action)
+                .font(.caption)
+                .foregroundStyle(Theme.secondaryText)
+            Spacer(minLength: 0)
         }
     }
 

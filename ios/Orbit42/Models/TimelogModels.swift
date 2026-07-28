@@ -72,3 +72,31 @@ struct TimelogPost: Decodable, Identifiable, Sendable {
     var startDate: Date? { APIDateParser.parse(startAt) }
     var coverURL: URL? { imageUrls.first.flatMap(URL.init(string:)) }
 }
+
+
+// MARK: - 오르빗 스트림 (GET /api/v1/orbit/stream)
+
+struct OrbitStreamResponse: Decodable, Sendable {
+    let items: [OrbitStreamItem]
+}
+
+/// 팔로우한 사람들의 최근 활동 — 시간 로그 또는 새 타임슬롯.
+struct OrbitStreamItem: Decodable, Identifiable, Sendable {
+    let id: String
+    let type: String        // "timelog" | "slot"
+    let createdAt: String
+    let username: String
+    let displayName: String?
+    let avatarUrl: String?
+    let post: TimelogPost?
+    let slot: TimeSlot?
+
+    var preferredName: String {
+        if let displayName, !displayName.isEmpty { return displayName }
+        return username
+    }
+
+    var avatarURL: URL? {
+        avatarUrl.flatMap(URL.init(string:))
+    }
+}

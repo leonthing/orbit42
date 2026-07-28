@@ -166,6 +166,35 @@ struct TimeAssetSummary: Decodable {
     let yearRemaining: TimeAssetYearRemaining?
     /// 주간 목표 + 이번 주 진행률 — 목표 미설정이면 null
     let goals: TimeAssetGoals?
+    /// 시간 비즈니스 — 실제 번 돈 + 이번 주 판매 퍼널 (구 서버 응답에는 없음)
+    let business: TimeAssetBusiness?
+}
+
+/// 실수입(거래+수동 기록)과 판매 퍼널.
+struct TimeAssetBusiness: Decodable {
+    let monthLabel: String
+    let monthBookedKrw: Int
+    let monthManualKrw: Int
+    let monthTotalKrw: Int
+    let earnTrend: [MonthEarn]
+    let funnel: TimeAssetFunnel?
+
+    struct MonthEarn: Decodable, Identifiable {
+        let month: String
+        let krw: Int
+        var id: String { month }
+        /// "7월"
+        var shortLabel: String {
+            month.split(separator: "-").last.map { "\(Int($0) ?? 0)월" } ?? month
+        }
+    }
+}
+
+struct TimeAssetFunnel: Decodable {
+    let openHours: Double
+    let bookedHours: Double
+    let bookedKrw: Int
+    let unsoldValueKrw: Int
 }
 
 /// 지난주(완결된 주) 리포트 — 전주 대비 변화 포함.

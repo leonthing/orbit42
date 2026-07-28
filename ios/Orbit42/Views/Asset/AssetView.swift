@@ -118,6 +118,12 @@ struct AssetView: View {
     private func loaded(_ summary: TimeAssetSummary) -> some View {
         ScrollView {
             VStack(spacing: 16) {
+                if let business = summary.business {
+                    businessCard(business)
+                    if let funnel = business.funnel {
+                        funnelCard(funnel)
+                    }
+                }
                 if summary.incomeType == "freelance" {
                     freelanceHeader(summary)
                 } else if let hourly = summary.hourlyValueKrw {
@@ -365,6 +371,124 @@ struct AssetView: View {
         }
         let sleepPerDay = AssetFormat.hours(summary.sleepHoursPerDay ?? sleepWeek / 7)
         return "기록 \(recorded)시간 · 수면(설정 \(sleepPerDay)시간/일) \(AssetFormat.hours(sleepWeek))시간 · 그 외 미기록 \(unrecorded)시간"
+    }
+
+    // MARK: 1.0 시간 비즈니스 — 실제 번 돈
+
+    private func businessCard(_ business: TimeAssetBusiness) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("이번 달 시간으로 번 돈")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Theme.secondaryText)
+
+            Text(AssetFormat.won(business.monthTotalKrw))
+                .font(.system(size: 30, weight: .bold))
+                .foregroundStyle(Theme.primaryText)
+                .monospacedDigit()
+
+            if business.monthTotalKrw > 0 {
+                Text("슬롯 거래 \(AssetFormat.won(business.monthBookedKrw)) · 직접 기록 \(AssetFormat.won(business.monthManualKrw))")
+                    .font(.caption)
+                    .foregroundStyle(Theme.secondaryText)
+            } else {
+                Text("타임슬롯 판매와 일정 수익 기록이 여기에 쌓여요.")
+                    .font(.caption)
+                    .foregroundStyle(Theme.secondaryText)
+            }
+
+            // 6개월 실수입 미니 바 차트
+            let maxKrw = max(business.earnTrend.map(\.krw).max() ?? 0, 1)
+            HStack(alignment: .bottom, spacing: 8) {
+                ForEach(business.earnTrend) { entry in
+                    VStack(spacing: 4) {
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(entry.month == business.monthLabel ? Theme.accent : Theme.fill(0.15))
+                            .frame(height: max(4, 44 * CGFloat(entry.krw) / CGFloat(maxKrw)))
+                        Text(entry.shortLabel)
+                            .font(.system(size: 9))
+                            .foregroundStyle(Theme.secondaryText)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+            }
+            .frame(height: 62)
+            .padding(.top, 4)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    // MARK: 1.1 이번 주 판매 현황
+
+    private func funnelCard(_ funnel: TimeAssetFunnel) -> some View {
+        let totalHours = funnel.openHours + funnel.bookedHours
+        let soldRatio = totalHours > 0 ? funnel.bookedHours / totalHours : 0
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("이번 주 판매 현황")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Theme.secondaryText)
+                Spacer()
+                Text("\(AssetFormat.percent(soldRatio)) 판매")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(soldRatio > 0 ? .green : Theme.secondaryText)
+            }
+
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Theme.fill(0.08))
+                    Capsule()
+                        .fill(Color.green)
+                        .frame(width: max(soldRatio > 0 ? 4 : 0, proxy.size.width * soldRatio))
+                }
+            }
+            .frame(height: 6)
+
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("열린 시간")
+                        .font(.caption)
+                        .foregroundStyle(Theme.secondaryText)
+                    Text("\(AssetFormat.hours(funnel.openHours))시간")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.primaryText)
+                        .monospacedDigit()
+                }
+                Spacer()
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("예약됨")
+                        .font(.caption)
+                        .foregroundStyle(Theme.secondaryText)
+                    Text("\(AssetFormat.hours(funnel.bookedHours))시간 · \(AssetFormat.won(funnel.bookedKrw))")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.primaryText)
+                        .monospacedDigit()
+                }
+            }
+
+            if funnel.unsoldValueKrw > 0 {
+                HStack {
+                    Text("아직 안 팔린 시간 \(AssetFormat.won(funnel.unsoldValueKrw))어치")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                    Spacer()
+                    Button {
+                        router.selection = .profile
+                    } label: {
+                        Text("프로필 공유")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Theme.accent)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(Theme.accent.opacity(0.15), in: Capsule())
+                    }
+                }
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16))
     }
 
     // MARK: 1.5 남은 시간 자산
