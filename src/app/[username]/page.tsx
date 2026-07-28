@@ -228,7 +228,6 @@ export default async function PublicProfile({
           }))}
           hasPublicCalendar={hasPublicCalendar}
           hasPosts={myFeedPosts.length > 0}
-          profileUrl={profileUrl}
           loggedIn={!!session}
           viewerFollowing={viewerFollowing}
           rating={hostRating}

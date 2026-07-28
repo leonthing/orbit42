@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { ShareMenu } from "@/components/ShareMenu";
 import { FollowButton } from "./FollowButton";
 import type { SocialLinks } from "@/lib/auth";
 import { resolveLinkTheme } from "@/lib/link-themes";
@@ -88,7 +87,6 @@ export function PublicLinkProfile({
   slots,
   hasPublicCalendar,
   hasPosts,
-  profileUrl,
   loggedIn,
   viewerFollowing,
   rating,
@@ -104,7 +102,6 @@ export function PublicLinkProfile({
   slots: PublicSlot[];
   hasPublicCalendar: boolean;
   hasPosts: boolean;
-  profileUrl: string;
   loggedIn: boolean;
   viewerFollowing: boolean;
   rating: { average: number; count: number } | null;
@@ -204,23 +201,17 @@ export function PublicLinkProfile({
           </div>
         )}
 
-        {/* 액션 — 비로그인 방문자에게는 로그인 유도 대신 공유만.
-            가입 동선은 페이지 하단의 "나도 예약 링크 만들기" 가 담당한다. */}
-        <div className="mt-5 flex justify-center gap-2">
-          {loggedIn && (
+        {/* 액션 — 방문자의 시선이 예약 카드로 바로 가도록 버튼을 두지 않는다.
+            로그인한 방문자에게만 팔로우를 보여주고, 공유는 브라우저 공유 기능으로. */}
+        {loggedIn && (
+          <div className="mt-5 flex justify-center">
             <FollowButton
               targetUsername={username}
               initiallyFollowing={viewerFollowing}
               loggedIn
             />
-          )}
-          <ShareMenu
-            url={profileUrl}
-            title={`${displayName} (@${username}) | Orbit42`}
-            text={bio || `${displayName}님의 시간을 Orbit42에서 예약해보세요`}
-            compact
-          />
-        </div>
+          </div>
+        )}
 
         {/* 신뢰 신호 */}
         {((rating && rating.count > 0) || totalBookings > 0) && (
