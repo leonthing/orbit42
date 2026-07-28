@@ -68,6 +68,7 @@ struct ProfileView: View {
 
 private struct MyProfileContent: View {
     @Environment(AuthViewModel.self) private var auth
+    @Environment(\.openURL) private var openURL
     @State private var viewModel: PersonProfileViewModel
     @State private var showingEditProfile = false
     /// 내 캘린더 목록 — nil 이면 로딩 전. 실패해도 섹션만 숨긴다 (부가 콘텐츠).
@@ -140,6 +141,21 @@ private struct MyProfileContent: View {
         return viewModel.data?.user.interestTags ?? []
     }
 
+    /// 소셜 링크 — 편집 직후 즉시 반영되도록 auth.user 우선.
+    private var socialLinkItems: [SocialLinkItem] {
+        let links = auth.user?.socialLinks
+            ?? viewModel.data?.user.socialLinks
+            ?? [:]
+        return SocialLinkKind.allCases.compactMap { kind in
+            guard
+                let raw = links[kind.rawValue]?.trimmingCharacters(in: .whitespaces),
+                !raw.isEmpty,
+                let url = URL(string: raw)
+            else { return nil }
+            return SocialLinkItem(kind: kind, url: url)
+        }
+    }
+
     private var orbiting: Int? {
         viewModel.data?.orbiting ?? auth.user?.orbiting
     }
@@ -173,6 +189,23 @@ private struct MyProfileContent: View {
 
             if !interests.isEmpty {
                 interestChips(interests)
+            }
+
+            if !socialLinkItems.isEmpty {
+                HStack(spacing: 10) {
+                    ForEach(socialLinkItems) { link in
+                        Button {
+                            openURL(link.url)
+                        } label: {
+                            Image(systemName: link.kind.systemImage)
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(Theme.accent)
+                                .frame(width: 34, height: 34)
+                                .background(Theme.fill(0.08), in: Circle())
+                        }
+                        .accessibilityLabel(link.kind.label)
+                    }
+                }
             }
 
             if orbiting != nil || orbiters != nil {
