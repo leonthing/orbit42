@@ -117,6 +117,10 @@ type FormData = {
   endTime: string;
   allDay: boolean;
   calendarId: string;
+  /** 위치 — 자유 텍스트 (앱과 동일 계약) */
+  location: string;
+  /** 시작 전 이동시간(분) — 0 이면 없음 */
+  travelMin: number;
 };
 
 const emptyForm = (date?: string, calendarId?: string): FormData => ({
@@ -127,6 +131,8 @@ const emptyForm = (date?: string, calendarId?: string): FormData => ({
   endTime: "10:00",
   allDay: false,
   calendarId: calendarId ?? "",
+  location: "",
+  travelMin: 0,
 });
 
 // ─── Component ──────────────────────────────────────────────
@@ -510,6 +516,8 @@ export default function CalendarView({
         : `${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}`,
       allDay: event.all_day,
       calendarId: event.calendar_id ?? defaultCalendarId,
+      location: (event as { location?: string | null }).location ?? "",
+      travelMin: (event as { travel_min?: number | null }).travel_min ?? 0,
     });
     setShowForm(true);
   };
@@ -537,6 +545,8 @@ export default function CalendarView({
       end_at: new Date(endAt).toISOString(),
       all_day: form.allDay,
       calendar_id: form.calendarId || null,
+      location: form.location.trim() || null,
+      travel_min: form.travelMin > 0 ? form.travelMin : null,
     };
 
     startTransition(async () => {
@@ -1167,6 +1177,44 @@ export default function CalendarView({
                   className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder-charcoal-600 focus:border-navy-400 focus:outline-none resize-none"
                   placeholder="메모 (선택)"
                 />
+              </div>
+
+              {/* 위치 · 이동시간 (앱과 동일) */}
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-charcoal-400">
+                    위치
+                  </label>
+                  <input
+                    type="text"
+                    value={form.location}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, location: e.target.value }))
+                    }
+                    className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder-charcoal-600 focus:border-navy-400 focus:outline-none"
+                    placeholder="예: 강남 또는 상세 주소"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-charcoal-400">
+                    이동시간
+                  </label>
+                  <select
+                    value={form.travelMin}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, travelMin: Number(e.target.value) }))
+                    }
+                    className="rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 focus:border-navy-400 focus:outline-none"
+                  >
+                    <option value={0}>없음</option>
+                    <option value={15}>15분</option>
+                    <option value={30}>30분</option>
+                    <option value={45}>45분</option>
+                    <option value={60}>1시간</option>
+                    <option value={90}>1시간 30분</option>
+                    <option value={120}>2시간</option>
+                  </select>
+                </div>
               </div>
 
               {/* Calendar picker */}

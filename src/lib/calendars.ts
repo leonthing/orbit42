@@ -130,7 +130,12 @@ export async function createGoogleLinkedCalendar(args: {
 export async function updateCalendar(
   id: string,
   patch: Partial<
-    Pick<Calendar, "name" | "purpose" | "color" | "visibility" | "hourly_rate_krw">
+    Pick<
+      Calendar,
+      | "name" | "purpose" | "color" | "visibility" | "hourly_rate_krw"
+      | "goal_title" | "goal_target_hours" | "goal_deadline"
+      | "goal_started_at" | "archived_at"
+    >
   >,
 ) {
   const userId = await requireUserId();

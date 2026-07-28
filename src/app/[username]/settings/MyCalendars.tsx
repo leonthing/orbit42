@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { CalendarGoalShare } from "./CalendarGoalShare";
 import {
   createNativeCalendar,
   updateCalendar,
@@ -226,6 +227,8 @@ function CalendarRow({ calendar }: { calendar: Calendar }) {
           {calendar.source === "google" ? "연결 해제" : "삭제"}
         </button>
       </div>
+
+      <CalendarGoalShare calendar={calendar} />
     </li>
   );
 }
