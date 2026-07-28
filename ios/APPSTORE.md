@@ -8,8 +8,11 @@
 - [x] 온보딩 알림 권한 / 위치 권한 컨텍스트 요청 (권한 사용 문구 plist 등록)
 - [ ] **App Store Connect 앱 레코드 생성 (Leo)** — appstoreconnect.apple.com > 나의 앱 > + 신규 앱
   - 플랫폼 iOS / 이름 `orbit42` / 기본 언어 한국어 / 번들 ID `org.orbit42.app` / SKU `orbit42-ios`
-- [ ] 레코드 생성 후: 아카이브 → 업로드 (`ExportOptions.plist` 준비됨, 명령은 아래)
-- [ ] 스크린샷 촬영 (아래 목록)
+- [x] ASC 앱 레코드 생성 (2026-07-28)
+- [x] v1.0.0 (빌드 1) 업로드 완료 — TestFlight 처리 중
+- [x] 스크린샷 촬영: `~/Desktop/orbit42-screenshots/` (라이트 6장 + dark/ 다크 6장,
+  iPhone 17 Pro Max 6.9" 1320×2868) — 마음에 드는 세트를 ASC에 드래그 업로드
+- [ ] ASC 메타데이터 입력 (아래 초안 복붙) + App Privacy 신고
 - [ ] 심사 제출
 
 ## 업로드 명령 (레코드 생성 후)
@@ -41,8 +44,9 @@ xcodebuild -exportArchive -archivePath build/Orbit42.xcarchive \
 - **카테고리**: 생산성 (보조: 소셜 네트워킹)
 
 ## 심사 노트 (App Review Information)
-- 데모 계정: 심사 제출 전에 전용 계정 생성 필요 (예: appreview / 비밀번호 별도 생성)
-  — 팔로우·슬롯·일정이 미리 채워진 상태로 준비할 것
+- **데모 계정 (준비 완료)**: `appreview` / `Orbit42Review!`
+  — 프로필(김지우, 프리랜서 디자이너)·시급 55,000원·이번 주 일정 9건(위치·이동시간·
+  수익기록 포함)·타임슬롯 2개(커피챗·업무 미팅)·bella와 맞팔로우 상태로 시딩됨
 - Google 캘린더 연동은 선택 기능 — 데모 계정은 로컬 캘린더로 시연 가능하다고 명시
 - 결제: 현재 앱 내 결제 없음 (예약은 오프라인/무료 — payment_method offline)
 
