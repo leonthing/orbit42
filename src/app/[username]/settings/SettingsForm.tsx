@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { updateProfile, changePassword } from "@/lib/auth";
+import { updateProfile } from "@/lib/auth";
 import type { SocialLinks, Education, Experience } from "@/lib/auth";
-import { useTheme } from "@/components/ThemeProvider";
 import { buttonClasses } from "@/components/PendingButton";
 
 const SOCIAL_FIELDS: { key: keyof SocialLinks; label: string; placeholder: string; icon: React.ReactNode }[] = [
@@ -105,11 +104,6 @@ export function SettingsForm({
   const [profileMsg, setProfileMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
 
-  const [currentPw, setCurrentPw] = useState("");
-  const [newPw, setNewPw] = useState("");
-  const [confirmPw, setConfirmPw] = useState("");
-  const [pwMsg, setPwMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  const [pwLoading, setPwLoading] = useState(false);
 
   const hasChanges =
     displayName !== initialDisplayName ||
@@ -138,26 +132,6 @@ export function SettingsForm({
       setProfileMsg({ type: "success", text: "프로필이 업데이트되었습니다." });
     }
     setProfileLoading(false);
-  };
-
-  const handlePasswordChange = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setPwMsg(null);
-    if (newPw !== confirmPw) {
-      setPwMsg({ type: "error", text: "새 비밀번호가 일치하지 않습니다." });
-      return;
-    }
-    setPwLoading(true);
-    const result = await changePassword(username, currentPw, newPw);
-    if (result.error) {
-      setPwMsg({ type: "error", text: result.error });
-    } else {
-      setPwMsg({ type: "success", text: "비밀번호가 변경되었습니다." });
-      setCurrentPw("");
-      setNewPw("");
-      setConfirmPw("");
-    }
-    setPwLoading(false);
   };
 
   function addEducation() {
@@ -531,101 +505,6 @@ export function SettingsForm({
         </div>
       </section>
 
-      {/* Theme Section */}
-      <ThemeSection />
-
-      {/* Password Section */}
-      <section className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/40">
-        <div className="border-b border-charcoal-800/40 px-5 py-3">
-          <h2 className="text-sm font-semibold text-charcoal-200">비밀번호 변경</h2>
-        </div>
-        <form onSubmit={handlePasswordChange} className="space-y-4 p-5">
-          <div>
-            <label className="mb-1.5 block text-xs font-medium text-charcoal-400">현재 비밀번호</label>
-            <input type="password" autoComplete="current-password" value={currentPw} onChange={(e) => setCurrentPw(e.target.value)} className={inputClass} />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-xs font-medium text-charcoal-400">새 비밀번호</label>
-            <input type="password" autoComplete="new-password" value={newPw} onChange={(e) => setNewPw(e.target.value)} placeholder="6자 이상" className={inputClass} />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-xs font-medium text-charcoal-400">새 비밀번호 확인</label>
-            <input type="password" autoComplete="new-password" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} className={inputClass} />
-          </div>
-
-          {pwMsg && (
-            <p className={`text-sm ${pwMsg.type === "success" ? "text-emerald-400" : "text-navy-400"}`}>
-              {pwMsg.text}
-            </p>
-          )}
-
-          <button
-            type="submit"
-            disabled={pwLoading || !currentPw || !newPw || !confirmPw}
-            className={buttonClasses({ variant: "primary", size: "md" })}
-          >
-            {pwLoading ? "변경 중..." : "비밀번호 변경"}
-          </button>
-        </form>
-      </section>
     </div>
-  );
-}
-
-function ThemeSection() {
-  const { theme, setTheme } = useTheme();
-  const options: { value: "light" | "dark" | "system"; label: string; icon: React.ReactNode }[] = [
-    {
-      value: "light",
-      label: "라이트",
-      icon: (
-        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
-        </svg>
-      ),
-    },
-    {
-      value: "dark",
-      label: "다크",
-      icon: (
-        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
-        </svg>
-      ),
-    },
-    {
-      value: "system",
-      label: "시스템",
-      icon: (
-        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25A2.25 2.25 0 0 1 5.25 3h13.5A2.25 2.25 0 0 1 21 5.25Z" />
-        </svg>
-      ),
-    },
-  ];
-
-  return (
-    <section className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/40">
-      <div className="border-b border-charcoal-800/40 px-5 py-3">
-        <h2 className="text-sm font-semibold text-charcoal-200">테마</h2>
-      </div>
-      <div className="flex gap-3 p-5">
-        {options.map((opt) => (
-          <button
-            key={opt.value}
-            type="button"
-            onClick={() => setTheme(opt.value)}
-            className={`flex flex-1 flex-col items-center gap-2 rounded-lg border px-4 py-4 transition-colors ${
-              theme === opt.value
-                ? "border-navy-400 bg-navy-500/10 text-navy-400"
-                : "border-charcoal-800/60 text-charcoal-500 hover:border-charcoal-700 hover:text-charcoal-300"
-            }`}
-          >
-            {opt.icon}
-            <span className="text-xs font-medium">{opt.label}</span>
-          </button>
-        ))}
-      </div>
-    </section>
   );
 }

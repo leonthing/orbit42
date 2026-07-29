@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { getProfile } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import { SettingsForm } from "./SettingsForm";
+import { PasswordForm } from "./PasswordForm";
+import { ThemeSection } from "./ThemeSection";
 import { AvatarUploader } from "./AvatarUploader";
 import { isGoogleCalendarConnected } from "../calendar/actions";
 import { listMyCalendars } from "@/lib/calendars";
@@ -27,13 +29,14 @@ export const metadata: Metadata = { title: "설정" };
 export const dynamic = "force-dynamic";
 
 const SECTIONS = [
-  { id: "profile", label: "프로필 사진" },
+  { id: "profile", label: "프로필" },
   { id: "google", label: "Google" },
   { id: "calendars", label: "캘린더" },
   { id: "work-hours", label: "근무시간" },
   { id: "locations", label: "장소" },
   { id: "referral", label: "추천" },
   { id: "notifications", label: "알림" },
+  { id: "theme", label: "테마" },
   { id: "account", label: "계정" },
   { id: "danger", label: "계정 삭제" },
 ];
@@ -74,10 +77,26 @@ export default async function SettingsPage({
         <SectionNav items={SECTIONS} />
 
         <div className="min-w-0 flex-1 space-y-6">
-          <section id="profile" className="scroll-mt-16">
+          {/* 프로필: 사진 + 소개·학력·경력·관심사·SNS 를 한자리에.
+              예전엔 사진만 여기 있고 나머지는 "계정" 섹션에 있어서, 소개를
+              고치려는 사람이 프로필을 눌러도 찾을 수 없었다. */}
+          <section id="profile" className="scroll-mt-16 space-y-6">
             <AvatarUploader
               initialUrl={(profile.avatar_url as string | null) ?? null}
               name={profile.display_name || profile.username}
+            />
+            <SettingsForm
+              username={profile.username}
+              displayName={profile.display_name || ""}
+              birthDate={profile.birth_date || ""}
+              bio={profile.bio || ""}
+              socialLinks={profile.social_links || {}}
+              education={profile.education || []}
+              experience={profile.experience || []}
+              interests={profile.interests || []}
+              email={(profile.email as string | null) ?? null}
+              emailVerified={!!profile.email_verified}
+              createdAt={profile.created_at}
             />
           </section>
 
@@ -122,20 +141,12 @@ export default async function SettingsPage({
             <NotificationPrefs initial={notifPrefs} />
           </section>
 
+          <section id="theme" className="scroll-mt-16">
+            <ThemeSection />
+          </section>
+
           <section id="account" className="scroll-mt-16">
-            <SettingsForm
-              username={profile.username}
-              displayName={profile.display_name || ""}
-              birthDate={profile.birth_date || ""}
-              bio={profile.bio || ""}
-              socialLinks={profile.social_links || {}}
-              education={profile.education || []}
-              experience={profile.experience || []}
-              interests={profile.interests || []}
-              email={(profile.email as string | null) ?? null}
-              emailVerified={!!profile.email_verified}
-              createdAt={profile.created_at}
-            />
+            <PasswordForm username={profile.username} />
           </section>
 
           <section id="danger" className="scroll-mt-16">
