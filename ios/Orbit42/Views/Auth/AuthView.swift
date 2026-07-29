@@ -71,6 +71,7 @@ struct AuthView: View {
                 .padding(24)
                 .frame(maxWidth: 440)
             }
+            .readableWidth()
             .scrollDismissesKeyboard(.interactively)
         }
         .onChange(of: mode) {

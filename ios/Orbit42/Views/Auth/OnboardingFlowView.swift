@@ -23,6 +23,7 @@ struct OnboardingFlowView: View {
                 progressBar
                 currentStep
             }
+            .readableWidth()
         }
         .onAppear {
             guard steps.isEmpty else { return }

@@ -114,6 +114,7 @@ struct TimelineView: View {
             ZStack {
                 Theme.background.ignoresSafeArea()
                 content
+                    .readableWidth()
             }
             .navigationTitle("타임라인")
             .navigationBarTitleDisplayMode(.inline)

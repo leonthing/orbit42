@@ -90,6 +90,7 @@ private struct MyProfileContent: View {
                     slotsSection
                 }
                 .padding(16)
+                .readableWidth()
             }
             .refreshable {
                 await viewModel.load(force: true)

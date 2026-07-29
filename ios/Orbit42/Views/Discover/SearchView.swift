@@ -6,58 +6,32 @@ struct SearchView: View {
     @State private var viewModel = SearchViewModel()
     /// 팔로우 추천 — 오르빗 아래 섹션 (온보딩과 같은 API·행 공용).
     @State private var suggestions = FollowSuggestionsViewModel()
-    @FocusState private var isSearchFocused: Bool
 
     var body: some View {
         ZStack {
             Theme.background.ignoresSafeArea()
-            VStack(spacing: 0) {
-                searchBar
-                content
-            }
+            content
+                .readableWidth()
         }
         .navigationTitle("오르빗")
         .navigationBarTitleDisplayMode(.inline)
+        // 검색창을 화면 맨 위에 두면 이 탭이 "검색 화면"으로 읽혀서, 정작
+        // 팔로우한 사람들의 열린 시간·새 소식·추천이 아래로 밀린다.
+        // navigationBarDrawer(.automatic) 는 평소엔 숨어 있다가 위로 당길 때만
+        // 나타나므로, 탭을 열면 "내 오르빗"이 먼저 보인다.
+        .searchable(
+            text: $viewModel.query,
+            placement: .navigationBarDrawer(displayMode: .automatic),
+            prompt: "이름, @핸들, 슬롯 제목"
+        )
+        .onChange(of: viewModel.query) {
+            viewModel.queryChanged()
+        }
         .task {
             async let orbit: Void = viewModel.loadOrbit()
             async let stream: Void = viewModel.loadStream()
             async let suggested: Void = suggestions.load()
             _ = await (orbit, stream, suggested)
-        }
-    }
-
-    // MARK: - 검색바
-
-    private var searchBar: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass")
-                .font(.subheadline)
-                .foregroundStyle(Theme.secondaryText)
-            TextField("이름, @핸들, 슬롯 제목", text: $viewModel.query)
-                .focused($isSearchFocused)
-                .foregroundStyle(Theme.primaryText)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .submitLabel(.search)
-            if !viewModel.query.isEmpty {
-                Button {
-                    viewModel.query = ""
-                    viewModel.queryChanged()
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.subheadline)
-                        .foregroundStyle(Theme.secondaryText)
-                }
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
-        .padding(.bottom, 4)
-        .onChange(of: viewModel.query) {
-            viewModel.queryChanged()
         }
     }
 

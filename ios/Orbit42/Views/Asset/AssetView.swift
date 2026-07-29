@@ -15,6 +15,7 @@ struct AssetView: View {
             ZStack {
                 Theme.background.ignoresSafeArea()
                 content
+                    .readableWidth()
             }
             .navigationTitle("자산")
             .navigationBarTitleDisplayMode(.inline)

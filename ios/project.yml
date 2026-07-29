@@ -28,7 +28,9 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: org.orbit42.app
         PRODUCT_NAME: Orbit42
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        TARGETED_DEVICE_FAMILY: "1"
+        # 1=iPhone, 2=iPad. iPad 는 모든 방향을 지원해야 해서
+        # UISupportedInterfaceOrientations~ipad 를 따로 준다.
+        TARGETED_DEVICE_FAMILY: "1,2"
         CODE_SIGN_STYLE: Automatic
         MARKETING_VERSION: "1.0.0"
         CURRENT_PROJECT_VERSION: 1
@@ -44,8 +46,14 @@ targets:
         CFBundleURLTypes:
           - CFBundleURLSchemes:
               - orbit42
+        # iPhone 은 세로 고정 유지, iPad 는 4방향 모두 지원
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
         ITSAppUsesNonExemptEncryption: false
         # DEBUG 빌드가 http://localhost:3000 (Next.js dev 서버) 에 접속할 수 있도록 허용
         NSAppTransportSecurity:
