@@ -660,19 +660,62 @@ export default function CalendarView({
     </div>
   );
 
+  // 내 캘린더에서는 내가 열어 둔 빈 슬롯을 그리지 않는다. 시간 단위로 쪼개져
+  // 실제 일정을 덮어버려서 정작 봐야 할 게 안 보인다. 남의 캘린더에서는
+  // "예약 가능한 시간"이 이 화면의 존재 이유라 그대로 보여준다.
+  const displayWeekDays = useMemo(
+    () =>
+      viewerIsOwner
+        ? weekDays.map((d) => ({
+            ...d,
+            items: d.items.filter((i) => i.kind !== "slot"),
+          }))
+        : weekDays,
+    [weekDays, viewerIsOwner],
+  );
+
+  // 날짜 이동 — 예전엔 툴바 아래 별도 줄이었다. 한 줄로 합쳐 캘린더에 높이를 넘긴다.
+  const dateNav = (
+    <div className="flex items-center gap-1">
+      <button
+        onClick={() => navigate(-1)}
+        aria-label="이전"
+        className="rounded-lg px-2 py-1.5 text-sm text-charcoal-400 hover:bg-charcoal-800/50 hover:text-charcoal-200"
+      >
+        &larr;
+      </button>
+      <h2 className="min-w-[128px] text-center text-base font-semibold text-charcoal-200 sm:min-w-[150px] sm:text-lg">
+        {getHeaderLabel()}
+      </h2>
+      <button
+        onClick={() => navigate(1)}
+        aria-label="다음"
+        className="rounded-lg px-2 py-1.5 text-sm text-charcoal-400 hover:bg-charcoal-800/50 hover:text-charcoal-200"
+      >
+        &rarr;
+      </button>
+      {!isViewCurrent() && (
+        <button
+          onClick={goToToday}
+          className="ml-1 rounded-lg bg-charcoal-800/60 px-2.5 py-1 text-xs text-charcoal-400 hover:text-charcoal-200"
+        >
+          오늘
+        </button>
+      )}
+    </div>
+  );
+
   return (
     // 주간 뷰가 남은 높이를 전부 쓰도록 세로 flex 로 잡는다 (space-y 대신 gap).
     // h-full 이 아니라 flex-1 — 위에 체크리스트 같은 형제가 있어도 그만큼 줄어든다.
     <div className="flex min-h-0 flex-1 flex-col gap-4 sm:gap-6">
-      {/* Header — desktop keeps tabs inline with the picker; mobile gets its
-          own row below the title so nothing wraps mid-word. */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-charcoal-100">캘린더</h1>
-          <p className="mt-1 text-sm text-charcoal-500">일정 및 시간 관리</p>
-        </div>
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className="hidden sm:block">{viewTabs}</div>
+      {/* 한 줄 툴바 — 뷰 전환 · 날짜 이동 · 캘린더 선택 · 새 일정.
+          "캘린더 / 일정 및 시간 관리" 제목과 날짜 줄이 각각 한 줄씩 먹고 있었는데,
+          사이드바에서 이미 현재 위치를 알 수 있어 지우고 높이를 격자에 넘겼다. */}
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <div className="hidden sm:block">{viewTabs}</div>
+        {viewMode !== "life" && dateNav}
+        <div className="ml-auto flex items-center gap-2 sm:gap-3">
           {myCalendars.length > 0 ? (
             <div className="relative">
               <button
@@ -691,7 +734,9 @@ export default function CalendarView({
                       />
                     ))}
                 </span>
-                캘린더 {selectedCalendars.length}개
+                <span className="hidden sm:inline">
+                  캘린더 {selectedCalendars.length}개
+                </span>
                 <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                 </svg>
@@ -788,44 +833,16 @@ export default function CalendarView({
           ) : null}
           <button
             onClick={() => openCreateForm()}
-            className="rounded-lg bg-navy-500 px-4 py-2 text-sm font-medium text-white hover:bg-navy-400"
+            className="rounded-lg bg-navy-500 px-3 py-2 text-sm font-medium text-white hover:bg-navy-400 sm:px-4"
           >
-            + 새 일정
+            <span className="sm:hidden">+</span>
+            <span className="hidden sm:inline">+ 새 일정</span>
           </button>
         </div>
       </div>
 
       {/* Mobile-only tabs row — desktop renders them inline in the header */}
       <div className="sm:hidden">{viewTabs}</div>
-
-      {/* Navigation (hidden for Life view) */}
-      {viewMode !== "life" && (
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate(-1)}
-            className="rounded-lg px-3 py-1.5 text-sm text-charcoal-400 hover:bg-charcoal-800/50 hover:text-charcoal-200"
-          >
-            &larr;
-          </button>
-          <h2 className="min-w-[140px] text-center text-lg font-semibold text-charcoal-200">
-            {getHeaderLabel()}
-          </h2>
-          <button
-            onClick={() => navigate(1)}
-            className="rounded-lg px-3 py-1.5 text-sm text-charcoal-400 hover:bg-charcoal-800/50 hover:text-charcoal-200"
-          >
-            &rarr;
-          </button>
-          {!isViewCurrent() && (
-            <button
-              onClick={goToToday}
-              className="rounded-lg bg-charcoal-800/60 px-2.5 py-1 text-xs text-charcoal-400 hover:text-charcoal-200"
-            >
-              오늘
-            </button>
-          )}
-        </div>
-      )}
 
       {/* Main content area */}
       {viewMode === "month" && (
@@ -1027,7 +1044,7 @@ export default function CalendarView({
         <div className="flex min-h-0 flex-1 flex-col">
           <WeekCalendar
             username={username}
-            days={weekDays}
+            days={displayWeekDays}
             viewerIsOwner={viewerIsOwner}
             completedKeys={completed}
             onToggleComplete={handleToggleComplete}
