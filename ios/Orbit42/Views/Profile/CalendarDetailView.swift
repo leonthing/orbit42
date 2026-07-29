@@ -163,7 +163,7 @@ struct CalendarDetailView: View {
 
     private var weekdayHeader: some View {
         HStack(spacing: 0) {
-            ForEach(AppSettings.shared.weekStart.symbols, id: \.self) { symbol in
+            ForEach(AppSettings.shared.weekdaySymbols, id: \.self) { symbol in
                 Text(symbol)
                     .font(.caption2)
                     .foregroundStyle(Theme.secondaryText)

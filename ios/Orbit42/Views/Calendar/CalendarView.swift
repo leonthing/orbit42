@@ -442,12 +442,12 @@ struct CalendarView: View {
     // MARK: - 요일 헤더 (시작 요일은 설정을 따름)
 
     private var weekdayHeader: some View {
-        let weekStart = AppSettings.shared.weekStart
+        let settings = AppSettings.shared
         return HStack(spacing: 0) {
-            ForEach(Array(weekStart.symbols.enumerated()), id: \.offset) { index, symbol in
+            ForEach(Array(settings.weekdaySymbols.enumerated()), id: \.offset) { index, symbol in
                 Text(symbol)
                     .font(.caption.weight(.medium))
-                    .foregroundStyle(weekdayColor(weekday: weekStart.weekdayIndex(atColumn: index)))
+                    .foregroundStyle(weekdayColor(weekday: settings.weekdayIndex(atColumn: index)))
                     .frame(maxWidth: .infinity)
             }
         }

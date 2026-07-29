@@ -150,6 +150,6 @@ final class WorkHoursViewModel {
         let days = zip(keys, WeekStart.absoluteSymbols).map { key, label in
             WorkDayEdit(key: key, label: label, enabled: false, start: defaultStart, end: defaultEnd)
         }
-        return AppSettings.shared.weekStart.rotated(days)
+        return AppSettings.shared.rotated(days)
     }
 }

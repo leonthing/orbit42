@@ -91,28 +91,24 @@ struct CalendarSettingsView: View {
         .padding(.horizontal, 32)
     }
 
-    // MARK: - 주 시작 요일
+    // MARK: - 보기 설정 (캘린더 목록 아래)
 
-    /// 기기별 설정 — 캘린더 탭·예약 화면의 월 격자가 모두 이 값을 따른다.
-    private var weekStartSection: some View {
+    /// 기기별 표시 설정 — 캘린더 탭·예약 화면의 월 격자가 모두 이 값을 따른다.
+    private var displaySection: some View {
         Section {
-            Picker(
-                "시작 요일",
-                selection: Binding(
-                    get: { settings.weekStart },
-                    set: { settings.setWeekStart($0) }
-                )
-            ) {
-                ForEach(WeekStart.allCases) { option in
-                    Text(option.label).tag(option)
+            NavigationLink {
+                WeekStartPickerView()
+            } label: {
+                HStack {
+                    Text("시작 요일")
+                        .foregroundStyle(Theme.primaryText)
+                    Spacer(minLength: 0)
+                    Text(settings.weekStartDisplayName)
+                        .foregroundStyle(Theme.secondaryText)
                 }
             }
-            .pickerStyle(.segmented)
         } header: {
-            Text("주 시작 요일")
-                .foregroundStyle(Theme.secondaryText)
-        } footer: {
-            Text("캘린더와 예약 화면의 달력이 이 요일부터 시작해요. 이 기기에만 적용돼요.")
+            Text("보기 설정")
                 .foregroundStyle(Theme.secondaryText)
         }
         .listRowBackground(Theme.surface)
@@ -122,8 +118,6 @@ struct CalendarSettingsView: View {
 
     private func calendarList(_ calendars: [CalendarInfo]) -> some View {
         List {
-            weekStartSection
-
             Section {
                 ForEach(calendars) { calendar in
                     Button {
@@ -147,6 +141,8 @@ struct CalendarSettingsView: View {
                     .foregroundStyle(Theme.secondaryText)
             }
             .listRowBackground(Theme.surface)
+
+            displaySection
         }
         .scrollContentBackground(.hidden)
         .refreshable {
