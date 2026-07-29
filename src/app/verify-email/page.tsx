@@ -33,7 +33,7 @@ export default async function VerifyEmailPage({
         <p className="mt-1.5 text-sm text-charcoal-500">
           {ok ? "이제 모든 기능을 사용할 수 있어요." : "error" in result ? result.error : ""}
         </p>
-        <Link href={ok ? "/feed" : "/"} className={`mt-6 ${buttonClasses()}`}>
+        <Link href={ok ? "/calendar" : "/"} className={`mt-6 ${buttonClasses()}`}>
           {ok ? "피드로 이동" : "홈으로"}
         </Link>
       </div>

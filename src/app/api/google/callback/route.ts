@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
           new URL(`/?error=${encodeURIComponent(res.error)}`, request.url),
         );
       }
-      return NextResponse.redirect(new URL("/feed", request.url));
+      return NextResponse.redirect(new URL("/calendar", request.url));
     } catch (err) {
       console.error("google signin", err);
       return NextResponse.redirect(

@@ -76,7 +76,7 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
       setLoading(false);
       return;
     }
-    router.push("/feed");
+    router.push("/calendar");
   };
 
   const input =

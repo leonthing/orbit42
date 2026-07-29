@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: SITE.title,
     short_name: SITE.title,
     description: SITE.description,
-    start_url: "/feed",
+    start_url: "/calendar",
     display: "standalone",
     background_color: "#0a0a0f",
     theme_color: "#0a0a0f",

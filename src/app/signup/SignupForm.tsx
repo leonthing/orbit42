@@ -36,7 +36,7 @@ export function SignupForm({ initialRef }: { initialRef: string }) {
       setLoading(false);
       return;
     }
-    router.push("/feed");
+    router.push("/calendar");
   };
 
   const input =

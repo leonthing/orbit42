@@ -163,50 +163,9 @@ export function Sidebar({
         </div>
       )}
 
-      {/* Nav */}
+      {/* Nav — 유틸리티(캘린더·슬롯·예약)가 먼저, 소셜은 아래로.
+          앱의 중심이 피드가 아니라 내 시간 관리라는 순서를 그대로 반영한다. */}
       <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-3">
-        {/* Social — what other people are doing */}
-        <NavLink
-          href="/feed"
-          label="피드"
-          icon={icons.home}
-          active={pathname === "/feed"}
-          collapsed={collapsed}
-          onClick={close}
-        />
-        <NavLink
-          href="/explore"
-          label="탐색"
-          icon={icons.users}
-          active={pathname === "/explore"}
-          collapsed={collapsed}
-          onClick={close}
-        />
-        <NavLink
-          href={`/${username}`}
-          label="내 프로필"
-          icon={icons.user}
-          active={pathname === `/${username}`}
-          collapsed={collapsed}
-          onClick={close}
-        />
-        <NavLink
-          href="/messages"
-          label="메시지"
-          icon={icons.chat}
-          active={pathname === "/messages" || pathname.startsWith("/messages/")}
-          collapsed={collapsed}
-          onClick={close}
-          badge={unreadMessages}
-        />
-
-        <div className="my-3 border-t border-charcoal-800/40" />
-        {!collapsed && (
-          <p className="px-3 pb-1 text-2xs font-semibold uppercase tracking-wider text-charcoal-500">
-            관리
-          </p>
-        )}
-
         {NAV_ITEMS.map((item) => {
           const href = `/${username}${item.href}`;
           const isActive =
@@ -223,6 +182,47 @@ export function Sidebar({
             />
           );
         })}
+
+        <div className="my-3 border-t border-charcoal-800/40" />
+        {!collapsed && (
+          <p className="px-3 pb-1 text-2xs font-semibold uppercase tracking-wider text-charcoal-500">
+            둘러보기
+          </p>
+        )}
+
+        <NavLink
+          href={`/${username}`}
+          label="내 프로필"
+          icon={icons.user}
+          active={pathname === `/${username}`}
+          collapsed={collapsed}
+          onClick={close}
+        />
+        <NavLink
+          href="/explore"
+          label="탐색"
+          icon={icons.users}
+          active={pathname === "/explore"}
+          collapsed={collapsed}
+          onClick={close}
+        />
+        <NavLink
+          href="/messages"
+          label="메시지"
+          icon={icons.chat}
+          active={pathname === "/messages" || pathname.startsWith("/messages/")}
+          collapsed={collapsed}
+          onClick={close}
+          badge={unreadMessages}
+        />
+        <NavLink
+          href="/feed"
+          label="피드"
+          icon={icons.home}
+          active={pathname === "/feed"}
+          collapsed={collapsed}
+          onClick={close}
+        />
       </nav>
 
       {/* Bottom: Feedback + Collapse */}

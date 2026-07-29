@@ -7,6 +7,7 @@ import { getProfileWeek, startOfWeek } from "@/lib/profile-week";
 import { listMyCalendars } from "@/lib/calendars";
 import CalendarView from "./CalendarView";
 import { SlotPanelProvider } from "@/components/SlotPanel";
+import { OnboardingSection } from "@/components/OnboardingSection";
 
 export const metadata: Metadata = { title: "캘린더" };
 export const dynamic = "force-dynamic";
@@ -52,6 +53,13 @@ export default async function CalendarPage({
 
   return (
     <SlotPanelProvider username={params.username}>
+      {/* 홈이 캘린더로 옮겨오면서 시작하기 체크리스트도 함께 이주했다.
+          내 캘린더일 때만 보여준다 (남의 캘린더에서는 의미 없음). */}
+      {isOwner && (
+        <div className="mb-4">
+          <OnboardingSection />
+        </div>
+      )}
       <CalendarView
         username={params.username}
         initialEvents={events}

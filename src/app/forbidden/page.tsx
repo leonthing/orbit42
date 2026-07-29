@@ -28,7 +28,7 @@ export default function ForbiddenPage() {
           <Link href="/" className={buttonClasses({ variant: "primary", size: "lg" })}>
             홈으로
           </Link>
-          <Link href="/feed" className={buttonClasses({ variant: "secondary", size: "lg" })}>
+          <Link href="/calendar" className={buttonClasses({ variant: "secondary", size: "lg" })}>
             피드 보기
           </Link>
         </div>

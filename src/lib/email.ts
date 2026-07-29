@@ -360,7 +360,7 @@ export async function sendWeeklyDigestEmail(
     bodyHtml:
       listHtml +
       extraHtml +
-      emailButton("Orbit42 열기", siteUrl("/feed")) +
+      emailButton("Orbit42 열기", siteUrl("/calendar")) +
       mutedNote(
         `주간 요약은 <a href="${siteUrl(`/${args.username}/settings`)}">설정</a>에서 끌 수 있어요.`,
       ),

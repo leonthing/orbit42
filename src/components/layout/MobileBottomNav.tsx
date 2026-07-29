@@ -6,28 +6,8 @@ import { usePathname } from "next/navigation";
 export function MobileBottomNav({ username }: { username: string }) {
   const pathname = usePathname();
 
+  // 캘린더가 홈. 유틸리티(캘린더·타임슬롯·예약)를 앞에 두고 소셜은 뒤로 뺀다.
   const items = [
-    {
-      href: "/feed",
-      label: "피드",
-      active: pathname === "/feed",
-      icon: (
-        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-        </svg>
-      ),
-    },
-    {
-      href: "/explore",
-      label: "탐색",
-      active: pathname === "/explore",
-      icon: (
-        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-          <circle cx="11" cy="11" r="7" />
-          <path strokeLinecap="round" d="m21 21-4.3-4.3" />
-        </svg>
-      ),
-    },
     {
       href: `/${username}/calendar`,
       label: "캘린더",
@@ -45,6 +25,27 @@ export function MobileBottomNav({ username }: { username: string }) {
       icon: (
         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+        </svg>
+      ),
+    },
+    {
+      href: `/${username}/bookings`,
+      label: "예약",
+      active: pathname.startsWith(`/${username}/bookings`),
+      icon: (
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+        </svg>
+      ),
+    },
+    {
+      href: "/explore",
+      label: "탐색",
+      active: pathname === "/explore",
+      icon: (
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          <circle cx="11" cy="11" r="7" />
+          <path strokeLinecap="round" d="m21 21-4.3-4.3" />
         </svg>
       ),
     },

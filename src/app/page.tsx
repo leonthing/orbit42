@@ -8,7 +8,7 @@ import { SITE } from "@/lib/constants";
 export default async function LandingPage() {
   const session = await getSession();
   if (session) {
-    redirect("/feed");
+    redirect("/calendar");
   }
 
   const websiteSchema = {
