@@ -73,7 +73,7 @@ export function MobileBottomNav({ username }: { username: string }) {
         <Link
           key={it.href}
           href={it.href}
-          className={`relative flex flex-1 flex-col items-center justify-center gap-1 text-[11px] font-medium ${
+          className={`relative flex flex-1 flex-col items-center justify-center gap-1 text-2xs font-medium ${
             it.active ? "text-navy-400" : "text-charcoal-500"
           }`}
         >

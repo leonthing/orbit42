@@ -66,7 +66,7 @@ export function ShareEventButton({
             className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
             onClick={() => setOpen(false)}
           />
-          <div className="fixed left-1/2 top-1/2 z-50 w-[92vw] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] p-5 shadow-2xl">
+          <div className="fixed left-1/2 top-1/2 z-50 w-[92vw] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] p-5 shadow-2xl">
             <p className="text-xs font-semibold uppercase tracking-wider text-charcoal-500">
               피드에 공유
             </p>

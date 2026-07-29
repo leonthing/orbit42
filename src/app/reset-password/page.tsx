@@ -57,7 +57,7 @@ function ResetPasswordInner() {
             onChange={(e) => setPw(e.target.value)}
             placeholder="새 비밀번호 (6자 이상)"
             required
-            className="w-full rounded-md border border-charcoal-700 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-500 focus:border-navy-400 focus:outline-none focus:ring-1 focus:ring-navy-400/40"
+            className="w-full rounded-lg border border-charcoal-700 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-500 focus:border-navy-400 focus:outline-none focus:ring-1 focus:ring-navy-400/40"
           />
           <input
             type="password"
@@ -65,7 +65,7 @@ function ResetPasswordInner() {
             onChange={(e) => setConfirm(e.target.value)}
             placeholder="새 비밀번호 확인"
             required
-            className="w-full rounded-md border border-charcoal-700 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-500 focus:border-navy-400 focus:outline-none focus:ring-1 focus:ring-navy-400/40"
+            className="w-full rounded-lg border border-charcoal-700 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-500 focus:border-navy-400 focus:outline-none focus:ring-1 focus:ring-navy-400/40"
           />
           {err && <p className="text-xs text-navy-400">{err}</p>}
           <PendingButton
@@ -92,7 +92,7 @@ function ResetPasswordInner() {
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[rgb(var(--bg-base))] px-4">
-      <div className="w-full max-w-sm rounded-2xl border border-charcoal-800/60 bg-charcoal-900/40 p-6 shadow-xl">
+      <div className="w-full max-w-sm rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 p-6 shadow-xl">
         {children}
       </div>
     </div>

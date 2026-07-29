@@ -281,7 +281,7 @@ function List({ children }: { children: React.ReactNode }) {
 
 function Th({ children }: { children: React.ReactNode }) {
   return (
-    <th className="px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wider">
+    <th className="px-2 py-2 text-left text-2xs font-semibold uppercase tracking-wider">
       {children}
     </th>
   );

@@ -22,7 +22,7 @@ export default async function AdminFeedbackPage() {
       <div className="mx-auto max-w-4xl px-5 py-8">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-charcoal-500">
+            <p className="text-2xs font-semibold uppercase tracking-[0.18em] text-charcoal-500">
               Admin · Feedback
             </p>
             <h1 className="mt-1 text-2xl font-bold text-charcoal-100">
@@ -97,7 +97,7 @@ export default async function AdminFeedbackPage() {
                             >
                               {f.user.display_name || f.user.username}
                             </Link>
-                            <p className="truncate text-[11px] text-charcoal-500">
+                            <p className="truncate text-2xs text-charcoal-500">
                               @{f.user.username}
                               {f.email ? ` · ${f.email}` : ""}
                             </p>
@@ -108,13 +108,13 @@ export default async function AdminFeedbackPage() {
                           <p className="text-sm font-semibold text-charcoal-300">
                             익명
                           </p>
-                          <p className="text-[11px] text-charcoal-500">
+                          <p className="text-2xs text-charcoal-500">
                             {f.email ?? "회신 주소 없음"}
                           </p>
                         </div>
                       )}
                     </div>
-                    <div className="flex shrink-0 items-center gap-2 text-[11px] text-charcoal-500">
+                    <div className="flex shrink-0 items-center gap-2 text-2xs text-charcoal-500">
                       <span>{when}</span>
                       <ResolveButton
                         id={f.id}
@@ -128,7 +128,7 @@ export default async function AdminFeedbackPage() {
                   </p>
 
                   {(f.path || f.user_agent) && (
-                    <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-charcoal-600">
+                    <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-2xs text-charcoal-600">
                       {f.path && <span>📍 {f.path}</span>}
                       {f.user_agent && (
                         <span className="truncate">🖥 {f.user_agent}</span>

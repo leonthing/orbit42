@@ -78,7 +78,7 @@ export function FeedbackBox({ collapsed, loggedIn }: Props) {
           onClick={close}
         >
           <div
-            className="w-full max-w-md rounded-2xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] p-5 shadow-2xl"
+            className="w-full max-w-md rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] p-5 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-3 flex items-baseline justify-between">
@@ -129,7 +129,7 @@ export function FeedbackBox({ collapsed, loggedIn }: Props) {
                 )}
 
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[11px] text-charcoal-600">
+                  <span className="text-2xs text-charcoal-600">
                     {body.length} / 4000
                   </span>
                   <PendingButton

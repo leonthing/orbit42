@@ -141,12 +141,12 @@ function CalendarRow({ calendar }: { calendar: Calendar }) {
             <p className="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-charcoal-100">
               <span className="truncate">{calendar.name}</span>
               {calendar.is_default && (
-                <span className="rounded-full bg-navy-400/15 px-2 py-0.5 text-[10px] font-semibold text-navy-600 ring-1 ring-navy-400/30 dark:text-navy-200 dark:ring-0">
+                <span className="rounded-full bg-navy-400/15 px-2 py-0.5 text-2xs font-semibold text-navy-600 ring-1 ring-navy-400/30 dark:text-navy-200 dark:ring-0">
                   기본
                 </span>
               )}
               {calendar.source === "google" && (
-                <span className="rounded-full bg-charcoal-800/60 px-2 py-0.5 text-[10px] text-charcoal-700 dark:text-charcoal-300">
+                <span className="rounded-full bg-charcoal-800/60 px-2 py-0.5 text-2xs text-charcoal-700 dark:text-charcoal-300">
                   Google
                 </span>
               )}
@@ -163,7 +163,7 @@ function CalendarRow({ calendar }: { calendar: Calendar }) {
               type="button"
               onClick={() => changeVisibility(v.value)}
               disabled={pending}
-              className={`shrink-0 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+              className={`shrink-0 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
                 calendar.visibility === v.value
                   ? "bg-navy-500 text-white"
                   : "text-charcoal-500 hover:text-charcoal-900 dark:text-charcoal-400 dark:hover:text-charcoal-200"
@@ -176,13 +176,13 @@ function CalendarRow({ calendar }: { calendar: Calendar }) {
       </div>
 
       <div className="flex items-center gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden">
-        <span className="shrink-0 text-[10px] uppercase tracking-wider text-charcoal-500">
+        <span className="shrink-0 text-2xs uppercase tracking-wider text-charcoal-500">
           용도
         </span>
         <button
           type="button"
           onClick={() => changePurpose(null)}
-          className={`shrink-0 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] ${
+          className={`shrink-0 whitespace-nowrap rounded-full px-2.5 py-0.5 text-2xs ${
             calendar.purpose === null
               ? "bg-charcoal-700 text-white"
               : "text-charcoal-600 hover:text-charcoal-900 dark:text-charcoal-500 dark:hover:text-charcoal-300"
@@ -195,7 +195,7 @@ function CalendarRow({ calendar }: { calendar: Calendar }) {
             key={p.value}
             type="button"
             onClick={() => changePurpose(p.value)}
-            className={`shrink-0 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] transition-colors ${
+            className={`shrink-0 whitespace-nowrap rounded-full px-2.5 py-0.5 text-2xs transition-colors ${
               calendar.purpose === p.value
                 ? "bg-navy-500 text-white"
                 : "bg-charcoal-900/50 text-charcoal-700 hover:text-charcoal-900 dark:text-charcoal-400 dark:hover:text-charcoal-200"
@@ -207,7 +207,7 @@ function CalendarRow({ calendar }: { calendar: Calendar }) {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[10px] uppercase tracking-wider text-charcoal-500">색상</span>
+        <span className="text-2xs uppercase tracking-wider text-charcoal-500">색상</span>
         {CALENDAR_COLORS.map((c) => (
           <button
             key={c}
@@ -222,7 +222,7 @@ function CalendarRow({ calendar }: { calendar: Calendar }) {
         <button
           type="button"
           onClick={onDelete}
-          className="ml-auto rounded-md border border-charcoal-800 px-2.5 py-1 text-[11px] text-charcoal-400 hover:border-red-500/50 hover:text-red-400"
+          className="ml-auto rounded-lg border border-charcoal-800 px-2.5 py-1 text-2xs text-charcoal-400 hover:border-red-500/50 hover:text-red-400"
         >
           {calendar.source === "google" ? "연결 해제" : "삭제"}
         </button>
@@ -321,7 +321,7 @@ function NewCalendarForm({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[10px] uppercase tracking-wider text-charcoal-500">색상</span>
+        <span className="text-2xs uppercase tracking-wider text-charcoal-500">색상</span>
         {CALENDAR_COLORS.map((c) => (
           <button
             key={c}
@@ -341,7 +341,7 @@ function NewCalendarForm({
             key={v.value}
             type="button"
             onClick={() => setVisibility(v.value)}
-            className={`rounded-md px-2.5 py-1 text-xs font-medium ${
+            className={`rounded-lg px-2.5 py-1 text-xs font-medium ${
               visibility === v.value
                 ? "bg-navy-500 text-white"
                 : "text-charcoal-400 hover:text-charcoal-200"
@@ -353,7 +353,7 @@ function NewCalendarForm({
       </div>
 
       <div className="space-y-2 border-t border-charcoal-800/40 pt-3">
-        <p className="text-[11px] text-charcoal-500">
+        <p className="text-2xs text-charcoal-500">
           함께 쓸 사람(선택) — 초대한 사람도 이 캘린더에 일정을 기록할 수 있어요.
           만든 뒤에도 추가할 수 있어요.
         </p>
@@ -390,12 +390,12 @@ function NewCalendarForm({
               }
             }}
             placeholder="@핸들로 초대"
-            className="flex-1 rounded-md border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-500/60 focus:outline-none"
+            className="flex-1 rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-500/60 focus:outline-none"
           />
           <select
             value={inviteRole}
             onChange={(e) => setInviteRole(e.target.value)}
-            className="rounded-md border border-charcoal-800/60 bg-charcoal-900/40 px-2 text-xs text-charcoal-200 focus:outline-none"
+            className="rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-2 text-xs text-charcoal-200 focus:outline-none"
           >
             <option value="editor">함께 기록</option>
             <option value="viewer">보기만</option>
@@ -404,7 +404,7 @@ function NewCalendarForm({
             type="button"
             onClick={addInvite}
             disabled={!inviteHandle.trim()}
-            className="rounded-md border border-charcoal-700 px-3 py-1.5 text-xs text-charcoal-300 hover:border-charcoal-600 disabled:opacity-50"
+            className="rounded-lg border border-charcoal-700 px-3 py-1.5 text-xs text-charcoal-300 hover:border-charcoal-600 disabled:opacity-50"
           >
             추가
           </button>

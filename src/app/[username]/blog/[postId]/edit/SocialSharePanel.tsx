@@ -147,7 +147,7 @@ export default function SocialSharePanel({ title, content, slug, postId, usernam
         <button
           onClick={handleGenerate}
           disabled={generating || !content.trim()}
-          className="flex items-center gap-1.5 rounded-md bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-500 disabled:opacity-50"
+          className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-500 disabled:opacity-50"
         >
           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456Z" />
@@ -170,7 +170,7 @@ export default function SocialSharePanel({ title, content, slug, postId, usernam
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold text-charcoal-200">{p.label}</span>
                 {p.connected ? (
-                  <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-400">
+                  <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-2xs text-emerald-400">
                     {p.connectedLabel} 연결됨
                   </span>
                 ) : (
@@ -178,14 +178,14 @@ export default function SocialSharePanel({ title, content, slug, postId, usernam
                     href={p.authUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded-full bg-charcoal-700/50 px-2 py-0.5 text-[10px] text-navy-400 hover:bg-charcoal-700"
+                    className="rounded-full bg-charcoal-700/50 px-2 py-0.5 text-2xs text-navy-400 hover:bg-charcoal-700"
                   >
                     계정 연결 ↗
                   </a>
                 )}
               </div>
               {p.maxLen && (
-                <span className={`text-[10px] ${p.text.length > p.maxLen ? "text-navy-400 font-medium" : "text-charcoal-500"}`}>
+                <span className={`text-2xs ${p.text.length > p.maxLen ? "text-navy-400 font-medium" : "text-charcoal-500"}`}>
                   {p.text.length}/{p.maxLen}
                 </span>
               )}
@@ -221,7 +221,7 @@ export default function SocialSharePanel({ title, content, slug, postId, usernam
                 {copied === p.key ? "복사됨 ✓" : "복사"}
               </button>
               {results[p.key] && results[p.key] !== "posted" && (
-                <span className="truncate text-[10px] text-navy-400">{results[p.key]}</span>
+                <span className="truncate text-2xs text-navy-400">{results[p.key]}</span>
               )}
             </div>
           </div>

@@ -234,7 +234,7 @@ export function SettingsForm({
                 {email || "등록된 이메일이 없어요"}
               </span>
               <span
-                className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                className={`shrink-0 rounded-full px-2 py-0.5 text-2xs font-semibold ${
                   emailVerified
                     ? "bg-emerald-500/15 text-emerald-800 ring-1 ring-emerald-500/40 dark:text-emerald-200 dark:ring-0"
                     : "bg-amber-500/15 text-amber-800 ring-1 ring-amber-500/40 dark:text-amber-200 dark:ring-0"

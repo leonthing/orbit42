@@ -76,7 +76,7 @@ export default function OwnerBookingPreview({
             })}
           </div>
           {locations.length > 1 && (
-            <p className="mt-2 text-[11px] text-charcoal-500">
+            <p className="mt-2 text-2xs text-charcoal-500">
               선택한 위치 기준으로 가능한 시간이 재계산돼요.
               {pending && " · 시간 다시 계산 중…"}
             </p>

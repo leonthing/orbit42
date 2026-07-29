@@ -80,20 +80,20 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
   };
 
   const input =
-    "w-full rounded-md border border-charcoal-700 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-500 focus:border-navy-400 focus:outline-none focus:ring-1 focus:ring-navy-400/40";
+    "w-full rounded-lg border border-charcoal-700 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-500 focus:border-navy-400 focus:outline-none focus:ring-1 focus:ring-navy-400/40";
 
   return (
     <div
       ref={rootRef}
       id="auth"
-      className="mx-auto w-full max-w-sm rounded-2xl border border-charcoal-800/60 bg-charcoal-900/50 p-4 shadow-xl backdrop-blur sm:p-5"
+      className="mx-auto w-full max-w-sm rounded-xl border border-charcoal-800/60 bg-charcoal-900/50 p-4 shadow-xl backdrop-blur sm:p-5"
     >
       {/* Collapsed trigger — mobile only, only when !expanded. */}
       {!expanded && (
         <button
           type="button"
           onClick={() => setExpanded(true)}
-          className="flex w-full items-center justify-between rounded-md bg-navy-500/10 px-3 py-2 text-sm font-semibold text-navy-300 hover:bg-navy-500/20 md:hidden"
+          className="flex w-full items-center justify-between rounded-lg bg-navy-500/10 px-3 py-2 text-sm font-semibold text-navy-300 hover:bg-navy-500/20 md:hidden"
         >
           <span>로그인 · 가입하기</span>
           <svg
@@ -111,12 +111,12 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
 
       <div className={expanded ? "block" : "hidden md:block"}>
       {justReset && mode === "signin" && (
-        <div className="mb-3 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-[11px] text-emerald-700 dark:text-emerald-200">
+        <div className="mb-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-2xs text-emerald-700 dark:text-emerald-200">
           비밀번호가 변경되었어요. 새 비밀번호로 로그인해주세요.
         </div>
       )}
       <div className="mb-3 flex items-center gap-1.5">
-        <div className="flex flex-1 rounded-md bg-charcoal-800/40 p-0.5">
+        <div className="flex flex-1 rounded-lg bg-charcoal-800/40 p-0.5">
           <TabButton
             active={mode === "signin"}
             onClick={() => {
@@ -139,7 +139,7 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
         <button
           type="button"
           onClick={() => setExpanded(false)}
-          className="shrink-0 rounded-md px-2 py-1 text-[11px] text-charcoal-500 hover:text-charcoal-200 md:hidden"
+          className="shrink-0 rounded-lg px-2 py-1 text-2xs text-charcoal-500 hover:text-charcoal-200 md:hidden"
           title="접기"
         >
           접기
@@ -152,7 +152,7 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
             ? `/api/auth/google?ref=${encodeURIComponent(referrerRef)}`
             : "/api/auth/google"
         }
-        className="mb-2.5 flex w-full items-center justify-center gap-2 rounded-md bg-[#111] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1f1f1f] ring-1 ring-black/5"
+        className="mb-2.5 flex w-full items-center justify-center gap-2 rounded-lg bg-[#111] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1f1f1f] ring-1 ring-black/5"
       >
         <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden>
           <path fill="#4285f4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
@@ -163,7 +163,7 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
         Google로 계속하기
       </a>
 
-      <div className="mb-2.5 flex items-center gap-2 text-[10px] uppercase tracking-wider text-charcoal-500">
+      <div className="mb-2.5 flex items-center gap-2 text-2xs uppercase tracking-wider text-charcoal-500">
         <span className="h-px flex-1 bg-charcoal-800/60" />
         <span>또는</span>
         <span className="h-px flex-1 bg-charcoal-800/60" />
@@ -196,7 +196,7 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
           required
         />
         {mode === "signup" && (
-          <p className="-mt-0.5 text-[11px] text-charcoal-500">
+          <p className="-mt-0.5 text-2xs text-charcoal-500">
             {username ? (
               <>
                 orbit42.org/<span className="text-navy-400">{username}</span>
@@ -259,7 +259,7 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
         <button
           type="submit"
           disabled={loading || !username || !password}
-          className="!mt-3 w-full rounded-md bg-navy-500 py-2 text-sm font-semibold text-white shadow-sm hover:bg-navy-400 disabled:cursor-not-allowed disabled:bg-charcoal-800 disabled:text-charcoal-500"
+          className="!mt-3 w-full rounded-lg bg-navy-500 py-2 text-sm font-semibold text-white shadow-sm hover:bg-navy-400 disabled:cursor-not-allowed disabled:bg-charcoal-800 disabled:text-charcoal-500"
         >
           {loading
             ? "처리 중…"
@@ -269,7 +269,7 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
         </button>
       </form>
 
-      <p className="mt-3 text-center text-[11px] text-charcoal-500">
+      <p className="mt-3 text-center text-2xs text-charcoal-500">
         {mode === "signup" ? (
           <>
             가입하면{" "}
@@ -306,7 +306,7 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
-      className={`flex-1 rounded-[5px] px-3 py-1 text-xs font-semibold transition-colors ${
+      className={`flex-1 rounded-sm px-3 py-1 text-xs font-semibold transition-colors ${
         active
           ? "bg-navy-500 text-white shadow-sm"
           : "text-charcoal-500 hover:text-charcoal-900 dark:text-charcoal-400 dark:hover:text-charcoal-100"

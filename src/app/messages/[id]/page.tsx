@@ -43,7 +43,7 @@ export default async function ConversationPage({
             <span className="text-sm font-semibold text-charcoal-100">
               {res.other.display_name || res.other.username}
             </span>
-            <span className="text-[11px] text-charcoal-500">
+            <span className="text-2xs text-charcoal-500">
               @{res.other.username}
             </span>
           </div>

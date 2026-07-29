@@ -46,7 +46,7 @@ export default async function AdminPage() {
       <div className="mx-auto max-w-6xl px-5 py-8">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-charcoal-500">
+            <p className="text-2xs font-semibold uppercase tracking-[0.18em] text-charcoal-500">
               Admin
             </p>
             <h1 className="mt-1 text-2xl font-bold text-charcoal-100">대시보드</h1>
@@ -89,7 +89,7 @@ export default async function AdminPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-charcoal-800/40 text-left text-[11px] uppercase tracking-wider text-charcoal-500">
+                <tr className="border-b border-charcoal-800/40 text-left text-2xs uppercase tracking-wider text-charcoal-500">
                   <th className="px-5 py-2 font-semibold">사용자</th>
                   <th className="px-3 py-2 font-semibold">이메일</th>
                   <th className="px-3 py-2 font-semibold">추천인</th>
@@ -133,7 +133,7 @@ export default async function AdminPage() {
                             <p className="truncate text-charcoal-100">
                               {u.display_name || u.username}
                             </p>
-                            <p className="truncate text-[11px] text-charcoal-500">
+                            <p className="truncate text-2xs text-charcoal-500">
                               @{u.username}
                             </p>
                           </div>
@@ -142,7 +142,7 @@ export default async function AdminPage() {
                       <td className="px-3 py-2.5 text-charcoal-400">
                         {(u.email as string) || "—"}
                         {u.email_verified ? (
-                          <span className="ml-1.5 rounded bg-emerald-500/10 px-1 py-0.5 text-[9px] uppercase text-emerald-400">
+                          <span className="ml-1.5 rounded bg-emerald-500/10 px-1 py-0.5 text-3xs uppercase text-emerald-400">
                             verified
                           </span>
                         ) : null}
@@ -181,7 +181,7 @@ export default async function AdminPage() {
 function Stat({ label, value }: { label: string; value: number | string }) {
   return (
     <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 px-4 py-3">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-charcoal-500">
+      <p className="text-2xs font-semibold uppercase tracking-wider text-charcoal-500">
         {label}
       </p>
       <p className="mt-1 text-xl font-bold text-charcoal-100">{value}</p>

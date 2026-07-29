@@ -60,7 +60,7 @@ export default function ServicesManager({ initial }: { initial: Menu[] }) {
       )}
 
       {initial.length === 0 && !showNew ? (
-        <div className="rounded-2xl border border-dashed border-charcoal-800/60 bg-charcoal-900/20 p-12 text-center">
+        <div className="rounded-xl border border-dashed border-charcoal-800/60 bg-charcoal-900/20 p-12 text-center">
           <p className="text-base font-semibold text-charcoal-200">
             아직 등록된 항목이 없어요
           </p>
@@ -131,7 +131,7 @@ function NewMenuForm({
   return (
     <form
       onSubmit={submit}
-      className="space-y-4 rounded-2xl border border-charcoal-800/60 bg-charcoal-900/30 p-6"
+      className="space-y-4 rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-6"
     >
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-charcoal-100">새 메뉴</h3>
@@ -139,7 +139,7 @@ function NewMenuForm({
           type="button"
           onClick={onCancel}
           aria-label="Close"
-          className="flex h-7 w-7 items-center justify-center rounded-md text-charcoal-500 hover:bg-charcoal-800/40 hover:text-charcoal-100"
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-charcoal-500 hover:bg-charcoal-800/40 hover:text-charcoal-100"
         >
           <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M6 6l12 12M6 18L18 6" />
@@ -251,11 +251,11 @@ function MenuRow({ menu, onChanged }: { menu: Menu; onChanged: () => void }) {
             {menu.name}
           </p>
           {!menu.active && (
-            <span className="rounded-full bg-charcoal-700/40 px-2 py-0.5 text-[10px] font-semibold text-charcoal-500">
+            <span className="rounded-full bg-charcoal-700/40 px-2 py-0.5 text-2xs font-semibold text-charcoal-500">
               OFF
             </span>
           )}
-          <span className="rounded-full bg-navy-400/15 px-2 py-0.5 text-[10px] font-bold text-navy-700 ring-1 ring-navy-400/30 dark:text-navy-200 dark:ring-0">
+          <span className="rounded-full bg-navy-400/15 px-2 py-0.5 text-2xs font-bold text-navy-700 ring-1 ring-navy-400/30 dark:text-navy-200 dark:ring-0">
             {menu.price_cents === 0
               ? "Free"
               : `₩${(menu.price_cents / 100).toLocaleString("ko-KR")}`}
@@ -271,7 +271,7 @@ function MenuRow({ menu, onChanged }: { menu: Menu; onChanged: () => void }) {
         <button
           type="button"
           onClick={() => setEditing(true)}
-          className="rounded-md border border-charcoal-800 px-2.5 py-1.5 text-xs text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
+          className="rounded-lg border border-charcoal-800 px-2.5 py-1.5 text-xs text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
         >
           수정
         </button>
@@ -279,7 +279,7 @@ function MenuRow({ menu, onChanged }: { menu: Menu; onChanged: () => void }) {
           type="button"
           onClick={toggleActive}
           disabled={pending}
-          className="rounded-md border border-charcoal-800 px-2.5 py-1.5 text-xs text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
+          className="rounded-lg border border-charcoal-800 px-2.5 py-1.5 text-xs text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
         >
           {menu.active ? "Pause" : "활성화"}
         </button>
@@ -287,7 +287,7 @@ function MenuRow({ menu, onChanged }: { menu: Menu; onChanged: () => void }) {
           type="button"
           onClick={remove}
           disabled={pending}
-          className="rounded-md border border-charcoal-800 px-2.5 py-1.5 text-xs text-charcoal-500 hover:border-red-500/60 hover:text-red-400"
+          className="rounded-lg border border-charcoal-800 px-2.5 py-1.5 text-xs text-charcoal-500 hover:border-red-500/60 hover:text-red-400"
         >
           삭제
         </button>

@@ -15,7 +15,7 @@ type Props = {
  */
 export function EmptyState({ icon, title, body, cta }: Props) {
   return (
-    <div className="rounded-2xl border border-dashed border-charcoal-800/60 bg-charcoal-900/20 px-6 py-12 text-center">
+    <div className="rounded-xl border border-dashed border-charcoal-800/60 bg-charcoal-900/20 px-6 py-12 text-center">
       {icon && (
         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-charcoal-800/60 text-charcoal-400">
           {icon}

@@ -90,7 +90,7 @@ export function ComposeBox({
     <form
       ref={formRef}
       onSubmit={submit}
-      className="rounded-2xl border border-charcoal-800/60 bg-charcoal-900/30 p-4"
+      className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-4"
     >
       <div className="flex gap-3">
         <Avatar
@@ -145,7 +145,7 @@ export function ComposeBox({
 
           {showLocation && (
             <div className="mt-2 flex items-center gap-2 rounded-lg border border-charcoal-800/60 bg-charcoal-800/30 px-3 py-2">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-charcoal-500">
+              <span className="text-2xs font-semibold uppercase tracking-wider text-charcoal-500">
                 위치
               </span>
               <input
@@ -170,7 +170,7 @@ export function ComposeBox({
 
           {addToCalendar && (
             <div className="mt-2 flex items-center gap-2 rounded-lg border border-navy-400/40 bg-navy-400/5 px-3 py-2">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-navy-400">
+              <span className="text-2xs font-semibold uppercase tracking-wider text-navy-400">
                 캘린더
               </span>
               <input
@@ -179,7 +179,7 @@ export function ComposeBox({
                 onChange={(e) => setCalendarStart(e.target.value)}
                 className="flex-1 border-0 bg-transparent text-sm text-charcoal-100 placeholder:text-charcoal-500 focus:outline-none focus:ring-0"
               />
-              <span className="text-[10px] text-charcoal-500">
+              <span className="text-2xs text-charcoal-500">
                 비워두면 지금 시각 · 30분 일정
               </span>
               <button

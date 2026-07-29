@@ -118,7 +118,7 @@ export function MiniMonth({ username }: { username: string }) {
         <button
           type="button"
           onClick={toggle}
-          className="flex flex-1 items-center gap-1 rounded-md px-1.5 py-1 text-left text-[11px] font-semibold text-charcoal-300 hover:bg-charcoal-800/50"
+          className="flex flex-1 items-center gap-1 rounded-lg px-1.5 py-1 text-left text-2xs font-semibold text-charcoal-300 hover:bg-charcoal-800/50"
           aria-expanded={!collapsed}
         >
           <svg
@@ -168,7 +168,7 @@ export function MiniMonth({ username }: { username: string }) {
             {DAYS_MON.map((d, i) => (
               <span
                 key={d}
-                className={`text-[9px] font-medium ${
+                className={`text-3xs font-medium ${
                   i === 5
                     ? "text-blue-400/70"
                     : i === 6
@@ -194,7 +194,7 @@ export function MiniMonth({ username }: { username: string }) {
                 <Link
                   key={i}
                   href={`/${username}/calendar?d=${key}`}
-                  className={`relative flex h-6 items-center justify-center rounded text-[10px] font-medium transition-colors ${
+                  className={`relative flex h-6 items-center justify-center rounded text-2xs font-medium transition-colors ${
                     isToday
                       ? "bg-navy-500 text-white"
                       : colIdx === 5
@@ -217,7 +217,7 @@ export function MiniMonth({ username }: { username: string }) {
             <button
               type="button"
               onClick={goToday}
-              className="mt-1.5 w-full rounded px-1.5 py-0.5 text-[10px] text-charcoal-500 hover:bg-charcoal-800/50 hover:text-charcoal-300"
+              className="mt-1.5 w-full rounded px-1.5 py-0.5 text-2xs text-charcoal-500 hover:bg-charcoal-800/50 hover:text-charcoal-300"
             >
               오늘로
             </button>

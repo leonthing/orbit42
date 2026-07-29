@@ -172,11 +172,11 @@ export default function LifeCalendarView({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <h2 className="text-xs font-bold text-charcoal-100 sm:text-sm">YOUR LIFE IN WEEKS</h2>
-              <p className="mt-0.5 text-[10px] text-charcoal-500">
+              <p className="mt-0.5 text-2xs text-charcoal-500">
                 {weeksLived.toLocaleString("ko-KR")} lived · {Math.max(0, totalWeeks - weeksLived).toLocaleString("ko-KR")} remaining
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2 text-[10px] text-charcoal-500 sm:gap-3">
+            <div className="flex flex-wrap items-center gap-2 text-2xs text-charcoal-500 sm:gap-3">
               <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-navy-400" />Born</span>
               <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-navy-400" />Lived</span>
               <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />Now</span>
@@ -192,7 +192,7 @@ export default function LifeCalendarView({
             <div className="flex" style={{ paddingLeft: LABEL_W + 2 }}>
               {Array.from({ length: WEEKS_PER_YEAR }, (_, w) => (
                 <div key={w} style={{ width: cellSize, height: 14 }} className="flex items-end justify-center">
-                  {w % 4 === 0 && <span className="text-[8px] leading-none text-charcoal-600">{w + 1}</span>}
+                  {w % 4 === 0 && <span className="text-3xs leading-none text-charcoal-600">{w + 1}</span>}
                 </div>
               ))}
             </div>
@@ -209,7 +209,7 @@ export default function LifeCalendarView({
                   {/* Year label */}
                   <div className="shrink-0 text-right pr-1" style={{ width: LABEL_W }}>
                     {(i === 0 || i % 5 === 0 || isCurrentYear) && (
-                      <span className={`text-[8px] leading-none ${isCurrentYear ? "font-bold text-navy-400" : isDecade ? "text-charcoal-400" : "text-charcoal-600"}`}>
+                      <span className={`text-3xs leading-none ${isCurrentYear ? "font-bold text-navy-400" : isDecade ? "text-charcoal-400" : "text-charcoal-600"}`}>
                         {yr}
                       </span>
                     )}
@@ -256,7 +256,7 @@ export default function LifeCalendarView({
                   {/* Age */}
                   <div className="shrink-0 pl-1" style={{ width: LABEL_W - 4 }}>
                     {(i === 0 || i % 10 === 0 || isCurrentYear) && (
-                      <span className={`text-[8px] leading-none ${isCurrentYear ? "font-bold text-navy-400" : "text-charcoal-600"}`}>
+                      <span className={`text-3xs leading-none ${isCurrentYear ? "font-bold text-navy-400" : "text-charcoal-600"}`}>
                         {i}
                       </span>
                     )}
@@ -269,12 +269,12 @@ export default function LifeCalendarView({
 
         {/* Progress */}
         <div className="mt-3 flex items-center gap-2 md:mt-4 md:gap-3">
-          <span className="text-[10px] text-charcoal-600">{birthYear}</span>
+          <span className="text-2xs text-charcoal-600">{birthYear}</span>
           <div className="h-1 flex-1 overflow-hidden rounded-full bg-charcoal-800">
             <div className="h-full rounded-full bg-gradient-to-r from-navy-500 to-navy-400" style={{ width: `${Math.min(100, (weeksLived / totalWeeks) * 100)}%` }} />
           </div>
-          <span className="text-[10px] text-charcoal-500">{Math.round((weeksLived / totalWeeks) * 100)}%</span>
-          <span className="text-[10px] text-charcoal-600">{endYear}</span>
+          <span className="text-2xs text-charcoal-500">{Math.round((weeksLived / totalWeeks) * 100)}%</span>
+          <span className="text-2xs text-charcoal-600">{endYear}</span>
         </div>
       </div>
 
@@ -385,7 +385,7 @@ export default function LifeCalendarView({
                             {mem.content}
                           </p>
                         )}
-                        <p className="mt-2 text-[10px] text-charcoal-600">
+                        <p className="mt-2 text-2xs text-charcoal-600">
                           {new Date(mem.created_at).toLocaleDateString("ko-KR")}
                         </p>
                       </div>

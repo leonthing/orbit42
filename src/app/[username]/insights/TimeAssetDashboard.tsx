@@ -34,7 +34,7 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-charcoal-800/50 bg-[rgb(var(--bg-surface))] p-5">
+    <section className="rounded-xl border border-charcoal-800/50 bg-[rgb(var(--bg-surface))] p-5">
       {(title || action) && (
         <div className="mb-3 flex items-center justify-between">
           {title && (
@@ -115,7 +115,7 @@ export function TimeAssetDashboard({
                 }`}
                 style={{ height: `${Math.max(4, (entry.krw / maxEarn) * 44)}px` }}
               />
-              <span className="text-[9px] text-charcoal-600">
+              <span className="text-3xs text-charcoal-600">
                 {Number(entry.month.split("-")[1])}월
               </span>
             </div>
@@ -206,7 +206,7 @@ export function TimeAssetDashboard({
                     />
                   </div>
                 )}
-                <p className="mt-2 text-[11px] text-charcoal-500">
+                <p className="mt-2 text-2xs text-charcoal-500">
                   {goal.achieved
                     ? "목표를 채웠어요. 축하해요!"
                     : goal.neededWeeklyHours != null && goal.neededWeeklyHours > 0

@@ -74,7 +74,7 @@ export function LocationBuffersForm({ initial }: Props) {
         )}
       </ul>
 
-      <div className="border-t border-charcoal-800/40 px-5 py-3 text-[11px] text-charcoal-600">
+      <div className="border-t border-charcoal-800/40 px-5 py-3 text-2xs text-charcoal-600">
         예) 이름{" "}
         <span className="font-mono text-charcoal-400">여의도</span>, 버퍼{" "}
         <span className="font-mono text-charcoal-400">60</span>, 별칭{" "}
@@ -154,7 +154,7 @@ function Row({
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="강남"
-          className="min-w-0 flex-[2] rounded-md border border-charcoal-800/60 bg-charcoal-900/60 px-2.5 py-1.5 text-sm text-charcoal-100"
+          className="min-w-0 flex-[2] rounded-lg border border-charcoal-800/60 bg-charcoal-900/60 px-2.5 py-1.5 text-sm text-charcoal-100"
         />
         <div className="flex flex-1 items-center gap-1">
           <input
@@ -162,7 +162,7 @@ function Row({
             inputMode="numeric"
             value={buffer}
             onChange={(e) => setBuffer(e.target.value.replace(/[^0-9]/g, ""))}
-            className="w-full rounded-md border border-charcoal-800/60 bg-charcoal-900/60 px-2.5 py-1.5 text-right text-sm text-charcoal-100"
+            className="w-full rounded-lg border border-charcoal-800/60 bg-charcoal-900/60 px-2.5 py-1.5 text-right text-sm text-charcoal-100"
           />
           <span className="shrink-0 text-xs text-charcoal-500">분</span>
         </div>
@@ -172,14 +172,14 @@ function Row({
         value={aliases}
         onChange={(e) => setAliases(e.target.value)}
         placeholder="별칭 (쉼표로 구분, 선택)"
-        className="w-full rounded-md border border-charcoal-800/60 bg-charcoal-900/60 px-2.5 py-1.5 text-xs text-charcoal-200 placeholder:text-charcoal-600"
+        className="w-full rounded-lg border border-charcoal-800/60 bg-charcoal-900/60 px-2.5 py-1.5 text-xs text-charcoal-200 placeholder:text-charcoal-600"
       />
-      {error && <p className="text-[11px] text-red-400">{error}</p>}
+      {error && <p className="text-2xs text-red-400">{error}</p>}
       <div className="flex items-center justify-end gap-1.5">
         <button
           type="button"
           onClick={remove}
-          className="rounded-md border border-charcoal-800/60 px-2.5 py-1 text-[11px] text-charcoal-500 hover:border-red-500/50 hover:text-red-400"
+          className="rounded-lg border border-charcoal-800/60 px-2.5 py-1 text-2xs text-charcoal-500 hover:border-red-500/50 hover:text-red-400"
           disabled={pending}
         >
           삭제
@@ -187,7 +187,7 @@ function Row({
         <button
           type="button"
           onClick={save}
-          className="rounded-md bg-navy-500 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-navy-400 disabled:opacity-50"
+          className="rounded-lg bg-navy-500 px-2.5 py-1 text-2xs font-semibold text-white hover:bg-navy-400 disabled:opacity-50"
           disabled={pending}
         >
           {pending ? "저장 중…" : "저장"}
@@ -242,7 +242,7 @@ function NewRow({ onDone }: { onDone: () => void }) {
           onChange={(e) => setName(e.target.value)}
           placeholder="장소 이름 (예: 강남)"
           required
-          className="min-w-0 flex-[2] rounded-md border border-charcoal-800/60 bg-charcoal-900/60 px-2.5 py-1.5 text-sm text-charcoal-100"
+          className="min-w-0 flex-[2] rounded-lg border border-charcoal-800/60 bg-charcoal-900/60 px-2.5 py-1.5 text-sm text-charcoal-100"
         />
         <div className="flex flex-1 items-center gap-1">
           <input
@@ -251,7 +251,7 @@ function NewRow({ onDone }: { onDone: () => void }) {
             value={buffer}
             onChange={(e) => setBuffer(e.target.value.replace(/[^0-9]/g, ""))}
             required
-            className="w-full rounded-md border border-charcoal-800/60 bg-charcoal-900/60 px-2.5 py-1.5 text-right text-sm text-charcoal-100"
+            className="w-full rounded-lg border border-charcoal-800/60 bg-charcoal-900/60 px-2.5 py-1.5 text-right text-sm text-charcoal-100"
           />
           <span className="shrink-0 text-xs text-charcoal-500">분</span>
         </div>
@@ -261,14 +261,14 @@ function NewRow({ onDone }: { onDone: () => void }) {
         value={aliases}
         onChange={(e) => setAliases(e.target.value)}
         placeholder="별칭 (쉼표로 구분, 선택) — 예: 강남구, gangnam"
-        className="w-full rounded-md border border-charcoal-800/60 bg-charcoal-900/60 px-2.5 py-1.5 text-xs text-charcoal-200 placeholder:text-charcoal-600"
+        className="w-full rounded-lg border border-charcoal-800/60 bg-charcoal-900/60 px-2.5 py-1.5 text-xs text-charcoal-200 placeholder:text-charcoal-600"
       />
-      {error && <p className="text-[11px] text-red-400">{error}</p>}
+      {error && <p className="text-2xs text-red-400">{error}</p>}
       <div className="flex justify-end gap-1.5">
         <button
           type="submit"
           disabled={pending}
-          className="rounded-md bg-navy-500 px-3 py-1 text-xs font-semibold text-white hover:bg-navy-400 disabled:opacity-50"
+          className="rounded-lg bg-navy-500 px-3 py-1 text-xs font-semibold text-white hover:bg-navy-400 disabled:opacity-50"
         >
           {pending ? "추가 중…" : "추가"}
         </button>

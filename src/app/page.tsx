@@ -49,7 +49,7 @@ export default async function LandingPage() {
         {/* Hero */}
         <section className="flex flex-col gap-8 md:grid md:grid-cols-2 md:items-start md:gap-12">
           <div className="order-1 min-w-0 md:col-start-1 md:row-start-1">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-navy-600 dark:text-navy-400">
+            <p className="text-2xs font-semibold uppercase tracking-[0.22em] text-navy-600 dark:text-navy-400">
               Book time, not tables
             </p>
             <h1 className="mt-3 text-3xl font-bold leading-[1.15] tracking-tight text-charcoal-100 sm:text-4xl md:text-5xl lg:text-[56px]">
@@ -84,7 +84,7 @@ export default async function LandingPage() {
 
           <div className="relative order-2 min-w-0 md:col-start-2 md:row-span-2 md:row-start-1">
             <AuthCard initialMode="signup" />
-            <div className="pointer-events-none absolute -inset-4 -z-10 rounded-3xl bg-gradient-to-br from-navy-400/10 via-transparent to-navy-500/20 blur-3xl" />
+            <div className="pointer-events-none absolute -inset-4 -z-10 rounded-xl bg-gradient-to-br from-navy-400/10 via-transparent to-navy-500/20 blur-3xl" />
           </div>
         </section>
 
@@ -203,7 +203,7 @@ export default async function LandingPage() {
         </section>
 
         {/* CTA bottom */}
-        <section className="mt-20 overflow-hidden rounded-3xl border border-charcoal-800/60 bg-gradient-to-br from-navy-500/15 via-charcoal-900/60 to-charcoal-900/30 p-6 text-center sm:p-8 md:mt-28 md:p-12">
+        <section className="mt-20 overflow-hidden rounded-xl border border-charcoal-800/60 bg-gradient-to-br from-navy-500/15 via-charcoal-900/60 to-charcoal-900/30 p-6 text-center sm:p-8 md:mt-28 md:p-12">
           <h2 className="text-xl font-bold leading-tight text-charcoal-100 sm:text-2xl md:text-3xl">
             시간은 가장 중요한 자산입니다
           </h2>
@@ -249,7 +249,7 @@ function FeatureHeader({
 }) {
   return (
     <div className="max-w-2xl">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-navy-600 dark:text-navy-400">
+      <p className="text-2xs font-semibold uppercase tracking-[0.2em] text-navy-600 dark:text-navy-400">
         {eyebrow}
       </p>
       <h2 className="mt-2 text-2xl font-bold text-charcoal-100 sm:text-3xl">
@@ -264,7 +264,7 @@ function FeatureHeader({
 
 function Step({ n, title, body }: { n: number; title: string; body: string }) {
   return (
-    <div className="relative rounded-2xl border border-charcoal-800/60 bg-charcoal-900/30 p-5">
+    <div className="relative rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5">
       <div className="flex h-7 w-7 items-center justify-center rounded-full bg-navy-500 text-xs font-bold text-white">
         {n}
       </div>
@@ -284,7 +284,7 @@ function ValueCard({
   icon?: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-charcoal-800/60 bg-charcoal-900/30 p-5">
+    <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5">
       {icon && (
         <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-navy-500/15 text-navy-400">
           {icon}
@@ -324,16 +324,16 @@ function DemoBookingPage() {
   const times = ["10:00", "11:00", "14:00", "15:00", "16:00", "17:00"];
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-charcoal-800/60 bg-charcoal-900/40 shadow-2xl">
+    <div className="overflow-hidden rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 shadow-2xl">
       <div className="border-b border-charcoal-800/50 p-5">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-charcoal-500">
+        <p className="text-2xs font-semibold uppercase tracking-[0.18em] text-charcoal-500">
           예약 페이지 예시
         </p>
         <div className="mt-2 flex items-baseline gap-2">
           <h3 className="text-base font-bold text-charcoal-100">
             프로덕트 멘토링
           </h3>
-          <span className="rounded-full bg-navy-400/15 px-2 py-0.5 text-[10px] font-bold text-navy-400">
+          <span className="rounded-full bg-navy-400/15 px-2 py-0.5 text-2xs font-bold text-navy-400">
             ₩50,000
           </span>
         </div>
@@ -352,11 +352,11 @@ function DemoBookingPage() {
           <div className="mb-2 flex items-center justify-between">
             <p className="text-xs font-semibold text-charcoal-300">2026년 4월</p>
             <div className="flex gap-1">
-              <span className="flex h-5 w-5 items-center justify-center rounded text-[10px] text-charcoal-500">‹</span>
-              <span className="flex h-5 w-5 items-center justify-center rounded text-[10px] text-charcoal-500">›</span>
+              <span className="flex h-5 w-5 items-center justify-center rounded text-2xs text-charcoal-500">‹</span>
+              <span className="flex h-5 w-5 items-center justify-center rounded text-2xs text-charcoal-500">›</span>
             </div>
           </div>
-          <div className="grid grid-cols-7 gap-1 text-center text-[9px] font-semibold uppercase tracking-wider text-charcoal-500">
+          <div className="grid grid-cols-7 gap-1 text-center text-3xs font-semibold uppercase tracking-wider text-charcoal-500">
             {weekdays.map((w, i) => (
               <span
                 key={w}
@@ -375,7 +375,7 @@ function DemoBookingPage() {
               return (
                 <div
                   key={i}
-                  className={`flex aspect-square items-center justify-center rounded-md text-xs ${
+                  className={`flex aspect-square items-center justify-center rounded-lg text-xs ${
                     isSelected
                       ? "bg-navy-500 font-bold text-white"
                       : isToday
@@ -398,12 +398,12 @@ function DemoBookingPage() {
         </div>
 
         {/* Time pills */}
-        <p className="mb-2 text-[11px] font-medium text-charcoal-500">오전 · 오후</p>
+        <p className="mb-2 text-2xs font-medium text-charcoal-500">오전 · 오후</p>
         <div className="grid grid-cols-3 gap-1.5">
           {times.map((t, i) => (
             <div
               key={t}
-              className={`rounded-md border px-2 py-1.5 text-center text-xs tabular-nums ${
+              className={`rounded-lg border px-2 py-1.5 text-center text-xs tabular-nums ${
                 i === 2
                   ? "border-navy-400 bg-navy-500/15 font-semibold text-charcoal-100"
                   : "border-charcoal-800/60 bg-charcoal-800/20 text-charcoal-200"
@@ -437,17 +437,17 @@ function DemoTodoDay() {
   ];
   const doneCount = items.filter((i) => i.done).length;
   return (
-    <div className="overflow-hidden rounded-2xl border border-charcoal-800/60 bg-charcoal-900/40 shadow-2xl">
+    <div className="overflow-hidden rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 shadow-2xl">
       <div className="flex items-center justify-between border-b border-charcoal-800/50 px-5 py-3">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-charcoal-500">
+          <p className="text-2xs font-semibold uppercase tracking-[0.18em] text-charcoal-500">
             Today
           </p>
           <p className="mt-0.5 text-sm font-semibold text-charcoal-200">
             오늘의 일정 (예시)
           </p>
         </div>
-        <span className="text-[11px] text-charcoal-500">
+        <span className="text-2xs text-charcoal-500">
           <span className="font-semibold text-emerald-400">{doneCount}</span>
           <span className="text-charcoal-600">/{items.length} 완료</span>
         </span>
@@ -462,7 +462,7 @@ function DemoTodoDay() {
           >
             <span
               aria-hidden
-              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border ${
+              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
                 it.done
                   ? "border-navy-400 bg-navy-400 text-white"
                   : "border-charcoal-600 bg-charcoal-900"
@@ -480,7 +480,7 @@ function DemoTodoDay() {
                 </svg>
               )}
             </span>
-            <span className="w-14 shrink-0 font-mono text-[11px] tabular-nums text-charcoal-500">
+            <span className="w-14 shrink-0 font-mono text-2xs tabular-nums text-charcoal-500">
               {it.time}
             </span>
             <span
@@ -491,14 +491,14 @@ function DemoTodoDay() {
               {it.title}
             </span>
             {it.now && (
-              <span className="shrink-0 rounded-full bg-navy-400/15 px-2 py-0.5 text-[10px] font-semibold text-navy-400">
+              <span className="shrink-0 rounded-full bg-navy-400/15 px-2 py-0.5 text-2xs font-semibold text-navy-400">
                 NOW
               </span>
             )}
           </li>
         ))}
       </ul>
-      <div className="border-t border-charcoal-800/40 bg-charcoal-900/50 px-5 py-2.5 text-[11px] text-charcoal-500">
+      <div className="border-t border-charcoal-800/40 bg-charcoal-900/50 px-5 py-2.5 text-2xs text-charcoal-500">
         체크박스를 탭해서 완료 표시 — 하루 끝에 한눈에 확인돼요
       </div>
     </div>
@@ -507,17 +507,17 @@ function DemoTodoDay() {
 
 function DemoCalendar() {
   return (
-    <div className="mt-6 overflow-hidden rounded-2xl border border-charcoal-800/60 bg-charcoal-900/40 shadow-2xl">
+    <div className="mt-6 overflow-hidden rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 shadow-2xl">
       <div className="flex items-center justify-between border-b border-charcoal-800/50 px-4 py-3 sm:px-5">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-charcoal-500">
+          <p className="text-2xs font-semibold uppercase tracking-[0.18em] text-charcoal-500">
             This week
           </p>
           <p className="mt-0.5 text-sm font-semibold text-charcoal-200">
             내 캘린더 (예시)
           </p>
         </div>
-        <div className="flex items-center gap-2.5 text-[11px] text-charcoal-500 sm:gap-3 sm:text-xs">
+        <div className="flex items-center gap-2.5 text-2xs text-charcoal-500 sm:gap-3 sm:text-xs">
           <span className="inline-flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-charcoal-500" />
             일정 2
@@ -541,7 +541,7 @@ function DemoCalendar() {
             ) : (
               <span
                 aria-hidden
-                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[10px] font-bold ${
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-2xs font-bold ${
                   item.auction
                     ? "bg-amber-500/15 text-amber-800 ring-1 ring-amber-500/40 dark:text-amber-200 dark:ring-0"
                     : "bg-navy-400/15 text-navy-700 ring-1 ring-navy-400/30 dark:text-navy-200 dark:ring-0"
@@ -554,11 +554,11 @@ function DemoCalendar() {
               <p className="truncate text-sm font-medium text-charcoal-100">
                 {item.title}
               </p>
-              <p className="text-[11px] text-charcoal-500">{item.time}</p>
+              <p className="text-2xs text-charcoal-500">{item.time}</p>
             </div>
             {item.kind === "slot" && (
               <span
-                className={`shrink-0 rounded-md px-2 py-0.5 text-xs font-bold ${
+                className={`shrink-0 rounded-lg px-2 py-0.5 text-xs font-bold ${
                   item.auction
                     ? "bg-amber-500/15 text-amber-800 dark:text-amber-200"
                     : "bg-navy-400/15 text-navy-700 dark:text-navy-200"
@@ -570,7 +570,7 @@ function DemoCalendar() {
           </li>
         ))}
       </ul>
-      <div className="border-t border-charcoal-800/40 bg-charcoal-900/50 px-4 py-2.5 text-[11px] text-charcoal-500 sm:px-5">
+      <div className="border-t border-charcoal-800/40 bg-charcoal-900/50 px-4 py-2.5 text-2xs text-charcoal-500 sm:px-5">
         Google 일정은 자동으로 읽어와 예약 가능 시간에서 제외돼요
       </div>
     </div>

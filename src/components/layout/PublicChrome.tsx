@@ -19,7 +19,7 @@ export function PublicChrome({
         <main className="mx-auto w-full max-w-5xl px-4 py-8 md:px-8 md:py-10">
           {children}
         </main>
-        <footer className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 pb-8 pt-4 text-[11px] text-charcoal-500">
+        <footer className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 pb-8 pt-4 text-2xs text-charcoal-500">
           <Link href="/explore" className="hover:text-charcoal-300">
             둘러보기
           </Link>

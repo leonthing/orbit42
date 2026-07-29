@@ -49,7 +49,7 @@ export function TimeAssetCard({
           <h2 className="text-sm font-semibold text-charcoal-100">
             내 시간 자산
           </h2>
-          <p className="mt-0.5 text-[11px] text-charcoal-500">
+          <p className="mt-0.5 text-2xs text-charcoal-500">
             확정·완료된 예약과 경매 낙찰 기준 누적
           </p>
         </div>
@@ -58,14 +58,14 @@ export function TimeAssetCard({
             href={cardUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-md border border-charcoal-700 px-3 py-1.5 text-xs text-charcoal-300 hover:border-charcoal-600 hover:text-charcoal-100"
+            className="rounded-lg border border-charcoal-700 px-3 py-1.5 text-xs text-charcoal-300 hover:border-charcoal-600 hover:text-charcoal-100"
           >
             카드 미리보기
           </a>
           <button
             type="button"
             onClick={copyCard}
-            className="rounded-md bg-navy-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-400"
+            className="rounded-lg bg-navy-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-400"
           >
             {copied ? "복사됨!" : "공유 카드 복사"}
           </button>
@@ -114,7 +114,7 @@ function AssetStat({
 }) {
   return (
     <div className="rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 p-3">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-charcoal-500">
+      <p className="text-2xs font-semibold uppercase tracking-wider text-charcoal-500">
         {label}
       </p>
       <p

@@ -96,7 +96,7 @@ export function TimeRequestsInbox({ requests }: { requests: TimeRequestRow[] }) 
                       type="button"
                       onClick={() => accept(r.id)}
                       disabled={!pickedTime || pending}
-                      className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {pending ? "확정 중…" : "이 시간으로 확정"}
                     </button>
@@ -114,7 +114,7 @@ export function TimeRequestsInbox({ requests }: { requests: TimeRequestRow[] }) 
                       type="button"
                       onClick={() => setAcceptingId(r.id)}
                       disabled={pending}
-                      className="rounded-md bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
+                      className="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
                     >
                       시간 정해서 수락
                     </button>
@@ -122,7 +122,7 @@ export function TimeRequestsInbox({ requests }: { requests: TimeRequestRow[] }) 
                       type="button"
                       onClick={() => decline(r.id)}
                       disabled={pending}
-                      className="rounded-md border border-charcoal-700 px-3 py-1 text-xs text-charcoal-400 hover:border-navy-400/60 hover:text-navy-400 disabled:opacity-50"
+                      className="rounded-lg border border-charcoal-700 px-3 py-1 text-xs text-charcoal-400 hover:border-navy-400/60 hover:text-navy-400 disabled:opacity-50"
                     >
                       거절
                     </button>

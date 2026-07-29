@@ -100,7 +100,7 @@ export async function ProfileCalendarCards({
             <Link
               key={cal.id as string}
               href={`/${username}/c?calendar=${cal.id}`}
-              className="rounded-2xl border border-charcoal-800/50 bg-[rgb(var(--bg-surface))] p-4 transition-colors hover:border-charcoal-700"
+              className="rounded-xl border border-charcoal-800/50 bg-[rgb(var(--bg-surface))] p-4 transition-colors hover:border-charcoal-700"
             >
               <div className="flex items-center gap-2">
                 <span
@@ -111,12 +111,12 @@ export async function ProfileCalendarCards({
                   {cal.name as string}
                 </span>
                 {cal.visibility === "private" && (
-                  <span className="ml-auto text-[10px] text-charcoal-600">비공개</span>
+                  <span className="ml-auto text-2xs text-charcoal-600">비공개</span>
                 )}
               </div>
               {cal.goal_title && (
                 <p
-                  className="mt-1 truncate text-[11px] font-medium"
+                  className="mt-1 truncate text-2xs font-medium"
                   style={{ color }}
                 >
                   {cal.goal_title as string}
@@ -138,7 +138,7 @@ export async function ProfileCalendarCards({
                   />
                 ))}
               </div>
-              <p className="mt-2 text-[11px] text-charcoal-500">
+              <p className="mt-2 text-2xs text-charcoal-500">
                 이번 달{" "}
                 {(events ?? []).filter((e) => e.calendar_id === cal.id).length}개
               </p>

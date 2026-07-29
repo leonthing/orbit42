@@ -648,7 +648,7 @@ export default function CalendarView({
         <button
           key={mode}
           onClick={() => switchView(mode)}
-          className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+          className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
             viewMode === mode
               ? "bg-navy-500 text-white"
               : "text-charcoal-400 hover:text-charcoal-200"
@@ -700,7 +700,7 @@ export default function CalendarView({
                   <div className="absolute right-0 z-50 mt-2 w-72 rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] p-3 shadow-2xl">
                     <div className="mb-2 flex items-center justify-between">
                       <p className="text-xs font-medium text-charcoal-400">내 캘린더</p>
-                      <div className="flex gap-1 text-[10px]">
+                      <div className="flex gap-1 text-2xs">
                         <button
                           type="button"
                           onClick={() => {
@@ -757,10 +757,10 @@ export default function CalendarView({
                           <span className="min-w-0 flex-1 truncate text-sm text-charcoal-200">
                             {cal.name}
                             {cal.is_default && (
-                              <span className="ml-1 text-[10px] text-charcoal-500">기본</span>
+                              <span className="ml-1 text-2xs text-charcoal-500">기본</span>
                             )}
                           </span>
-                          <span className="text-[10px] text-charcoal-500">
+                          <span className="text-2xs text-charcoal-500">
                             {cal.source === "google" ? "G" : "N"}
                           </span>
                         </label>
@@ -817,7 +817,7 @@ export default function CalendarView({
           {!isViewCurrent() && (
             <button
               onClick={goToToday}
-              className="rounded-md bg-charcoal-800/60 px-2.5 py-1 text-xs text-charcoal-400 hover:text-charcoal-200"
+              className="rounded-lg bg-charcoal-800/60 px-2.5 py-1 text-xs text-charcoal-400 hover:text-charcoal-200"
             >
               오늘
             </button>
@@ -832,7 +832,7 @@ export default function CalendarView({
           <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 p-3 md:p-5">
             {/* Day headers with week number column */}
             <div className="grid grid-cols-[1.5rem_repeat(7,minmax(0,1fr))] gap-0.5 md:grid-cols-[2rem_repeat(7,minmax(0,1fr))] md:gap-1">
-              <div className="py-2 text-center text-[10px] font-medium text-charcoal-600">W</div>
+              <div className="py-2 text-center text-2xs font-medium text-charcoal-600">W</div>
               {DAYS_MON.map((d, i) => (
                 <div
                   key={d}
@@ -873,7 +873,7 @@ export default function CalendarView({
                   <>
                     {showWeekNum && (
                       <div key={`w${i}`} className="flex h-14 items-start justify-center pt-1 md:h-20 md:pt-2">
-                        <span className="text-[10px] font-medium text-charcoal-600">
+                        <span className="text-2xs font-medium text-charcoal-600">
                           {weekNum}
                         </span>
                       </div>
@@ -938,7 +938,7 @@ export default function CalendarView({
                                         });
                                       }
                                     }}
-                                    className={`flex min-w-0 items-center gap-1 truncate rounded-[3px] px-1 py-[1px] text-left text-[10px] leading-tight hover:bg-charcoal-800/60 md:text-[11px] ${
+                                    className={`flex min-w-0 items-center gap-1 truncate rounded-sm px-1 py-[1px] text-left text-2xs leading-tight hover:bg-charcoal-800/60 md:text-2xs ${
                                       ev.tentative ? "border border-dashed" : ""
                                     }`}
                                     title={ev.tentative ? `${ev.title} · 확정 대기` : ev.title}
@@ -965,7 +965,7 @@ export default function CalendarView({
                                 );
                               })}
                               {dayEvents.length > 3 && (
-                                <span className="px-1 text-[10px] text-charcoal-500">
+                                <span className="px-1 text-2xs text-charcoal-500">
                                   +{dayEvents.length - 3}
                                 </span>
                               )}
@@ -995,7 +995,7 @@ export default function CalendarView({
                     </h3>
                     <button
                       onClick={() => openCreateForm(selectedDay)}
-                      className="rounded-md bg-navy-500 px-2.5 py-1 text-xs font-medium text-white hover:bg-navy-400"
+                      className="rounded-lg bg-navy-500 px-2.5 py-1 text-xs font-medium text-white hover:bg-navy-400"
                     >
                       + 추가
                     </button>
@@ -1525,14 +1525,14 @@ function QuickEditPopover({
                 handleSave();
               }
             }}
-            className="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-1.5 py-1 text-sm font-semibold text-charcoal-100 hover:border-charcoal-800 focus:border-charcoal-700 focus:outline-none"
+            className="min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-1.5 py-1 text-sm font-semibold text-charcoal-100 hover:border-charcoal-800 focus:border-charcoal-700 focus:outline-none"
           />
         </div>
         <div className="mt-3 space-y-1 text-xs text-charcoal-400">
           <p>{dateLabel}</p>
           <p>{timeLabel}</p>
           {isGoogle && (
-            <p className="text-[11px] text-blue-400/80">Google 캘린더</p>
+            <p className="text-2xs text-blue-400/80">Google 캘린더</p>
           )}
         </div>
         <div className="mt-4 flex items-center justify-between gap-2">
@@ -1540,7 +1540,7 @@ function QuickEditPopover({
             type="button"
             onClick={handleDelete}
             disabled={pending}
-            className="rounded-md px-2.5 py-1.5 text-xs text-charcoal-500 hover:bg-red-900/30 hover:text-red-400 disabled:opacity-50"
+            className="rounded-lg px-2.5 py-1.5 text-xs text-charcoal-500 hover:bg-red-900/30 hover:text-red-400 disabled:opacity-50"
           >
             삭제
           </button>
@@ -1549,7 +1549,7 @@ function QuickEditPopover({
               type="button"
               onClick={onOpenFull}
               disabled={pending}
-              className="rounded-md px-2.5 py-1.5 text-xs text-charcoal-400 hover:bg-charcoal-800/60 hover:text-charcoal-200 disabled:opacity-50"
+              className="rounded-lg px-2.5 py-1.5 text-xs text-charcoal-400 hover:bg-charcoal-800/60 hover:text-charcoal-200 disabled:opacity-50"
             >
               상세
             </button>
@@ -1557,7 +1557,7 @@ function QuickEditPopover({
               type="button"
               onClick={handleSave}
               disabled={pending || !title.trim()}
-              className="rounded-md bg-navy-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-navy-400 disabled:opacity-50"
+              className="rounded-lg bg-navy-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-navy-400 disabled:opacity-50"
             >
               {pending ? "저장 중..." : "저장"}
             </button>
@@ -1625,10 +1625,10 @@ function EventList({
                   {ev.title}
                 </p>
                 {ev.source === "google" && (
-                  <span className="shrink-0 rounded bg-blue-500/10 px-1 py-0.5 text-[10px] text-blue-400">G</span>
+                  <span className="shrink-0 rounded bg-blue-500/10 px-1 py-0.5 text-2xs text-blue-400">G</span>
                 )}
                 {ev.tentative && (
-                  <span className="shrink-0 rounded border border-dashed border-amber-500/50 px-1 py-0.5 text-[10px] text-amber-400">예정</span>
+                  <span className="shrink-0 rounded border border-dashed border-amber-500/50 px-1 py-0.5 text-2xs text-amber-400">예정</span>
                 )}
               </div>
               <p className="mt-0.5 text-xs text-charcoal-500">
@@ -1736,7 +1736,7 @@ function YearView({
               {DAYS_MON.map((d, i) => (
                 <div
                   key={d}
-                  className={`text-center text-[8px] font-medium ${
+                  className={`text-center text-3xs font-medium ${
                     i === 5 ? "text-blue-400/50" : i === 6 ? "text-navy-400/50" : "text-charcoal-600"
                   }`}
                 >
@@ -1757,7 +1757,7 @@ function YearView({
                     {day && (
                       <div className="relative flex items-center justify-center">
                         <span
-                          className={`text-[9px] leading-none ${
+                          className={`text-3xs leading-none ${
                             isToday
                               ? "flex h-3.5 w-3.5 items-center justify-center rounded-full bg-navy-500 text-white"
                               : "text-charcoal-500"
@@ -1824,7 +1824,7 @@ function QuarterView({
               {DAYS_MON.map((d, i) => (
                 <div
                   key={d}
-                  className={`py-1 text-center text-[10px] font-medium ${
+                  className={`py-1 text-center text-2xs font-medium ${
                     i === 5 ? "text-blue-400/60" : i === 6 ? "text-navy-400/60" : "text-charcoal-600"
                   }`}
                 >
@@ -1846,7 +1846,7 @@ function QuarterView({
                     key={i}
                     disabled={!day}
                     onClick={() => day && onDayClick(monthIdx, day)}
-                    className={`flex h-8 flex-col items-center justify-center rounded-md text-xs transition-colors ${
+                    className={`flex h-8 flex-col items-center justify-center rounded-lg text-xs transition-colors ${
                       !day
                         ? "cursor-default"
                         : isToday
@@ -1857,7 +1857,7 @@ function QuarterView({
                     {day && (
                       <div className="relative flex items-center justify-center">
                         <span
-                          className={`flex h-5 w-5 items-center justify-center text-[11px] font-medium ${
+                          className={`flex h-5 w-5 items-center justify-center text-2xs font-medium ${
                             isToday
                               ? "rounded-full bg-navy-500 text-white"
                               : isSun
@@ -1925,7 +1925,7 @@ function EventDetailModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-2xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] p-5 shadow-2xl"
+        className="w-full max-w-md rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] p-5 shadow-2xl"
       >
         <div className="flex items-start gap-3">
           <span
@@ -1956,7 +1956,7 @@ function EventDetailModal({
                   )}`}
             </p>
             {!isNative && canToggleComplete && (
-              <p className="mt-2 text-[11px] text-charcoal-600">
+              <p className="mt-2 text-2xs text-charcoal-600">
                 Google 캘린더 일정 — 여기서 수정하면 Google 쪽에도 함께 반영돼요.
               </p>
             )}

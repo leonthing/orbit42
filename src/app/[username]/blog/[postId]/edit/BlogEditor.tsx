@@ -429,7 +429,7 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
           </button>
 
           <span
-            className={`rounded-md px-2 py-0.5 text-xs font-medium ${
+            className={`rounded-lg px-2 py-0.5 text-xs font-medium ${
               post.published
                 ? "bg-emerald-500/15 text-emerald-400"
                 : "bg-charcoal-700/40 text-charcoal-400"
@@ -472,7 +472,7 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="hidden text-[10px] text-charcoal-600 sm:inline">
+          <span className="hidden text-2xs text-charcoal-600 sm:inline">
             {wordCount}자 · {readingTime}분
           </span>
           <button
@@ -664,12 +664,12 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
             </span>
           ))}
           {uploading && (
-            <span className="ml-2 text-[11px] text-charcoal-500">
+            <span className="ml-2 text-2xs text-charcoal-500">
               업로드 중…
             </span>
           )}
           {uploadError && (
-            <span className="ml-2 text-[11px] text-red-400">
+            <span className="ml-2 text-2xs text-red-400">
               {uploadError}
             </span>
           )}

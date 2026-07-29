@@ -207,8 +207,8 @@ export default function BookingForm({
         </div>
 
         {!loggedIn && (
-          <div className="rounded-2xl border border-navy-400/30 bg-gradient-to-br from-navy-500/10 to-charcoal-900/40 p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-navy-400">
+          <div className="rounded-xl border border-navy-400/30 bg-gradient-to-br from-navy-500/10 to-charcoal-900/40 p-5">
+            <p className="text-2xs font-semibold uppercase tracking-wider text-navy-400">
               Orbit42
             </p>
             <h3 className="mt-1 text-lg font-bold text-charcoal-50">
@@ -291,12 +291,12 @@ export default function BookingForm({
             })}
           </div>
           {locations.length > 1 ? (
-            <p className="mt-2 text-[11px] text-charcoal-500">
+            <p className="mt-2 text-2xs text-charcoal-500">
               선택한 위치에서 호스트 일정에 따라 가능한 시간만 보여져요.
               {locPending && " · 시간 다시 계산 중…"}
             </p>
           ) : (
-            <p className="mt-2 text-[11px] text-charcoal-500">
+            <p className="mt-2 text-2xs text-charcoal-500">
               이 위치에서 만나요.
             </p>
           )}
@@ -354,7 +354,7 @@ export default function BookingForm({
 
       {!loggedIn && (
         <>
-          <p className="-mb-1 rounded-md bg-charcoal-800/30 px-3 py-2 text-[11px] leading-relaxed text-charcoal-500">
+          <p className="-mb-1 rounded-lg bg-charcoal-800/30 px-3 py-2 text-2xs leading-relaxed text-charcoal-500">
             계정이 없어도 예약할 수 있어요. 입력한 이메일로 확인 메일이 가요.
           </p>
           <div className="grid gap-2 sm:grid-cols-2">
@@ -539,7 +539,7 @@ function BookingMenuPicker({
       <p className="text-xs font-semibold text-charcoal-100">서비스 선택</p>
       {Array.from(grouped.entries()).map(([cat, items]) => (
         <div key={cat}>
-          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-charcoal-500">
+          <p className="mb-1.5 text-2xs font-semibold uppercase tracking-wider text-charcoal-500">
             {cat}
           </p>
           <ul className="space-y-1.5">
@@ -550,7 +550,7 @@ function BookingMenuPicker({
                   <button
                     type="button"
                     onClick={() => toggle(m.id)}
-                    className={`flex w-full items-start justify-between gap-3 rounded-md border px-3 py-2 text-left transition-colors ${
+                    className={`flex w-full items-start justify-between gap-3 rounded-lg border px-3 py-2 text-left transition-colors ${
                       active
                         ? "border-navy-400 bg-navy-400/10"
                         : "border-charcoal-800/60 bg-charcoal-800/10 hover:border-charcoal-700"

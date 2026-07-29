@@ -51,7 +51,7 @@ export function ProfileTabs({ tabs, overview, slots, posts }: Props) {
               <span>{t.label}</span>
               {typeof t.count === "number" && t.count > 0 && (
                 <span
-                  className={`ml-1.5 text-[11px] ${
+                  className={`ml-1.5 text-2xs ${
                     isActive ? "text-navy-400" : "text-charcoal-600"
                   }`}
                 >

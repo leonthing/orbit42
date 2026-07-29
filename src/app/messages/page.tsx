@@ -59,7 +59,7 @@ export default async function MessagesPage() {
                     <span className="truncate text-sm font-medium text-charcoal-100">
                       {c.other.display_name || c.other.username}
                     </span>
-                    <span className="shrink-0 text-[11px] text-charcoal-500">
+                    <span className="shrink-0 text-2xs text-charcoal-500">
                       {formatWhen(c.last_message_at)}
                     </span>
                   </div>

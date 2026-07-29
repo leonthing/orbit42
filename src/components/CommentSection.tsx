@@ -203,13 +203,13 @@ function CommentForm({
           if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit(e);
         }}
       />
-      {error && <p className="text-[11px] text-red-400">{error}</p>}
+      {error && <p className="text-2xs text-red-400">{error}</p>}
       <div className="flex items-center justify-end gap-2">
         {onCancel && (
           <button
             type="button"
             onClick={onCancel}
-            className="text-[11px] text-charcoal-500 hover:text-charcoal-200"
+            className="text-2xs text-charcoal-500 hover:text-charcoal-200"
           >
             취소
           </button>
@@ -270,14 +270,14 @@ function CommentItem({
             >
               {node.author.display_name || node.author.username}
             </Link>
-            <span className="text-[10px] text-charcoal-500">
+            <span className="text-2xs text-charcoal-500">
               {relTime(node.created_at)}
             </span>
           </div>
           <p className="mt-0.5 whitespace-pre-wrap break-words text-sm text-charcoal-200">
             {node.body}
           </p>
-          <div className="mt-1 flex items-center gap-3 text-[11px]">
+          <div className="mt-1 flex items-center gap-3 text-2xs">
             {loggedIn && (
               <button
                 type="button"

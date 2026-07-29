@@ -106,7 +106,7 @@ export default function BookingsInbox({
         )}
       </header>
 
-      <div className="flex rounded-md bg-charcoal-800/40 p-0.5">
+      <div className="flex rounded-lg bg-charcoal-800/40 p-0.5">
         <TabButton active={tab === "host"} onClick={() => setTab("host")}>
           받은 예약 {hostBookings.length > 0 && `(${hostBookings.length})`}
         </TabButton>
@@ -173,7 +173,7 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
-      className={`flex-1 rounded-[5px] px-3 py-1.5 text-xs font-semibold transition-colors ${
+      className={`flex-1 rounded-sm px-3 py-1.5 text-xs font-semibold transition-colors ${
         active
           ? "bg-navy-500 text-white shadow-sm"
           : "text-charcoal-500 hover:text-charcoal-900 dark:text-charcoal-400 dark:hover:text-charcoal-100"
@@ -197,7 +197,7 @@ function Stat({
 }) {
   return (
     <div className="rounded-lg border border-charcoal-800/60 bg-charcoal-900/30 px-4 py-2">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-charcoal-500">
+      <p className="text-2xs font-semibold uppercase tracking-wider text-charcoal-500">
         {label}
       </p>
       <p
@@ -244,13 +244,13 @@ function DateStamp({ iso }: { iso: string }) {
   const d = new Date(iso);
   return (
     <div className="flex w-14 shrink-0 flex-col items-center rounded-lg bg-charcoal-800/40 px-2 py-2 text-center">
-      <span className="text-[10px] font-semibold uppercase tracking-wider text-charcoal-500">
+      <span className="text-2xs font-semibold uppercase tracking-wider text-charcoal-500">
         {d.toLocaleDateString("ko-KR", { month: "short" })}
       </span>
       <span className="mt-0.5 text-xl font-bold tabular-nums text-charcoal-100">
         {d.getDate()}
       </span>
-      <span className="text-[10px] text-charcoal-500">
+      <span className="text-2xs text-charcoal-500">
         {d.toLocaleDateString("ko-KR", { weekday: "short" })}
       </span>
     </div>
@@ -260,7 +260,7 @@ function DateStamp({ iso }: { iso: string }) {
 function StatusPill({ status }: { status: string }) {
   return (
     <span
-      className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+      className={`shrink-0 rounded-full px-2 py-0.5 text-2xs font-semibold ${
         STATUS_STYLES[status] ?? "bg-charcoal-700/40 text-charcoal-500"
       }`}
     >
@@ -340,7 +340,7 @@ function HostSection({
                         {b.selected_menus.map((m) => (
                           <span
                             key={m.id}
-                            className="inline-flex items-center gap-1 rounded-md bg-navy-400/10 px-2 py-0.5 text-[11px] text-navy-600 ring-1 ring-navy-400/30 dark:text-navy-200 dark:ring-0"
+                            className="inline-flex items-center gap-1 rounded-lg bg-navy-400/10 px-2 py-0.5 text-2xs text-navy-600 ring-1 ring-navy-400/30 dark:text-navy-200 dark:ring-0"
                           >
                             {m.name}
                             <span className="text-charcoal-500">
@@ -353,7 +353,7 @@ function HostSection({
                       </div>
                     )}
                     {b.message && (
-                      <p className="mt-2 rounded-md bg-charcoal-800/40 px-3 py-2 text-xs leading-relaxed text-charcoal-400">
+                      <p className="mt-2 rounded-lg bg-charcoal-800/40 px-3 py-2 text-xs leading-relaxed text-charcoal-400">
                         {b.message}
                       </p>
                     )}
@@ -363,7 +363,7 @@ function HostSection({
                       <button
                         onClick={() => update(b.id, "confirmed")}
                         disabled={pending}
-                        className="rounded-md bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-60"
+                        className="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-60"
                       >
                         수락
                       </button>
@@ -372,7 +372,7 @@ function HostSection({
                       <button
                         onClick={() => update(b.id, "canceled")}
                         disabled={pending}
-                        className="rounded-md border border-charcoal-700 px-3 py-1 text-xs text-charcoal-400 hover:border-navy-400/60 hover:text-navy-400"
+                        className="rounded-lg border border-charcoal-700 px-3 py-1 text-xs text-charcoal-400 hover:border-navy-400/60 hover:text-navy-400"
                       >
                         취소
                       </button>
@@ -381,7 +381,7 @@ function HostSection({
                       <button
                         onClick={() => update(b.id, "completed")}
                         disabled={pending}
-                        className="rounded-md border border-charcoal-700 px-3 py-1 text-xs text-charcoal-400 hover:border-charcoal-600 hover:text-charcoal-200"
+                        className="rounded-lg border border-charcoal-700 px-3 py-1 text-xs text-charcoal-400 hover:border-charcoal-600 hover:text-charcoal-200"
                       >
                         완료
                       </button>
@@ -468,7 +468,7 @@ function GuestSection({
                       </p>
                     )}
                     {b.message && (
-                      <p className="mt-2 rounded-md bg-charcoal-800/40 px-3 py-2 text-xs leading-relaxed text-charcoal-400">
+                      <p className="mt-2 rounded-lg bg-charcoal-800/40 px-3 py-2 text-xs leading-relaxed text-charcoal-400">
                         {b.message}
                       </p>
                     )}
@@ -477,7 +477,7 @@ function GuestSection({
                     {b.host && (
                       <Link
                         href={`/${b.host.username}/s/${b.slot.slug}`}
-                        className="rounded-md border border-charcoal-800 px-2.5 py-1 text-center text-xs text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
+                        className="rounded-lg border border-charcoal-800 px-2.5 py-1 text-center text-xs text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
                       >
                         슬롯
                       </Link>
@@ -494,7 +494,7 @@ function GuestSection({
                               )
                             }
                             disabled={pending}
-                            className="rounded-md border border-charcoal-800 px-2.5 py-1 text-xs text-charcoal-400 hover:border-charcoal-600 hover:text-charcoal-100 disabled:opacity-50"
+                            className="rounded-lg border border-charcoal-800 px-2.5 py-1 text-xs text-charcoal-400 hover:border-charcoal-600 hover:text-charcoal-100 disabled:opacity-50"
                           >
                             시간 변경
                           </button>
@@ -502,7 +502,7 @@ function GuestSection({
                             type="button"
                             onClick={() => onCancel(b.id)}
                             disabled={pending}
-                            className="rounded-md border border-charcoal-800 px-2.5 py-1 text-xs text-charcoal-400 hover:border-navy-400/60 hover:text-navy-400 disabled:opacity-50"
+                            className="rounded-lg border border-charcoal-800 px-2.5 py-1 text-xs text-charcoal-400 hover:border-navy-400/60 hover:text-navy-400 disabled:opacity-50"
                           >
                             취소
                           </button>
@@ -518,13 +518,13 @@ function GuestSection({
                               cur === b.id ? null : b.id,
                             )
                           }
-                          className="rounded-md bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-500/40 hover:bg-amber-500/25 dark:text-amber-200 dark:ring-0"
+                          className="rounded-lg bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-500/40 hover:bg-amber-500/25 dark:text-amber-200 dark:ring-0"
                         >
                           후기 남기기
                         </button>
                       )}
                     {reviewed.has(b.id) && (
-                      <span className="px-2.5 py-1 text-center text-[11px] text-charcoal-600">
+                      <span className="px-2.5 py-1 text-center text-2xs text-charcoal-600">
                         후기 완료
                       </span>
                     )}
@@ -612,7 +612,7 @@ function ReviewPanel({
           type="button"
           onClick={submit}
           disabled={rating === 0 || saving}
-          className="rounded-md bg-navy-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-400 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-lg bg-navy-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-400 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {saving ? "등록 중…" : "후기 등록"}
         </button>
@@ -702,7 +702,7 @@ function ReschedulePanel({
             type="button"
             onClick={submit}
             disabled={!picked || saving}
-            className="rounded-md bg-navy-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-400 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg bg-navy-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-400 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saving ? "변경 중…" : "변경"}
           </button>

@@ -20,7 +20,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[rgb(var(--bg-base))] px-4">
-      <div className="w-full max-w-sm rounded-2xl border border-charcoal-800/60 bg-charcoal-900/40 p-6 shadow-xl">
+      <div className="w-full max-w-sm rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 p-6 shadow-xl">
         <h1 className="text-lg font-bold text-charcoal-100">비밀번호 재설정</h1>
         <p className="mt-1 text-sm text-charcoal-500">
           가입한 이메일을 입력하시면 재설정 링크를 보내드려요.
@@ -39,7 +39,7 @@ export default function ForgotPasswordPage() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="이메일"
               required
-              className="w-full rounded-md border border-charcoal-700 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-500 focus:border-navy-400 focus:outline-none focus:ring-1 focus:ring-navy-400/40"
+              className="w-full rounded-lg border border-charcoal-700 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-500 focus:border-navy-400 focus:outline-none focus:ring-1 focus:ring-navy-400/40"
             />
             <PendingButton
               type="submit"

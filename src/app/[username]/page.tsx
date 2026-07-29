@@ -396,7 +396,7 @@ export default async function PublicProfile({
                     </h2>
                     <Link
                       href={`/${params.username}/insights`}
-                      className="text-[11px] text-navy-400 hover:text-navy-300"
+                      className="text-2xs text-navy-400 hover:text-navy-300"
                     >
                       자세히 →
                     </Link>
@@ -609,7 +609,7 @@ export default async function PublicProfile({
                   <div className="flex flex-wrap items-baseline gap-x-2">
                     <p className="font-medium text-charcoal-100">{exp.company}</p>
                     {exp.current && (
-                      <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-emerald-500/40 dark:text-emerald-200 dark:ring-0">
+                      <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-2xs font-semibold text-emerald-700 ring-1 ring-emerald-500/40 dark:text-emerald-200 dark:ring-0">
                         재직 중
                       </span>
                     )}
@@ -708,7 +708,7 @@ function PostsList({
             className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-4"
           >
             <div className="flex items-start justify-between gap-3">
-              <time className="text-[11px] font-medium text-charcoal-500">
+              <time className="text-2xs font-medium text-charcoal-500">
                 {new Date(p.created_at).toLocaleString("ko-KR", {
                   timeZone: "Asia/Seoul",
                   year: "numeric",
@@ -795,7 +795,7 @@ function ValueStat({
 }) {
   return (
     <div className="min-w-0">
-      <p className="text-[10px] font-medium text-charcoal-500">{label}</p>
+      <p className="text-2xs font-medium text-charcoal-500">{label}</p>
       <p
         className={`truncate text-sm font-bold ${
           accent ? "text-navy-600 dark:text-navy-300" : "text-charcoal-100"

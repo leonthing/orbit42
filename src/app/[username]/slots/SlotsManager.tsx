@@ -108,7 +108,7 @@ export default function SlotsManager({
       </header>
 
       {presetPicker && (
-        <section className="rounded-2xl border border-charcoal-800/60 bg-charcoal-900/30 p-5">
+        <section className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5">
           <p className="mb-1 text-sm font-semibold text-charcoal-100">
             템플릿 선택
           </p>
@@ -158,7 +158,7 @@ export default function SlotsManager({
       )}
 
       {initial.length === 0 && !showNew ? (
-        <div className="rounded-2xl border border-dashed border-charcoal-800/60 bg-charcoal-900/20 p-12 text-center">
+        <div className="rounded-xl border border-dashed border-charcoal-800/60 bg-charcoal-900/20 p-12 text-center">
           <p className="text-base font-semibold text-charcoal-200">
             아직 슬롯이 없어요
           </p>
@@ -329,7 +329,7 @@ function NewSlotForm({
   return (
     <form
       onSubmit={submit}
-      className="overflow-hidden rounded-2xl border border-charcoal-800/60 bg-charcoal-900/30"
+      className="overflow-hidden rounded-xl border border-charcoal-800/60 bg-charcoal-900/30"
     >
       <div className="flex items-center justify-between border-b border-charcoal-800/50 bg-charcoal-900/50 px-6 py-4">
         <div>
@@ -341,7 +341,7 @@ function NewSlotForm({
         <button
           type="button"
           onClick={onCancel}
-          className="flex h-8 w-8 items-center justify-center rounded-md text-charcoal-500 hover:bg-charcoal-800/40 hover:text-charcoal-100"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-charcoal-500 hover:bg-charcoal-800/40 hover:text-charcoal-100"
           aria-label="Close"
         >
           <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -885,7 +885,7 @@ function ManualWindows({
           {windows.map((w, i) => (
             <li
               key={i}
-              className="flex items-center justify-between rounded-md bg-charcoal-800/40 px-3 py-2 text-xs text-charcoal-200"
+              className="flex items-center justify-between rounded-lg bg-charcoal-800/40 px-3 py-2 text-xs text-charcoal-200"
             >
               <span className="tabular-nums">
                 {new Date(w).toLocaleString("ko-KR", {
@@ -968,12 +968,12 @@ function AutoConfig({
             return (
               <div
                 key={d.key}
-                className="flex items-center gap-3 rounded-md px-2 py-1.5"
+                className="flex items-center gap-3 rounded-lg px-2 py-1.5"
               >
                 <button
                   type="button"
                   onClick={() => toggleDay(d.key)}
-                  className={`flex h-8 w-10 shrink-0 items-center justify-center rounded-md text-xs font-bold transition-colors ${
+                  className={`flex h-8 w-10 shrink-0 items-center justify-center rounded-lg text-xs font-bold transition-colors ${
                     enabled
                       ? "bg-navy-500 text-white"
                       : "bg-charcoal-800/60 text-charcoal-500 hover:bg-charcoal-800"
@@ -987,14 +987,14 @@ function AutoConfig({
                       type="time"
                       value={range[0]?.start ?? "10:00"}
                       onChange={(e) => updateRange(d.key, "start", e.target.value)}
-                      className="rounded-md border border-charcoal-800/60 bg-charcoal-900/40 px-2 py-1.5 text-charcoal-100"
+                      className="rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-2 py-1.5 text-charcoal-100"
                     />
                     <span className="text-charcoal-600">—</span>
                     <input
                       type="time"
                       value={range[0]?.end ?? "18:00"}
                       onChange={(e) => updateRange(d.key, "end", e.target.value)}
-                      className="rounded-md border border-charcoal-800/60 bg-charcoal-900/40 px-2 py-1.5 text-charcoal-100"
+                      className="rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-2 py-1.5 text-charcoal-100"
                     />
                   </div>
                 ) : (
@@ -1086,8 +1086,8 @@ function PresetCard({
       <p className="text-sm font-semibold text-charcoal-100 group-hover:text-navy-300">
         {title}
       </p>
-      <p className="text-[11px] leading-relaxed text-charcoal-400">{hint}</p>
-      <p className="mt-auto pt-2 text-[10px] uppercase tracking-wider text-charcoal-600">
+      <p className="text-2xs leading-relaxed text-charcoal-400">{hint}</p>
+      <p className="mt-auto pt-2 text-2xs uppercase tracking-wider text-charcoal-600">
         {meta}
       </p>
     </button>
@@ -1162,7 +1162,7 @@ function LocationsInput({
 
       {suggested.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[10px] uppercase tracking-wider text-charcoal-500">
+          <span className="text-2xs uppercase tracking-wider text-charcoal-500">
             프리셋
           </span>
           {suggested.map((p) => (
@@ -1170,7 +1170,7 @@ function LocationsInput({
               key={p}
               type="button"
               onClick={() => add(p)}
-              className="rounded-full border border-charcoal-800/60 bg-charcoal-900/40 px-2.5 py-0.5 text-[11px] text-charcoal-300 hover:border-navy-400/40 hover:text-navy-300"
+              className="rounded-full border border-charcoal-800/60 bg-charcoal-900/40 px-2.5 py-0.5 text-2xs text-charcoal-300 hover:border-navy-400/40 hover:text-navy-300"
             >
               + {p}
             </button>
@@ -1178,7 +1178,7 @@ function LocationsInput({
         </div>
       )}
 
-      <p className="text-[11px] text-charcoal-500">
+      <p className="text-2xs text-charcoal-500">
         게스트가 예약할 때 이 중에서 만날 장소를 골라요. 등록한 장소가 설정의{" "}
         <b>장소별 이동시간</b> 프리셋과 매칭되면 인접 일정과의 버퍼가 자동
         최적화돼요.
@@ -1284,7 +1284,7 @@ function SlotCard({
               {row.slot.title}
             </h2>
             <span
-              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+              className={`rounded-full px-2 py-0.5 text-2xs font-semibold ${
                 row.slot.active
                   ? "bg-emerald-600/20 text-emerald-400"
                   : "bg-charcoal-700/40 text-charcoal-500"
@@ -1292,14 +1292,14 @@ function SlotCard({
             >
               {row.slot.active ? "활성" : "중지"}
             </span>
-            <span className="rounded-full bg-charcoal-800/60 px-2 py-0.5 text-[10px] font-medium text-charcoal-400">
+            <span className="rounded-full bg-charcoal-800/60 px-2 py-0.5 text-2xs font-medium text-charcoal-400">
               {row.slot.mode === "auto" ? "자동" : "직접"}
             </span>
-            <span className="rounded-full bg-navy-400/15 px-2 py-0.5 text-[10px] font-bold text-navy-300">
+            <span className="rounded-full bg-navy-400/15 px-2 py-0.5 text-2xs font-bold text-navy-300">
               {priceLabel}
             </span>
             {cal && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-charcoal-800/60 bg-charcoal-800/40 px-2 py-0.5 text-[10px] font-medium text-charcoal-300">
+              <span className="inline-flex items-center gap-1 rounded-full border border-charcoal-800/60 bg-charcoal-800/40 px-2 py-0.5 text-2xs font-medium text-charcoal-300">
                 <span
                   className="h-1.5 w-1.5 rounded-full"
                   style={{ backgroundColor: cal.color }}
@@ -1330,7 +1330,7 @@ function SlotCard({
               {attachedMenus.map((m) => (
                 <span
                   key={m.id}
-                  className="inline-flex items-center gap-1 rounded-md bg-charcoal-800/40 px-2 py-0.5 text-[10px] text-charcoal-700 dark:text-charcoal-200"
+                  className="inline-flex items-center gap-1 rounded-lg bg-charcoal-800/40 px-2 py-0.5 text-2xs text-charcoal-700 dark:text-charcoal-200"
                 >
                   {m.name}
                   <span className="text-charcoal-500">
@@ -1346,7 +1346,7 @@ function SlotCard({
         <div className="flex flex-wrap items-center gap-1 sm:shrink-0">
           <Link
             href={`/${username}/s/${row.slot.slug}`}
-            className="rounded-md border border-charcoal-800 px-2.5 py-1.5 text-xs text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
+            className="rounded-lg border border-charcoal-800 px-2.5 py-1.5 text-xs text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
             title="공개 페이지 열기"
           >
             보기
@@ -1354,14 +1354,14 @@ function SlotCard({
           <button
             type="button"
             onClick={copy}
-            className="rounded-md border border-charcoal-800 px-2.5 py-1.5 text-xs text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
+            className="rounded-lg border border-charcoal-800 px-2.5 py-1.5 text-xs text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
           >
             {copied ? "복사됨" : "링크"}
           </button>
           <button
             type="button"
             onClick={() => setEditing((v) => !v)}
-            className={`rounded-md border px-2.5 py-1.5 text-xs ${
+            className={`rounded-lg border px-2.5 py-1.5 text-xs ${
               editing
                 ? "border-navy-400/60 bg-navy-400/10 text-navy-200"
                 : "border-charcoal-800 text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
@@ -1373,7 +1373,7 @@ function SlotCard({
             type="button"
             onClick={toggleActive}
             disabled={pending}
-            className="rounded-md border border-charcoal-800 px-2.5 py-1.5 text-xs text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
+            className="rounded-lg border border-charcoal-800 px-2.5 py-1.5 text-xs text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
           >
             {row.slot.active ? "일시중지" : "활성화"}
           </button>
@@ -1381,7 +1381,7 @@ function SlotCard({
             type="button"
             onClick={clone}
             disabled={pending}
-            className="rounded-md border border-charcoal-800 px-2.5 py-1.5 text-xs text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
+            className="rounded-lg border border-charcoal-800 px-2.5 py-1.5 text-xs text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
             title="복제"
           >
             복제
@@ -1390,7 +1390,7 @@ function SlotCard({
             type="button"
             onClick={remove}
             disabled={pending}
-            className="rounded-md border border-charcoal-800 px-2.5 py-1.5 text-xs text-charcoal-500 hover:border-red-500/60 hover:text-red-400"
+            className="rounded-lg border border-charcoal-800 px-2.5 py-1.5 text-xs text-charcoal-500 hover:border-red-500/60 hover:text-red-400"
             title="삭제"
           >
             삭제
@@ -1429,13 +1429,13 @@ function SlotCard({
               type="datetime-local"
               value={newWindow}
               onChange={(e) => setNewWindow(e.target.value)}
-              className="flex-1 rounded-md border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2 text-sm text-charcoal-100 focus:border-navy-400/60 focus:outline-none"
+              className="flex-1 rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2 text-sm text-charcoal-100 focus:border-navy-400/60 focus:outline-none"
             />
             <button
               type="button"
               onClick={addWindow}
               disabled={pending || !newWindow}
-              className="shrink-0 rounded-md bg-navy-500 px-4 py-2 text-xs font-semibold text-white hover:bg-navy-400 disabled:opacity-50"
+              className="shrink-0 rounded-lg bg-navy-500 px-4 py-2 text-xs font-semibold text-white hover:bg-navy-400 disabled:opacity-50"
             >
               + 추가
             </button>
@@ -1445,7 +1445,7 @@ function SlotCard({
               {row.availabilities.map((a) => (
                 <li
                   key={a.id}
-                  className="flex items-center justify-between rounded-md bg-charcoal-800/40 px-3 py-2 text-xs"
+                  className="flex items-center justify-between rounded-lg bg-charcoal-800/40 px-3 py-2 text-xs"
                 >
                   <span className="tabular-nums text-charcoal-200">
                     {new Date(a.start_at).toLocaleString("ko-KR", {
@@ -1600,7 +1600,7 @@ function EditSlotForm({
     <form onSubmit={submit} className="space-y-5">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-charcoal-100">슬롯 수정</h3>
-        <p className="text-[11px] text-charcoal-500">
+        <p className="text-2xs text-charcoal-500">
           모드({slot.mode}) / 가격 유형({slot.pricing_model})은 고정이에요.
         </p>
       </div>
@@ -1786,7 +1786,7 @@ function EditSlotForm({
         />
         <span>
           <span className="block">피드에 노출</span>
-          <span className="block text-[11px] font-normal text-charcoal-500">
+          <span className="block text-2xs font-normal text-charcoal-500">
             꺼두면 이 슬롯이 피드에 올라가지 않아요.
           </span>
         </span>
@@ -1853,7 +1853,7 @@ function MenuPicker({
     <div className="space-y-3">
       {Array.from(grouped.entries()).map(([cat, items]) => (
         <div key={cat}>
-          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-charcoal-500">
+          <p className="mb-1.5 text-2xs font-semibold uppercase tracking-wider text-charcoal-500">
             {cat}
           </p>
           <div className="grid gap-1.5 sm:grid-cols-2">
@@ -1961,7 +1961,7 @@ function ValidityPicker({
       {preset === "custom" && (
         <div className="grid gap-2 sm:grid-cols-2">
           <label className="block">
-            <span className="mb-1 block text-[11px] font-medium text-charcoal-500">
+            <span className="mb-1 block text-2xs font-medium text-charcoal-500">
               시작 (선택)
             </span>
             <input
@@ -1972,7 +1972,7 @@ function ValidityPicker({
             />
           </label>
           <label className="block">
-            <span className="mb-1 block text-[11px] font-medium text-charcoal-500">
+            <span className="mb-1 block text-2xs font-medium text-charcoal-500">
               종료 (선택)
             </span>
             <input

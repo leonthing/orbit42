@@ -24,7 +24,7 @@ export function CalendarGoalShare({ calendar }: { calendar: Calendar }) {
         <span className="text-xs font-medium text-charcoal-300">
           목표 · 함께 쓰기
           {calendar.goal_title && (
-            <span className="ml-2 rounded-full bg-navy-500/15 px-2 py-0.5 text-[10px] font-semibold text-navy-400">
+            <span className="ml-2 rounded-full bg-navy-500/15 px-2 py-0.5 text-2xs font-semibold text-navy-400">
               {calendar.goal_title}
             </span>
           )}
@@ -73,7 +73,7 @@ function GoalForm({ calendar }: { calendar: Calendar }) {
 
   return (
     <div className="space-y-2">
-      <p className="text-[11px] text-charcoal-500">
+      <p className="text-2xs text-charcoal-500">
         목표를 정하면 이 캘린더에 쌓이는 시간이 달성률로 계산돼요. 학습·사이드
         프로젝트·운동 캘린더에 좋아요.
       </p>
@@ -81,11 +81,11 @@ function GoalForm({ calendar }: { calendar: Calendar }) {
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder="목표 (예: 토익 900점, 앱 출시)"
-        className="w-full rounded-md border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-500/60 focus:outline-none"
+        className="w-full rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-500/60 focus:outline-none"
       />
       {title.trim() && (
         <div className="flex gap-2">
-          <div className="flex flex-1 items-center gap-2 rounded-md border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2">
+          <div className="flex flex-1 items-center gap-2 rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2">
             <input
               value={targetHours}
               onChange={(e) => setTargetHours(e.target.value.replace(/[^\d.]/g, ""))}
@@ -99,7 +99,7 @@ function GoalForm({ calendar }: { calendar: Calendar }) {
             type="date"
             value={deadline}
             onChange={(e) => setDeadline(e.target.value)}
-            className="rounded-md border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2 text-sm text-charcoal-100 focus:border-navy-500/60 focus:outline-none"
+            className="rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2 text-sm text-charcoal-100 focus:border-navy-500/60 focus:outline-none"
           />
         </div>
       )}
@@ -107,7 +107,7 @@ function GoalForm({ calendar }: { calendar: Calendar }) {
         type="button"
         onClick={save}
         disabled={pending}
-        className="rounded-md bg-navy-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-400 disabled:opacity-50"
+        className="rounded-lg bg-navy-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-400 disabled:opacity-50"
       >
         {pending ? "저장 중…" : "목표 저장"}
       </button>
@@ -181,7 +181,7 @@ function ShareBox({ calendar }: { calendar: Calendar }) {
 
   return (
     <div className="space-y-2 border-t border-charcoal-800/40 pt-3">
-      <p className="text-[11px] text-charcoal-500">
+      <p className="text-2xs text-charcoal-500">
         초대한 사람도 이 캘린더에 일정을 기록할 수 있어요. 가족 일정, 커플 기록,
         팀 프로젝트에 좋아요.
       </p>
@@ -190,15 +190,15 @@ function ShareBox({ calendar }: { calendar: Calendar }) {
           {members.map((member) => (
             <li
               key={member.id}
-              className="flex items-center gap-2 rounded-md bg-charcoal-900/40 px-2.5 py-1.5"
+              className="flex items-center gap-2 rounded-lg bg-charcoal-900/40 px-2.5 py-1.5"
             >
               <span className="text-xs text-charcoal-200">
                 {member.displayName || member.username}
               </span>
-              <span className="text-[10px] text-charcoal-600">
+              <span className="text-2xs text-charcoal-600">
                 @{member.username}
               </span>
-              <span className="ml-auto text-[10px] text-charcoal-500">
+              <span className="ml-auto text-2xs text-charcoal-500">
                 {member.isOwner
                   ? "소유자"
                   : member.role === "editor"
@@ -209,7 +209,7 @@ function ShareBox({ calendar }: { calendar: Calendar }) {
                 <button
                   type="button"
                   onClick={() => remove(member)}
-                  className="text-[10px] text-charcoal-600 hover:text-red-400"
+                  className="text-2xs text-charcoal-600 hover:text-red-400"
                 >
                   내보내기
                 </button>
@@ -223,12 +223,12 @@ function ShareBox({ calendar }: { calendar: Calendar }) {
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           placeholder="@핸들로 초대"
-          className="flex-1 rounded-md border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-500/60 focus:outline-none"
+          className="flex-1 rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-500/60 focus:outline-none"
         />
         <select
           value={role}
           onChange={(e) => setRole(e.target.value)}
-          className="rounded-md border border-charcoal-800/60 bg-charcoal-900/40 px-2 text-xs text-charcoal-200 focus:outline-none"
+          className="rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-2 text-xs text-charcoal-200 focus:outline-none"
         >
           <option value="editor">함께 기록</option>
           <option value="viewer">보기만</option>
@@ -237,7 +237,7 @@ function ShareBox({ calendar }: { calendar: Calendar }) {
           type="button"
           onClick={invite}
           disabled={busy || !username.trim()}
-          className="rounded-md bg-navy-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-400 disabled:opacity-50"
+          className="rounded-lg bg-navy-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-400 disabled:opacity-50"
         >
           초대
         </button>

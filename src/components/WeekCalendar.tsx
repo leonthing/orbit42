@@ -54,7 +54,7 @@ export function WeekCalendar({
 
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-charcoal-800/60 bg-charcoal-900/40">
+    <div className="overflow-hidden rounded-xl border border-charcoal-800/60 bg-charcoal-900/40">
       {/* On mobile, horizontally scroll through 2-day chunks. 44px for
           the time axis + 2 day cols ≈ 360px viewport. Users swipe the
           rest. Desktop fits all 7 days naturally. */}
@@ -95,7 +95,7 @@ function DayHeader({ day }: { day: WeekDay }) {
       }`}
     >
       <p
-        className={`text-[10px] font-semibold uppercase tracking-wider ${
+        className={`text-2xs font-semibold uppercase tracking-wider ${
           day.isToday ? "text-navy-400" : isWeekend ? "text-charcoal-500" : "text-charcoal-500"
         }`}
       >
@@ -136,7 +136,7 @@ function TimeAxis() {
         return (
           <div
             key={h}
-            className={`absolute right-1.5 ${offsetClass} text-[11px] font-medium tabular-nums text-charcoal-400`}
+            className={`absolute right-1.5 ${offsetClass} text-2xs font-medium tabular-nums text-charcoal-400`}
             style={{ top: i * ROW_HEIGHT }}
           >
             {`${String(h).padStart(2, "0")}:00`}
@@ -157,7 +157,7 @@ function AllDayColumn({ items }: { items: PositionedItem[] }) {
           return (
             <div
               key={item.id}
-              className="truncate rounded-sm border-l-[3px] bg-charcoal-800/60 px-1 py-0.5 text-[10px] font-medium text-charcoal-100"
+              className="truncate rounded-sm border-l-[3px] bg-charcoal-800/60 px-1 py-0.5 text-2xs font-medium text-charcoal-100"
               style={{ borderColor: item.color }}
               title={item.title}
             >
@@ -168,7 +168,7 @@ function AllDayColumn({ items }: { items: PositionedItem[] }) {
         return null;
       })}
       {extra > 0 && (
-        <div className="px-1 text-[10px] text-charcoal-500">+{extra}</div>
+        <div className="px-1 text-2xs text-charcoal-500">+{extra}</div>
       )}
     </div>
   );
@@ -210,7 +210,7 @@ function UnifiedScroll({
         </div>
         {hasAllDay && (
           <div className="grid grid-cols-[44px_repeat(7,minmax(0,1fr))] border-b border-charcoal-800/40 bg-charcoal-900/40">
-            <div className="flex items-start justify-end border-r border-charcoal-800/40 px-1.5 pt-1.5 text-[10px] font-medium text-charcoal-500">
+            <div className="flex items-start justify-end border-r border-charcoal-800/40 px-1.5 pt-1.5 text-2xs font-medium text-charcoal-500">
               종일
             </div>
             {positionedByDay.map((items, idx) => (
@@ -381,7 +381,7 @@ function ItemBlock({
             ? (e) => { e.currentTarget.style.backgroundColor = tint; }
             : undefined
         }
-        className={`group absolute overflow-hidden rounded-[3px] px-1.5 py-0.5 transition-colors ${
+        className={`group absolute overflow-hidden rounded-sm px-1.5 py-0.5 transition-colors ${
           item.tentative ? "border border-dashed" : "border-l-[3px]"
         } ${clickable ? "cursor-pointer" : ""} ${completed ? "opacity-50" : ""}`}
         style={{
@@ -400,7 +400,7 @@ function ItemBlock({
                 onToggleComplete?.(item.id);
               }}
               aria-label={completed ? "미완료로 표시" : "완료로 표시"}
-              className="mt-[2px] flex h-3 w-3 shrink-0 items-center justify-center rounded-[2px] border"
+              className="mt-[2px] flex h-3 w-3 shrink-0 items-center justify-center rounded-sm border"
               style={{
                 borderColor: item.color,
                 backgroundColor: completed ? item.color : "transparent",
@@ -421,7 +421,7 @@ function ItemBlock({
             </button>
           )}
           <p
-            className={`min-w-0 flex-1 truncate text-[11px] font-semibold leading-tight ${
+            className={`min-w-0 flex-1 truncate text-2xs font-semibold leading-tight ${
               completed ? "line-through" : ""
             }`}
             style={{ color: item.color }}
@@ -431,7 +431,7 @@ function ItemBlock({
         </div>
         {!item.allDay && height >= 32 && (
           <p
-            className="truncate text-[10px] leading-tight opacity-70"
+            className="truncate text-2xs leading-tight opacity-70"
             style={{ color: item.color }}
           >
             {minToHM(item.startMin)}
@@ -474,7 +474,7 @@ function ItemBlock({
   // hinting at what happens when the slot gets booked.
   const tintHover = `color-mix(in srgb, ${accent} 10%, transparent)`;
   const className =
-    "group absolute overflow-hidden rounded-[3px] border border-dashed px-1.5 py-0.5 text-left transition-colors";
+    "group absolute overflow-hidden rounded-sm border border-dashed px-1.5 py-0.5 text-left transition-colors";
   const subStyle: React.CSSProperties = { color: accent, opacity: 0.75 };
   const slotStyle: React.CSSProperties = {
     ...style,
@@ -491,29 +491,29 @@ function ItemBlock({
     <>
       <div className="flex items-baseline justify-between gap-1">
         <p
-          className="truncate text-[11px] font-semibold leading-tight"
+          className="truncate text-2xs font-semibold leading-tight"
           style={{ color: accent }}
         >
           {item.title}
         </p>
-        <span className="shrink-0 text-[10px] font-bold" style={{ color: accent }}>
+        <span className="shrink-0 text-2xs font-bold" style={{ color: accent }}>
           {priceLabel}
         </span>
       </div>
       {isAuction && height >= 34 && (
-        <p className="truncate text-[10px] leading-tight" style={subStyle}>
+        <p className="truncate text-2xs leading-tight" style={subStyle}>
           <span className="font-semibold">{auctionLabel}</span>
           {item.bid_count > 0 && <span className="ml-1">· 입찰 {item.bid_count}</span>}
         </p>
       )}
       {!isAuction && height >= 34 && (
-        <p className="truncate text-[10px] leading-tight" style={subStyle}>
+        <p className="truncate text-2xs leading-tight" style={subStyle}>
           {minToHM(item.startMin)}–{minToHM(item.endMin)}
           {multi && <span className="ml-1 font-semibold">· {item.option_count}자리</span>}
         </p>
       )}
       {height >= 56 && (
-        <p className="truncate text-[10px] leading-tight" style={subStyle}>
+        <p className="truncate text-2xs leading-tight" style={subStyle}>
           {item.duration_min}분
         </p>
       )}

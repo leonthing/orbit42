@@ -71,10 +71,10 @@ export default function AuctionPanel({
 
   return (
     <section className="space-y-4">
-      <div className="rounded-2xl border border-navy-400/40 bg-gradient-to-br from-navy-400/10 to-navy-500/5 p-6">
+      <div className="rounded-xl border border-navy-400/40 bg-gradient-to-br from-navy-400/10 to-navy-500/5 p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-navy-400">
+            <p className="text-2xs font-semibold uppercase tracking-wider text-navy-400">
               {ended ? "Closed" : "Live auction"}
             </p>
             <p className="mt-2 text-3xl font-bold text-charcoal-100">
@@ -158,7 +158,7 @@ export default function AuctionPanel({
         )}
       </div>
 
-      <div className="rounded-2xl border border-charcoal-800/60 bg-charcoal-900/30 p-5">
+      <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5">
         <h3 className="text-sm font-semibold text-charcoal-200">
           입찰 기록 ({bids.length})
         </h3>
@@ -215,7 +215,7 @@ function Countdown({
 
   return (
     <div className="text-right">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-charcoal-500">
+      <p className="text-2xs font-semibold uppercase tracking-wider text-charcoal-500">
         {ended ? "Ended" : "마감까지"}
       </p>
       <p className="mt-1 text-2xl font-bold tabular-nums text-navy-300">

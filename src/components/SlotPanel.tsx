@@ -122,7 +122,7 @@ function SlotPanelDrawer({
         <header className="flex items-center justify-between border-b border-charcoal-800/40 px-5 py-3.5">
           <Link
             href={`/${username}/s/${slug}${startAt ? `?t=${encodeURIComponent(startAt)}` : ""}`}
-            className="text-[11px] font-medium text-charcoal-500 hover:text-charcoal-200"
+            className="text-2xs font-medium text-charcoal-500 hover:text-charcoal-200"
           >
             전체 페이지에서 보기 ↗
           </Link>
@@ -130,7 +130,7 @@ function SlotPanelDrawer({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="-mr-1 flex h-7 w-7 items-center justify-center rounded-md text-charcoal-500 hover:bg-charcoal-800/40 hover:text-charcoal-100"
+            className="-mr-1 flex h-7 w-7 items-center justify-center rounded-lg text-charcoal-500 hover:bg-charcoal-800/40 hover:text-charcoal-100"
           >
             <svg
               className="h-4 w-4"
@@ -149,8 +149,8 @@ function SlotPanelDrawer({
         <div className="flex-1 overflow-y-auto px-6 py-6">
           {!data && !error && (
             <div className="space-y-3">
-              <div className="h-7 w-2/3 animate-pulse rounded-md bg-charcoal-800/60" />
-              <div className="h-4 w-1/2 animate-pulse rounded-md bg-charcoal-800/40" />
+              <div className="h-7 w-2/3 animate-pulse rounded-lg bg-charcoal-800/60" />
+              <div className="h-4 w-1/2 animate-pulse rounded-lg bg-charcoal-800/40" />
               <div className="mt-6 h-28 animate-pulse rounded-xl bg-charcoal-800/30" />
             </div>
           )}
@@ -193,7 +193,7 @@ function SlotPanelBody({
         <div className="flex items-baseline gap-2">
           <h2 className="text-xl font-bold text-charcoal-100">{slot.title}</h2>
           {!slot.active && (
-            <span className="rounded-full bg-charcoal-700/40 px-2 py-0.5 text-[10px] font-semibold text-charcoal-500">
+            <span className="rounded-full bg-charcoal-700/40 px-2 py-0.5 text-2xs font-semibold text-charcoal-500">
               OFF
             </span>
           )}
@@ -216,7 +216,7 @@ function SlotPanelBody({
         )}
         {menus.length > 0 && (
           <div className="mt-4 space-y-1.5 border-t border-charcoal-800/40 pt-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-charcoal-500">
+            <p className="text-2xs font-semibold uppercase tracking-wider text-charcoal-500">
               포함되는 서비스
             </p>
             <ul className="space-y-1">

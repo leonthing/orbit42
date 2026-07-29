@@ -99,7 +99,7 @@ export default async function SignupPage({
 
         {/* Right — signup form */}
         <div className="w-full md:w-[380px]">
-          <div className="rounded-2xl border border-charcoal-800 bg-charcoal-900/60 p-6 shadow-2xl backdrop-blur sm:p-7">
+          <div className="rounded-xl border border-charcoal-800 bg-charcoal-900/60 p-6 shadow-2xl backdrop-blur sm:p-7">
             <h2 className="mb-1 text-base font-semibold text-charcoal-100">
               {referrer ? "초대 수락" : "계정 만들기"}
             </h2>

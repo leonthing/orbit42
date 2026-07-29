@@ -82,7 +82,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
             role="dialog"
             aria-modal="true"
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-sm rounded-2xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] p-5 shadow-2xl"
+            className="w-full max-w-sm rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] p-5 shadow-2xl"
           >
             <h3 className="text-base font-semibold text-charcoal-100">
               {pending.opts.title}

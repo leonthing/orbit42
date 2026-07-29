@@ -36,7 +36,7 @@ export function ReferralLink({ username }: { username: string }) {
         </button>
       </div>
 
-      <p className="mt-3 text-[11px] text-charcoal-500">
+      <p className="mt-3 text-2xs text-charcoal-500">
         또는 가입 폼에 추천인 란에 <span className="font-mono text-charcoal-300">@{username}</span>{" "}
         만 넣어도 돼요.
       </p>

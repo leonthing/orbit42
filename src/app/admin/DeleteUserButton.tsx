@@ -46,7 +46,7 @@ export function DeleteUserButton({
         {pending ? "삭제 중…" : "삭제"}
       </button>
       {error && (
-        <span className="ml-2 text-[11px] text-red-400">{error}</span>
+        <span className="ml-2 text-2xs text-red-400">{error}</span>
       )}
     </>
   );

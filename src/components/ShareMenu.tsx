@@ -109,7 +109,7 @@ export function ShareMenu({ url, title, text, compact }: Props) {
                   링크 복사
                 </span>
                 {copied === "copy" && (
-                  <span className="text-[11px] text-emerald-400">복사됨</span>
+                  <span className="text-2xs text-emerald-400">복사됨</span>
                 )}
               </button>
             </li>
@@ -153,12 +153,12 @@ export function ShareMenu({ url, title, text, compact }: Props) {
                   Instagram (복사)
                 </span>
                 {copied === "instagram" && (
-                  <span className="text-[11px] text-emerald-400">복사됨</span>
+                  <span className="text-2xs text-emerald-400">복사됨</span>
                 )}
               </button>
             </li>
           </ul>
-          <div className="border-t border-charcoal-800/40 px-3.5 py-2 text-[10px] text-charcoal-600">
+          <div className="border-t border-charcoal-800/40 px-3.5 py-2 text-2xs text-charcoal-600">
             Instagram 은 링크 공유 API 가 없어, 복사한 뒤 스토리/DM/바이오에 붙여
             주세요.
           </div>

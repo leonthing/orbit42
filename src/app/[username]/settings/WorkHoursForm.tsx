@@ -91,7 +91,7 @@ export function WorkHoursForm({ initial }: Props) {
               <button
                 type="button"
                 onClick={() => toggle(d)}
-                className={`flex h-7 w-10 shrink-0 items-center justify-center rounded-md text-xs font-semibold transition-colors ${
+                className={`flex h-7 w-10 shrink-0 items-center justify-center rounded-lg text-xs font-semibold transition-colors ${
                   enabled
                     ? "bg-navy-500 text-white"
                     : "bg-charcoal-800/60 text-charcoal-500 hover:text-charcoal-200"
@@ -105,14 +105,14 @@ export function WorkHoursForm({ initial }: Props) {
                     type="time"
                     value={w.start}
                     onChange={(e) => setField(d, "start", e.target.value)}
-                    className="rounded-md border border-charcoal-800/60 bg-charcoal-900/60 px-2 py-1 text-xs"
+                    className="rounded-lg border border-charcoal-800/60 bg-charcoal-900/60 px-2 py-1 text-xs"
                   />
                   <span className="text-charcoal-600">–</span>
                   <input
                     type="time"
                     value={w.end}
                     onChange={(e) => setField(d, "end", e.target.value)}
-                    className="rounded-md border border-charcoal-800/60 bg-charcoal-900/60 px-2 py-1 text-xs"
+                    className="rounded-lg border border-charcoal-800/60 bg-charcoal-900/60 px-2 py-1 text-xs"
                   />
                 </div>
               ) : (

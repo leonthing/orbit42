@@ -32,6 +32,17 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/",
   },
+  // 아이콘은 public/ 에 있고 favicon.ico·apple-touch-icon.png 는 루트 관례로도
+  // 잡히지만, 명시해 둬야 favicon-16/32 까지 링크되고 크롤러가 확실히 집는다.
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+  },
   openGraph: {
     title: SITE.title,
     description: SITE.description,

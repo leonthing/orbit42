@@ -123,7 +123,7 @@ function NavLink({
       </span>
       <span className={`flex-1 ${collapsed ? "hidden" : ""}`}>{label}</span>
       {!collapsed && badge > 0 && (
-        <span className="rounded-full bg-navy-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+        <span className="rounded-full bg-navy-500 px-1.5 py-0.5 text-2xs font-bold text-white">
           {badge > 99 ? "99+" : badge}
         </span>
       )}
@@ -202,7 +202,7 @@ export function Sidebar({
 
         <div className="my-3 border-t border-charcoal-800/40" />
         {!collapsed && (
-          <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-charcoal-500">
+          <p className="px-3 pb-1 text-2xs font-semibold uppercase tracking-wider text-charcoal-500">
             관리
           </p>
         )}

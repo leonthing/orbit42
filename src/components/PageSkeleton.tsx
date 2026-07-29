@@ -2,7 +2,7 @@
 // server component streams. Calm pulse, matches the dark surface.
 
 function Bar({ className = "" }: { className?: string }) {
-  return <div className={`rounded-md bg-charcoal-800/60 ${className}`} />;
+  return <div className={`rounded-lg bg-charcoal-800/60 ${className}`} />;
 }
 
 /** A stacked-list skeleton — feed, explore, bookings, messages. */

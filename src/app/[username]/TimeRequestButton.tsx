@@ -76,7 +76,7 @@ export function TimeRequestButton({
             role="dialog"
             aria-modal="true"
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md rounded-2xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] p-5 shadow-2xl"
+            className="w-full max-w-md rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] p-5 shadow-2xl"
           >
             <h3 className="text-base font-semibold text-charcoal-100">
               @{targetUsername}에게 시간 요청하기

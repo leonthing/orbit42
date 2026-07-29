@@ -102,7 +102,7 @@ export default async function PublicPostPage({
           ) : isOwner ? (
             <>
               {" · "}
-              <span className="rounded bg-charcoal-800/60 px-1.5 py-0.5 text-[10px] text-charcoal-300">
+              <span className="rounded bg-charcoal-800/60 px-1.5 py-0.5 text-2xs text-charcoal-300">
                 임시저장
               </span>
             </>
@@ -122,7 +122,7 @@ export default async function PublicPostPage({
         />
       )}
 
-      <div className="post-body text-[15px] leading-relaxed text-charcoal-100">
+      <div className="post-body text-sm leading-relaxed text-charcoal-100">
         <ReactMarkdown
           remarkPlugins={[remarkGfm, remarkBreaks]}
           rehypePlugins={[rehypeHighlight]}

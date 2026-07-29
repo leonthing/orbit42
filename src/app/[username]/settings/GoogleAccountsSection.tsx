@@ -74,7 +74,7 @@ export function GoogleAccountsSection({
             <p className="text-sm font-medium text-charcoal-100">
               {primaryConnected ? primaryEmail ?? "Primary account" : "연결되지 않음"}
               {primaryConnected && (
-                <span className="ml-2 rounded-full bg-navy-500/25 px-2 py-0.5 text-[10px] font-semibold text-navy-300">
+                <span className="ml-2 rounded-full bg-navy-500/25 px-2 py-0.5 text-2xs font-semibold text-navy-300">
                   PRIMARY
                 </span>
               )}

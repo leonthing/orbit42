@@ -20,7 +20,7 @@ export function CopyLinkButton({ url }: { url: string }) {
       type="button"
       onClick={copy}
       aria-label="링크 복사"
-      className="inline-flex h-8 items-center gap-1.5 rounded-md border border-charcoal-800 bg-charcoal-900/40 px-2.5 text-xs font-medium text-charcoal-300 hover:border-charcoal-700 hover:text-charcoal-100"
+      className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-charcoal-800 bg-charcoal-900/40 px-2.5 text-xs font-medium text-charcoal-300 hover:border-charcoal-700 hover:text-charcoal-100"
     >
       {copied ? (
         <>

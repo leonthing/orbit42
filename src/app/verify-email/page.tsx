@@ -17,7 +17,7 @@ export default async function VerifyEmailPage({
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[rgb(var(--bg-base))] px-4">
-      <div className="w-full max-w-sm rounded-2xl border border-charcoal-800/60 bg-charcoal-900/40 p-8 text-center shadow-xl">
+      <div className="w-full max-w-sm rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 p-8 text-center shadow-xl">
         <div
           className={`mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full ${
             ok

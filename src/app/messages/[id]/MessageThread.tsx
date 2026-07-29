@@ -122,7 +122,7 @@ export function MessageThread({
               return (
                 <div key={m.id}>
                   {showDay && (
-                    <div className="my-3 text-center text-[11px] text-charcoal-500">
+                    <div className="my-3 text-center text-2xs text-charcoal-500">
                       {day}
                     </div>
                   )}
@@ -133,7 +133,7 @@ export function MessageThread({
                       }`}
                     >
                       <div
-                        className={`whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm ${
+                        className={`whitespace-pre-wrap break-words rounded-xl px-3 py-2 text-sm ${
                           mine
                             ? "bg-navy-500 text-white"
                             : "bg-charcoal-800/60 text-charcoal-100"
@@ -141,7 +141,7 @@ export function MessageThread({
                       >
                         {m.body}
                       </div>
-                      <span className="pb-1 text-[10px] text-charcoal-500">
+                      <span className="pb-1 text-2xs text-charcoal-500">
                         {formatTime(m.created_at)}
                       </span>
                     </div>

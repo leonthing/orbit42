@@ -74,7 +74,7 @@ export default async function NotificationsPage() {
                       {n.body}
                     </p>
                   )}
-                  <p className="mt-1 text-[11px] text-charcoal-600">
+                  <p className="mt-1 text-2xs text-charcoal-600">
                     {when(n.created_at)}
                   </p>
                 </div>

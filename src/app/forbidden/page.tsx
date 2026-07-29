@@ -14,7 +14,7 @@ export default function ForbiddenPage() {
       </Link>
 
       <div className="max-w-sm text-center">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-700 dark:text-amber-400">
+        <p className="text-2xs font-semibold uppercase tracking-[0.22em] text-amber-700 dark:text-amber-400">
           403
         </p>
         <h1 className="mt-3 text-3xl font-bold tracking-tight text-charcoal-100 sm:text-4xl">

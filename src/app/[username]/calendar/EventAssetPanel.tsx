@@ -130,7 +130,7 @@ export function EventAssetPanel({
     <div className="mt-4 space-y-3 border-t border-charcoal-800/50 pt-4">
       {/* 자산 분류 */}
       <div>
-        <p className="mb-1.5 text-[11px] font-medium text-charcoal-500">자산 분류</p>
+        <p className="mb-1.5 text-2xs font-medium text-charcoal-500">자산 분류</p>
         <div className="flex flex-wrap gap-1.5">
           <button
             type="button"
@@ -180,12 +180,12 @@ export function EventAssetPanel({
       {/* 사진 기록 */}
       <div>
         <div className="mb-1.5 flex items-center justify-between">
-          <p className="text-[11px] font-medium text-charcoal-500">사진 기록</p>
+          <p className="text-2xs font-medium text-charcoal-500">사진 기록</p>
           {images.length > 0 && (
             <select
               value={visibility}
               onChange={(e) => changeVisibility(e.target.value)}
-              className="rounded border border-charcoal-800/60 bg-transparent px-1.5 py-0.5 text-[10px] text-charcoal-400 focus:outline-none"
+              className="rounded border border-charcoal-800/60 bg-transparent px-1.5 py-0.5 text-2xs text-charcoal-400 focus:outline-none"
             >
               <option value="private">비공개</option>
               <option value="followers">팔로워 공개</option>
@@ -222,7 +222,7 @@ export function EventAssetPanel({
         >
           {busy ? "올리는 중…" : images.length > 0 ? "사진 추가" : "사진 붙이기"}
         </button>
-        <p className="mt-1.5 text-[10px] text-charcoal-600">
+        <p className="mt-1.5 text-2xs text-charcoal-600">
           사진을 붙이면 타임라인에 기록으로 남아요.
         </p>
       </div>

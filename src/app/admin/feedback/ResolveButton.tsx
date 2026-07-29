@@ -23,7 +23,7 @@ export function ResolveButton({
           router.refresh();
         })
       }
-      className={`rounded-md px-2 py-1 text-[11px] font-medium ${
+      className={`rounded-lg px-2 py-1 text-2xs font-medium ${
         resolved
           ? "border border-charcoal-800/60 text-charcoal-500 hover:text-charcoal-200"
           : "bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25"

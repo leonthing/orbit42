@@ -129,7 +129,7 @@ export default async function InsightsPage({
           {!isCurrent && (
             <Link
               href={`/${params.username}/insights`}
-              className="rounded-md border border-charcoal-800/60 bg-charcoal-900/60 px-3 py-1.5 text-xs text-charcoal-300 hover:border-charcoal-700"
+              className="rounded-lg border border-charcoal-800/60 bg-charcoal-900/60 px-3 py-1.5 text-xs text-charcoal-300 hover:border-charcoal-700"
             >
               이번 주
             </Link>
@@ -202,7 +202,7 @@ export default async function InsightsPage({
               style={{ width: `${utilization}%` }}
             />
           </div>
-          <div className="mt-2 flex items-center justify-between text-[11px] text-charcoal-500">
+          <div className="mt-2 flex items-center justify-between text-2xs text-charcoal-500">
             <span>
               일정 {fmtHours(insights.working_hours_busy)} / 여유{" "}
               {fmtHours(insights.working_hours_free)}
@@ -245,7 +245,7 @@ export default async function InsightsPage({
                     <div className="flex items-baseline justify-between gap-2">
                       <p className="truncate text-sm text-charcoal-200">
                         {c.label}
-                        <span className="ml-2 text-[10px] uppercase tracking-wider text-charcoal-600">
+                        <span className="ml-2 text-2xs uppercase tracking-wider text-charcoal-600">
                           {PURPOSE_GROUP_LABEL[c.group]}
                         </span>
                       </p>
@@ -276,7 +276,7 @@ export default async function InsightsPage({
           <h2 className="text-sm font-semibold text-charcoal-200">
             최근 4주 트렌드
           </h2>
-          <div className="flex items-center gap-3 text-[10px] text-charcoal-500">
+          <div className="flex items-center gap-3 text-2xs text-charcoal-500">
             {GROUPS.map((g) => (
               <span key={g} className="flex items-center gap-1">
                 <span
@@ -324,7 +324,7 @@ export default async function InsightsPage({
                   ))}
                 </div>
                 <div className="text-center">
-                  <p className="text-[10px] text-charcoal-500">{label}</p>
+                  <p className="text-2xs text-charcoal-500">{label}</p>
                   <p className="text-xs font-semibold text-charcoal-200">
                     {fmtHours(total)}
                   </p>
@@ -372,7 +372,7 @@ function Stat({
             style={{ backgroundColor: accent }}
           />
         )}
-        <p className="truncate text-[10px] font-semibold uppercase tracking-wider text-charcoal-500">
+        <p className="truncate text-2xs font-semibold uppercase tracking-wider text-charcoal-500">
           {label}
         </p>
       </div>
@@ -382,7 +382,7 @@ function Stat({
       >
         {value}
       </p>
-      {hint && <p className="mt-0.5 truncate text-[10px] text-charcoal-600">{hint}</p>}
+      {hint && <p className="mt-0.5 truncate text-2xs text-charcoal-600">{hint}</p>}
     </div>
   );
 }
@@ -399,7 +399,7 @@ function WeekNavLink({
   return (
     <Link
       href={`/${username}/insights?week=${weekKey(week)}`}
-      className="rounded-md border border-charcoal-800/60 bg-charcoal-900/60 px-3 py-1.5 text-xs text-charcoal-300 hover:border-charcoal-700"
+      className="rounded-lg border border-charcoal-800/60 bg-charcoal-900/60 px-3 py-1.5 text-xs text-charcoal-300 hover:border-charcoal-700"
     >
       {label}
     </Link>

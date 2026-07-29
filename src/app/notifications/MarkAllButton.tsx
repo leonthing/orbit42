@@ -17,7 +17,7 @@ export function MarkAllButton() {
           router.refresh();
         })
       }
-      className="rounded-md border border-charcoal-800/60 px-3 py-1.5 text-xs text-charcoal-300 hover:bg-charcoal-800/40"
+      className="rounded-lg border border-charcoal-800/60 px-3 py-1.5 text-xs text-charcoal-300 hover:bg-charcoal-800/40"
     >
       {pending ? "처리 중…" : "모두 읽음"}
     </button>

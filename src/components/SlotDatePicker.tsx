@@ -167,7 +167,7 @@ export function SlotDatePicker({
             type="button"
             onClick={() => setCursor(addMonths(cursor, -1))}
             aria-label="이전 달"
-            className="flex h-8 w-8 items-center justify-center rounded-md border border-charcoal-800/60 text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-charcoal-800/60 text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
           >
             ‹
           </button>
@@ -175,7 +175,7 @@ export function SlotDatePicker({
             type="button"
             onClick={() => setCursor(addMonths(cursor, 1))}
             aria-label="다음 달"
-            className="flex h-8 w-8 items-center justify-center rounded-md border border-charcoal-800/60 text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-charcoal-800/60 text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
           >
             ›
           </button>
@@ -183,7 +183,7 @@ export function SlotDatePicker({
       </div>
 
       {/* Weekday header */}
-      <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-semibold uppercase tracking-wider text-charcoal-500">
+      <div className="grid grid-cols-7 gap-1 text-center text-2xs font-semibold uppercase tracking-wider text-charcoal-500">
         {WEEKDAYS.map((w, i) => (
           <span
             key={w}
@@ -219,7 +219,7 @@ export function SlotDatePicker({
               type="button"
               disabled={!has}
               onClick={() => setSelectedDay(key)}
-              className={`flex aspect-square flex-col items-center justify-center rounded-md text-sm transition-colors ${baseClass} ${selectedClass} ${
+              className={`flex aspect-square flex-col items-center justify-center rounded-lg text-sm transition-colors ${baseClass} ${selectedClass} ${
                 !isSelected
                   ? isWeekend
                     ? "text-charcoal-500"
@@ -292,7 +292,7 @@ function TimeGroup({
               key={k}
               type="button"
               onClick={() => onSelect(k)}
-              className={`flex flex-col items-center rounded-md border px-3 py-2 text-sm transition-colors tabular-nums ${
+              className={`flex flex-col items-center rounded-lg border px-3 py-2 text-sm transition-colors tabular-nums ${
                 active
                   ? "border-navy-400 bg-navy-500/15 font-semibold text-charcoal-100"
                   : "border-charcoal-800/60 bg-charcoal-800/20 text-charcoal-200 hover:border-charcoal-700"
@@ -307,7 +307,7 @@ function TimeGroup({
                 })}
               </span>
               {o.remaining > 1 && (
-                <span className="mt-0.5 text-[10px] font-normal text-charcoal-500">
+                <span className="mt-0.5 text-2xs font-normal text-charcoal-500">
                   {o.remaining}자리 남음
                 </span>
               )}

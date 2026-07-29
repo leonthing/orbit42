@@ -49,7 +49,7 @@ export function VerifyEmailBanner({
             type="button"
             onClick={resend}
             disabled={pending || sent}
-            className="shrink-0 rounded-md border border-amber-600/60 bg-amber-500/20 px-3 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-500/30 disabled:opacity-50 dark:text-amber-100"
+            className="shrink-0 rounded-lg border border-amber-600/60 bg-amber-500/20 px-3 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-500/30 disabled:opacity-50 dark:text-amber-100"
           >
             {sent ? "전송됨" : pending ? "보내는 중…" : "확인 메일 다시 보내기"}
           </button>
@@ -111,14 +111,14 @@ export function DeleteAccountSection({ username }: { username: string }) {
             value={confirmText}
             onChange={(e) => setConfirmText(e.target.value)}
             placeholder={username}
-            className="w-full rounded-md border border-charcoal-700 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-400 focus:outline-none focus:ring-1 focus:ring-navy-400/40"
+            className="w-full rounded-lg border border-charcoal-700 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-400 focus:outline-none focus:ring-1 focus:ring-navy-400/40"
           />
         </div>
         <button
           type="button"
           onClick={remove}
           disabled={pending || confirmText !== username}
-          className="rounded-md bg-navy-500 px-4 py-2 text-sm font-semibold text-white hover:bg-navy-400 disabled:cursor-not-allowed disabled:bg-charcoal-800 disabled:text-charcoal-500"
+          className="rounded-lg bg-navy-500 px-4 py-2 text-sm font-semibold text-white hover:bg-navy-400 disabled:cursor-not-allowed disabled:bg-charcoal-800 disabled:text-charcoal-500"
         >
           {pending ? "처리 중…" : "탈퇴하기"}
         </button>

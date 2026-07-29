@@ -7,8 +7,8 @@ import { buttonClasses } from "@/components/PendingButton";
  */
 export function PoweredByCta({ hostUsername }: { hostUsername: string }) {
   return (
-    <div className="rounded-2xl border border-charcoal-800/60 bg-charcoal-900/30 p-5 text-center">
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-navy-400">
+    <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5 text-center">
+      <p className="text-2xs font-semibold uppercase tracking-wider text-navy-400">
         Powered by Orbit42
       </p>
       <p className="mt-2 text-sm text-charcoal-300">

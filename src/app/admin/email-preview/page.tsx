@@ -56,7 +56,7 @@ export default async function EmailPreviewPage({
       <div className="mx-auto max-w-4xl px-5 py-8">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-charcoal-500">
+            <p className="text-2xs font-semibold uppercase tracking-[0.18em] text-charcoal-500">
               Admin · Email preview
             </p>
             <h1 className="mt-1 text-xl font-bold text-charcoal-100">
@@ -88,7 +88,7 @@ export default async function EmailPreviewPage({
         </div>
 
         <div className="mt-6 overflow-hidden rounded-xl border border-charcoal-800/60">
-          <div className="border-b border-charcoal-800/60 bg-charcoal-900/40 px-4 py-2.5 text-[11px]">
+          <div className="border-b border-charcoal-800/60 bg-charcoal-900/40 px-4 py-2.5 text-2xs">
             <p className="text-charcoal-500">
               From: Orbit42 &lt;noreply@mail.orbit42.org&gt;
             </p>

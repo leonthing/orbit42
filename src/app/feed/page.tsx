@@ -493,7 +493,7 @@ function DayCard({
 
   return (
     <article
-      className={`overflow-hidden rounded-2xl border bg-charcoal-900/30 ${
+      className={`overflow-hidden rounded-xl border bg-charcoal-900/30 ${
         isToday
           ? "border-navy-400/50 shadow-[0_0_0_1px_rgb(245_158_11_/_0.2)]"
           : "border-charcoal-800/60"
@@ -517,7 +517,7 @@ function DayCard({
           <span className="text-xs text-charcoal-500">{weekday}</span>
         </div>
         <span
-          className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+          className={`rounded-full px-2.5 py-0.5 text-2xs font-bold uppercase tracking-wider ${
             isToday
               ? "bg-navy-500 text-white"
               : isPast
@@ -651,14 +651,14 @@ function EntryBody({
       {item.kind === "feed_post" && (
         <div className="mt-3 space-y-3">
           {item.attached_event_id && (
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-800 ring-1 ring-emerald-500/40 dark:text-emerald-200 dark:ring-0">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-2xs font-semibold uppercase tracking-wider text-emerald-800 ring-1 ring-emerald-500/40 dark:text-emerald-200 dark:ring-0">
               일정 공유
             </div>
           )}
           {item.body && (
             <Markdown
               body={item.body}
-              className="break-words text-[15px] leading-relaxed text-charcoal-100"
+              className="break-words text-sm leading-relaxed text-charcoal-100"
             />
           )}
           {item.image_urls.length > 0 && (
@@ -690,7 +690,7 @@ function EntryBody({
           )}
           {item.location_label && (
             <p className="text-xs text-charcoal-500">
-              <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider">
+              <span className="mr-1 text-2xs font-semibold uppercase tracking-wider">
                 위치
               </span>
               {item.location_label}
@@ -753,7 +753,7 @@ function KindBadge({ kind }: { kind: FeedItem["kind"] }) {
   };
   const m = map[kind];
   return (
-    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${m.color}`}>
+    <span className={`rounded-full px-2 py-0.5 text-2xs font-semibold ${m.color}`}>
       {m.label}
     </span>
   );
@@ -848,7 +848,7 @@ function FeedSlotCard({
           <p className="truncate text-sm font-semibold text-charcoal-100">
             {item.title}
           </p>
-          <span className="shrink-0 rounded-md bg-navy-400/15 px-2 py-0.5 text-xs font-bold text-navy-600 dark:text-navy-300">
+          <span className="shrink-0 rounded-lg bg-navy-400/15 px-2 py-0.5 text-xs font-bold text-navy-600 dark:text-navy-300">
             {item.price_cents === 0
               ? "무료"
               : `₩${(item.price_cents / 100).toLocaleString("ko-KR")}`}
@@ -872,14 +872,14 @@ function FeedSlotCard({
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="inline-flex items-center rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-800 ring-1 ring-amber-500/40 dark:text-amber-200 dark:ring-0">
+          <span className="inline-flex items-center rounded-full bg-amber-500/20 px-2 py-0.5 text-2xs font-semibold uppercase tracking-wider text-amber-800 ring-1 ring-amber-500/40 dark:text-amber-200 dark:ring-0">
             {auctionEnded ? "경매 종료" : "경매중"}
           </span>
           <p className="truncate text-sm font-semibold text-charcoal-100">
             {item.title}
           </p>
         </div>
-        <span className="shrink-0 rounded-md bg-amber-500/20 px-2 py-0.5 text-xs font-bold text-amber-800 dark:text-amber-200">
+        <span className="shrink-0 rounded-lg bg-amber-500/20 px-2 py-0.5 text-xs font-bold text-amber-800 dark:text-amber-200">
           {priceLabel}
         </span>
       </div>
@@ -897,7 +897,7 @@ function FeedSlotCard({
         </span>
         {remaining && (
           <span
-            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+            className={`rounded-full px-2 py-0.5 text-2xs font-semibold ${
               auctionEnded
                 ? "bg-charcoal-700/40 text-charcoal-500"
                 : "bg-amber-500/20 text-amber-800 dark:text-amber-200"

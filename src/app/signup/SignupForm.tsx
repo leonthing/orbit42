@@ -61,7 +61,7 @@ export function SignupForm({ initialRef }: { initialRef: string }) {
         Google로 계속하기
       </a>
 
-      <div className="mb-3 flex items-center gap-2 text-[10px] uppercase tracking-wider text-charcoal-500">
+      <div className="mb-3 flex items-center gap-2 text-2xs uppercase tracking-wider text-charcoal-500">
         <span className="h-px flex-1 bg-charcoal-800/60" />
         <span>또는</span>
         <span className="h-px flex-1 bg-charcoal-800/60" />
@@ -89,7 +89,7 @@ export function SignupForm({ initialRef }: { initialRef: string }) {
           required
           className={input}
         />
-        <p className="-mt-1 text-[11px] text-charcoal-500">
+        <p className="-mt-1 text-2xs text-charcoal-500">
           {username ? (
             <>
               orbit42.org/<span className="text-navy-400">{username}</span>

@@ -197,7 +197,7 @@ export default function BlogPostList({ initialPosts }: { initialPosts: BlogPost[
                     {post.title || "제목 없음"}
                   </h3>
                   <span
-                    className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-medium ${
+                    className={`shrink-0 rounded-lg px-1.5 py-0.5 text-2xs font-medium ${
                       post.published
                         ? "bg-emerald-500/15 text-emerald-400"
                         : "bg-charcoal-700/40 text-charcoal-400"

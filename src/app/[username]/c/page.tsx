@@ -70,19 +70,19 @@ export default async function PublicCalendarPage({
         <div className="flex gap-1">
           <Link
             href={`/${params.username}/c?m=${prev.year}-${String(prev.month + 1).padStart(2, "0")}`}
-            className="rounded-md border border-charcoal-700 px-3 py-1.5 text-xs text-charcoal-300 hover:border-charcoal-600"
+            className="rounded-lg border border-charcoal-700 px-3 py-1.5 text-xs text-charcoal-300 hover:border-charcoal-600"
           >
             ‹
           </Link>
           <Link
             href={`/${params.username}/c`}
-            className="rounded-md border border-charcoal-700 px-3 py-1.5 text-xs text-charcoal-300 hover:border-charcoal-600"
+            className="rounded-lg border border-charcoal-700 px-3 py-1.5 text-xs text-charcoal-300 hover:border-charcoal-600"
           >
             오늘
           </Link>
           <Link
             href={`/${params.username}/c?m=${next.year}-${String(next.month + 1).padStart(2, "0")}`}
-            className="rounded-md border border-charcoal-700 px-3 py-1.5 text-xs text-charcoal-300 hover:border-charcoal-600"
+            className="rounded-lg border border-charcoal-700 px-3 py-1.5 text-xs text-charcoal-300 hover:border-charcoal-600"
           >
             ›
           </Link>

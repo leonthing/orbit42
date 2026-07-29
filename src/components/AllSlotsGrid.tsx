@@ -51,9 +51,9 @@ export function AllSlotsGrid({
         const auctionStatus = auctionEnded ? "경매 종료" : "경매중";
         const badgeClass = isAuction
           ? auctionEnded
-            ? "shrink-0 rounded-md bg-charcoal-800/40 px-2 py-0.5 text-xs font-bold text-charcoal-500 ring-1 ring-charcoal-300 dark:ring-0"
-            : "shrink-0 rounded-md bg-amber-500/15 px-2 py-0.5 text-xs font-bold text-amber-800 ring-1 ring-amber-500/40 dark:text-amber-200 dark:ring-0"
-          : "shrink-0 rounded-md bg-navy-400/15 px-2 py-0.5 text-xs font-bold text-navy-700 ring-1 ring-navy-400/30 dark:text-navy-300 dark:ring-0";
+            ? "shrink-0 rounded-lg bg-charcoal-800/40 px-2 py-0.5 text-xs font-bold text-charcoal-500 ring-1 ring-charcoal-300 dark:ring-0"
+            : "shrink-0 rounded-lg bg-amber-500/15 px-2 py-0.5 text-xs font-bold text-amber-800 ring-1 ring-amber-500/40 dark:text-amber-200 dark:ring-0"
+          : "shrink-0 rounded-lg bg-navy-400/15 px-2 py-0.5 text-xs font-bold text-navy-700 ring-1 ring-navy-400/30 dark:text-navy-300 dark:ring-0";
         const pillClass = auctionEnded
           ? "bg-charcoal-800/40 text-charcoal-500 ring-1 ring-charcoal-300 dark:ring-0"
           : "bg-amber-500/15 text-amber-800 ring-1 ring-amber-500/40 dark:text-amber-200 dark:ring-0";
@@ -68,7 +68,7 @@ export function AllSlotsGrid({
             <p className="mt-1 text-xs text-charcoal-500">
               {isAuction && (
                 <span
-                  className={`mr-1 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${pillClass}`}
+                  className={`mr-1 inline-flex items-center rounded-full px-1.5 py-0.5 text-2xs font-semibold uppercase tracking-wider ${pillClass}`}
                 >
                   {auctionStatus}
                 </span>

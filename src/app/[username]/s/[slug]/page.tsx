@@ -142,7 +142,7 @@ export default async function SlotPage({
         // 방문자에게는 "누구의 시간인지"를 먼저 보여준다 (SNS 에서 바로 들어오는 링크)
         <Link
           href={`/${params.username}`}
-          className="flex items-center gap-3 rounded-2xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] px-4 py-3 transition-colors hover:border-charcoal-700"
+          className="flex items-center gap-3 rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] px-4 py-3 transition-colors hover:border-charcoal-700"
         >
           {host.avatar_url ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -168,7 +168,7 @@ export default async function SlotPage({
         </Link>
       )}
 
-      <header className="overflow-hidden rounded-2xl border border-charcoal-800/60 bg-charcoal-900/30">
+      <header className="overflow-hidden rounded-xl border border-charcoal-800/60 bg-charcoal-900/30">
         {slot.image_urls && slot.image_urls.length > 0 && (
           <div
             className={`grid gap-1 ${
@@ -197,13 +197,13 @@ export default async function SlotPage({
           </h1>
           <div className="flex shrink-0 items-center gap-1.5">
             {!slot.active && (
-              <span className="rounded-full bg-charcoal-700/40 px-2 py-0.5 text-[10px] font-semibold text-charcoal-500">
+              <span className="rounded-full bg-charcoal-700/40 px-2 py-0.5 text-2xs font-semibold text-charcoal-500">
                 OFF
               </span>
             )}
             {(isAuction || isOwner) && (
               <span
-                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
+                className={`rounded-full px-2 py-0.5 text-2xs font-semibold uppercase ${
                   isAuction
                     ? "bg-navy-400/20 text-navy-300"
                     : "bg-charcoal-800/60 text-charcoal-400"
@@ -255,7 +255,7 @@ export default async function SlotPage({
         )}
         {attachedMenus.length > 0 && (
           <div className="mt-4 space-y-1.5 border-t border-charcoal-800/40 pt-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-charcoal-500">
+            <p className="text-2xs font-semibold uppercase tracking-wider text-charcoal-500">
               포함되는 서비스
             </p>
             <ul className="space-y-1">
@@ -296,7 +296,7 @@ export default async function SlotPage({
       )}
 
       {hostReviews.length > 0 && (
-        <section className="rounded-2xl border border-charcoal-800/60 bg-charcoal-900/30 p-6">
+        <section className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-6">
           <h2 className="text-sm font-semibold text-charcoal-200">
             후기
             {hostRating && (
@@ -330,7 +330,7 @@ export default async function SlotPage({
                       {"★".repeat(r.rating)}
                     </span>
                     {r.slot_title && (
-                      <span className="text-[11px] text-charcoal-600">
+                      <span className="text-2xs text-charcoal-600">
                         {r.slot_title}
                       </span>
                     )}
@@ -357,7 +357,7 @@ export default async function SlotPage({
           >
             나도 예약 링크 만들기
           </Link>
-          <p className="mt-3 text-[11px] text-charcoal-600">
+          <p className="mt-3 text-2xs text-charcoal-600">
             orbit42 · 링크 하나로 내 시간을 예약받아요
           </p>
         </div>
@@ -384,7 +384,7 @@ async function BookingSection({
     listMenusForSlot(slot.id),
   ]);
   return (
-    <section className="rounded-2xl border border-charcoal-800/60 bg-charcoal-900/30 p-6">
+    <section className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-6">
       <h2 className="text-sm font-semibold text-charcoal-200">예약 가능한 시간</h2>
       {!slot.active ? (
         <p className="mt-3 text-sm text-charcoal-500">현재 예약을 받지 않는 슬롯이에요.</p>

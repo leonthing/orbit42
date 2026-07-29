@@ -239,7 +239,7 @@ export default async function ExplorePage() {
                   href={`/${host.username}/s/${a.slug}`}
                   className="rounded-xl border border-navy-400/30 bg-navy-400/5 p-5 transition-colors hover:border-navy-400/60"
                 >
-                  <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wider">
+                  <div className="flex items-center justify-between gap-2 text-2xs font-semibold uppercase tracking-wider">
                     <span className="text-navy-400">Auction</span>
                     <span className="text-charcoal-500">
                       {hoursLeft >= 48
@@ -416,7 +416,7 @@ function PersonCard({
           {bio && (
             <p className="mt-2 line-clamp-2 text-xs text-charcoal-400">{bio}</p>
           )}
-          <span className="mt-2 inline-block rounded-full bg-charcoal-800/60 px-2 py-0.5 text-[10px] font-semibold text-charcoal-700 dark:text-charcoal-300">
+          <span className="mt-2 inline-block rounded-full bg-charcoal-800/60 px-2 py-0.5 text-2xs font-semibold text-charcoal-700 dark:text-charcoal-300">
             {badge}
           </span>
         </div>

@@ -32,7 +32,7 @@ export function DeleteFeedPostButton({ id }: { id: string }) {
       onClick={onClick}
       disabled={pending}
       title="삭제"
-      className="rounded-md px-2 py-1 text-xs text-charcoal-500 hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
+      className="rounded-lg px-2 py-1 text-xs text-charcoal-500 hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
     >
       {pending ? "…" : "삭제"}
     </button>

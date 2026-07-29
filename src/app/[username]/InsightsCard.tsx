@@ -97,14 +97,14 @@ function Cell({
             style={{ backgroundColor: accent }}
           />
         )}
-        <p className="truncate text-[10px] font-semibold uppercase tracking-wider text-charcoal-500">
+        <p className="truncate text-2xs font-semibold uppercase tracking-wider text-charcoal-500">
           {label}
         </p>
       </div>
       <p className="mt-1 truncate text-base font-bold text-charcoal-100">
         {value}
       </p>
-      {hint && <p className="mt-0.5 truncate text-[10px] text-charcoal-600">{hint}</p>}
+      {hint && <p className="mt-0.5 truncate text-2xs text-charcoal-600">{hint}</p>}
     </div>
   );
 }

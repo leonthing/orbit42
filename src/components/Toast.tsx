@@ -112,7 +112,7 @@ function ToastCard({ item, onClose }: { item: ToastItem; onClose: () => void }) 
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium leading-snug">{item.message}</p>
           {item.body && (
-            <p className="mt-0.5 text-[11px] leading-snug opacity-80">
+            <p className="mt-0.5 text-2xs leading-snug opacity-80">
               {item.body}
             </p>
           )}

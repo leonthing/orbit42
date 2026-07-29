@@ -78,7 +78,7 @@ export function TimelineFeed({
         <div className="inline-flex rounded-lg border border-charcoal-800/60 p-0.5">
           <Link
             href={href({ scope: "me", calendarId: null })}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium ${
+            className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
               scope === "me"
                 ? "bg-navy-500 text-white"
                 : "text-charcoal-400 hover:text-charcoal-200"
@@ -88,7 +88,7 @@ export function TimelineFeed({
           </Link>
           <Link
             href={href({ scope: "following", calendarId: null })}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium ${
+            className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
               scope === "following"
                 ? "bg-navy-500 text-white"
                 : "text-charcoal-400 hover:text-charcoal-200"
@@ -143,7 +143,7 @@ export function TimelineFeed({
       </div>
 
       {groups.length === 0 ? (
-        <div className="rounded-2xl border border-charcoal-800/50 bg-[rgb(var(--bg-surface))] px-6 py-16 text-center">
+        <div className="rounded-xl border border-charcoal-800/50 bg-[rgb(var(--bg-surface))] px-6 py-16 text-center">
           <p className="text-sm font-medium text-charcoal-200">아직 기록이 없어요</p>
           <p className="mt-1 text-xs text-charcoal-500">
             {scope === "following"
@@ -159,7 +159,7 @@ export function TimelineFeed({
               {group.items.map((entry) => (
                 <article
                   key={entry.id}
-                  className="overflow-hidden rounded-2xl border border-charcoal-800/50 bg-[rgb(var(--bg-surface))]"
+                  className="overflow-hidden rounded-xl border border-charcoal-800/50 bg-[rgb(var(--bg-surface))]"
                 >
                   {entry.imageUrls.length > 0 && (
                     <div
@@ -198,7 +198,7 @@ export function TimelineFeed({
                       </div>
                       {entry.goalTitle && (
                         <span
-                          className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium"
+                          className="shrink-0 rounded-full px-2 py-0.5 text-2xs font-medium"
                           style={{
                             color: entry.calendarColor ?? "#6366f1",
                             backgroundColor: `${entry.calendarColor ?? "#6366f1"}26`,

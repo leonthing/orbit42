@@ -246,12 +246,12 @@ export function PublicLinkProfile({
             <Link
               key={slot.slug}
               href={`/${username}/s/${slot.slug}`}
-              className="block rounded-2xl border px-5 py-4 text-left transition-transform hover:-translate-y-0.5"
+              className="block rounded-xl border px-5 py-4 text-left transition-transform hover:-translate-y-0.5"
               style={cardStyle}
             >
               <div className="flex items-center gap-3">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[15px] font-semibold">{slot.title}</p>
+                  <p className="truncate text-sm font-semibold">{slot.title}</p>
                   <p className="mt-0.5 text-xs" style={{ color: theme.muted }}>
                     {slot.duration_min}분 · {priceLabel(slot)}
                   </p>
@@ -268,7 +268,7 @@ export function PublicLinkProfile({
 
           {slots.length === 0 && (
             <p
-              className="rounded-2xl border border-dashed px-5 py-8 text-sm"
+              className="rounded-xl border border-dashed px-5 py-8 text-sm"
               style={{ borderColor: theme.border, color: theme.muted }}
             >
               아직 열어둔 시간이 없어요.
@@ -278,10 +278,10 @@ export function PublicLinkProfile({
           {/* 맞는 시간이 없을 때 — 조율은 앱 안에서 */}
           <Link
             href={loggedIn ? `/${username}?request=1` : `/signup?ref=${username}`}
-            className="block rounded-2xl border px-5 py-4 text-left transition-transform hover:-translate-y-0.5"
+            className="block rounded-xl border px-5 py-4 text-left transition-transform hover:-translate-y-0.5"
             style={cardStyle}
           >
-            <p className="text-[15px] font-semibold" style={{ color: theme.accent }}>
+            <p className="text-sm font-semibold" style={{ color: theme.accent }}>
               시간 요청하기
             </p>
             <p className="mt-0.5 text-xs" style={{ color: theme.muted }}>
@@ -331,7 +331,7 @@ export function PublicLinkProfile({
           </Link>
         )}
 
-        <p className="mt-6 text-[11px] leading-relaxed" style={{ color: theme.muted }}>
+        <p className="mt-6 text-2xs leading-relaxed" style={{ color: theme.muted }}>
           <Link href="/" className="font-semibold">
             orbit42
           </Link>{" "}
@@ -358,10 +358,10 @@ function LinkCard({
   return (
     <Link
       href={href}
-      className="block rounded-2xl border px-5 py-4 text-left transition-transform hover:-translate-y-0.5"
+      className="block rounded-xl border px-5 py-4 text-left transition-transform hover:-translate-y-0.5"
       style={style}
     >
-      <p className="text-[15px] font-semibold">{label}</p>
+      <p className="text-sm font-semibold">{label}</p>
       <p className="mt-0.5 text-xs" style={{ color: muted }}>
         {sub}
       </p>

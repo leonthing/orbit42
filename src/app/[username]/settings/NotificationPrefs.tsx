@@ -37,7 +37,7 @@ export function NotificationPrefs({
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-charcoal-800/40 text-left text-[11px] uppercase tracking-wider text-charcoal-500">
+            <tr className="border-b border-charcoal-800/40 text-left text-2xs uppercase tracking-wider text-charcoal-500">
               <th className="px-1 py-2 font-semibold">종류</th>
               <th className="w-24 px-1 py-2 text-center font-semibold">앱 내</th>
               <th className="w-24 px-1 py-2 text-center font-semibold">이메일</th>
