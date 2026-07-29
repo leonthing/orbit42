@@ -43,7 +43,9 @@ export function AppShell({
               } as React.CSSProperties
             }
           >
-            <div className="w-full px-4 py-4 sm:px-5 md:px-6 md:py-5">
+            {/* h-full 이라야 캘린더처럼 "화면을 채우는" 페이지가 flex-1 로
+                남은 높이를 가져갈 수 있다. 짧은 페이지에는 영향이 없다. */}
+            <div className="h-full w-full px-4 py-4 sm:px-5 md:px-6 md:py-5">
               {children}
             </div>
           </main>

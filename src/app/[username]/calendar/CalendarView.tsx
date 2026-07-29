@@ -661,7 +661,9 @@ export default function CalendarView({
   );
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    // 주간 뷰가 남은 높이를 전부 쓰도록 세로 flex 로 잡는다 (space-y 대신 gap).
+    // h-full 이 아니라 flex-1 — 위에 체크리스트 같은 형제가 있어도 그만큼 줄어든다.
+    <div className="flex min-h-0 flex-1 flex-col gap-4 sm:gap-6">
       {/* Header — desktop keeps tabs inline with the picker; mobile gets its
           own row below the title so nothing wraps mid-word. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1021,19 +1023,22 @@ export default function CalendarView({
       )}
 
       {viewMode === "week" && (
-        <WeekCalendar
-          username={username}
-          days={weekDays}
-          viewerIsOwner={viewerIsOwner}
-          completedKeys={completed}
-          onToggleComplete={handleToggleComplete}
-          onEventClick={(item) => setDetailEvent(item)}
-          emptyMessage={
-            viewerIsOwner
-              ? "이 주가 비어있어요. 슬롯을 열거나 이벤트를 추가해보세요."
-              : "이 주에 공개된 일정이나 예약 가능한 시간이 없어요."
-          }
-        />
+        // min-h-0 이 없으면 flex 자식이 콘텐츠 높이만큼 부풀어 스크롤이 안 잡힌다.
+        <div className="flex min-h-0 flex-1 flex-col">
+          <WeekCalendar
+            username={username}
+            days={weekDays}
+            viewerIsOwner={viewerIsOwner}
+            completedKeys={completed}
+            onToggleComplete={handleToggleComplete}
+            onEventClick={(item) => setDetailEvent(item)}
+            emptyMessage={
+              viewerIsOwner
+                ? "이 주가 비어있어요. 슬롯을 열거나 이벤트를 추가해보세요."
+                : "이 주에 공개된 일정이나 예약 가능한 시간이 없어요."
+            }
+          />
+        </div>
       )}
 
       {detailEvent && (

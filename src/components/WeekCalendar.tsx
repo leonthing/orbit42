@@ -10,7 +10,7 @@ import { normalizeEventKey } from "@/lib/event-key";
 // Visible window: 00:00 – 24:00 (full day, 24 one-hour rows).
 const START_HOUR = 0;
 const END_HOUR = 24;
-const ROW_HEIGHT = 32; // px per hour
+const ROW_HEIGHT = 44; // px per hour — 32 은 이벤트 두 줄이 안 들어가 뭉개졌다
 const ROWS = END_HOUR - START_HOUR; // 18
 const GRID_HEIGHT = ROWS * ROW_HEIGHT; // 24 * 32 = 768
 const START_MIN = START_HOUR * 60;
@@ -54,7 +54,7 @@ export function WeekCalendar({
 
 
   return (
-    <div className="overflow-hidden rounded-xl border border-charcoal-800/60 bg-charcoal-900/40">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-charcoal-800/60 bg-charcoal-900/40">
       {/* 가로·세로를 한 컨테이너(UnifiedScroll)에서 스크롤한다.
           가로 스크롤을 바깥 div 로 빼면 시간축의 sticky left 가 그 스크롤포트를
           조상으로 잡지 못해 동작하지 않는다. 헤더·종일·시간표가 같은 폭을
@@ -191,7 +191,8 @@ function UnifiedScroll({
   // Scroll to 06:00 on mount so the grid opens where most events live.
   // Sticky headers stay pinned; the time-grid portion scrolls beneath.
   useEffect(() => {
-    if (ref.current) ref.current.scrollTop = 6 * ROW_HEIGHT;
+    // 새벽 시간대를 보여줄 이유가 없다. 업무 시간대부터 보이게 맞춘다.
+    if (ref.current) ref.current.scrollTop = 8 * ROW_HEIGHT;
   }, []);
   const hasAllDay = positionedByDay.some((col) => col.some((i) => i.allDay));
   return (
@@ -199,7 +200,7 @@ function UnifiedScroll({
       ref={ref}
       // 모바일에서는 요일 단위로 스냅되고(scroll-pl-11 로 44px 시간축을 비켜
       // 정렬), 데스크톱은 7일이 다 들어가므로 가로 스크롤을 끈다.
-      className="max-h-[680px] snap-x snap-mandatory scroll-pl-11 overflow-auto md:snap-none md:overflow-x-hidden"
+      className="min-h-0 flex-1 snap-x snap-mandatory scroll-pl-11 overflow-auto md:snap-none md:overflow-x-hidden"
     >
       <div className="w-[calc(44px+7*132px)] sm:w-[calc(44px+7*168px)] md:w-full">
       {/* Sticky header stack: day labels + (optionally) all-day lane. */}
@@ -280,15 +281,6 @@ function DayColumn({
           style={{ top: i * ROW_HEIGHT }}
         />
       ))}
-      {/* Half-hour guide (subtle) */}
-      {Array.from({ length: ROWS }).map((_, i) => (
-        <div
-          key={`hh${i}`}
-          className="pointer-events-none absolute inset-x-0 border-t border-dashed border-charcoal-800/20"
-          style={{ top: i * ROW_HEIGHT + ROW_HEIGHT / 2 }}
-        />
-      ))}
-
       {/* Now line */}
       {isToday && <NowLine />}
 
@@ -572,18 +564,78 @@ function relativeTimeTo(iso: string): string {
 
 // ---------- Layout helpers ----------
 
+/**
+ * 예약 가능 시간은 한 슬롯이 시간 단위 옵션으로 쪼개져 내려온다. 그대로 그리면
+ * "업무 미팅 FREE" 박스가 하루에 8개씩 쌓여 실제 일정을 덮어버린다.
+ * 같은 슬롯(slot_slug)이 끊김 없이 이어지면 한 덩어리로 합쳐 그린다 — 예약은
+ * 어차피 슬롯 단위로 열리므로 클릭 대상도 같다.
+ *
+ * 경매는 옵션마다 입찰·마감이 달라 합치지 않는다.
+ */
+function mergeContiguousSlots(items: WeekItem[]): WeekItem[] {
+  const slots = items.filter(
+    (i): i is Extract<WeekItem, { kind: "slot" }> =>
+      i.kind === "slot" && i.pricing_model !== "auction",
+  );
+  const others = items.filter(
+    (i) => !(i.kind === "slot" && i.pricing_model !== "auction"),
+  );
+  if (slots.length === 0) return items;
+
+  type SlotItem = (typeof slots)[number];
+  const byKey = new Map<string, SlotItem[]>();
+  for (const s of slots) {
+    const key = `${s.slot_slug}|${s.price_cents}`;
+    const list = byKey.get(key) ?? [];
+    list.push(s);
+    byKey.set(key, list);
+  }
+
+  const merged: WeekItem[] = [];
+  for (const list of Array.from(byKey.values())) {
+    list.sort(
+      (a: SlotItem, b: SlotItem) =>
+        new Date(a.start_at).getTime() - new Date(b.start_at).getTime(),
+    );
+    let run = { ...list[0] };
+    let runEnd = new Date(run.start_at).getTime() + run.duration_min * 60_000;
+    for (const next of list.slice(1)) {
+      const nextStart = new Date(next.start_at).getTime();
+      // 1분 이내 간격이면 이어진 것으로 본다 (경계 반올림 흡수).
+      if (nextStart - runEnd <= 60_000) {
+        runEnd = nextStart + next.duration_min * 60_000;
+        // duration_min 은 "1회 예약 길이"라 그대로 두고, 그리는 범위만 늘린다.
+        // (여기서 duration_min 을 키우면 카드에 "540분" 같은 값이 찍힌다.)
+        run = { ...run, end_at: new Date(runEnd).toISOString() };
+      } else {
+        merged.push(run);
+        run = { ...next };
+        runEnd = nextStart + next.duration_min * 60_000;
+      }
+    }
+    merged.push(run);
+  }
+  return [...others, ...merged];
+}
+
 function position(items: WeekItem[], dayDate: Date): PositionedItem[] {
   // Compute start/end minutes within the given day.
   const dayStart = new Date(dayDate);
   dayStart.setHours(0, 0, 0, 0);
 
-  const rough = items.map((item) => {
+  const rough = mergeContiguousSlots(items).map((item) => {
     const s = new Date(item.start_at);
+    const slotEnd =
+      item.kind === "slot" && item.end_at
+        ? new Date(item.end_at)
+        : null;
     const e =
       item.kind === "slot"
-        ? new Date(
-            new Date(item.start_at).getTime() + item.duration_min * 60_000,
-          )
+        ? // 병합된 블록은 end_at 이 전체 구간을 가리킨다. 없거나 뒤집혀 있으면
+          // 1회 예약 길이로 되돌아간다.
+          slotEnd && slotEnd.getTime() > s.getTime()
+          ? slotEnd
+          : new Date(s.getTime() + item.duration_min * 60_000)
         : new Date(item.end_at || item.start_at);
     const startMin = Math.max(
       0,
