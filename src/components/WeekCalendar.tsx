@@ -55,25 +55,19 @@ export function WeekCalendar({
 
   return (
     <div className="overflow-hidden rounded-xl border border-charcoal-800/60 bg-charcoal-900/40">
-      {/* On mobile, horizontally scroll through 2-day chunks. 44px for
-          the time axis + 2 day cols ≈ 360px viewport. Users swipe the
-          rest. Desktop fits all 7 days naturally. */}
-      <div className="overflow-x-auto md:overflow-x-visible">
-        <div className="w-[calc(44px+7*132px)] sm:w-[calc(44px+7*168px)] md:w-full">
-          {/* Single vertical scroll container so header, all-day and
-              time grid all share the same width — no scrollbar-induced
-              column drift between rows. */}
-          <UnifiedScroll
-            positionedByDay={positionedByDay}
-            days={days}
-            username={username}
-            viewerIsOwner={viewerIsOwner}
-            completedKeys={completedKeys}
-            onToggleComplete={onToggleComplete}
-            onEventClick={onEventClick}
-          />
-        </div>
-      </div>
+      {/* 가로·세로를 한 컨테이너(UnifiedScroll)에서 스크롤한다.
+          가로 스크롤을 바깥 div 로 빼면 시간축의 sticky left 가 그 스크롤포트를
+          조상으로 잡지 못해 동작하지 않는다. 헤더·종일·시간표가 같은 폭을
+          공유하는 것도 그대로 유지된다. */}
+      <UnifiedScroll
+        positionedByDay={positionedByDay}
+        days={days}
+        username={username}
+        viewerIsOwner={viewerIsOwner}
+        completedKeys={completedKeys}
+        onToggleComplete={onToggleComplete}
+        onEventClick={onEventClick}
+      />
 
       {days.every((d) => d.items.length === 0) && emptyMessage && (
         <div className="border-t border-charcoal-800/50 px-5 py-4 text-center text-xs text-charcoal-500">
@@ -90,7 +84,7 @@ function DayHeader({ day }: { day: WeekDay }) {
   const isWeekend = day.date.getDay() === 0 || day.date.getDay() === 6;
   return (
     <div
-      className={`border-r border-charcoal-800/40 px-2 py-2 text-center last:border-r-0 ${
+      className={`snap-start border-r border-charcoal-800/40 px-2 py-2 text-center last:border-r-0 ${
         day.isToday ? "bg-navy-500/5" : ""
       }`}
     >
@@ -119,7 +113,9 @@ function DayHeader({ day }: { day: WeekDay }) {
 function TimeAxis() {
   return (
     <div
-      className="relative border-r border-charcoal-800/40"
+      // sticky 는 relative 처럼 containing block 이 되므로 시간 라벨의
+      // absolute 위치 기준은 그대로 유지된다.
+      className="sticky left-0 z-10 border-r border-charcoal-800/40 bg-[rgb(var(--bg-surface))]"
       style={{ height: GRID_HEIGHT }}
     >
       {Array.from({ length: ROWS + 1 }).map((_, i) => {
@@ -199,18 +195,24 @@ function UnifiedScroll({
   }, []);
   const hasAllDay = positionedByDay.some((col) => col.some((i) => i.allDay));
   return (
-    <div ref={ref} className="max-h-[680px] overflow-y-auto">
+    <div
+      ref={ref}
+      // 모바일에서는 요일 단위로 스냅되고(scroll-pl-11 로 44px 시간축을 비켜
+      // 정렬), 데스크톱은 7일이 다 들어가므로 가로 스크롤을 끈다.
+      className="max-h-[680px] snap-x snap-mandatory scroll-pl-11 overflow-auto md:snap-none md:overflow-x-hidden"
+    >
+      <div className="w-[calc(44px+7*132px)] sm:w-[calc(44px+7*168px)] md:w-full">
       {/* Sticky header stack: day labels + (optionally) all-day lane. */}
       <div className="sticky top-0 z-20 bg-[rgb(var(--bg-surface))]">
         <div className="grid grid-cols-[44px_repeat(7,minmax(0,1fr))] border-b border-charcoal-800/40 bg-charcoal-900/60">
-          <div className="border-r border-charcoal-800/40" />
+          <div className="sticky left-0 z-30 border-r border-charcoal-800/40 bg-[rgb(var(--bg-surface))]" />
           {days.map((day) => (
             <DayHeader key={day.date.toISOString()} day={day} />
           ))}
         </div>
         {hasAllDay && (
           <div className="grid grid-cols-[44px_repeat(7,minmax(0,1fr))] border-b border-charcoal-800/40 bg-charcoal-900/40">
-            <div className="flex items-start justify-end border-r border-charcoal-800/40 px-1.5 pt-1.5 text-2xs font-medium text-charcoal-500">
+            <div className="sticky left-0 z-30 flex items-start justify-end border-r border-charcoal-800/40 bg-[rgb(var(--bg-surface))] px-1.5 pt-1.5 text-2xs font-medium text-charcoal-500">
               종일
             </div>
             {positionedByDay.map((items, idx) => (
@@ -241,6 +243,7 @@ function UnifiedScroll({
             onEventClick={onEventClick}
           />
         ))}
+        </div>
       </div>
     </div>
   );

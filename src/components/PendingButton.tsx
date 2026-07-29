@@ -26,8 +26,15 @@ const ICON_SIZE_CLASS: Record<ButtonSize, string> = {
   lg: "h-11 w-11 rounded-lg",
 };
 
+// 터치에는 hover 가 없어서 누른 느낌이 전혀 없었다. 살짝 눌리는 스케일과
+// 키보드 포커스 링을 공용 클래스에 넣어 이 함수를 쓰는 모든 버튼이 함께 얻는다.
+// (모션 축소 설정은 globals.css 에서 전역으로 무력화한다.)
 const BASE_CLASS =
-  "inline-flex shrink-0 items-center justify-center gap-1.5 transition-colors disabled:cursor-not-allowed";
+  "inline-flex shrink-0 touch-manipulation select-none items-center justify-center gap-1.5 " +
+  "transition-[color,background-color,border-color,transform] duration-150 " +
+  "active:scale-[0.97] " +
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-400/60 " +
+  "disabled:cursor-not-allowed disabled:active:scale-100";
 
 export function buttonClasses({
   variant = "primary",

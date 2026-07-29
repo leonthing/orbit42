@@ -85,6 +85,19 @@
   @apply transition-colors duration-150;
 }
 
+/* 모션 축소를 켠 사용자에게는 전역 트랜지션·애니메이션을 사실상 끈다.
+   버튼의 active:scale, 스켈레톤 pulse, 스냅 스크롤까지 함께 적용된다. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Readable markdown body (native, instead of prose-invert which pulls too-light colors) */
 .post-body p { @apply my-4; }
 .post-body h1 { @apply mt-8 mb-3 text-2xl font-bold text-charcoal-50; }
