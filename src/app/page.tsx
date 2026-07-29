@@ -50,21 +50,21 @@ export default async function LandingPage() {
         <section className="flex flex-col gap-8 md:grid md:grid-cols-2 md:items-start md:gap-12">
           <div className="order-1 min-w-0 md:col-start-1 md:row-start-1">
             <p className="text-2xs font-semibold uppercase tracking-[0.22em] text-navy-600 dark:text-navy-400">
-              Book time, not tables
+              Time is an asset
             </p>
             <h1 className="mt-3 text-3xl font-bold leading-[1.15] tracking-tight text-charcoal-100 sm:text-4xl md:text-5xl lg:text-[56px]">
-              미팅 일정을
+              시간을
               <br />
               <span className="bg-gradient-to-r from-navy-500 to-navy-400 bg-clip-text text-transparent">
-                맛집 예약처럼
+                자산으로
               </span>
               <br />
-              간편하게
+              만드는 캘린더
             </h1>
             <p className="mt-5 max-w-md text-sm leading-relaxed text-charcoal-400 sm:text-base">
-              링크 하나로 상대가 내 남는 시간을 예약해요.
+              캘린더에 쌓인 시간을 돈으로 환산해 보여주고,
               <br />
-              “언제 괜찮으세요?” 이메일 핑퐁은 이제 그만.
+              남는 시간은 팔 수 있게 만들어요.
             </p>
 
             <div className="mt-7 flex justify-center md:justify-start">
@@ -91,8 +91,8 @@ export default async function LandingPage() {
         {/* Feature 1: Easy meeting booking */}
         <section className="mt-20 md:mt-28">
           <FeatureHeader
-            eyebrow="1분이면 돼요"
-            title="미팅 예약, 더 쉬울 수가 없어요"
+            eyebrow="남는 시간 팔기"
+            title="비는 시간이 실제 수입이 돼요"
             body="슬롯을 열고 링크를 보내면, 상대는 이름과 이메일만 남기고 바로 예약 완료. 가입도, 로그인도 필요 없어요."
           />
           <div className="mt-8 grid gap-6 md:grid-cols-2 md:items-start">
@@ -120,9 +120,9 @@ export default async function LandingPage() {
         {/* Feature 2: Calendar + Todo */}
         <section className="mt-20 md:mt-28">
           <FeatureHeader
-            eyebrow="캘린더 + 할 일"
-            title="일정이 끝났으면 체크"
-            body="모든 일정 옆에 체크박스. 미팅이 끝나면 탭 한 번으로 완료 표시. 하루 끝에 내가 실제로 뭘 했는지 한눈에 보여요."
+            eyebrow="쓴 시간 기록"
+            title="지나간 시간이 기록으로 남아요"
+            body="일정 옆 체크박스를 탭하면 실제로 쓴 시간이 됩니다. 기록이 쌓여야 어디에 얼마를 썼는지 값을 매길 수 있어요."
           />
           <div className="mt-8 grid gap-6 md:grid-cols-2 md:items-start">
             <div className="space-y-4">
@@ -153,7 +153,7 @@ export default async function LandingPage() {
         <section className="mt-20 md:mt-28">
           <FeatureHeader
             eyebrow="Google Calendar 연동"
-            title="남는 시간을 수익으로"
+            title="빈 시간은 캘린더가 찾아줘요"
             body="구글 캘린더의 빈 시간을 자동으로 읽어서, 그 안에서만 예약 가능하게 만들어줘요. 이미 일정 있는 시간은 자동으로 제외."
           />
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
