@@ -248,7 +248,10 @@ export function SettingsForm({
             </p>
           </div>
 
-          <div>
+          {/* 시작하기 체크리스트가 이 입력으로 바로 보내기 위한 앵커.
+              소개는 "프로필" 이 아니라 이 폼(계정 섹션) 안에 있어서, 앵커가
+              없으면 사용자가 어디를 채워야 하는지 알 수 없다. */}
+          <div id="bio" className="scroll-mt-16">
             <label className="mb-1.5 block text-xs font-medium text-charcoal-400">한 줄 소개</label>
             <input type="text" value={bio} onChange={(e) => setBio(e.target.value)} placeholder="나를 소개하는 한 마디" className={inputClass} />
           </div>

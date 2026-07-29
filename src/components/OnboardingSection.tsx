@@ -47,12 +47,23 @@ export async function OnboardingSection() {
       ])
     : [null, null, null];
 
+  // 사진과 소개는 설정에서 서로 다른 자리에 있다(사진=프로필 섹션,
+  // 소개=계정 섹션의 폼). 무엇이 비었는지에 따라 라벨과 이동 위치를 바꿔야
+  // 눌렀을 때 뭘 해야 하는지 알 수 있다.
+  const hasAvatar = !!viewerProfile?.avatar_url;
+  const hasBio = !!(viewerProfile?.bio as string | null)?.trim();
+  const profileStep = !hasAvatar && !hasBio
+    ? { label: "프로필 사진과 소개 채우기", hash: "#profile" }
+    : !hasAvatar
+      ? { label: "프로필 사진 올리기", hash: "#profile" }
+      : { label: "한 줄 소개 쓰기", hash: "#bio" };
+
   const steps = [
     {
       key: "profile",
-      label: "프로필 사진과 소개 채우기",
-      href: `/${session.username}/settings#profile`,
-      done: !!viewerProfile?.avatar_url && !!viewerProfile?.bio,
+      label: profileStep.label,
+      href: `/${session.username}/settings${profileStep.hash}`,
+      done: hasAvatar && hasBio,
     },
     {
       key: "google",

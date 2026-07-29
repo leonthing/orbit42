@@ -27,7 +27,7 @@ export const metadata: Metadata = { title: "설정" };
 export const dynamic = "force-dynamic";
 
 const SECTIONS = [
-  { id: "profile", label: "프로필" },
+  { id: "profile", label: "프로필 사진" },
   { id: "google", label: "Google" },
   { id: "calendars", label: "캘린더" },
   { id: "work-hours", label: "근무시간" },
