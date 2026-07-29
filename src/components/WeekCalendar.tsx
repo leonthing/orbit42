@@ -202,7 +202,10 @@ function UnifiedScroll({
       // 정렬), 데스크톱은 7일이 다 들어가므로 가로 스크롤을 끈다.
       className="min-h-0 flex-1 snap-x snap-mandatory scroll-pl-11 overflow-auto md:snap-none md:overflow-x-hidden"
     >
-      <div className="w-[calc(44px+7*132px)] sm:w-[calc(44px+7*168px)] md:w-full">
+      {/* 모바일은 132px 고정이라 2.6일이 걸쳐 보였다. 뷰포트에서 페이지 좌우
+          여백(32)·카드 테두리(2)·시간축(44)을 뺀 폭을 3으로 나눠, 한 화면에
+          딱 3일이 들어오게 한다. 스냅이 요일 경계에 걸려 있어 스와이프도 맞는다. */}
+      <div className="w-[calc(44px+7*((100vw-78px)/3))] sm:w-[calc(44px+7*168px)] md:w-full">
       {/* Sticky header stack: day labels + (optionally) all-day lane. */}
       <div className="sticky top-0 z-20 bg-[rgb(var(--bg-surface))]">
         <div className="grid grid-cols-[44px_repeat(7,minmax(0,1fr))] border-b border-charcoal-800/40 bg-charcoal-900/60">
