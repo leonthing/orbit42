@@ -415,14 +415,8 @@ struct SlotBookingView: View {
 private struct BookingMiniCalendar: View {
     let viewModel: SlotBookingViewModel
 
-    /// 헤더가 일요일 시작이므로 로케일과 무관하게 firstWeekday 를 일요일로 고정.
-    private static let gridCalendar: Calendar = {
-        var calendar = Calendar.current
-        calendar.firstWeekday = 1
-        return calendar
-    }()
-
-    private var calendar: Calendar { Self.gridCalendar }
+    /// 헤더와 격자 모두 설정된 시작 요일을 따른다.
+    private var calendar: Calendar { AppSettings.shared.calendar }
 
     var body: some View {
         VStack(spacing: 8) {
@@ -472,22 +466,24 @@ private struct BookingMiniCalendar: View {
         .padding(.horizontal, 4)
     }
 
-    // MARK: - 요일 헤더 (일요일 시작)
+    // MARK: - 요일 헤더 (시작 요일은 설정을 따름)
 
     private var weekdayHeader: some View {
-        HStack(spacing: 0) {
-            ForEach(Array(Self.weekdaySymbols.enumerated()), id: \.offset) { index, symbol in
+        let weekStart = AppSettings.shared.weekStart
+        return HStack(spacing: 0) {
+            ForEach(Array(weekStart.symbols.enumerated()), id: \.offset) { index, symbol in
                 Text(symbol)
                     .font(.caption.weight(.medium))
-                    .foregroundStyle(weekdayColor(at: index))
+                    .foregroundStyle(weekdayColor(weekday: weekStart.weekdayIndex(atColumn: index)))
                     .frame(maxWidth: .infinity)
             }
         }
         .padding(.horizontal, 4)
     }
 
-    private func weekdayColor(at index: Int) -> Color {
-        switch index {
+    /// weekday: 0=일 … 6=토
+    private func weekdayColor(weekday: Int) -> Color {
+        switch weekday {
         case 0: return Color(red: 0.94, green: 0.45, blue: 0.45)   // 일
         case 6: return Color(red: 0.45, green: 0.62, blue: 0.94)   // 토
         default: return Theme.secondaryText
@@ -545,7 +541,7 @@ private struct BookingMiniCalendar: View {
     private var monthDays: [Date?] {
         let first = viewModel.displayedMonth
         guard let range = calendar.range(of: .day, in: .month, for: first) else { return [] }
-        let leading = (calendar.component(.weekday, from: first) - calendar.firstWeekday + 7) % 7
+        let leading = calendar.leadingBlankDays(forMonthContaining: first)
         var days: [Date?] = Array(repeating: nil, count: leading)
         for offset in 0..<range.count {
             days.append(calendar.date(byAdding: .day, value: offset, to: first))
@@ -562,8 +558,6 @@ private struct BookingMiniCalendar: View {
         formatter.timeZone = .current
         return formatter
     }()
-
-    private static let weekdaySymbols = ["일", "월", "화", "수", "목", "금", "토"]
 }
 
 // MARK: - 예약 확인 시트

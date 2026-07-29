@@ -141,14 +141,15 @@ final class WorkHoursViewModel {
         hhmmFormatter.string(from: date)
     }
 
-    /// 일~토 기본 상태 (off, 09:00~18:00)
+    /// 기본 상태 (off, 09:00~18:00). 나열 순서는 설정한 주 시작 요일을 따른다.
+    /// 저장 페이로드는 요일 키 딕셔너리라 순서와 무관하다.
     private static func defaultDays() -> [WorkDayEdit] {
         let keys = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"]
-        let labels = ["일", "월", "화", "수", "목", "금", "토"]
         let defaultStart = timeDate("09:00") ?? Date()
         let defaultEnd = timeDate("18:00") ?? Date()
-        return zip(keys, labels).map { key, label in
+        let days = zip(keys, WeekStart.absoluteSymbols).map { key, label in
             WorkDayEdit(key: key, label: label, enabled: false, start: defaultStart, end: defaultEnd)
         }
+        return AppSettings.shared.weekStart.rotated(days)
     }
 }

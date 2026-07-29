@@ -3,6 +3,7 @@ import SwiftUI
 /// 프로필 탭 > 내 캘린더 — 캘린더 목록/편집/생성/삭제.
 struct CalendarSettingsView: View {
     @State private var viewModel = CalendarSettingsViewModel()
+    private var settings = AppSettings.shared
     @State private var editingCalendar: CalendarInfo?
     @State private var showingCreate = false
 
@@ -90,10 +91,39 @@ struct CalendarSettingsView: View {
         .padding(.horizontal, 32)
     }
 
+    // MARK: - 주 시작 요일
+
+    /// 기기별 설정 — 캘린더 탭·예약 화면의 월 격자가 모두 이 값을 따른다.
+    private var weekStartSection: some View {
+        Section {
+            Picker(
+                "시작 요일",
+                selection: Binding(
+                    get: { settings.weekStart },
+                    set: { settings.setWeekStart($0) }
+                )
+            ) {
+                ForEach(WeekStart.allCases) { option in
+                    Text(option.label).tag(option)
+                }
+            }
+            .pickerStyle(.segmented)
+        } header: {
+            Text("주 시작 요일")
+                .foregroundStyle(Theme.secondaryText)
+        } footer: {
+            Text("캘린더와 예약 화면의 달력이 이 요일부터 시작해요. 이 기기에만 적용돼요.")
+                .foregroundStyle(Theme.secondaryText)
+        }
+        .listRowBackground(Theme.surface)
+    }
+
     // MARK: - 목록
 
     private func calendarList(_ calendars: [CalendarInfo]) -> some View {
         List {
+            weekStartSection
+
             Section {
                 ForEach(calendars) { calendar in
                     Button {

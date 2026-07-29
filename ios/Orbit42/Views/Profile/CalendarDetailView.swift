@@ -70,7 +70,6 @@ struct CalendarDetailView: View {
         return formatter
     }()
 
-    private static let weekdaySymbols = ["일", "월", "화", "수", "목", "금", "토"]
 
     var body: some View {
         ZStack {
@@ -164,7 +163,7 @@ struct CalendarDetailView: View {
 
     private var weekdayHeader: some View {
         HStack(spacing: 0) {
-            ForEach(Self.weekdaySymbols, id: \.self) { symbol in
+            ForEach(AppSettings.shared.weekStart.symbols, id: \.self) { symbol in
                 Text(symbol)
                     .font(.caption2)
                     .foregroundStyle(Theme.secondaryText)
@@ -178,7 +177,7 @@ struct CalendarDetailView: View {
             from: calendar.dateComponents([.year, .month], from: month)
         ) ?? month
         let dayCount = calendar.range(of: .day, in: .month, for: firstDay)?.count ?? 30
-        let leading = calendar.component(.weekday, from: firstDay) - 1
+        let leading = calendar.leadingBlankDays(forMonthContaining: firstDay)
         let color = data?.calendar.displayColor ?? Theme.accent
 
         return LazyVGrid(

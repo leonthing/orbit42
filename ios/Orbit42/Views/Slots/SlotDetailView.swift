@@ -823,13 +823,8 @@ private struct PreviewMiniCalendar: View {
 
     @State private var month: Date
 
-    /// ko_KR·일요일 시작 (예약 화면과 동일)
-    static let calendar: Calendar = {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.locale = Locale(identifier: "ko_KR")
-        calendar.firstWeekday = 1
-        return calendar
-    }()
+    /// ko_KR — 주 시작 요일은 설정을 따른다 (예약 화면과 동일)
+    static var calendar: Calendar { AppSettings.shared.calendar }
 
     init(availableDays: Set<Date>, selectedDay: Binding<Date?>) {
         self.availableDays = availableDays
@@ -850,7 +845,6 @@ private struct PreviewMiniCalendar: View {
         return formatter
     }()
 
-    private static let weekdaySymbols = ["일", "월", "화", "수", "목", "금", "토"]
 
     var body: some View {
         VStack(spacing: 8) {
@@ -891,7 +885,7 @@ private struct PreviewMiniCalendar: View {
 
     private var weekdayHeader: some View {
         HStack(spacing: 0) {
-            ForEach(Self.weekdaySymbols, id: \.self) { symbol in
+            ForEach(AppSettings.shared.weekStart.symbols, id: \.self) { symbol in
                 Text(symbol)
                     .font(.caption2)
                     .foregroundStyle(Theme.secondaryText)
@@ -902,14 +896,14 @@ private struct PreviewMiniCalendar: View {
 
     private var monthGrid: some View {
         let calendar = Self.calendar
-        let firstWeekday = calendar.component(.weekday, from: month) - 1
+        let leading = calendar.leadingBlankDays(forMonthContaining: month)
         let dayCount = calendar.range(of: .day, in: .month, for: month)?.count ?? 30
 
         return LazyVGrid(
             columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7),
             spacing: 6
         ) {
-            ForEach(0..<firstWeekday, id: \.self) { _ in
+            ForEach(0..<leading, id: \.self) { _ in
                 Color.clear.frame(height: 34)
             }
             ForEach(1...dayCount, id: \.self) { day in

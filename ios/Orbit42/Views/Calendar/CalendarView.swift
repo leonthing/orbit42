@@ -311,7 +311,7 @@ struct CalendarView: View {
             withAnimation { viewModel.select(date: date) }
         } label: {
             VStack(spacing: 4) {
-                Text(Self.weekdaySymbols[calendar.component(.weekday, from: date) - 1])
+                Text(WeekStart.absoluteSymbols[calendar.component(.weekday, from: date) - 1])
                     .font(.caption2)
                     .foregroundStyle(Theme.secondaryText)
                 Text("\(calendar.component(.day, from: date))")
@@ -405,7 +405,7 @@ struct CalendarView: View {
             from: DateComponents(year: displayedYear, month: month, day: 1)
         ) ?? Date()
         let dayCount = calendar.range(of: .day, in: .month, for: firstDay)?.count ?? 30
-        let leading = calendar.component(.weekday, from: firstDay) - 1
+        let leading = calendar.leadingBlankDays(forMonthContaining: firstDay)
         let isCurrentMonth = calendar.isDate(firstDay, equalTo: Date(), toGranularity: .month)
 
         return Button {
@@ -439,14 +439,15 @@ struct CalendarView: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - 요일 헤더 (일요일 시작)
+    // MARK: - 요일 헤더 (시작 요일은 설정을 따름)
 
     private var weekdayHeader: some View {
-        HStack(spacing: 0) {
-            ForEach(Array(Self.weekdaySymbols.enumerated()), id: \.offset) { index, symbol in
+        let weekStart = AppSettings.shared.weekStart
+        return HStack(spacing: 0) {
+            ForEach(Array(weekStart.symbols.enumerated()), id: \.offset) { index, symbol in
                 Text(symbol)
                     .font(.caption.weight(.medium))
-                    .foregroundStyle(weekdayColor(at: index))
+                    .foregroundStyle(weekdayColor(weekday: weekStart.weekdayIndex(atColumn: index)))
                     .frame(maxWidth: .infinity)
             }
         }
@@ -454,8 +455,9 @@ struct CalendarView: View {
         .padding(.bottom, 6)
     }
 
-    private func weekdayColor(at index: Int) -> Color {
-        switch index {
+    /// weekday: 0=일 … 6=토
+    private func weekdayColor(weekday: Int) -> Color {
+        switch weekday {
         case 0: return Color(red: 0.94, green: 0.45, blue: 0.45)   // 일
         case 6: return Color(red: 0.45, green: 0.62, blue: 0.94)   // 토
         default: return Theme.secondaryText
@@ -507,7 +509,7 @@ struct CalendarView: View {
     private var monthDays: [Date?] {
         let first = CalendarViewModel.firstDayOfMonth(containing: viewModel.displayedMonth)
         guard let range = calendar.range(of: .day, in: .month, for: first) else { return [] }
-        let leading = (calendar.component(.weekday, from: first) - calendar.firstWeekday + 7) % 7
+        let leading = calendar.leadingBlankDays(forMonthContaining: first)
         var days: [Date?] = Array(repeating: nil, count: leading)
         for offset in 0..<range.count {
             days.append(calendar.date(byAdding: .day, value: offset, to: first))
@@ -651,7 +653,6 @@ struct CalendarView: View {
         return formatter
     }()
 
-    private static let weekdaySymbols = ["일", "월", "화", "수", "목", "금", "토"]
 }
 
 // MARK: - 날짜 셀

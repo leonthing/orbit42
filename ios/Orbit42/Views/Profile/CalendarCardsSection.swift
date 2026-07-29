@@ -156,10 +156,10 @@ struct CalendarCardsSection: View {
 
     /// 이번 달 그리드 — 일정 있는 날만 캘린더 색으로 채운다.
     private func miniMonth(calendar: ProfileCalendar, year: Int, month: Int) -> some View {
-        let cal = Calendar(identifier: .gregorian)
+        let cal = AppSettings.shared.calendar
         let firstDay = cal.date(from: DateComponents(year: year, month: month, day: 1)) ?? Date()
         let dayCount = cal.range(of: .day, in: .month, for: firstDay)?.count ?? 30
-        let leading = cal.component(.weekday, from: firstDay) - 1
+        let leading = cal.leadingBlankDays(forMonthContaining: firstDay)
         let active = Set(calendar.activeDays)
 
         return LazyVGrid(

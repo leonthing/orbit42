@@ -18,13 +18,8 @@ final class CalendarViewModel {
         var calendars: [CalendarInfo]
     }
 
-    /// 한국 로케일 그레고리력 — 주 시작은 일요일.
-    static let calendar: Calendar = {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.locale = Locale(identifier: "ko_KR")
-        calendar.firstWeekday = 1
-        return calendar
-    }()
+    /// 한국 로케일 그레고리력 — 주 시작 요일은 설정(`AppSettings.weekStart`)을 따른다.
+    static var calendar: Calendar { AppSettings.shared.calendar }
 
     /// 현재 표시 중인 달 (해당 월 1일 자정으로 정규화)
     private(set) var displayedMonth: Date
