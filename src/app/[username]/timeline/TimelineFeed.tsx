@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EmptyState } from "@/components/EmptyState";
 
 export type TimelineEntry = {
   id: string;
@@ -143,14 +144,14 @@ export function TimelineFeed({
       </div>
 
       {groups.length === 0 ? (
-        <div className="rounded-xl border border-charcoal-800/50 bg-[rgb(var(--bg-surface))] px-6 py-16 text-center">
-          <p className="text-sm font-medium text-charcoal-200">아직 기록이 없어요</p>
-          <p className="mt-1 text-xs text-charcoal-500">
-            {scope === "following"
+        <EmptyState
+          title="아직 기록이 없어요"
+          body={
+            scope === "following"
               ? "팔로우한 사람들의 공개 캘린더 일정이 여기에 보여요."
-              : "지나간 일정이 여기에 쌓여요. 일정에 사진을 붙이면 기록이 더 선명해져요."}
-          </p>
-        </div>
+              : "지나간 일정이 여기에 쌓여요. 일정에 사진을 붙이면 기록이 더 선명해져요."
+          }
+        />
       ) : (
         groups.map((group) => (
           <section key={group.key} className="space-y-2">

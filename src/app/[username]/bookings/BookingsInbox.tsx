@@ -13,6 +13,7 @@ import type { BookingRow, GuestBookingRow, BookableOption } from "@/lib/slots";
 import { addBookingReview } from "@/lib/reviews";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
+import { EmptyState } from "@/components/EmptyState";
 
 const STATUS_STYLES: Record<string, string> = {
   pending: "bg-amber-500/15 text-amber-800 ring-1 ring-amber-500/40 dark:text-amber-200 dark:ring-0",
@@ -233,11 +234,7 @@ function SectionHeader({
 }
 
 function EmptyCard({ hint }: { hint: string }) {
-  return (
-    <div className="rounded-xl border border-dashed border-charcoal-800/60 bg-charcoal-900/20 px-5 py-6 text-center">
-      <p className="text-sm text-charcoal-500">{hint}</p>
-    </div>
-  );
+  return <EmptyState compact title={hint} />;
 }
 
 function DateStamp({ iso }: { iso: string }) {

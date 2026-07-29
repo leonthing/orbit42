@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getProfile } from "@/lib/auth";
 import { listFollowing } from "@/lib/follows";
 import { Avatar } from "@/components/Avatar";
+import { EmptyState } from "@/components/EmptyState";
 
 export const dynamic = "force-dynamic";
 
@@ -46,9 +47,7 @@ export default async function FollowingPage({
       </header>
 
       {people.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-charcoal-800/60 p-8 text-center text-sm text-charcoal-500">
-          아직 팔로우하는 사람이 없어요.
-        </div>
+        <EmptyState title="아직 팔로우하는 사람이 없어요" />
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2">
           {people.map((p) => (

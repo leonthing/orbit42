@@ -6,6 +6,7 @@ import { listFollowers } from "@/lib/follows";
 import { Avatar } from "@/components/Avatar";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
 import { SITE } from "@/lib/constants";
+import { EmptyState } from "@/components/EmptyState";
 
 export const dynamic = "force-dynamic";
 
@@ -92,10 +93,7 @@ function PeopleList({
       </header>
 
       {people.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-charcoal-800/60 p-8 text-center text-sm text-charcoal-500">
-          {emptyBody}
-          {emptyExtra}
-        </div>
+        <EmptyState title={emptyBody} body={emptyExtra} />
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2">
           {people.map((p) => (

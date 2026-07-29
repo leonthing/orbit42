@@ -28,6 +28,7 @@ import { updateCalendar } from "@/lib/calendars";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { buttonClasses } from "@/components/PendingButton";
+import { EmptyState } from "@/components/EmptyState";
 
 type Row = { slot: TimeSlot; availabilities: Availability[]; menuIds: string[] };
 const DAYS = [
@@ -158,21 +159,19 @@ export default function SlotsManager({
       )}
 
       {initial.length === 0 && !showNew ? (
-        <div className="rounded-xl border border-dashed border-charcoal-800/60 bg-charcoal-900/20 p-12 text-center">
-          <p className="text-base font-semibold text-charcoal-200">
-            아직 슬롯이 없어요
-          </p>
-          <p className="mt-2 text-sm text-charcoal-500">
-            첫 슬롯을 만들어 누군가의 궤도에 올려보세요.
-          </p>
-          <button
-            type="button"
-            onClick={() => setShowNew(true)}
-            className={`mt-5 ${buttonClasses({ variant: "primary", size: "md" })}`}
-          >
-            새 슬롯 만들기
-          </button>
-        </div>
+        <EmptyState
+          title="아직 슬롯이 없어요"
+          body="첫 슬롯을 만들어 누군가의 궤도에 올려보세요."
+          action={
+            <button
+              type="button"
+              onClick={() => setShowNew(true)}
+              className={buttonClasses({ variant: "primary", size: "md" })}
+            >
+              새 슬롯 만들기
+            </button>
+          }
+        />
       ) : (
         initial.length > 0 && (
           <div className="space-y-3">

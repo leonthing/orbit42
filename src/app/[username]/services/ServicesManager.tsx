@@ -6,6 +6,8 @@ import type { Menu } from "@/lib/menus";
 import { createMenu, updateMenu, deleteMenu } from "@/lib/menus";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
+import { EmptyState } from "@/components/EmptyState";
+import { buttonClasses } from "@/components/PendingButton";
 
 const INPUT =
   "w-full rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-400/60 focus:outline-none focus:ring-1 focus:ring-navy-400/40";
@@ -60,21 +62,19 @@ export default function ServicesManager({ initial }: { initial: Menu[] }) {
       )}
 
       {initial.length === 0 && !showNew ? (
-        <div className="rounded-xl border border-dashed border-charcoal-800/60 bg-charcoal-900/20 p-12 text-center">
-          <p className="text-base font-semibold text-charcoal-200">
-            아직 등록된 항목이 없어요
-          </p>
-          <p className="mt-2 text-sm text-charcoal-500">
-            첫 항목을 추가해보세요.
-          </p>
-          <button
-            type="button"
-            onClick={() => setShowNew(true)}
-            className="mt-5 rounded-lg bg-navy-500 px-4 py-2 text-sm font-semibold text-white hover:bg-navy-400"
-          >
-            첫 서비스 추가하기
-          </button>
-        </div>
+        <EmptyState
+          title="아직 등록된 항목이 없어요"
+          body="첫 항목을 추가해보세요."
+          action={
+            <button
+              type="button"
+              onClick={() => setShowNew(true)}
+              className={buttonClasses({ variant: "primary", size: "md" })}
+            >
+              첫 서비스 추가하기
+            </button>
+          }
+        />
       ) : (
         <div className="space-y-6">
           {grouped.map(([cat, items]) => (
