@@ -268,11 +268,13 @@ private struct MyProfileContent: View {
 
     // MARK: - 프로필 편집 / 공유
 
-    /// 내 예약 페이지 공유 문구 — 링크를 본문 맨 앞에 둔다 (메신저 미리보기용).
-    /// item: URL + message: Text 조합은 공유 시트의 "복사"가 message 텍스트만
-    /// 복사하는 iOS 동작이 있어 단일 문자열로 합친다.
-    private var shareText: String {
-        "https://orbit42.org/\(username)\n\n제 시간을 예약할 수 있는 페이지예요."
+    /// 내 예약 페이지 공유 — URL 만 넘긴다.
+    ///
+    /// 예전엔 안내 문구를 본문에 합쳐 단일 문자열로 공유했는데, 그러면 붙여넣기에
+    /// 한글이 섞여 나와 주소창에 넣으면 404 가 난다. 미리보기 문구는 페이지의
+    /// OG 태그가 담당하므로 링크만 넘기면 충분하다. (타임슬롯 공유도 URL 방식)
+    private var shareURL: URL? {
+        URL(string: "https://orbit42.org/\(username)")
     }
 
     private var actionButtons: some View {
@@ -292,17 +294,19 @@ private struct MyProfileContent: View {
                 .background(Theme.fill(0.08), in: Capsule())
             }
 
-            ShareLink(item: shareText) {
-                HStack(spacing: 6) {
-                    Image(systemName: "square.and.arrow.up")
-                        .font(.footnote)
-                    Text("프로필 공유")
+            if let shareURL {
+                ShareLink(item: shareURL) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.footnote)
+                        Text("프로필 공유")
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.accent)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Theme.accent.opacity(0.15), in: Capsule())
                 }
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(Theme.accent)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(Theme.accent.opacity(0.15), in: Capsule())
             }
         }
     }

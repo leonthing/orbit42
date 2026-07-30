@@ -33,7 +33,11 @@ export function ShareMenu({ url, title, text, compact }: Props) {
     // Native mobile share sheet covers every app — preferable when we have it.
     if (typeof navigator !== "undefined" && "share" in navigator) {
       try {
-        await navigator.share({ url, title, text });
+        // text 를 함께 넘기면 메시지·메모·카톡 등 상당수 대상이 본문과 URL 을
+        // 이어 붙여 준다. 그러면 "…예약해보세요\nhttps://orbit42.org/…" 가
+        // 통째로 붙여넣어져 주소창에서 404 가 난다. 링크 미리보기 문구는
+        // 대상 페이지의 OG 태그가 담당하므로 여기서는 url·title 만 넘긴다.
+        await navigator.share({ url, title });
         return;
       } catch {
         // User cancelled or share failed — fall through to menu.

@@ -89,10 +89,8 @@ struct SettingsView: View {
                 menuRow(icon: "figure.walk", title: "이동시간 버퍼")
             }
 
-            if let referralText {
-                // URL을 본문에 합친 단일 문자열로 공유 — item: URL + message: Text 조합은
-                // 공유 시트의 "복사"가 message 텍스트만 복사하는 iOS 동작이 있다.
-                ShareLink(item: referralText) {
+            if let referralURL {
+                ShareLink(item: referralURL) {
                     menuRow(icon: "person.badge.plus", title: "친구 초대")
                 }
             }
@@ -159,10 +157,10 @@ struct SettingsView: View {
     }
 
     /// 친구 초대 추천 링크 — 이 링크로 가입하면 추천인과 자동 연결된다.
-    /// 웹 ReferralLink 와 동일하게 링크를 본문 맨 앞에 둔다 (메신저 미리보기용).
-    private var referralText: String? {
+    /// 프로필 공유와 같은 이유로 URL 만 넘긴다 (문구를 합치면 붙여넣기에 한글이 섞인다).
+    private var referralURL: URL? {
         guard let username = auth.user?.username else { return nil }
-        return "https://orbit42.org/signup?ref=\(username)\n\nOrbit42에 초대합니다. 제 추천으로 가입하면 자동으로 연결돼요."
+        return URL(string: "https://orbit42.org/signup?ref=\(username)")
     }
 
     // MARK: - 프로필 비공개
