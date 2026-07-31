@@ -1,6 +1,22 @@
-# App Store 제출 준비 (v1.0.0)
+# App Store 제출 기록
 
-## 상태
+## v1.1.0 (빌드 2) — 2026-07-31 제출, WAITING_FOR_REVIEW
+- 1.0.1 이 아니라 1.1.0: iPad 지원(기기 패밀리 추가)만으로도 마이너 감. 설정 2종 신규·오르빗 탭 개편·아이콘 변형·타임라인 동작 변경 포함.
+- 전 과정 API 자동화 성공: 버전 레코드 생성 → 릴리스 노트(ko) → 스크린샷 업로드 → 빌드 연결 → 심사 제출.
+  - 스크린샷 업로드는 3단계: `POST /v1/appScreenshots`(fileSize·fileName) → `uploadOperations` 의 URL 로 바이트 PUT → `PATCH {uploaded:true, sourceFileChecksum:<md5>}`.
+  - 빌드 연결: `PATCH /v1/appStoreVersions/{id}/relationships/build`.
+  - 제출: `POST /v1/reviewSubmissions` → `POST /v1/reviewSubmissionItems` → `PATCH {submitted:true}`.
+  - **WAITING_FOR_REVIEW 상태에서도 메타데이터(설명) 수정이 먹는다.** IN_REVIEW 로 넘어가면 잠긴다.
+- 업로드: `xcodebuild -exportArchive` 에 `-authenticationKeyPath/-authenticationKeyID/-authenticationKeyIssuerID` 를 주면 무인 업로드된다(ExportOptions 의 destination=upload).
+- 스크린샷: **[[feedback_store_screenshots]] 규칙 필수** — 실계정 촬영 금지, 오르빗 탭은 추천 목록이 실제 가입자를 뽑아 어떤 방법으로도 촬영 금지(타임라인으로 대체). `appreview` 데모 계정 + `SIMCTL_CHILD_DEMO_TOKEN`/`DEMO_TAB` 무인 촬영.
+  - 1.0.0 에 올라갔던 `04-orbit.png` 에 제3자 실명·프로필 사진이 노출돼 있었고, 1.1.0 출시 시점에 교체된다(출시된 버전의 스크린샷은 따로 못 고침).
+- 필요 사이즈: iPhone 6.9" 1320×2868, **iPad 13" 2064×2752**(iPad 지원 추가 시 필수, display type `APP_IPAD_PRO_3GEN_129`).
+
+## v1.0.0 기록
+- 2026-07-28 제출 → 7-29 Guideline 2.3 거절(오르빗 커뮤니티 기능을 못 찾겠다) → 기능·데이터 정상 확인 후 ASC 회신 소명 → 7-30 승인.
+- **승인 후에도 스토어에 안 보였던 원인 = "App Store 에서 판매 중단" 상태.** 가격 및 사용 가능 여부에서 되돌리자 제품 페이지가 바로 살아났다. 검색 색인은 반나절~하루 더 걸린다(한글명이 영문명보다 먼저 잡혔다).
+
+## v1.0.0 준비 체크리스트 (당시)
 - [x] Release 아카이브 빌드 검증 완료 (2026-07-28)
 - [x] 앱 아이콘·PrivacyInfo 번들 포함 확인 (project.yml sources 단일화)
 - [x] 개인정보처리방침/이용약관 웹 페이지 + 앱 내 링크
