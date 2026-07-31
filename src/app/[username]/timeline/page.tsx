@@ -5,6 +5,11 @@ import { getUserId } from "@/lib/db";
 import { getAdminClient } from "@/lib/supabase";
 import { fetchTimeBlocks } from "@/lib/insights";
 import { listEventPosts } from "@/lib/event-posts";
+import {
+  completedKeysFor,
+  completedPairsFor,
+  completionKeyForBlock,
+} from "@/lib/event-completions-query";
 import { listFollowing } from "@/lib/follows";
 import { TimelineFeed, type TimelineEntry } from "./TimelineFeed";
 
@@ -62,9 +67,17 @@ export default async function TimelinePage({
     };
     const calById = new Map(calendars.map((c) => [c.id, c]));
 
-    entries = blocks
+    // 타임라인은 "실제로 한 일"의 기록 — 완료 체크한 일정만 올린다.
+    const pastBlocks = blocks
       .filter((b) => b.start.getTime() <= now.getTime())
-      .filter((b) => !searchParams.calendarId || b.calendar_id === searchParams.calendarId)
+      .filter((b) => !searchParams.calendarId || b.calendar_id === searchParams.calendarId);
+    const doneKeys = await completedKeysFor(
+      userId,
+      pastBlocks.map((b) => completionKeyForBlock(b.id)),
+    );
+
+    entries = pastBlocks
+      .filter((b) => doneKeys.has(completionKeyForBlock(b.id)))
       .map((b) => {
         const post = postFor(b.id);
         const cal = calById.get(b.calendar_id);
@@ -143,7 +156,14 @@ export default async function TimelinePage({
           }
         }
 
+        // 남의 기록도 같은 규칙 — 그 사람이 완료 체크한 것만.
+        const donePairs = await completedPairsFor(
+          Array.from(new Set((rows ?? []).map((r) => r.user_id as string))),
+          (rows ?? []).map((r) => `local:${r.id as string}`),
+        );
+
         entries = (rows ?? [])
+          .filter((r) => donePairs.has(`${r.user_id as string}|local:${r.id as string}`))
           .map((r) => {
             const cal = metaById.get(r.calendar_id as string);
             const person = peopleById.get(r.user_id as string);

@@ -89,7 +89,8 @@ final class TimelineViewModel {
 
 // MARK: - 화면
 
-/// 타임라인 탭 — 내 시간의 기록. 지나간 일정을 최신순으로 보여주고,
+/// 타임라인 탭 — 내가 "실제로 한 일"의 기록.
+/// 캘린더에서 완료 체크한 일정만 최신순으로 보여준다(예정만 잡혀 있던 일정은 제외).
 /// 사진을 붙인 일정은 카드로 크게 나온다. 목표 캘린더로 좁히면 그 목표의 여정이 된다.
 struct TimelineView: View {
     @State private var viewModel = TimelineViewModel()
@@ -247,8 +248,8 @@ struct TimelineView: View {
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(Theme.primaryText)
             Text(viewModel.scope == "following"
-                 ? "팔로우한 사람들의 공개 캘린더 일정이 여기에 보여요.\n오르빗 탭에서 관심 가는 사람을 팔로우해 보세요."
-                 : "지나간 일정이 여기에 쌓여요.\n일정에 사진을 붙이면 기록이 더 선명해져요.")
+                 ? "팔로우한 사람들이 완료한 일정이 여기에 보여요.\n오르빗 탭에서 관심 가는 사람을 팔로우해 보세요."
+                 : "캘린더에서 완료 체크한 일정이 여기에 쌓여요.\n사진을 붙이면 기록이 더 선명해져요.")
                 .font(.footnote)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(Theme.secondaryText)

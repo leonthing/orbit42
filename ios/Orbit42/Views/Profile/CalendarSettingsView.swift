@@ -107,8 +107,22 @@ struct CalendarSettingsView: View {
                         .foregroundStyle(Theme.secondaryText)
                 }
             }
+            Picker(
+                "기본 일정 시간",
+                selection: Binding(
+                    get: { settings.eventDuration },
+                    set: { settings.setEventDuration($0) }
+                )
+            ) {
+                ForEach(EventDuration.allCases) { option in
+                    Text(option.label).tag(option)
+                }
+            }
         } header: {
             Text("보기 설정")
+                .foregroundStyle(Theme.secondaryText)
+        } footer: {
+            Text("새 일정을 만들 때 종료 시각이 이만큼 뒤로 잡혀요.")
                 .foregroundStyle(Theme.secondaryText)
         }
         .listRowBackground(Theme.surface)

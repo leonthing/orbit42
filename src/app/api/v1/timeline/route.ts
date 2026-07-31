@@ -2,6 +2,11 @@ import { apiSession, apiUserId } from "@/lib/api-auth";
 import { getAdminClient } from "@/lib/supabase";
 import { fetchTimeBlocks } from "@/lib/insights";
 import { listEventPosts } from "@/lib/event-posts";
+import {
+  completedKeysFor,
+  completedPairsFor,
+  completionKeyForBlock,
+} from "@/lib/event-completions-query";
 
 export const dynamic = "force-dynamic";
 
@@ -71,9 +76,18 @@ export async function GET(request: Request) {
     return blockId;
   };
 
-  const items = blocks
+  // 타임라인은 "실제로 한 일"의 기록이다. 캘린더에 잡혀 있던 예정이 아니라
+  // 완료 체크한 일정만 올린다.
+  const pastBlocks = blocks
     .filter((b) => b.start.getTime() <= now.getTime()) // 지나간 시간만
-    .filter((b) => !calendarId || b.calendar_id === calendarId)
+    .filter((b) => !calendarId || b.calendar_id === calendarId);
+  const doneKeys = await completedKeysFor(
+    userId,
+    pastBlocks.map((b) => completionKeyForBlock(b.id)),
+  );
+
+  const items = pastBlocks
+    .filter((b) => doneKeys.has(completionKeyForBlock(b.id)))
     .map((b) => {
       const post = postFor(b.id);
       const cal = calById.get(b.calendar_id);
@@ -158,7 +172,15 @@ export async function GET(request: Request) {
       }
     }
 
-    const followingItems = (rows ?? []).map((r) => {
+    // 남의 타임라인도 같은 규칙 — 그 사람이 완료 체크한 일정만 보여준다.
+    const donePairs = await completedPairsFor(
+      Array.from(new Set((rows ?? []).map((r) => r.user_id as string))),
+      (rows ?? []).map((r) => `local:${r.id as string}`),
+    );
+
+    const followingItems = (rows ?? [])
+      .filter((r) => donePairs.has(`${r.user_id as string}|local:${r.id as string}`))
+      .map((r) => {
       const cal = calMetaById.get(r.calendar_id as string);
       const person = peopleById.get(r.user_id as string);
       const photo = photoByEvent.get(r.id as string);

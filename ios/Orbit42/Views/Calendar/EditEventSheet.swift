@@ -161,9 +161,18 @@ struct EditEventSheet: View {
                     }
                 }
             }
-            .onChange(of: start) { _, newStart in
+            .onChange(of: start) { oldStart, newStart in
+                // 시작을 옮기면 종료도 같은 간격을 유지한 채 따라간다.
+                // (예전엔 뒤집힐 때만 보정해서, 09→14 로 옮기면 종료가 10:00 에
+                //  남아 매번 손으로 고쳐야 했다.)
+                let delta = newStart.timeIntervalSince(oldStart)
+                if delta != 0 {
+                    end = end.addingTimeInterval(delta)
+                }
                 if end < newStart {
-                    end = allDay ? newStart : newStart.addingTimeInterval(3600)
+                    end = allDay
+                        ? newStart
+                        : newStart.addingTimeInterval(AppSettings.shared.eventDuration.seconds)
                 }
             }
             .interactiveDismissDisabled(isSaving)

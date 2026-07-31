@@ -44,6 +44,22 @@ enum WeekStart: Int, CaseIterable, Identifiable {
     }
 }
 
+
+/// 새 일정을 만들 때 기본으로 잡히는 길이.
+enum EventDuration: Int, CaseIterable, Identifiable {
+    case min5 = 5
+    case min10 = 10
+    case min15 = 15
+    case min30 = 30
+    case hour1 = 60
+
+    var id: Int { rawValue }
+
+    var seconds: TimeInterval { TimeInterval(rawValue * 60) }
+
+    var label: String { self == .hour1 ? "1시간" : "\(rawValue)분" }
+}
+
 /// 기기별 앱 설정. 서버와 동기화하지 않고 `UserDefaults` 에만 저장한다.
 @MainActor
 @Observable
@@ -51,6 +67,7 @@ final class AppSettings {
     static let shared = AppSettings()
 
     private static let weekStartKey = "weekStart"
+    private static let eventDurationKey = "eventDuration"
 
     /// 캘린더 주 시작 요일 — 기본값은 기기 설정 따름.
     /// 쓰기는 `setWeekStart(_:)` 로만 한다(파생 `calendar` 를 함께 갱신해야 해서).
@@ -60,6 +77,9 @@ final class AppSettings {
     /// 격자 렌더링마다 다시 만들지 않도록 저장해 둔다.
     private(set) var calendar: Calendar
 
+    /// 새 일정 기본 길이 — 기본값 1시간.
+    private(set) var eventDuration: EventDuration
+
     @ObservationIgnored private var foregroundObserver: NSObjectProtocol?
 
     private init() {
@@ -67,6 +87,10 @@ final class AppSettings {
             .flatMap(WeekStart.init(rawValue:)) ?? .system
         weekStart = stored
         calendar = Self.makeCalendar(firstWeekday: stored.resolvedFirstWeekday)
+        eventDuration =
+            EventDuration(
+                rawValue: UserDefaults.standard.integer(forKey: Self.eventDurationKey)
+            ) ?? .hour1
 
         // `.system` 인 동안 사용자가 기기 설정을 바꾸고 돌아올 수 있다.
         foregroundObserver = NotificationCenter.default.addObserver(
@@ -110,6 +134,11 @@ final class AppSettings {
         if resolved != calendar.firstWeekday {
             calendar = Self.makeCalendar(firstWeekday: resolved)
         }
+    }
+
+    func setEventDuration(_ value: EventDuration) {
+        eventDuration = value
+        UserDefaults.standard.set(value.rawValue, forKey: Self.eventDurationKey)
     }
 
     /// `.system` 일 때 기기 설정이 바뀌었으면 따라간다.
