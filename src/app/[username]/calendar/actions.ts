@@ -256,6 +256,141 @@ export async function deleteGoogleEvent(
   }
 }
 
+// ─── 참석자 · 받은 초대 ──────────────────────────────────────
+//
+// iOS 는 /api/v1/... 을 쓰지만 그쪽은 베어러 토큰 전용이라 쿠키 세션인 웹에서는
+// 못 부른다. 웹은 같은 lib 함수를 서버 액션으로 감싸 쓴다.
+
+export type ParticipantView = {
+  id: string;
+  status: string;
+  username: string | null;
+  displayName: string | null;
+  avatarUrl: string | null;
+  email: string | null;
+};
+
+export type InviteView = {
+  id: string;
+  title: string;
+  start_at: string;
+  end_at: string;
+  all_day: boolean;
+  status: "invited" | "accepted";
+  inviterUsername: string | null;
+  inviterName: string | null;
+  inviterAvatar: string | null;
+};
+
+export type PersonSuggestion = {
+  username: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+};
+
+type EventSnapshotInput = {
+  title: string;
+  startAt: string;
+  endAt: string | null;
+  allDay: boolean;
+};
+
+function snapshotOf(s: EventSnapshotInput) {
+  return {
+    title: s.title.slice(0, 200),
+    start_at: s.startAt,
+    end_at: s.endAt,
+    all_day: s.allDay,
+  };
+}
+
+export async function listEventParticipants(
+  eventKey: string,
+): Promise<ParticipantView[]> {
+  const userId = await requireUserId();
+  const { listParticipants } = await import("@/lib/event-participants");
+  return listParticipants(userId, eventKey);
+}
+
+export async function addEventParticipant(
+  eventKey: string,
+  snapshot: EventSnapshotInput,
+  target: { username?: string; email?: string },
+): Promise<{ participants: ParticipantView[] } | { error: string }> {
+  const userId = await requireUserId();
+  const {
+    addParticipantByUsername,
+    addParticipantByEmail,
+    listParticipants,
+  } = await import("@/lib/event-participants");
+  const snap = snapshotOf(snapshot);
+  const result = target.username
+    ? await addParticipantByUsername(userId, eventKey, snap, target.username)
+    : target.email
+      ? await addParticipantByEmail(userId, eventKey, snap, target.email)
+      : { error: "초대할 사람을 선택해주세요." };
+  if ("error" in result) return { error: result.error };
+  return { participants: await listParticipants(userId, eventKey) };
+}
+
+export async function removeEventParticipant(
+  eventKey: string,
+  participantRowId: string,
+): Promise<{ participants: ParticipantView[] } | { error: string }> {
+  const userId = await requireUserId();
+  const { removeParticipant, listParticipants } = await import(
+    "@/lib/event-participants"
+  );
+  const result = await removeParticipant(userId, eventKey, participantRowId);
+  if ("error" in result) return { error: result.error };
+  return { participants: await listParticipants(userId, eventKey) };
+}
+
+/** 참석자 검색 — 통합 검색의 사람 결과에서 나 자신만 뺀다. */
+export async function searchPeopleToInvite(
+  q: string,
+): Promise<PersonSuggestion[]> {
+  const query = q.trim();
+  if (query.length < 1) return [];
+  const { getSession } = await import("@/lib/auth");
+  const [session, { searchAll }] = await Promise.all([
+    getSession(),
+    import("@/lib/search"),
+  ]);
+  const { users } = await searchAll(query);
+  return users
+    .filter((u) => u.username !== session?.username)
+    .slice(0, 6)
+    .map((u) => ({
+      username: u.username,
+      displayName: u.display_name,
+      avatarUrl: u.avatar_url,
+    }));
+}
+
+/** 내가 초대받은 일정 (거절 제외) — 캘린더에 겹쳐 그린다. */
+export async function getMyInvites(
+  rangeStartIso: string,
+  rangeEndIso: string,
+): Promise<InviteView[]> {
+  const userId = await requireUserId();
+  const { listMyInvites } = await import("@/lib/event-participants");
+  return listMyInvites(
+    userId,
+    new Date(rangeStartIso),
+    new Date(rangeEndIso),
+  );
+}
+
+export async function respondToEventInvite(
+  participationId: string,
+  status: "accepted" | "declined",
+): Promise<{ ok: true } | { error: string }> {
+  const userId = await requireUserId();
+  const { respondToInvite } = await import("@/lib/event-participants");
+  return respondToInvite(userId, participationId, status);
+}
+
 export async function fetchWeekDays(
   username: string,
   weekStartIso: string,

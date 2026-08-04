@@ -4,6 +4,7 @@ export const NOTIFICATION_TYPES = [
   { key: "booking_confirmed", label: "예약 확정" },
   { key: "booking_canceled", label: "예약 취소" },
   { key: "booking_reminder", label: "예약 리마인더 (24시간 전)" },
+  { key: "event_invite", label: "일정 초대" },
   { key: "new_follower", label: "새 팔로워" },
   { key: "comment_received", label: "댓글" },
   { key: "reply_received", label: "답글" },

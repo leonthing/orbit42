@@ -86,7 +86,7 @@ export async function addParticipantByUsername(
   const db = getAdminClient();
   const { data: target } = await db
     .from("users")
-    .select("id, username")
+    .select("id, username, email, email_verified")
     .eq("username", username.trim().toLowerCase())
     .maybeSingle();
   if (!target) return { error: "사용자를 찾을 수 없어요." };
@@ -131,6 +131,26 @@ export async function addParticipantByUsername(
     link: `/${owner?.username}`,
     actorId: ownerId,
   });
+
+  // 이메일: 인증된 주소가 있고 알림 설정이 켜져 있을 때만.
+  try {
+    const { emailAllowed } = await import("@/lib/notification-prefs");
+    if (
+      target.email &&
+      target.email_verified &&
+      (await emailAllowed(target.id as string, "event_invite"))
+    ) {
+      const { sendEventParticipantEmail } = await import("@/lib/email");
+      await sendEventParticipantEmail(target.email as string, {
+        inviterName: label,
+        eventTitle: snapshot.title,
+        when: whenText(snapshot),
+        recipientUsername: (target.username as string) ?? null,
+      });
+    }
+  } catch (err) {
+    console.error("event_invite email", err);
+  }
   return { ok: true };
 }
 
@@ -270,7 +290,7 @@ export async function listMyInvites(
   const { data } = await db
     .from("event_participants")
     .select(
-      "id, title, start_at, end_at, all_day, status, owner:users!event_participants_owner_id_fkey(username, display_name)",
+      "id, title, start_at, end_at, all_day, status, owner:users!event_participants_owner_id_fkey(username, display_name, avatar_url)",
     )
     .eq("participant_id", userId)
     .neq("status", "declined")
@@ -280,6 +300,7 @@ export async function listMyInvites(
     const owner = row.owner as unknown as {
       username: string;
       display_name: string | null;
+      avatar_url: string | null;
     } | null;
     return {
       id: row.id as string,
@@ -290,6 +311,7 @@ export async function listMyInvites(
       status: row.status as "invited" | "accepted",
       inviterUsername: owner?.username ?? null,
       inviterName: owner?.display_name ?? owner?.username ?? null,
+      inviterAvatar: owner?.avatar_url ?? null,
     };
   });
 }

@@ -2,12 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useToast } from "@/components/Toast";
+import { toEventKey } from "@/lib/event-key";
 
 /**
  * 일정의 자산·기록 부가 정보 — iOS 일정 상세와 같은 구성.
  * 자산 분류(수입/투자/소비/생활) · 수익 기록 · 사진 기록.
  *
- * 이벤트 키는 앱과 같은 형식으로 정규화한다:
+ * 이벤트 키는 앱과 같은 형식으로 정규화한다 (`toEventKey`):
  *   주간 뷰 native:<uuid> → <uuid>, <구글캘린더>::<id> → gcal_<id>
  */
 const BUCKETS = [
@@ -16,13 +17,6 @@ const BUCKETS = [
   { key: "spend", label: "소비", color: "#f59e0b" },
   { key: "life", label: "생활", color: "#64748b" },
 ] as const;
-
-function normalizeEventId(raw: string) {
-  if (raw.startsWith("native:")) return raw.slice("native:".length);
-  const sep = raw.indexOf("::");
-  if (sep >= 0) return `gcal_${raw.slice(sep + 2)}`;
-  return raw;
-}
 
 export function EventAssetPanel({
   eventId,
@@ -38,7 +32,7 @@ export function EventAssetPanel({
   allDay: boolean;
 }) {
   const toast = useToast();
-  const id = normalizeEventId(eventId);
+  const id = toEventKey(eventId);
   const [bucket, setBucket] = useState<string | null>(null);
   const [earning, setEarning] = useState<number | null>(null);
   const [images, setImages] = useState<string[]>([]);

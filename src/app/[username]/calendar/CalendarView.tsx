@@ -1,15 +1,18 @@
 "use client";
 
 import { EventAssetPanel } from "./EventAssetPanel";
+import { EventParticipantsPanel } from "./EventParticipantsPanel";
 import { useState, useTransition, useCallback, useMemo, useEffect, useRef } from "react";
 import {
   getCompletedKeys,
   toggleEventCompletion,
 } from "@/lib/event-completions";
 import { normalizeEventKey } from "@/lib/event-key";
+import { Avatar } from "@/components/Avatar";
 import {
   type Event,
   type EventInput,
+  type InviteView,
   getEvents,
   createEvent,
   updateEvent,
@@ -17,6 +20,8 @@ import {
   updateGoogleEvent,
   deleteGoogleEvent,
   fetchWeekDays,
+  getMyInvites,
+  respondToEventInvite,
 } from "./actions";
 import LifeCalendarViewExternal from "./LifeCalendarView";
 import type { LifeMemory } from "./life-actions";
@@ -26,6 +31,32 @@ import type { Calendar } from "@/lib/calendars-types";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
 import { useRouter, useSearchParams } from "next/navigation";
+
+/** 초대받은 일정은 내 이벤트가 아니라 `invite:<참석행 id>` 로 구분한다. */
+const INVITE_PREFIX = "invite:";
+const INVITE_COLOR = "#a855f7";
+
+function isSameDay(a: Date, b: Date) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+function inviteToWeekItem(inv: InviteView): WeekItem {
+  return {
+    kind: "event",
+    id: `${INVITE_PREFIX}${inv.id}`,
+    start_at: inv.start_at,
+    end_at: inv.end_at,
+    all_day: inv.all_day,
+    title: inv.title,
+    color: INVITE_COLOR,
+    // 아직 수락하지 않은 초대는 점선으로 — 확정 대기 예약과 같은 표현.
+    tentative: inv.status === "invited",
+  };
+}
 
 /** Parse a WeekItem event id back into its source+ids. */
 function parseWeekItemId(
@@ -201,6 +232,58 @@ export default function CalendarView({
   const [viewMode, setViewMode] = useState<ViewMode>("week");
   const [quarter, setQuarter] = useState(getQuarterForMonth(initialMonth));
   const [weekDays, setWeekDays] = useState<WeekDay[]>(initialWeekDays);
+  const [invites, setInvites] = useState<InviteView[]>([]);
+
+  // 받은 초대는 내 캘린더에서만 의미가 있다. 주간 뷰가 달 경계를 넘나들어서
+  // 보이는 달 앞뒤로 일주일씩 넉넉히 받아 둔다.
+  useEffect(() => {
+    if (!viewerIsOwner) return;
+    const start = new Date(year, month, 1);
+    start.setDate(start.getDate() - 7);
+    const end = new Date(year, month + 1, 0, 23, 59, 59);
+    end.setDate(end.getDate() + 7);
+    let cancelled = false;
+    getMyInvites(start.toISOString(), end.toISOString())
+      .then((rows) => {
+        if (!cancelled) setInvites(rows);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [year, month, viewerIsOwner]);
+
+  const invitesForDay = useCallback(
+    (y: number, m: number, day: number) =>
+      invites.filter((inv) =>
+        isSameDay(new Date(inv.start_at), new Date(y, m, day)),
+      ),
+    [invites],
+  );
+
+  const pendingInvites = useMemo(
+    () => invites.filter((inv) => inv.status === "invited"),
+    [invites],
+  );
+
+  const respondToInvite = useCallback(
+    async (inviteId: string, status: "accepted" | "declined") => {
+      const res = await respondToEventInvite(inviteId, status);
+      if ("error" in res) {
+        toast.error(res.error);
+        return;
+      }
+      if (status === "declined") {
+        setInvites((prev) => prev.filter((i) => i.id !== inviteId));
+      } else {
+        setInvites((prev) =>
+          prev.map((i) => (i.id === inviteId ? { ...i, status } : i)),
+        );
+      }
+      toast.success(status === "accepted" ? "초대를 수락했어요" : "초대를 거절했어요");
+    },
+    [toast],
+  );
 
   // Load completion marks whenever visible events change. We pull keys
   // from BOTH the month events and the week-day items so checkboxes
@@ -229,6 +312,8 @@ export default function CalendarView({
   }, [events, weekDays]);
 
   const handleToggleComplete = useCallback(async (eventId: string) => {
+    // 남의 일정에 초대받은 것 — 완료 표시는 일정 주인의 몫이다.
+    if (eventId.startsWith(INVITE_PREFIX)) return;
     const key = normalizeEventKey(eventId);
     const isDone = completed.has(key);
     // Optimistic update.
@@ -470,6 +555,9 @@ export default function CalendarView({
   const eventsForCurrentDay = (day: number) => eventsForDay(year, month, day);
 
   const selectedDayEvents = selectedDay ? eventsForCurrentDay(selectedDay) : [];
+  const selectedDayInvites = selectedDay
+    ? invitesForDay(year, month, selectedDay)
+    : [];
 
   // Calendar color lookup: prefer the user's calendar color, fall back to
   // a source-based default (red for local, blue for google).
@@ -663,16 +751,23 @@ export default function CalendarView({
   // 내 캘린더에서는 내가 열어 둔 빈 슬롯을 그리지 않는다. 시간 단위로 쪼개져
   // 실제 일정을 덮어버려서 정작 봐야 할 게 안 보인다. 남의 캘린더에서는
   // "예약 가능한 시간"이 이 화면의 존재 이유라 그대로 보여준다.
-  const displayWeekDays = useMemo(
-    () =>
-      viewerIsOwner
-        ? weekDays.map((d) => ({
-            ...d,
-            items: d.items.filter((i) => i.kind !== "slot"),
-          }))
-        : weekDays,
-    [weekDays, viewerIsOwner],
-  );
+  const displayWeekDays = useMemo(() => {
+    const base = viewerIsOwner
+      ? weekDays.map((d) => ({
+          ...d,
+          items: d.items.filter((i) => i.kind !== "slot"),
+        }))
+      : weekDays;
+    if (!viewerIsOwner || invites.length === 0) return base;
+    // 받은 초대를 같은 격자에 겹쳐 그린다 — 내 일정과 나란히 봐야 겹치는지 안다.
+    return base.map((d) => {
+      const dayInvites = invites.filter((inv) =>
+        isSameDay(new Date(inv.start_at), new Date(d.date)),
+      );
+      if (dayInvites.length === 0) return d;
+      return { ...d, items: [...d.items, ...dayInvites.map(inviteToWeekItem)] };
+    });
+  }, [weekDays, viewerIsOwner, invites]);
 
   // 날짜 이동 — 예전엔 툴바 아래 별도 줄이었다. 한 줄로 합쳐 캘린더에 높이를 넘긴다.
   const dateNav = (
@@ -844,6 +939,63 @@ export default function CalendarView({
       {/* Mobile-only tabs row — desktop renders them inline in the header */}
       <div className="sm:hidden">{viewTabs}</div>
 
+      {/* 아직 답하지 않은 초대 — 캘린더에도 점선으로 뜨지만, 답을 기다리는
+          일은 눈에 먼저 걸려야 한다. */}
+      {viewerIsOwner && pendingInvites.length > 0 && viewMode !== "life" && (
+        <div className="rounded-xl border border-purple-500/30 bg-purple-500/[0.06] p-3">
+          <p className="mb-2 text-xs font-medium text-purple-300">
+            받은 초대 {pendingInvites.length}건
+          </p>
+          <ul className="space-y-1.5">
+            {pendingInvites.map((inv) => (
+              <li
+                key={inv.id}
+                className="flex flex-wrap items-center gap-2 rounded-lg bg-charcoal-900/40 px-2.5 py-2"
+              >
+                <Avatar
+                  url={inv.inviterAvatar}
+                  name={inv.inviterName || "초대"}
+                  size={24}
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs text-charcoal-200">
+                    {inv.title}
+                  </p>
+                  <p className="truncate text-2xs text-charcoal-500">
+                    {inv.inviterName ?? "누군가"}님 ·{" "}
+                    {new Date(inv.start_at).toLocaleString("ko-KR", {
+                      month: "long",
+                      day: "numeric",
+                      weekday: "short",
+                      ...(inv.all_day
+                        ? {}
+                        : { hour: "2-digit", minute: "2-digit", hour12: false }),
+                    })}
+                    {inv.all_day ? " (종일)" : ""}
+                  </p>
+                </div>
+                <div className="flex shrink-0 gap-1">
+                  <button
+                    type="button"
+                    onClick={() => respondToInvite(inv.id, "accepted")}
+                    className="rounded-lg bg-navy-500 px-2.5 py-1 text-2xs font-medium text-white hover:bg-navy-400"
+                  >
+                    수락
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => respondToInvite(inv.id, "declined")}
+                    className="rounded-lg border border-charcoal-700 px-2.5 py-1 text-2xs text-charcoal-400 hover:border-charcoal-600 hover:text-charcoal-200"
+                  >
+                    거절
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* Main content area */}
       {viewMode === "month" && (
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
@@ -870,6 +1022,7 @@ export default function CalendarView({
                 const isToday = isCurrentMonth && day === today.getDate();
                 const isSelected = day === selectedDay;
                 const dayEvents = day ? eventsForCurrentDay(day) : [];
+                const dayInvites = day ? invitesForDay(year, month, day) : [];
                 const colIdx = i % 7;
                 const isSaturday = colIdx === 5;
                 const isSunday = colIdx === 6;
@@ -936,7 +1089,7 @@ export default function CalendarView({
                           >
                             {day}
                           </span>
-                          {dayEvents.length > 0 && (
+                          {(dayEvents.length > 0 || dayInvites.length > 0) && (
                             <div className="mt-1 flex min-h-0 flex-1 flex-col gap-[2px] overflow-hidden">
                               {dayEvents.slice(0, 3).map((ev) => {
                                 const color = getEventColor(ev);
@@ -988,6 +1141,31 @@ export default function CalendarView({
                                   +{dayEvents.length - 3}
                                 </span>
                               )}
+                              {dayInvites.slice(0, 2).map((inv) => (
+                                <button
+                                  key={inv.id}
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDetailEvent(inviteToWeekItem(inv));
+                                  }}
+                                  title={`${inv.title} · ${inv.inviterName ?? "초대"}님의 초대`}
+                                  className={`flex min-w-0 items-center gap-1 truncate rounded-sm px-1 py-[1px] text-left text-2xs leading-tight hover:bg-charcoal-800/60 ${
+                                    inv.status === "invited"
+                                      ? "border border-dashed"
+                                      : ""
+                                  }`}
+                                  style={{
+                                    color: INVITE_COLOR,
+                                    borderColor:
+                                      inv.status === "invited"
+                                        ? INVITE_COLOR
+                                        : undefined,
+                                  }}
+                                >
+                                  <span className="truncate">{inv.title}</span>
+                                </button>
+                              ))}
                             </div>
                           )}
                         </>
@@ -1019,16 +1197,67 @@ export default function CalendarView({
                       + 추가
                     </button>
                   </div>
-                  {selectedDayEvents.length === 0 ? (
+                  {selectedDayEvents.length === 0 &&
+                  selectedDayInvites.length === 0 ? (
                     <p className="text-sm text-charcoal-600">일정이 없습니다</p>
                   ) : (
-                    <EventList
-                      events={selectedDayEvents}
-                      onEdit={openEditForm}
-                      onDelete={handleDelete}
-                      completed={completed}
-                      onToggleComplete={handleToggleComplete}
-                    />
+                    <>
+                      {selectedDayEvents.length > 0 && (
+                        <EventList
+                          events={selectedDayEvents}
+                          onEdit={openEditForm}
+                          onDelete={handleDelete}
+                          completed={completed}
+                          onToggleComplete={handleToggleComplete}
+                        />
+                      )}
+                      {selectedDayInvites.length > 0 && (
+                        <ul className="mt-3 space-y-2">
+                          {selectedDayInvites.map((inv) => (
+                            <li
+                              key={inv.id}
+                              className="rounded-lg border border-dashed border-purple-500/40 bg-purple-500/[0.06] p-3"
+                            >
+                              <p className="truncate text-sm font-medium text-charcoal-200">
+                                {inv.title}
+                              </p>
+                              <p className="mt-0.5 text-xs text-charcoal-500">
+                                {inv.all_day
+                                  ? "종일"
+                                  : `${formatTime(inv.start_at)} - ${formatTime(inv.end_at)}`}{" "}
+                                · {inv.inviterName ?? "누군가"}님의 초대
+                              </p>
+                              {inv.status === "invited" ? (
+                                <div className="mt-2 flex gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      respondToInvite(inv.id, "accepted")
+                                    }
+                                    className="rounded-lg bg-navy-500 px-2.5 py-1 text-2xs font-medium text-white hover:bg-navy-400"
+                                  >
+                                    수락
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      respondToInvite(inv.id, "declined")
+                                    }
+                                    className="rounded-lg border border-charcoal-700 px-2.5 py-1 text-2xs text-charcoal-400 hover:text-charcoal-200"
+                                  >
+                                    거절
+                                  </button>
+                                </div>
+                              ) : (
+                                <p className="mt-1 text-2xs text-green-400">
+                                  수락함
+                                </p>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </>
                   )}
                 </>
               ) : (
@@ -1061,6 +1290,17 @@ export default function CalendarView({
       {detailEvent && (
         <EventDetailModal
           item={detailEvent}
+          invite={
+            detailEvent.id.startsWith(INVITE_PREFIX)
+              ? (invites.find(
+                  (i) => `${INVITE_PREFIX}${i.id}` === detailEvent.id,
+                ) ?? null)
+              : null
+          }
+          onRespond={async (id, status) => {
+            await respondToInvite(id, status);
+            if (status === "declined") setDetailEvent(null);
+          }}
           isCompleted={completed.has(normalizeEventKey(detailEvent.id))}
           canToggleComplete={!!viewerIsOwner}
           onToggleComplete={() => handleToggleComplete(detailEvent.id)}
@@ -1171,7 +1411,7 @@ export default function CalendarView({
       {/* ── Create / Edit Modal ── */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-md rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-base))] p-6 shadow-2xl">
+          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-base))] p-6 shadow-2xl">
             <h3 className="mb-4 text-lg font-semibold text-charcoal-100">
               {editingEvent ? "일정 수정" : "새 일정"}
             </h3>
@@ -1327,6 +1567,17 @@ export default function CalendarView({
                     />
                   </div>
                 </div>
+              )}
+
+              {/* 참석자 — 저장된 일정에만. 새 일정은 저장 후 상세에서 추가한다. */}
+              {editingEvent && (
+                <EventParticipantsPanel
+                  eventId={editingEvent.id}
+                  title={editingEvent.title}
+                  startAt={editingEvent.start_at}
+                  endAt={editingEvent.end_at}
+                  allDay={editingEvent.all_day}
+                />
               )}
 
               {/* Actions */}
@@ -1910,6 +2161,8 @@ function QuarterView({
 
 function EventDetailModal({
   item,
+  invite,
+  onRespond,
   isCompleted,
   canToggleComplete,
   onToggleComplete,
@@ -1918,6 +2171,9 @@ function EventDetailModal({
   onClose,
 }: {
   item: WeekItem;
+  /** 내가 초대받은 일정일 때만 — 이 경우 수정·삭제 대신 수락/거절을 낸다. */
+  invite?: InviteView | null;
+  onRespond?: (id: string, status: "accepted" | "declined") => void;
   isCompleted: boolean;
   canToggleComplete: boolean;
   onToggleComplete: () => void;
@@ -1926,6 +2182,7 @@ function EventDetailModal({
   onClose: () => void;
 }) {
   if (item.kind !== "event") return null;
+  const isInvite = !!invite;
   // Week items identify native vs google by id prefix.
   // native: "native:<uuid>", google: "<gcal_id>::<event_id>"
   const isNative = item.id.startsWith("native:");
@@ -1947,7 +2204,7 @@ function EventDetailModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] p-5 shadow-2xl"
+        className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] p-5 shadow-2xl"
       >
         <div className="flex items-start gap-3">
           <span
@@ -1977,27 +2234,64 @@ function EventDetailModal({
                     },
                   )}`}
             </p>
-            {!isNative && canToggleComplete && (
-              <p className="mt-2 text-2xs text-charcoal-600">
-                Google 캘린더 일정 — 여기서 수정하면 Google 쪽에도 함께 반영돼요.
+            {isInvite ? (
+              <p className="mt-2 text-2xs text-purple-300">
+                {invite?.inviterName ?? "누군가"}님이 초대한 일정이에요.
+                {invite?.status === "accepted" ? " 수락함." : ""}
               </p>
+            ) : (
+              !isNative &&
+              canToggleComplete && (
+                <p className="mt-2 text-2xs text-charcoal-600">
+                  Google 캘린더 일정 — 여기서 수정하면 Google 쪽에도 함께 반영돼요.
+                </p>
+              )
             )}
           </div>
         </div>
 
-        {canToggleComplete && (
-          <EventAssetPanel
-            eventId={item.id}
-            title={item.title}
-            startAt={item.start_at}
-            endAt={item.end_at}
-            allDay={item.all_day}
-          />
+        {canToggleComplete && !isInvite && (
+          <>
+            <EventAssetPanel
+              eventId={item.id}
+              title={item.title}
+              startAt={item.start_at}
+              endAt={item.end_at}
+              allDay={item.all_day}
+            />
+            <EventParticipantsPanel
+              eventId={item.id}
+              title={item.title}
+              startAt={item.start_at}
+              endAt={item.end_at}
+              allDay={item.all_day}
+            />
+          </>
         )}
 
         <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
-            {canToggleComplete && (
+            {isInvite && invite && (
+              <>
+                {invite.status === "invited" && (
+                  <button
+                    type="button"
+                    onClick={() => onRespond?.(invite.id, "accepted")}
+                    className="rounded-lg bg-navy-500 px-3 py-2 text-sm font-medium text-white hover:bg-navy-400"
+                  >
+                    수락
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => onRespond?.(invite.id, "declined")}
+                  className="rounded-lg border border-charcoal-700 px-3 py-2 text-sm text-charcoal-300 hover:border-charcoal-600 hover:bg-charcoal-800/60"
+                >
+                  거절
+                </button>
+              </>
+            )}
+            {!isInvite && canToggleComplete && (
               <button
                 type="button"
                 onClick={onToggleComplete}
@@ -2010,7 +2304,7 @@ function EventDetailModal({
                 {isCompleted ? "완료 취소" : "완료로 표시"}
               </button>
             )}
-            {canToggleComplete && onEdit && (
+            {!isInvite && canToggleComplete && onEdit && (
               <button
                 type="button"
                 onClick={onEdit}
@@ -2019,7 +2313,7 @@ function EventDetailModal({
                 수정
               </button>
             )}
-            {canToggleComplete && onDelete && (
+            {!isInvite && canToggleComplete && onDelete && (
               <button
                 type="button"
                 onClick={onDelete}

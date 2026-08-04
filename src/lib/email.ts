@@ -386,6 +386,7 @@ export async function sendPasswordResetEmail(to: string, token: string) {
   return send(to, "[Orbit42] 비밀번호 재설정", html);
 }
 
+/** 아직 가입하지 않은 사람에게 — 가입 유도 링크. */
 export async function sendEventInviteEmail(
   to: string,
   args: {
@@ -395,20 +396,28 @@ export async function sendEventInviteEmail(
     refUsername: string;
   },
 ) {
-  const url = siteUrl(`/signup?ref=${encodeURIComponent(args.refUsername)}`);
-  const html = renderEmail({
-    eyebrow: "일정 초대",
-    heading: `${escapeHtml(args.inviterName)}님이 일정에 초대했어요`,
-    preheader: `${args.eventTitle} · ${args.when}`,
-    bodyHtml:
-      detailCard(escapeHtml(args.eventTitle), [
-        { label: "일시", value: escapeHtml(args.when), strong: true },
-        { label: "보낸 사람", value: escapeHtml(args.inviterName) },
-      ]) +
-      emailButton("Orbit42에서 확인하기", url) +
-      mutedNote(
-        "Orbit42는 시간을 자산으로 만드는 캘린더예요. 가입하면 초대한 사람과 자동으로 연결돼요.",
-      ),
-  });
-  return send(to, `[Orbit42] 일정 초대: ${args.eventTitle}`, html);
+  const { eventInviteBody, eventInviteSubject } = await import(
+    "@/lib/email-templates"
+  );
+  return send(to, eventInviteSubject(args.eventTitle), eventInviteBody(args));
+}
+
+/** 이미 가입한 참석자에게 — 수락/거절은 앱(알림)에서. */
+export async function sendEventParticipantEmail(
+  to: string,
+  args: {
+    inviterName: string;
+    eventTitle: string;
+    when: string;
+    recipientUsername: string | null;
+  },
+) {
+  const { eventParticipantBody, eventInviteSubject } = await import(
+    "@/lib/email-templates"
+  );
+  return send(
+    to,
+    eventInviteSubject(args.eventTitle),
+    eventParticipantBody(args),
+  );
 }

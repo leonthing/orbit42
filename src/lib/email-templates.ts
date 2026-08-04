@@ -4,7 +4,12 @@
  * the exact same markup. Uses the shared Orbit42 email shell.
  */
 
-import { renderEmail, emailButton, mutedNote } from "@/lib/email-layout";
+import {
+  renderEmail,
+  emailButton,
+  mutedNote,
+  detailCard,
+} from "@/lib/email-layout";
 
 const FONT =
   "-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Pretendard',Roboto,'Segoe UI',sans-serif";
@@ -101,5 +106,65 @@ export function inviteUsedBody(args: {
       `@${escapeHtml(args.inviteeUsername)} 프로필 열기`,
       url,
     ),
+  });
+}
+
+export function eventInviteSubject(eventTitle: string): string {
+  return `[Orbit42] 일정 초대: ${eventTitle}`;
+}
+
+/** 일정 초대 메일 공통 골격 — 가입자/미가입자가 CTA와 안내만 다르다. */
+function eventInviteShell(args: {
+  inviterName: string;
+  eventTitle: string;
+  when: string;
+  ctaLabel: string;
+  ctaUrl: string;
+  note: string;
+}): string {
+  return renderEmail({
+    eyebrow: "일정 초대",
+    heading: `${escapeHtml(args.inviterName)}님이 일정에 초대했어요`,
+    preheader: `${args.eventTitle} · ${args.when}`,
+    bodyHtml:
+      detailCard(escapeHtml(args.eventTitle), [
+        { label: "일시", value: escapeHtml(args.when), strong: true },
+        { label: "보낸 사람", value: escapeHtml(args.inviterName) },
+      ]) +
+      emailButton(args.ctaLabel, args.ctaUrl) +
+      mutedNote(args.note),
+  });
+}
+
+/** 아직 가입하지 않은 사람에게 — 가입하면 초대한 사람과 연결된다. */
+export function eventInviteBody(args: {
+  inviterName: string;
+  eventTitle: string;
+  when: string;
+  refUsername: string;
+}): string {
+  return eventInviteShell({
+    ...args,
+    ctaLabel: "Orbit42에서 확인하기",
+    ctaUrl: siteUrlFor(`/signup?ref=${encodeURIComponent(args.refUsername)}`),
+    note: "Orbit42는 시간을 자산으로 만드는 캘린더예요. 가입하면 초대한 사람과 자동으로 연결돼요.",
+  });
+}
+
+/** 이미 가입한 참석자에게 — 수락/거절은 앱에서. */
+export function eventParticipantBody(args: {
+  inviterName: string;
+  eventTitle: string;
+  when: string;
+  recipientUsername: string | null;
+}): string {
+  const settingsUrl = siteUrlFor(
+    args.recipientUsername ? `/${args.recipientUsername}/settings` : "/calendar",
+  );
+  return eventInviteShell({
+    ...args,
+    ctaLabel: "캘린더에서 수락하기",
+    ctaUrl: siteUrlFor("/calendar"),
+    note: `수락하면 내 캘린더에도 이 일정이 표시돼요. 초대 메일은 <a href="${settingsUrl}">설정</a>에서 끌 수 있어요.`,
   });
 }

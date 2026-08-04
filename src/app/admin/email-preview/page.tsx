@@ -6,6 +6,9 @@ import {
   welcomeSubject,
   inviteUsedBody,
   inviteUsedSubject,
+  eventInviteBody,
+  eventParticipantBody,
+  eventInviteSubject,
 } from "@/lib/email-templates";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +36,32 @@ const TEMPLATES: Record<
       label: "Invite used (초대한 사람에게)",
       subject: inviteUsedSubject(args.inviteeLabel),
       html: inviteUsedBody(args),
+    };
+  })(),
+  event_participant: (() => {
+    const args = {
+      inviterName: "Leo Kim",
+      eventTitle: "제품 기획 리뷰",
+      when: "8월 12일 화 오후 4:00",
+      recipientUsername: "leon",
+    };
+    return {
+      label: "Event invite (가입한 참석자)",
+      subject: eventInviteSubject(args.eventTitle),
+      html: eventParticipantBody(args),
+    };
+  })(),
+  event_invite: (() => {
+    const args = {
+      inviterName: "Leo Kim",
+      eventTitle: "제품 기획 리뷰",
+      when: "8월 12일 화 오후 4:00",
+      refUsername: "leokim5854",
+    };
+    return {
+      label: "Event invite (미가입 이메일)",
+      subject: eventInviteSubject(args.eventTitle),
+      html: eventInviteBody(args),
     };
   })(),
 };

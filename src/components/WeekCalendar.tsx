@@ -350,7 +350,12 @@ function ItemBlock({
   };
 
   if (item.kind === "event") {
-    const canToggle = !!(viewerIsOwner && onToggleComplete);
+    // `invite:` 는 내가 초대받은 남의 일정 — 완료 표시는 주인만 한다.
+    const canToggle = !!(
+      viewerIsOwner &&
+      onToggleComplete &&
+      !item.id.startsWith("invite:")
+    );
     const clickable = !!onEventClick;
     const tint = `color-mix(in srgb, ${item.color} 10%, transparent)`;
     const tintHover = `color-mix(in srgb, ${item.color} 16%, transparent)`;
