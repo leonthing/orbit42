@@ -1,13 +1,17 @@
 "use client";
 
 import { EventAssetPanel } from "./EventAssetPanel";
-import { EventParticipantsPanel } from "./EventParticipantsPanel";
+import {
+  EventParticipantsPanel,
+  PendingParticipantsPanel,
+  type PendingParticipant,
+} from "./EventParticipantsPanel";
 import { useState, useTransition, useCallback, useMemo, useEffect, useRef } from "react";
 import {
   getCompletedKeys,
   toggleEventCompletion,
 } from "@/lib/event-completions";
-import { normalizeEventKey } from "@/lib/event-key";
+import { normalizeEventKey, toEventKey } from "@/lib/event-key";
 import { Avatar } from "@/components/Avatar";
 import {
   type Event,
@@ -22,6 +26,7 @@ import {
   fetchWeekDays,
   getMyInvites,
   respondToEventInvite,
+  addEventParticipant,
 } from "./actions";
 import LifeCalendarViewExternal from "./LifeCalendarView";
 import type { LifeMemory } from "./life-actions";
@@ -217,6 +222,11 @@ export default function CalendarView({
   const [form, setForm] = useState<FormData>(() =>
     emptyForm(undefined, defaultCalendarId),
   );
+  // 새 일정은 event_key 가 없어 참석자를 바로 못 붙인다. 담아 뒀다가 저장
+  // 직후 초대한다 (iOS 새 일정 시트와 같은 방식).
+  const [pendingParticipants, setPendingParticipants] = useState<
+    PendingParticipant[]
+  >([]);
   const [isPending, startTransition] = useTransition();
   const [selectedCalendars, setSelectedCalendars] = useState<string[]>(() => {
     if (initialSelectedCalendars && initialSelectedCalendars.length > 0) {
@@ -586,6 +596,7 @@ export default function CalendarView({
       : toLocalDateStr(y, m, selectedDay ?? today.getDate());
     setEditingEvent(null);
     setForm(emptyForm(dateStr, defaultCalendarId));
+    setPendingParticipants([]);
     setShowForm(true);
   };
 
@@ -614,6 +625,7 @@ export default function CalendarView({
   const closeForm = () => {
     setShowForm(false);
     setEditingEvent(null);
+    setPendingParticipants([]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -658,7 +670,21 @@ export default function CalendarView({
           await updateEvent(editingEvent.id, input);
         }
       } else {
-        await createEvent(input);
+        const created = await createEvent(input);
+        const failed = await invitePending(created);
+        if (failed.length > 0) {
+          // 일정은 살아 있다. 저장된 일정 모드로 넘겨, 붙은 사람은 그대로 두고
+          // 실패한 사람만 다시 추가하게 한다.
+          const data = await getEvents(year, month, selectedCalendars);
+          setEvents(data);
+          router.refresh();
+          setEditingEvent(created);
+          setPendingParticipants([]);
+          toast.error(
+            `일정은 저장했지만 ${failed.length}명을 초대하지 못했어요. 아래에서 다시 추가해주세요.`,
+          );
+          return;
+        }
       }
       const data = await getEvents(year, month, selectedCalendars);
       setEvents(data);
@@ -666,6 +692,28 @@ export default function CalendarView({
       router.refresh();
       closeForm();
     });
+  };
+
+  /** 담아 둔 참석자를 새로 만든 일정에 초대하고, 실패한 사람만 돌려준다. */
+  const invitePending = async (created: Event) => {
+    if (pendingParticipants.length === 0) return [];
+    const snapshot = {
+      title: created.title,
+      startAt: created.start_at,
+      endAt: created.end_at,
+      allDay: created.all_day,
+    };
+    const failed: PendingParticipant[] = [];
+    for (const p of pendingParticipants) {
+      const res = await addEventParticipant(
+        // 구글 캘린더에 만든 일정은 `gcal_<id>` 로 돌아온다 — 참석자 키와 같은 형식.
+        toEventKey(created.id),
+        snapshot,
+        p.kind === "user" ? { username: p.username } : { email: p.email },
+      );
+      if ("error" in res) failed.push(p);
+    }
+    return failed;
   };
 
   const handleDelete = (eventId: string) => {
@@ -1569,14 +1617,19 @@ export default function CalendarView({
                 </div>
               )}
 
-              {/* 참석자 — 저장된 일정에만. 새 일정은 저장 후 상세에서 추가한다. */}
-              {editingEvent && (
+              {/* 참석자 — 저장된 일정은 바로 붙고, 새 일정은 담아 뒀다가 저장 직후 초대한다. */}
+              {editingEvent ? (
                 <EventParticipantsPanel
                   eventId={editingEvent.id}
                   title={editingEvent.title}
                   startAt={editingEvent.start_at}
                   endAt={editingEvent.end_at}
                   allDay={editingEvent.all_day}
+                />
+              ) : (
+                <PendingParticipantsPanel
+                  pending={pendingParticipants}
+                  onChange={setPendingParticipants}
                 />
               )}
 

@@ -49,6 +49,14 @@ struct AddEventSheet: View {
     @State private var locationLng: Double?
     @State private var travelMin: Int?
 
+    /// 참석자는 event_key 가 있어야 붙일 수 있어서, 저장 전에는 여기 담아 뒀다가
+    /// 일정이 만들어진 직후 초대를 보낸다.
+    @State private var pendingParticipants: [PendingParticipant] = []
+    @State private var showingAddParticipant = false
+    /// 일정은 저장됐는데 초대만 실패한 상태 — 다시 "저장" 을 눌러도 일정이
+    /// 두 번 만들어지지 않도록 붙잡아 둔다.
+    @State private var createdEvent: CalendarEvent?
+
     private var writableCalendars: [CalendarInfo] {
         freshCalendars ?? viewModel.calendars
     }
@@ -120,6 +128,8 @@ struct AddEventSheet: View {
                     travelMin: $travelMin
                 )
 
+                participantsSection
+
                 Section {
                     TextField("메모 (선택)", text: $memo, axis: .vertical)
                         .lineLimit(3...6)
@@ -173,7 +183,57 @@ struct AddEventSheet: View {
             }
             .interactiveDismissDisabled(isSaving)
             .task { await refreshCalendars() }
+            .sheet(isPresented: $showingAddParticipant) {
+                ParticipantAddSheet(mode: .collect($pendingParticipants))
+            }
         }
+    }
+
+    // MARK: - 참석자
+
+    private var participantsSection: some View {
+        Section {
+            ForEach(pendingParticipants) { pending in
+                HStack(spacing: 10) {
+                    DiscoverAvatar(
+                        url: pending.avatarURL,
+                        name: pending.label,
+                        size: 30
+                    )
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(pending.label)
+                            .font(.subheadline)
+                            .foregroundStyle(Theme.primaryText)
+                            .lineLimit(1)
+                        Text(pending.detail)
+                            .font(.caption)
+                            .foregroundStyle(Theme.secondaryText)
+                            .lineLimit(1)
+                    }
+                    Spacer()
+                }
+            }
+            .onDelete { offsets in
+                pendingParticipants.remove(atOffsets: offsets)
+            }
+
+            Button {
+                showingAddParticipant = true
+            } label: {
+                Label("참석자 추가", systemImage: "person.badge.plus")
+                    .foregroundStyle(Theme.accent)
+            }
+            .disabled(isSaving)
+        } header: {
+            Text("참석자")
+        } footer: {
+            Text(
+                pendingParticipants.isEmpty
+                    ? "orbit42 사용자를 태그하거나 이메일로 초대할 수 있어요."
+                    : "일정을 저장하면 \(pendingParticipants.count)명에게 초대가 나가요."
+            )
+        }
+        .listRowBackground(Theme.surface)
     }
 
     private func save() {
@@ -182,20 +242,35 @@ struct AddEventSheet: View {
         Task {
             defer { isSaving = false }
             do {
-                let trimmedMemo = memo.trimmingCharacters(in: .whitespacesAndNewlines)
-                try await viewModel.createEvent(
-                    title: title.trimmingCharacters(in: .whitespacesAndNewlines),
-                    memo: trimmedMemo.isEmpty ? nil : trimmedMemo,
-                    allDay: allDay,
-                    start: start,
-                    end: max(end, start),
-                    calendarId: selectedCalendarId,
-                    location: locationText.trimmingCharacters(in: .whitespaces).isEmpty
-                        ? nil : locationText.trimmingCharacters(in: .whitespaces),
-                    locationLat: locationLat,
-                    locationLng: locationLng,
-                    travelMin: travelMin
-                )
+                let event: CalendarEvent
+                if let createdEvent {
+                    // 일정은 이미 만들어졌고 초대만 남은 재시도.
+                    event = createdEvent
+                } else {
+                    let trimmedMemo = memo.trimmingCharacters(in: .whitespacesAndNewlines)
+                    event = try await viewModel.createEvent(
+                        title: title.trimmingCharacters(in: .whitespacesAndNewlines),
+                        memo: trimmedMemo.isEmpty ? nil : trimmedMemo,
+                        allDay: allDay,
+                        start: start,
+                        end: max(end, start),
+                        calendarId: selectedCalendarId,
+                        location: locationText.trimmingCharacters(in: .whitespaces).isEmpty
+                            ? nil : locationText.trimmingCharacters(in: .whitespaces),
+                        locationLat: locationLat,
+                        locationLng: locationLng,
+                        travelMin: travelMin
+                    )
+                    createdEvent = event
+                }
+
+                let failed = await invitePending(to: event)
+                guard failed.isEmpty else {
+                    // 일정은 살아 있다. 실패한 사람만 남겨 두고 다시 시도하게 한다.
+                    pendingParticipants = failed
+                    errorMessage = "일정은 저장했지만 \(failed.count)명을 초대하지 못했어요. 다시 시도해 주세요."
+                    return
+                }
                 dismiss()
             } catch let apiError as APIError {
                 errorMessage = apiError.errorDescription
@@ -203,6 +278,38 @@ struct AddEventSheet: View {
                 errorMessage = "일정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요."
             }
         }
+    }
+
+    /// 담아 둔 참석자를 순서대로 초대하고, 실패한 사람만 돌려준다.
+    private func invitePending(to event: CalendarEvent) async -> [PendingParticipant] {
+        guard !pendingParticipants.isEmpty else { return [] }
+        let snapshot = AddParticipantRequest(
+            username: nil,
+            email: nil,
+            title: event.title,
+            startAt: event.allDay
+                ? APIDateParser.encodeDateOnly(event.startAt)
+                : APIDateParser.encodeDateTime(event.startAt),
+            endAt: event.allDay
+                ? APIDateParser.encodeDateOnly(event.endAt)
+                : APIDateParser.encodeDateTime(event.endAt),
+            allDay: event.allDay
+        )
+        var failed: [PendingParticipant] = []
+        for pending in pendingParticipants {
+            var body = snapshot
+            body.username = pending.username
+            body.email = pending.email
+            do {
+                let _: ParticipantsResponse = try await APIClient.shared.post(
+                    "/api/v1/calendar/events/\(event.id)/participants",
+                    body: body
+                )
+            } catch {
+                failed.append(pending)
+            }
+        }
+        return failed
     }
 }
 

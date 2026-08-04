@@ -322,8 +322,7 @@ struct EventDetailSheet: View {
             }
             .sheet(isPresented: $showingAddParticipant) {
                 ParticipantAddSheet(
-                    eventId: event.id,
-                    snapshot: participantSnapshot
+                    mode: .attach(eventId: event.id, snapshot: participantSnapshot)
                 ) { updated in
                     participants = updated
                 }

@@ -1,12 +1,71 @@
 import SwiftUI
 
+/// 아직 서버에 붙이지 못한 참석자 — 새 일정은 저장 전이라 event_key 가 없다.
+/// 일정이 만들어진 직후 이 목록대로 초대를 보낸다.
+struct PendingParticipant: Identifiable, Equatable {
+    enum Target: Equatable {
+        case user(username: String, displayName: String?, avatarUrl: String?)
+        case email(String)
+    }
+
+    let target: Target
+
+    var id: String {
+        switch target {
+        case .user(let username, _, _): return "user:\(username)"
+        case .email(let email): return "email:\(email)"
+        }
+    }
+
+    var label: String {
+        switch target {
+        case .user(let username, let displayName, _):
+            if let displayName, !displayName.isEmpty { return displayName }
+            return "@\(username)"
+        case .email(let email):
+            return email
+        }
+    }
+
+    var detail: String {
+        switch target {
+        case .user(let username, _, _): return "@\(username)"
+        case .email: return "메일로 초대"
+        }
+    }
+
+    var avatarURL: URL? {
+        guard case .user(_, _, let avatarUrl) = target else { return nil }
+        return avatarUrl.flatMap(URL.init(string:))
+    }
+
+    var username: String? {
+        if case .user(let username, _, _) = target { return username }
+        return nil
+    }
+
+    var email: String? {
+        if case .email(let email) = target { return email }
+        return nil
+    }
+}
+
 /// 참석자 추가 — orbit42 사용자 검색 태그 또는 이메일 초대.
 /// 검색은 통합 검색 API(/api/v1/search)의 사람 결과를 쓴다.
 struct ParticipantAddSheet: View {
-    let eventId: String
-    let snapshot: (title: String, startAt: String, endAt: String?, allDay: Bool)
-    /// 추가 성공 시 최신 참석자 목록 전달.
-    let onUpdated: ([EventParticipant]) -> Void
+    /// 저장된 일정은 고르는 즉시 서버에 붙이고(attach), 아직 저장 전인 새 일정은
+    /// 목록에만 담아 뒀다가(collect) 일정이 만들어진 뒤 한꺼번에 초대한다.
+    enum Mode {
+        case attach(
+            eventId: String,
+            snapshot: (title: String, startAt: String, endAt: String?, allDay: Bool)
+        )
+        case collect(Binding<[PendingParticipant]>)
+    }
+
+    let mode: Mode
+    /// attach 모드에서 추가 성공 시 최신 참석자 목록 전달.
+    var onUpdated: ([EventParticipant]) -> Void = { _ in }
 
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
@@ -24,6 +83,11 @@ struct ParticipantAddSheet: View {
         trimmed.contains("@") && trimmed.contains(".")
     }
 
+    private var collected: Binding<[PendingParticipant]>? {
+        if case .collect(let binding) = mode { return binding }
+        return nil
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -39,7 +103,7 @@ struct ParticipantAddSheet: View {
                                 queryChanged()
                             }
                     } footer: {
-                        Text("가입자는 알림으로, 비가입자는 이메일로 초대돼요.")
+                        Text("가입자는 알림과 메일로, 비가입자는 초대 메일로 알려드려요.")
                     }
                     .listRowBackground(Theme.surface)
 
@@ -67,7 +131,7 @@ struct ParticipantAddSheet: View {
                         Section("사람") {
                             ForEach(results) { user in
                                 Button {
-                                    invite(username: user.username)
+                                    invite(user: user)
                                 } label: {
                                     HStack(spacing: 10) {
                                         DiscoverAvatar(
@@ -107,6 +171,41 @@ struct ParticipantAddSheet: View {
                         .listRowBackground(Theme.surface)
                     }
 
+                    // 담아 둔 참석자는 여기서도 보여 준다 — 여러 명을 연달아
+                    // 고르는 동안 누구를 담았는지 확인할 데가 있어야 한다.
+                    if let collected, !collected.wrappedValue.isEmpty {
+                        Section("담은 참석자") {
+                            ForEach(collected.wrappedValue) { pending in
+                                HStack(spacing: 10) {
+                                    DiscoverAvatar(
+                                        url: pending.avatarURL,
+                                        name: pending.label,
+                                        size: 30
+                                    )
+                                    VStack(alignment: .leading, spacing: 1) {
+                                        Text(pending.label)
+                                            .font(.subheadline)
+                                            .foregroundStyle(Theme.primaryText)
+                                            .lineLimit(1)
+                                        Text(pending.detail)
+                                            .font(.caption)
+                                            .foregroundStyle(Theme.secondaryText)
+                                            .lineLimit(1)
+                                    }
+                                    Spacer()
+                                    Button {
+                                        collected.wrappedValue.removeAll { $0.id == pending.id }
+                                    } label: {
+                                        Image(systemName: "minus.circle")
+                                            .foregroundStyle(Theme.secondaryText)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                        .listRowBackground(Theme.surface)
+                    }
+
                     if let errorMessage {
                         Section {
                             Text(errorMessage)
@@ -122,7 +221,7 @@ struct ParticipantAddSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("닫기") { dismiss() }
+                    Button(collected == nil ? "닫기" : "완료") { dismiss() }
                 }
             }
         }
@@ -157,10 +256,38 @@ struct ParticipantAddSheet: View {
 
     // MARK: - 초대
 
-    private func invite(username: String? = nil, email: String? = nil) {
-        let key = username ?? email ?? ""
-        guard submittingKey == nil else { return }
+    private func invite(user: SearchUser) {
+        add(
+            PendingParticipant(
+                target: .user(
+                    username: user.username,
+                    displayName: user.displayName,
+                    avatarUrl: user.avatarUrl
+                )
+            )
+        )
+    }
+
+    private func invite(email: String) {
+        add(PendingParticipant(target: .email(email)))
+    }
+
+    private func add(_ pending: PendingParticipant) {
         errorMessage = nil
+        if let collected {
+            guard !collected.wrappedValue.contains(where: { $0.id == pending.id }) else {
+                errorMessage = "이미 담은 사람이에요."
+                return
+            }
+            collected.wrappedValue.append(pending)
+            query = ""
+            results = []
+            return
+        }
+
+        guard case .attach(let eventId, let snapshot) = mode else { return }
+        let key = pending.username ?? pending.email ?? ""
+        guard submittingKey == nil else { return }
         submittingKey = key
         Task {
             defer { submittingKey = nil }
@@ -168,8 +295,8 @@ struct ParticipantAddSheet: View {
                 let response: ParticipantsResponse = try await APIClient.shared.post(
                     "/api/v1/calendar/events/\(eventId)/participants",
                     body: AddParticipantRequest(
-                        username: username,
-                        email: email,
+                        username: pending.username,
+                        email: pending.email,
                         title: snapshot.title,
                         startAt: snapshot.startAt,
                         endAt: snapshot.endAt,
@@ -177,7 +304,7 @@ struct ParticipantAddSheet: View {
                     )
                 )
                 onUpdated(response.participants)
-                if email != nil { query = "" }
+                if pending.email != nil { query = "" }
             } catch let apiError as APIError {
                 errorMessage = apiError.errorDescription
             } catch {

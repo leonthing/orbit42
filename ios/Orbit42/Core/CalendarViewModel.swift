@@ -168,6 +168,8 @@ final class CalendarViewModel {
     // MARK: - 이벤트 생성
 
     /// 이벤트를 생성하고, 성공하면 관련 월 캐시를 비운 뒤 시작일이 있는 달로 이동해 새로고침한다.
+    /// - Returns: 생성된 이벤트 — 참석자 초대처럼 event id 가 필요한 후속 작업용.
+    @discardableResult
     func createEvent(
         title: String,
         memo: String?,
@@ -179,7 +181,7 @@ final class CalendarViewModel {
         locationLat: Double? = nil,
         locationLng: Double? = nil,
         travelMin: Int? = nil
-    ) async throws {
+    ) async throws -> CalendarEvent {
         let body = CreateEventRequest(
             title: title,
             description: memo,
@@ -192,7 +194,10 @@ final class CalendarViewModel {
             locationLng: locationLng,
             travelMin: travelMin
         )
-        let _: CreateEventResponse = try await api.post("/api/v1/calendar/events", body: body)
+        let response: CreateEventResponse = try await api.post(
+            "/api/v1/calendar/events",
+            body: body
+        )
 
         // 이벤트가 걸친 달의 캐시를 무효화하고 시작일로 이동
         cache.removeValue(forKey: Self.key(for: start))
@@ -200,6 +205,7 @@ final class CalendarViewModel {
         selectedDate = Self.calendar.startOfDay(for: start)
         displayedMonth = Self.firstDayOfMonth(containing: start)
         await loadDisplayedMonth(force: true)
+        return response.event
     }
 
     // MARK: - 이벤트 수정/삭제
