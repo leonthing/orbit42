@@ -45,6 +45,8 @@ export async function POST(
     startAt?: string;
     endAt?: string | null;
     allDay?: boolean;
+    location?: string | null;
+    description?: string | null;
   };
   try {
     body = await request.json();
@@ -59,6 +61,11 @@ export async function POST(
     start_at: body.startAt,
     end_at: body.endAt ?? null,
     all_day: Boolean(body.allDay),
+    // 장소·메모는 저장하지 않고 초대 메일에만 실린다.
+    location: body.location ? String(body.location).slice(0, 200) : null,
+    description: body.description
+      ? String(body.description).slice(0, 1000)
+      : null,
   };
 
   const result = body.username

@@ -213,12 +213,17 @@ export function EventParticipantsPanel({
   startAt,
   endAt,
   allDay,
+  location = null,
+  description = null,
 }: {
   eventId: string;
   title: string;
   startAt: string;
   endAt: string | null;
   allDay: boolean;
+  /** 초대 메일에 함께 실린다 (저장은 하지 않는다). */
+  location?: string | null;
+  description?: string | null;
 }) {
   const toast = useToast();
   const key = toEventKey(eventId);
@@ -243,7 +248,7 @@ export function EventParticipantsPanel({
       try {
         const res = await addEventParticipant(
           key,
-          { title, startAt, endAt, allDay },
+          { title, startAt, endAt, allDay, location, description },
           { username: target.username, email: target.email },
         );
         if ("error" in res) {
@@ -256,7 +261,7 @@ export function EventParticipantsPanel({
         setBusyKey(null);
       }
     },
-    [key, title, startAt, endAt, allDay, toast],
+    [key, title, startAt, endAt, allDay, location, description, toast],
   );
 
   const remove = useCallback(

@@ -16,14 +16,22 @@ export type ParticipantRow = {
   start_at: string;
   end_at: string | null;
   all_day: boolean;
+  location: string | null;
+  description: string | null;
   status: "invited" | "accepted" | "declined";
 };
 
+/**
+ * 초대 시점의 일정 정보 — 상대 캘린더 표시용으로 행에 함께 저장하고,
+ * 초대 메일에도 같은 값을 싣는다.
+ */
 export type EventSnapshot = {
   title: string;
   start_at: string;
   end_at: string | null;
   all_day: boolean;
+  location?: string | null;
+  description?: string | null;
 };
 
 const KST_FMT: Intl.DateTimeFormatOptions = {
@@ -105,6 +113,8 @@ export async function addParticipantByUsername(
     start_at: snapshot.start_at,
     end_at: snapshot.end_at,
     all_day: snapshot.all_day,
+    location: snapshot.location ?? null,
+    description: snapshot.description ?? null,
   });
   if (error) {
     if (error.message.includes("duplicate")) {
@@ -145,6 +155,8 @@ export async function addParticipantByUsername(
         inviterName: label,
         eventTitle: snapshot.title,
         when: whenText(snapshot),
+        location: snapshot.location ?? null,
+        memo: snapshot.description ?? null,
         recipientUsername: (target.username as string) ?? null,
       });
     }
@@ -188,6 +200,8 @@ export async function addParticipantByEmail(
     start_at: snapshot.start_at,
     end_at: snapshot.end_at,
     all_day: snapshot.all_day,
+    location: snapshot.location ?? null,
+    description: snapshot.description ?? null,
   });
   if (error) {
     if (error.message.includes("duplicate")) {
@@ -210,6 +224,8 @@ export async function addParticipantByEmail(
       "Orbit42 사용자",
     eventTitle: snapshot.title,
     when: whenText(snapshot),
+    location: snapshot.location ?? null,
+    memo: snapshot.description ?? null,
     refUsername: (owner?.username as string) ?? "",
   });
   return { ok: true };
@@ -290,7 +306,7 @@ export async function listMyInvites(
   const { data } = await db
     .from("event_participants")
     .select(
-      "id, title, start_at, end_at, all_day, status, owner:users!event_participants_owner_id_fkey(username, display_name, avatar_url)",
+      "id, title, start_at, end_at, all_day, location, description, status, owner:users!event_participants_owner_id_fkey(username, display_name, avatar_url)",
     )
     .eq("participant_id", userId)
     .neq("status", "declined")
@@ -308,6 +324,8 @@ export async function listMyInvites(
       start_at: row.start_at as string,
       end_at: (row.end_at as string | null) ?? (row.start_at as string),
       all_day: Boolean(row.all_day),
+      location: (row.location as string | null) ?? null,
+      description: (row.description as string | null) ?? null,
       status: row.status as "invited" | "accepted",
       inviterUsername: owner?.username ?? null,
       inviterName: owner?.display_name ?? owner?.username ?? null,

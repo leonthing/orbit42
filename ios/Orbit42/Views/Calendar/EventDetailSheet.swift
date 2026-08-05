@@ -582,6 +582,17 @@ struct EventDetailSheet: View {
                         .font(.subheadline)
                         .foregroundStyle(Theme.secondaryText)
                 }
+                if let location = event.location, !location.isEmpty {
+                    Label {
+                        Text(location)
+                            .font(.subheadline)
+                            .foregroundStyle(Theme.secondaryText)
+                    } icon: {
+                        Image(systemName: "mappin.and.ellipse")
+                            .font(.subheadline)
+                            .foregroundStyle(Theme.secondaryText)
+                    }
+                }
                 if let inviter = event.inviterName {
                     Label {
                         Text("\(inviter)님의 초대")
@@ -597,6 +608,15 @@ struct EventDetailSheet: View {
             .padding(.vertical, 4)
         }
         .listRowBackground(Theme.surface)
+
+        if let description = event.description, !description.isEmpty {
+            Section("메모") {
+                Text(description)
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.primaryText.opacity(0.85))
+            }
+            .listRowBackground(Theme.surface)
+        }
 
         Section {
             if event.inviteStatus == "accepted" {
@@ -940,18 +960,9 @@ struct EventDetailSheet: View {
         // 닫히는 문제가 있어 최상위(NavigationStack)에 붙인다.
     }
 
-    /// 참석자 추가/시간 로그 공용 일정 스냅샷.
-    var participantSnapshot: (title: String, startAt: String, endAt: String?, allDay: Bool) {
-        (
-            title: event.title,
-            startAt: event.allDay
-                ? APIDateParser.encodeDateOnly(event.startAt)
-                : APIDateParser.encodeDateTime(event.startAt),
-            endAt: event.allDay
-                ? APIDateParser.encodeDateOnly(event.endAt)
-                : APIDateParser.encodeDateTime(event.endAt),
-            allDay: event.allDay
-        )
+    /// 참석자 초대에 함께 보내는 일정 스냅샷 (장소·메모 포함 — 초대 메일용).
+    var participantSnapshot: ParticipantEventSnapshot {
+        ParticipantEventSnapshot(event: event)
     }
 
     private func removeParticipant(_ participant: EventParticipant) {

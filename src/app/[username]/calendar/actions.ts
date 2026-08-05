@@ -23,6 +23,9 @@ export type Event = {
   calendar_id: string | null;
   source: "local" | "google";
   tentative: boolean;
+  /** 자유 텍스트 위치 — 서버가 늘 함께 내려준다. */
+  location?: string | null;
+  travel_min?: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -276,6 +279,8 @@ export type InviteView = {
   start_at: string;
   end_at: string;
   all_day: boolean;
+  location: string | null;
+  description: string | null;
   status: "invited" | "accepted";
   inviterUsername: string | null;
   inviterName: string | null;
@@ -293,6 +298,9 @@ type EventSnapshotInput = {
   startAt: string;
   endAt: string | null;
   allDay: boolean;
+  /** 장소·메모는 저장하지 않고 초대 메일에만 실린다. */
+  location?: string | null;
+  description?: string | null;
 };
 
 function snapshotOf(s: EventSnapshotInput) {
@@ -301,6 +309,8 @@ function snapshotOf(s: EventSnapshotInput) {
     start_at: s.startAt,
     end_at: s.endAt,
     all_day: s.allDay,
+    location: s.location ? s.location.slice(0, 200) : null,
+    description: s.description ? s.description.slice(0, 1000) : null,
   };
 }
 

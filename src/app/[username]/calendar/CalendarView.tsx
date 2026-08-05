@@ -616,8 +616,8 @@ export default function CalendarView({
         : `${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}`,
       allDay: event.all_day,
       calendarId: event.calendar_id ?? defaultCalendarId,
-      location: (event as { location?: string | null }).location ?? "",
-      travelMin: (event as { travel_min?: number | null }).travel_min ?? 0,
+      location: event.location ?? "",
+      travelMin: event.travel_min ?? 0,
     });
     setShowForm(true);
   };
@@ -702,6 +702,8 @@ export default function CalendarView({
       startAt: created.start_at,
       endAt: created.end_at,
       allDay: created.all_day,
+      location: created.location ?? null,
+      description: created.description ?? null,
     };
     const failed: PendingParticipant[] = [];
     for (const p of pendingParticipants) {
@@ -1349,6 +1351,13 @@ export default function CalendarView({
             await respondToInvite(id, status);
             if (status === "declined") setDetailEvent(null);
           }}
+          // 주간 아이템에는 장소·메모가 없다. 초대 메일에 실으려면 같은 달
+          // 이벤트 목록에서 원본을 찾아 넘긴다 (없으면 제목·시간만 나간다).
+          fullEvent={
+            events.find(
+              (e) => toEventKey(e.id) === toEventKey(detailEvent.id),
+            ) ?? null
+          }
           isCompleted={completed.has(normalizeEventKey(detailEvent.id))}
           canToggleComplete={!!viewerIsOwner}
           onToggleComplete={() => handleToggleComplete(detailEvent.id)}
@@ -1625,6 +1634,8 @@ export default function CalendarView({
                   startAt={editingEvent.start_at}
                   endAt={editingEvent.end_at}
                   allDay={editingEvent.all_day}
+                  location={editingEvent.location ?? null}
+                  description={editingEvent.description}
                 />
               ) : (
                 <PendingParticipantsPanel
@@ -2214,6 +2225,7 @@ function QuarterView({
 
 function EventDetailModal({
   item,
+  fullEvent,
   invite,
   onRespond,
   isCompleted,
@@ -2224,6 +2236,8 @@ function EventDetailModal({
   onClose,
 }: {
   item: WeekItem;
+  /** 같은 일정의 원본 — 장소·메모처럼 주간 아이템에 없는 값을 얻는 데 쓴다. */
+  fullEvent?: Event | null;
   /** 내가 초대받은 일정일 때만 — 이 경우 수정·삭제 대신 수락/거절을 낸다. */
   invite?: InviteView | null;
   onRespond?: (id: string, status: "accepted" | "declined") => void;
@@ -2288,10 +2302,17 @@ function EventDetailModal({
                   )}`}
             </p>
             {isInvite ? (
-              <p className="mt-2 text-2xs text-purple-300">
-                {invite?.inviterName ?? "누군가"}님이 초대한 일정이에요.
-                {invite?.status === "accepted" ? " 수락함." : ""}
-              </p>
+              <>
+                {invite?.location && (
+                  <p className="mt-1 text-xs text-charcoal-400">
+                    📍 {invite.location}
+                  </p>
+                )}
+                <p className="mt-2 text-2xs text-purple-300">
+                  {invite?.inviterName ?? "누군가"}님이 초대한 일정이에요.
+                  {invite?.status === "accepted" ? " 수락함." : ""}
+                </p>
+              </>
             ) : (
               !isNative &&
               canToggleComplete && (
@@ -2302,6 +2323,12 @@ function EventDetailModal({
             )}
           </div>
         </div>
+
+        {isInvite && invite?.description && (
+          <p className="mt-4 whitespace-pre-wrap rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 p-3 text-xs text-charcoal-300">
+            {invite.description}
+          </p>
+        )}
 
         {canToggleComplete && !isInvite && (
           <>
@@ -2318,6 +2345,8 @@ function EventDetailModal({
               startAt={item.start_at}
               endAt={item.end_at}
               allDay={item.all_day}
+              location={fullEvent?.location ?? null}
+              description={fullEvent?.description ?? null}
             />
           </>
         )}

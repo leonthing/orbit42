@@ -393,6 +393,8 @@ export async function sendEventInviteEmail(
     inviterName: string;
     eventTitle: string;
     when: string;
+    location?: string | null;
+    memo?: string | null;
     refUsername: string;
   },
 ) {
@@ -409,6 +411,8 @@ export async function sendEventParticipantEmail(
     inviterName: string;
     eventTitle: string;
     when: string;
+    location?: string | null;
+    memo?: string | null;
     recipientUsername: string | null;
   },
 ) {

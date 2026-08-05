@@ -9,6 +9,7 @@ import {
   emailButton,
   mutedNote,
   detailCard,
+  quoteBlock,
 } from "@/lib/email-layout";
 
 const FONT =
@@ -118,10 +119,13 @@ function eventInviteShell(args: {
   inviterName: string;
   eventTitle: string;
   when: string;
+  location?: string | null;
+  memo?: string | null;
   ctaLabel: string;
   ctaUrl: string;
   note: string;
 }): string {
+  const memo = args.memo?.trim();
   return renderEmail({
     eyebrow: "일정 초대",
     heading: `${escapeHtml(args.inviterName)}님이 일정에 초대했어요`,
@@ -129,8 +133,12 @@ function eventInviteShell(args: {
     bodyHtml:
       detailCard(escapeHtml(args.eventTitle), [
         { label: "일시", value: escapeHtml(args.when), strong: true },
+        // 값이 비면 detailCard 가 줄 자체를 걸러낸다.
+        { label: "장소", value: args.location ? escapeHtml(args.location) : "" },
         { label: "보낸 사람", value: escapeHtml(args.inviterName) },
       ]) +
+      // 메모는 여러 줄일 수 있어 카드 행이 아니라 인용 블록으로 (pre-wrap).
+      (memo ? quoteBlock(escapeHtml(memo)) : "") +
       emailButton(args.ctaLabel, args.ctaUrl) +
       mutedNote(args.note),
   });
@@ -141,6 +149,8 @@ export function eventInviteBody(args: {
   inviterName: string;
   eventTitle: string;
   when: string;
+  location?: string | null;
+  memo?: string | null;
   refUsername: string;
 }): string {
   return eventInviteShell({
@@ -156,6 +166,8 @@ export function eventParticipantBody(args: {
   inviterName: string;
   eventTitle: string;
   when: string;
+  location?: string | null;
+  memo?: string | null;
   recipientUsername: string | null;
 }): string {
   const settingsUrl = siteUrlFor(

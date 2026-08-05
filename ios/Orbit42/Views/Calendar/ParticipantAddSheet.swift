@@ -56,10 +56,7 @@ struct ParticipantAddSheet: View {
     /// 저장된 일정은 고르는 즉시 서버에 붙이고(attach), 아직 저장 전인 새 일정은
     /// 목록에만 담아 뒀다가(collect) 일정이 만들어진 뒤 한꺼번에 초대한다.
     enum Mode {
-        case attach(
-            eventId: String,
-            snapshot: (title: String, startAt: String, endAt: String?, allDay: Bool)
-        )
+        case attach(eventId: String, snapshot: ParticipantEventSnapshot)
         case collect(Binding<[PendingParticipant]>)
     }
 
@@ -294,13 +291,9 @@ struct ParticipantAddSheet: View {
             do {
                 let response: ParticipantsResponse = try await APIClient.shared.post(
                     "/api/v1/calendar/events/\(eventId)/participants",
-                    body: AddParticipantRequest(
+                    body: snapshot.request(
                         username: pending.username,
-                        email: pending.email,
-                        title: snapshot.title,
-                        startAt: snapshot.startAt,
-                        endAt: snapshot.endAt,
-                        allDay: snapshot.allDay
+                        email: pending.email
                     )
                 )
                 onUpdated(response.participants)

@@ -283,27 +283,17 @@ struct AddEventSheet: View {
     /// 담아 둔 참석자를 순서대로 초대하고, 실패한 사람만 돌려준다.
     private func invitePending(to event: CalendarEvent) async -> [PendingParticipant] {
         guard !pendingParticipants.isEmpty else { return [] }
-        let snapshot = AddParticipantRequest(
-            username: nil,
-            email: nil,
-            title: event.title,
-            startAt: event.allDay
-                ? APIDateParser.encodeDateOnly(event.startAt)
-                : APIDateParser.encodeDateTime(event.startAt),
-            endAt: event.allDay
-                ? APIDateParser.encodeDateOnly(event.endAt)
-                : APIDateParser.encodeDateTime(event.endAt),
-            allDay: event.allDay
-        )
+        // 장소·메모까지 담긴 스냅샷 — 초대 메일에 함께 나간다.
+        let snapshot = ParticipantEventSnapshot(event: event)
         var failed: [PendingParticipant] = []
         for pending in pendingParticipants {
-            var body = snapshot
-            body.username = pending.username
-            body.email = pending.email
             do {
                 let _: ParticipantsResponse = try await APIClient.shared.post(
                     "/api/v1/calendar/events/\(event.id)/participants",
-                    body: body
+                    body: snapshot.request(
+                        username: pending.username,
+                        email: pending.email
+                    )
                 )
             } catch {
                 failed.append(pending)

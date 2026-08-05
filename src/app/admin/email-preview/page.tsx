@@ -43,6 +43,8 @@ const TEMPLATES: Record<
       inviterName: "Leo Kim",
       eventTitle: "제품 기획 리뷰",
       when: "8월 12일 화 오후 4:00",
+      location: "성수동 카페 어니언 2층",
+      memo: "지난번 정리한 로드맵 초안 리뷰합니다.\n노트북 챙겨오세요.",
       recipientUsername: "leon",
     };
     return {
@@ -56,6 +58,8 @@ const TEMPLATES: Record<
       inviterName: "Leo Kim",
       eventTitle: "제품 기획 리뷰",
       when: "8월 12일 화 오후 4:00",
+      location: "성수동 카페 어니언 2층",
+      memo: "지난번 정리한 로드맵 초안 리뷰합니다.\n노트북 챙겨오세요.",
       refUsername: "leokim5854",
     };
     return {

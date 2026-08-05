@@ -337,6 +337,7 @@ struct ParticipantsResponse: Decodable, Sendable {
 }
 
 /// POST — username 또는 email 중 하나 + 일정 스냅샷.
+/// location/description 은 저장되지 않고 초대 메일에만 실린다.
 struct AddParticipantRequest: Encodable {
     var username: String?
     var email: String?
@@ -344,6 +345,50 @@ struct AddParticipantRequest: Encodable {
     let startAt: String
     let endAt: String?
     let allDay: Bool
+    var location: String?
+    var description: String?
+}
+
+/// 참석자를 초대할 때 함께 보내는 일정 정보.
+struct ParticipantEventSnapshot {
+    let title: String
+    let startAt: String
+    let endAt: String?
+    let allDay: Bool
+    var location: String?
+    var description: String?
+
+    /// 초대 대상만 채워 넣으면 되는 요청 본문.
+    func request(username: String?, email: String?) -> AddParticipantRequest {
+        AddParticipantRequest(
+            username: username,
+            email: email,
+            title: title,
+            startAt: startAt,
+            endAt: endAt,
+            allDay: allDay,
+            location: location,
+            description: description
+        )
+    }
+}
+
+extension ParticipantEventSnapshot {
+    /// 저장된 일정에서 그대로 뽑아 쓴다.
+    init(event: CalendarEvent) {
+        self.init(
+            title: event.title,
+            startAt: event.allDay
+                ? APIDateParser.encodeDateOnly(event.startAt)
+                : APIDateParser.encodeDateTime(event.startAt),
+            endAt: event.allDay
+                ? APIDateParser.encodeDateOnly(event.endAt)
+                : APIDateParser.encodeDateTime(event.endAt),
+            allDay: event.allDay,
+            location: event.location,
+            description: event.description
+        )
+    }
 }
 
 // MARK: - Hex 색상

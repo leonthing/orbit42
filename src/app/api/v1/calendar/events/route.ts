@@ -127,10 +127,11 @@ export async function GET(request: Request) {
       ...invites.map((inv) => ({
         id: `invite_${inv.id}`,
         title: inv.title,
-        description: null,
+        description: inv.description,
         startAt: inv.start_at,
         endAt: inv.end_at,
         allDay: inv.all_day,
+        location: inv.location,
         calendarId: null,
         source: "invite",
         tentative: inv.status === "invited",
