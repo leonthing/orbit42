@@ -10,6 +10,7 @@ import {
   refreshBookableOptions,
   proposeRescheduleAsHost,
   respondToReschedule,
+  withdrawReschedule,
 } from "@/lib/slots";
 import type { BookingRow, GuestBookingRow, BookableOption } from "@/lib/slots";
 import { addBookingReview } from "@/lib/reviews";
@@ -693,6 +694,18 @@ function RescheduleBanner({
     });
   };
 
+  const withdraw = () => {
+    startSaving(async () => {
+      const res = await withdrawReschedule(booking.id);
+      if ("error" in res) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success("제안을 취소했어요.");
+      router.refresh();
+    });
+  };
+
   return (
     <div className="mt-2 rounded-lg border border-navy-400/40 bg-navy-400/10 px-3 py-2">
       <p className="text-2xs font-semibold text-navy-600 dark:text-navy-200">
@@ -713,9 +726,19 @@ function RescheduleBanner({
         </p>
       )}
       {mine ? (
-        <p className="mt-1 text-2xs text-charcoal-500">
-          상대가 수락하면 예약과 캘린더가 함께 옮겨져요.
-        </p>
+        <>
+          <p className="mt-1 text-2xs text-charcoal-500">
+            상대가 수락하면 예약과 캘린더가 함께 옮겨져요.
+          </p>
+          <button
+            type="button"
+            onClick={withdraw}
+            disabled={saving}
+            className="mt-2 rounded-lg border border-charcoal-700 px-3 py-1 text-xs text-charcoal-400 hover:border-navy-400/60 hover:text-navy-400 disabled:opacity-60"
+          >
+            제안 취소
+          </button>
+        </>
       ) : (
         <div className="mt-2 flex gap-2">
           <button

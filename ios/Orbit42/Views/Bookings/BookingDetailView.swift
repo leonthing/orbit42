@@ -196,19 +196,26 @@ struct BookingDetailView: View {
                 Text("상대가 수락하면 예약과 캘린더가 함께 옮겨져요.")
                     .font(.caption)
                     .foregroundStyle(Theme.secondaryText)
+                actionButton("제안 취소", prominent: false) {
+                    Task {
+                        await viewModel.respondToReschedule(
+                            bookingId: bookingId, action: .withdraw
+                        )
+                    }
+                }
             } else {
                 HStack(spacing: 8) {
                     actionButton("수락", prominent: true) {
                         Task {
                             await viewModel.respondToReschedule(
-                                bookingId: bookingId, accept: true
+                                bookingId: bookingId, action: .accept
                             )
                         }
                     }
                     actionButton("거절", prominent: false) {
                         Task {
                             await viewModel.respondToReschedule(
-                                bookingId: bookingId, accept: false
+                                bookingId: bookingId, action: .decline
                             )
                         }
                     }

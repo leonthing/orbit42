@@ -4,6 +4,7 @@ import {
   rescheduleMyBooking,
   proposeRescheduleAsHost,
   respondToReschedule,
+  withdrawReschedule,
 } from "@/lib/slots";
 
 export const dynamic = "force-dynamic";
@@ -93,7 +94,8 @@ export async function POST(
   }
 }
 
-// PATCH { action: "accept" | "decline" } — 받은 변경 제안에 응답
+// PATCH { action: "accept" | "decline" | "withdraw" }
+// accept/decline 은 제안을 받은 쪽, withdraw 는 제안한 쪽이 쓴다.
 export async function PATCH(
   request: Request,
   { params }: { params: { id: string } },
@@ -109,12 +111,16 @@ export async function PATCH(
   } catch {
     return Response.json({ error: "잘못된 요청이에요." }, { status: 400 });
   }
-  if (body.action !== "accept" && body.action !== "decline") {
+  const action = body.action;
+  if (action !== "accept" && action !== "decline" && action !== "withdraw") {
     return Response.json({ error: "알 수 없는 액션이에요." }, { status: 400 });
   }
 
   try {
-    const result = await respondToReschedule(params.id, body.action);
+    const result =
+      action === "withdraw"
+        ? await withdrawReschedule(params.id)
+        : await respondToReschedule(params.id, action);
     if ("error" in result) {
       return Response.json({ error: result.error }, { status: 400 });
     }

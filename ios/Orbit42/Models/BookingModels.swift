@@ -244,7 +244,15 @@ struct RescheduleRequest: Encodable {
     let note: String?
 }
 
-/// `PATCH /api/v1/bookings/{id}/reschedule` — 받은 제안에 응답
+/// `PATCH /api/v1/bookings/{id}/reschedule` 의 action 값.
+/// accept/decline 은 제안을 받은 쪽, withdraw 는 제안한 쪽이 쓴다.
+enum RescheduleReply: String {
+    case accept
+    case decline
+    case withdraw
+}
+
+/// `PATCH /api/v1/bookings/{id}/reschedule` — 제안 응답/철회
 struct RescheduleResponseRequest: Encodable {
     let action: String
 }

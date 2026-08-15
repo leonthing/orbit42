@@ -2017,6 +2017,83 @@ export async function respondToReschedule(
   return { success: true as const };
 }
 
+/**
+ * 내가 보낸 변경 제안을 거둬들인다 (제안한 사람만).
+ *
+ * 다른 시간으로 다시 제안해 덮어쓰는 것과 달리, 상대가 이미 "제안이 왔어요"
+ * 알림을 받은 상태라 조용히 사라지면 헷갈린다. 그래서 상대에게도 알린다.
+ */
+export async function withdrawReschedule(
+  bookingId: string,
+): Promise<{ success: true } | { error: string }> {
+  const userId = await requireUserId();
+  const db = getAdminClient();
+
+  const { data: booking } = await db
+    .from("bookings")
+    .select(
+      "id, guest_id, host_id, slot_id, reschedule_by, reschedule_created_at",
+    )
+    .eq("id", bookingId)
+    .maybeSingle();
+  if (!booking) return { error: "예약을 찾을 수 없어요." };
+  if (!booking.reschedule_created_at) {
+    return { error: "거둬들일 제안이 없어요." };
+  }
+  if (booking.reschedule_by !== userId) {
+    return { error: "내가 보낸 제안만 취소할 수 있어요." };
+  }
+
+  const { error } = await db
+    .from("bookings")
+    .update({
+      reschedule_by: null,
+      reschedule_start_at: null,
+      reschedule_end_at: null,
+      reschedule_note: null,
+      reschedule_created_at: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", bookingId)
+    .eq("reschedule_by", userId);
+  if (error) {
+    console.error("withdrawReschedule", error);
+    return { error: "처리에 실패했어요." };
+  }
+
+  // 상대(제안을 받았던 쪽)에게 알린다.
+  const otherId =
+    booking.guest_id === userId
+      ? (booking.host_id as string)
+      : (booking.guest_id as string | null);
+  if (otherId) {
+    try {
+      const [{ data: slot }, { data: me }] = await Promise.all([
+        db.from("time_slots").select("title").eq("id", booking.slot_id).single(),
+        db
+          .from("users")
+          .select("username, display_name")
+          .eq("id", userId)
+          .single(),
+      ]);
+      const { createNotification } = await import("@/lib/notifications");
+      await createNotification({
+        userId: otherId,
+        type: "booking_reschedule_withdrawn",
+        title: `${personLabel(me, "상대")}님이 '${slot?.title ?? "예약"}' 시간 변경 제안을 취소했어요`,
+        body: "예약은 원래 시간 그대로예요",
+        link: `/bookings`,
+        actorId: userId,
+      });
+    } catch (err) {
+      console.error("withdrawReschedule notify", err);
+    }
+  }
+
+  revalidatePath("/", "layout");
+  return { success: true as const };
+}
+
 /** Guest cancels their own booking. Emails the host. */
 export async function cancelMyBooking(bookingId: string) {
   const userId = await requireUserId();

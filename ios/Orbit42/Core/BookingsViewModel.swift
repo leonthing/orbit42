@@ -139,8 +139,9 @@ final class BookingsViewModel {
         return false
     }
 
-    /// 받은 변경 제안에 응답.
-    func respondToReschedule(bookingId: String, accept: Bool) async {
+    /// 받은 변경 제안에 응답하거나(`accept`/`decline`),
+    /// 내가 보낸 제안을 거둬들인다(`withdraw`).
+    func respondToReschedule(bookingId: String, action: RescheduleReply) async {
         guard !actingIds.contains(bookingId) else { return }
         actingIds.insert(bookingId)
         defer { actingIds.remove(bookingId) }
@@ -148,7 +149,7 @@ final class BookingsViewModel {
         do {
             let _: BookingActionResponse = try await api.patch(
                 "/api/v1/bookings/\(bookingId)/reschedule",
-                body: RescheduleResponseRequest(action: accept ? "accept" : "decline")
+                body: RescheduleResponseRequest(action: action.rawValue)
             )
             await load(force: true)
         } catch is CancellationError {
