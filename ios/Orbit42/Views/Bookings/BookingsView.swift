@@ -8,6 +8,8 @@ struct BookingsView: View {
     @State private var cancelTarget: GuestBooking?
     /// "목록에서 삭제" 확인 다이얼로그 대상 예약 id
     @State private var deleteTargetId: String?
+    /// 카드 탭 → 상세로 push 할 대상
+    @State private var detailTarget: BookingDetailTarget?
 
     /// 프로필에서 push 할 때는 자체 NavigationStack 없이 쓴다 (중첩 방지).
     var embedded = false
@@ -72,6 +74,13 @@ struct BookingsView: View {
                 Button("돌아가기", role: .cancel) {}
             } message: { _ in
                 Text("내 목록에서만 사라지고 상대방의 기록은 유지돼요.")
+            }
+            .navigationDestination(item: $detailTarget) { target in
+                BookingDetailView(
+                    viewModel: viewModel,
+                    bookingId: target.id,
+                    role: target.role
+                )
             }
             .task {
                 await viewModel.load()
@@ -241,7 +250,8 @@ struct BookingsView: View {
             isActing: viewModel.actingIds.contains(booking.id),
             onAction: { action in
                 Task { await viewModel.act(action, on: booking.id) }
-            }
+            },
+            onOpen: { detailTarget = BookingDetailTarget(id: booking.id, role: .host) }
         )
         .bookingRowChrome()
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
@@ -298,7 +308,10 @@ struct BookingsView: View {
                             booking: booking,
                             isActing: viewModel.actingIds.contains(booking.id),
                             canCancel: booking.status == .pending || booking.status == .confirmed,
-                            onCancel: { cancelTarget = booking }
+                            onCancel: { cancelTarget = booking },
+                            onOpen: {
+                                detailTarget = BookingDetailTarget(id: booking.id, role: .guest)
+                            }
                         )
                         .bookingRowChrome()
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
@@ -323,7 +336,10 @@ struct BookingsView: View {
                             booking: booking,
                             isActing: false,
                             canCancel: false,
-                            onCancel: {}
+                            onCancel: {},
+                            onOpen: {
+                                detailTarget = BookingDetailTarget(id: booking.id, role: .guest)
+                            }
                         )
                         .bookingRowChrome()
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
@@ -373,6 +389,8 @@ private struct HostBookingRow: View {
     let booking: HostBooking
     let isActing: Bool
     let onAction: (BookingAction) -> Void
+    /// 카드 탭 → 예약 상세. 수락/거절 버튼은 자기 탭을 먼저 가져간다.
+    let onOpen: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -388,6 +406,10 @@ private struct HostBookingRow: View {
                 }
                 Spacer(minLength: 0)
                 StatusBadge(text: booking.badgeText, color: booking.badgeColor)
+                Image(systemName: "chevron.right")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(Theme.secondaryText)
+                    .padding(.top, 3)
             }
 
             if let message = booking.message, !message.isEmpty {
@@ -419,6 +441,8 @@ private struct HostBookingRow: View {
         .padding(.vertical, 10)
         .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
         .opacity(booking.status == .canceled ? 0.55 : 1)
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onOpen)
     }
 }
 
@@ -429,6 +453,8 @@ private struct GuestBookingRow: View {
     let isActing: Bool
     let canCancel: Bool
     let onCancel: () -> Void
+    /// 카드 탭 → 예약 상세. 취소 버튼은 자기 탭을 먼저 가져간다.
+    let onOpen: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -444,6 +470,10 @@ private struct GuestBookingRow: View {
                 }
                 Spacer(minLength: 0)
                 StatusBadge(text: booking.badgeText, color: booking.badgeColor)
+                Image(systemName: "chevron.right")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(Theme.secondaryText)
+                    .padding(.top, 3)
             }
 
             if let location = booking.locationDetail, !location.isEmpty {
@@ -464,6 +494,8 @@ private struct GuestBookingRow: View {
         .padding(.vertical, 10)
         .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
         .opacity(booking.status == .canceled ? 0.55 : 1)
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onOpen)
     }
 }
 

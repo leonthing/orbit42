@@ -8,6 +8,8 @@ import {
   cancelMyBooking,
   rescheduleMyBooking,
   refreshBookableOptions,
+  proposeRescheduleAsHost,
+  respondToReschedule,
 } from "@/lib/slots";
 import type { BookingRow, GuestBookingRow, BookableOption } from "@/lib/slots";
 import { addBookingReview } from "@/lib/reviews";
@@ -291,6 +293,7 @@ function HostSection({
   muted?: boolean;
   emptyHint: string;
 }) {
+  const [reschedulingId, setReschedulingId] = useState<string | null>(null);
   return (
     <section className="space-y-3">
       <SectionHeader title={title} count={rows.length} />
@@ -354,6 +357,13 @@ function HostSection({
                         {b.message}
                       </p>
                     )}
+                    <RescheduleBanner booking={b} />
+                    {reschedulingId === b.id && (
+                      <HostReschedulePanel
+                        bookingId={b.id}
+                        onDone={() => setReschedulingId(null)}
+                      />
+                    )}
                   </div>
                   <div className="flex shrink-0 flex-col gap-1">
                     {b.status === "pending" && (
@@ -365,6 +375,20 @@ function HostSection({
                         수락
                       </button>
                     )}
+                    {b.status !== "canceled" &&
+                      b.status !== "completed" &&
+                      start > new Date() && (
+                        <button
+                          onClick={() =>
+                            setReschedulingId(
+                              reschedulingId === b.id ? null : b.id,
+                            )
+                          }
+                          className="rounded-lg border border-charcoal-700 px-3 py-1 text-xs text-charcoal-400 hover:border-navy-400/60 hover:text-navy-400"
+                        >
+                          시간 변경
+                        </button>
+                      )}
                     {b.status !== "canceled" && b.status !== "completed" && (
                       <button
                         onClick={() => update(b.id, "canceled")}
@@ -527,6 +551,7 @@ function GuestSection({
                     )}
                   </div>
                 </div>
+                <RescheduleBanner booking={b} />
                 {reschedulingId === b.id && (
                   <ReschedulePanel
                     booking={b}
@@ -612,6 +637,177 @@ function ReviewPanel({
           className="rounded-lg bg-navy-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-400 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {saving ? "등록 중…" : "후기 등록"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** KST 표기 "8월 22일 (토) 11:00" */
+function whenLabel(iso: string) {
+  return new Date(iso).toLocaleString("ko-KR", {
+    timeZone: "Asia/Seoul",
+    month: "long",
+    day: "numeric",
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/**
+ * 대기 중인 시간 변경 제안 배너.
+ * 내가 보낸 제안이면 대기 안내만, 받은 제안이면 수락/거절 버튼을 준다.
+ */
+function RescheduleBanner({
+  booking,
+}: {
+  booking: {
+    id: string;
+    scheduled_at: string;
+    reschedule_start_at: string | null;
+    reschedule_note: string | null;
+    reschedule_by_me?: boolean;
+  };
+}) {
+  const router = useRouter();
+  const toast = useToast();
+  const [saving, startSaving] = useTransition();
+
+  if (!booking.reschedule_start_at) return null;
+  const mine = booking.reschedule_by_me ?? false;
+
+  const respond = (action: "accept" | "decline") => {
+    startSaving(async () => {
+      const res = await respondToReschedule(booking.id, action);
+      if ("error" in res) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success(
+        action === "accept"
+          ? "새 시간으로 옮겼어요."
+          : "제안을 거절했어요. 예약은 그대로예요.",
+      );
+      router.refresh();
+    });
+  };
+
+  return (
+    <div className="mt-2 rounded-lg border border-navy-400/40 bg-navy-400/10 px-3 py-2">
+      <p className="text-2xs font-semibold text-navy-600 dark:text-navy-200">
+        {mine ? "변경 제안을 보냈어요" : "시간 변경 제안이 왔어요"}
+      </p>
+      <p className="mt-1 text-xs text-charcoal-300">
+        <span className="text-charcoal-500 line-through">
+          {whenLabel(booking.scheduled_at)}
+        </span>
+        <span className="mx-1.5 text-charcoal-500">→</span>
+        <span className="font-semibold text-charcoal-100">
+          {whenLabel(booking.reschedule_start_at)}
+        </span>
+      </p>
+      {booking.reschedule_note && (
+        <p className="mt-1 text-xs text-charcoal-400">
+          {booking.reschedule_note}
+        </p>
+      )}
+      {mine ? (
+        <p className="mt-1 text-2xs text-charcoal-500">
+          상대가 수락하면 예약과 캘린더가 함께 옮겨져요.
+        </p>
+      ) : (
+        <div className="mt-2 flex gap-2">
+          <button
+            type="button"
+            onClick={() => respond("accept")}
+            disabled={saving}
+            className="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-60"
+          >
+            수락
+          </button>
+          <button
+            type="button"
+            onClick={() => respond("decline")}
+            disabled={saving}
+            className="rounded-lg border border-charcoal-700 px-3 py-1 text-xs text-charcoal-400 hover:border-navy-400/60 hover:text-navy-400 disabled:opacity-60"
+          >
+            거절
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * 호스트가 새 시간을 제안하는 패널.
+ * 자기 일정이라 시각은 자유롭게 고르되, 게스트가 그 시간에 올 수 있는지는
+ * 알 수 없으므로 바로 옮기지 않고 제안으로 남는다.
+ */
+function HostReschedulePanel({
+  bookingId,
+  onDone,
+}: {
+  bookingId: string;
+  onDone: () => void;
+}) {
+  const router = useRouter();
+  const toast = useToast();
+  const [when, setWhen] = useState("");
+  const [note, setNote] = useState("");
+  const [saving, startSaving] = useTransition();
+
+  const submit = () => {
+    if (!when) return;
+    const iso = new Date(when).toISOString();
+    startSaving(async () => {
+      const res = await proposeRescheduleAsHost(bookingId, iso, note || null);
+      if ("error" in res) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success(
+        res.applied
+          ? "시간을 변경하고 게스트에게 메일로 알렸어요."
+          : "변경을 제안했어요. 게스트가 수락하면 옮겨져요.",
+      );
+      onDone();
+      router.refresh();
+    });
+  };
+
+  return (
+    <div className="mt-3 space-y-2 rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 p-3">
+      <input
+        type="datetime-local"
+        value={when}
+        onChange={(e) => setWhen(e.target.value)}
+        className="w-full rounded-lg border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] px-3 py-1.5 text-xs text-charcoal-100 focus:border-charcoal-600 focus:outline-none"
+      />
+      <input
+        type="text"
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        placeholder="변경 사유 (선택)"
+        maxLength={500}
+        className="w-full rounded-lg border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] px-3 py-1.5 text-xs text-charcoal-100 placeholder:text-charcoal-600 focus:border-charcoal-600 focus:outline-none"
+      />
+      <div className="flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={onDone}
+          className="rounded-lg border border-charcoal-700 px-3 py-1 text-xs text-charcoal-400 hover:text-charcoal-200"
+        >
+          닫기
+        </button>
+        <button
+          type="button"
+          onClick={submit}
+          disabled={!when || saving}
+          className="rounded-lg bg-navy-500 px-3 py-1 text-xs font-semibold text-white hover:bg-navy-400 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {saving ? "보내는 중…" : "변경 제안"}
         </button>
       </div>
     </div>

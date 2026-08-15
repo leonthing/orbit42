@@ -195,6 +195,55 @@ export async function sendBookingCanceledToGuest(
   return send(to, `[Orbit42] 예약 취소: ${args.slotTitle}`, html);
 }
 
+/**
+ * 예약 시간 변경 — 제안(수락 대기)과 확정 양쪽에 쓴다.
+ * `decided: true` 면 이미 옮겨진 것이고, false 면 상대의 수락을 기다린다.
+ */
+export async function sendBookingRescheduleProposal(
+  to: string,
+  args: {
+    slotTitle: string;
+    previousWhen: string;
+    when: string;
+    proposerLabel: string;
+    note?: string | null;
+    decided: boolean;
+  },
+) {
+  const html = renderEmail({
+    eyebrow: args.decided ? "예약 시간 변경" : "시간 변경 제안",
+    heading: args.decided
+      ? "예약 시간이 변경되었어요"
+      : `${args.proposerLabel}님이 시간 변경을 제안했어요`,
+    intro: args.decided
+      ? "새 시간으로 캘린더도 함께 옮겨두었어요."
+      : "수락하면 예약이 새 시간으로 옮겨져요.",
+    preheader: `${args.slotTitle} · ${fmtWhen(args.when)}`,
+    bodyHtml:
+      detailCard(escapeHtml(args.slotTitle), [
+        { label: "기존", value: fmtWhen(args.previousWhen) },
+        { label: "변경", value: fmtWhen(args.when) },
+        ...(args.note
+          ? [{ label: "메모", value: escapeHtml(args.note) }]
+          : []),
+      ]) +
+      emailButton(
+        args.decided ? "예약 확인하기" : "수락 여부 결정하기",
+        siteUrl("/bookings"),
+      ) +
+      (args.decided
+        ? ""
+        : mutedNote("응답하지 않으면 예약은 원래 시간 그대로 유지돼요.")),
+  });
+  return send(
+    to,
+    args.decided
+      ? `[Orbit42] 예약 시간 변경: ${args.slotTitle}`
+      : `[Orbit42] 시간 변경 제안: ${args.slotTitle}`,
+    html,
+  );
+}
+
 export async function sendNewMessageEmail(
   to: string,
   args: { fromLabel: string; preview: string; conversationId: string },

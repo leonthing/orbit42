@@ -8,6 +8,31 @@ import {
 
 export const dynamic = "force-dynamic";
 
+/**
+ * 대기 중인 시간 변경 제안. `byMe` 로 "상대 응답 대기 중"과
+ * "내가 수락/거절해야 함"을 클라이언트가 구분한다.
+ */
+function toApiReschedule(
+  b: Pick<
+    BookingRow,
+    | "reschedule_by"
+    | "reschedule_start_at"
+    | "reschedule_end_at"
+    | "reschedule_note"
+    | "reschedule_by_me"
+  >,
+) {
+  if (!b.reschedule_by || !b.reschedule_start_at || !b.reschedule_end_at) {
+    return null;
+  }
+  return {
+    startAt: b.reschedule_start_at,
+    endAt: b.reschedule_end_at,
+    note: b.reschedule_note,
+    byMe: b.reschedule_by_me ?? false,
+  };
+}
+
 function toApiHostBooking(b: BookingRow) {
   return {
     id: b.id,
@@ -17,12 +42,15 @@ function toApiHostBooking(b: BookingRow) {
     message: b.message,
     guestName:
       b.guest?.display_name || b.guest?.username || b.guest_name || "게스트",
+    guestUsername: b.guest?.username ?? null,
     slotTitle: b.slot.title,
     slotSlug: b.slot.slug,
+    locationDetail: b.slot.location_detail ?? null,
     menus: (b.selected_menus ?? []).map((m) => ({
       name: m.name,
       priceCents: m.price_cents,
     })),
+    reschedule: toApiReschedule(b),
   };
 }
 
@@ -36,7 +64,13 @@ function toApiGuestBooking(b: GuestBookingRow) {
     hostName: b.host?.display_name || b.host?.username || "호스트",
     hostUsername: b.host?.username ?? null,
     slotTitle: b.slot.title,
+    slotSlug: b.slot.slug,
     locationDetail: b.slot.location_detail,
+    menus: (b.selected_menus ?? []).map((m) => ({
+      name: m.name,
+      priceCents: m.price_cents,
+    })),
+    reschedule: toApiReschedule(b),
   };
 }
 

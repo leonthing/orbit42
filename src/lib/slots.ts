@@ -1224,8 +1224,14 @@ export type BookingRow = {
   guest_name: string | null;
   guest_email: string | null;
   selected_menu_ids: string[];
+  reschedule_by: string | null;
+  reschedule_start_at: string | null;
+  reschedule_end_at: string | null;
+  reschedule_note: string | null;
+  /** 대기 중인 제안을 내가 보낸 것인지 — 목록을 부른 사람 기준으로 서버가 채운다. */
+  reschedule_by_me?: boolean;
   guest: { username: string; display_name: string | null } | null;
-  slot: { title: string; slug: string };
+  slot: { title: string; slug: string; location_detail: string | null };
   selected_menus?: {
     id: string;
     name: string;
@@ -1239,6 +1245,13 @@ export type GuestBookingRow = {
   scheduled_end_at: string;
   status: string;
   message: string | null;
+  selected_menu_ids: string[];
+  reschedule_by: string | null;
+  reschedule_start_at: string | null;
+  reschedule_end_at: string | null;
+  reschedule_note: string | null;
+  /** 대기 중인 제안을 내가 보낸 것인지 — 목록을 부른 사람 기준으로 서버가 채운다. */
+  reschedule_by_me?: boolean;
   host: { username: string; display_name: string | null } | null;
   slot: {
     id: string;
@@ -1246,7 +1259,38 @@ export type GuestBookingRow = {
     slug: string;
     location_detail: string | null;
   };
+  selected_menus?: {
+    id: string;
+    name: string;
+    price_cents: number;
+  }[];
 };
+
+/** 예약 행들의 selected_menu_ids 를 한 번의 조회로 메뉴 정보로 채운다. */
+async function hydrateSelectedMenus(
+  rows: { selected_menu_ids?: string[]; selected_menus?: unknown }[],
+) {
+  const allMenuIds = new Set<string>();
+  for (const r of rows) {
+    for (const id of r.selected_menu_ids ?? []) allMenuIds.add(id);
+  }
+  if (allMenuIds.size === 0) return;
+  const db = getAdminClient();
+  const { data: menuRows } = await db
+    .from("menus")
+    .select("id, name, price_cents")
+    .in("id", Array.from(allMenuIds));
+  const byId = new Map(
+    ((menuRows ?? []) as { id: string; name: string; price_cents: number }[]).map(
+      (m) => [m.id, m],
+    ),
+  );
+  for (const r of rows) {
+    r.selected_menus = (r.selected_menu_ids ?? [])
+      .map((id) => byId.get(id))
+      .filter(Boolean);
+  }
+}
 
 export async function listMyGuestBookings(): Promise<GuestBookingRow[]> {
   const userId = await requireUserId();
@@ -1254,12 +1298,15 @@ export async function listMyGuestBookings(): Promise<GuestBookingRow[]> {
   const { data } = await db
     .from("bookings")
     .select(
-      "id, scheduled_at, scheduled_end_at, status, message, host:users!bookings_host_id_fkey(username, display_name), slot:time_slots!bookings_slot_id_fkey(id, title, slug, location_detail)",
+      "id, scheduled_at, scheduled_end_at, status, message, selected_menu_ids, reschedule_by, reschedule_start_at, reschedule_end_at, reschedule_note, host:users!bookings_host_id_fkey(username, display_name), slot:time_slots!bookings_slot_id_fkey(id, title, slug, location_detail)",
     )
     .eq("guest_id", userId)
     .eq("hidden_by_guest", false)
     .order("scheduled_at", { ascending: true });
-  return ((data ?? []) as unknown) as GuestBookingRow[];
+  const rows = ((data ?? []) as unknown) as GuestBookingRow[];
+  await hydrateSelectedMenus(rows);
+  for (const r of rows) r.reschedule_by_me = r.reschedule_by === userId;
+  return rows;
 }
 
 export async function listMyHostBookings(): Promise<BookingRow[]> {
@@ -1268,34 +1315,14 @@ export async function listMyHostBookings(): Promise<BookingRow[]> {
   const { data } = await db
     .from("bookings")
     .select(
-      "id, scheduled_at, scheduled_end_at, status, message, guest_name, guest_email, selected_menu_ids, guest:users!bookings_guest_id_fkey(username, display_name), slot:time_slots!bookings_slot_id_fkey(title, slug)",
+      "id, scheduled_at, scheduled_end_at, status, message, guest_name, guest_email, selected_menu_ids, reschedule_by, reschedule_start_at, reschedule_end_at, reschedule_note, guest:users!bookings_guest_id_fkey(username, display_name), slot:time_slots!bookings_slot_id_fkey(title, slug, location_detail)",
     )
     .eq("host_id", userId)
     .eq("hidden_by_host", false)
     .order("scheduled_at", { ascending: true });
   const rows = ((data ?? []) as unknown) as BookingRow[];
-
-  // Hydrate selected menu names in one query.
-  const allMenuIds = new Set<string>();
-  for (const r of rows) {
-    for (const id of r.selected_menu_ids ?? []) allMenuIds.add(id);
-  }
-  if (allMenuIds.size > 0) {
-    const { data: menuRows } = await db
-      .from("menus")
-      .select("id, name, price_cents")
-      .in("id", Array.from(allMenuIds));
-    const byId = new Map(
-      ((menuRows ?? []) as { id: string; name: string; price_cents: number }[]).map(
-        (m) => [m.id, m],
-      ),
-    );
-    for (const r of rows) {
-      r.selected_menus = (r.selected_menu_ids ?? [])
-        .map((id) => byId.get(id))
-        .filter(Boolean) as BookingRow["selected_menus"];
-    }
-  }
+  await hydrateSelectedMenus(rows);
+  for (const r of rows) r.reschedule_by_me = r.reschedule_by === userId;
   return rows;
 }
 
@@ -1447,6 +1474,115 @@ export async function updateBookingStatus(
  * Approval semantics follow the slot: auto-approve keeps it confirmed,
  * otherwise it goes back to pending for the host.
  */
+/**
+ * 예약을 새 시각으로 실제로 옮긴다 — 가용 슬롯 점유, 미러된 구글 이벤트,
+ * 양쪽 네이티브 캘린더 이벤트를 함께 이동시킨다.
+ *
+ * 누가 옮길 자격이 있는지는 호출하는 쪽이 이미 검증했다고 본다
+ * (게스트 직접 변경 / 호스트 제안의 게스트 수락 양쪽이 공유한다).
+ * 대기 중이던 변경 제안은 어느 경로로 옮기든 무효가 되므로 함께 비운다.
+ */
+async function moveBookingTo(args: {
+  booking: {
+    id: string;
+    host_id: string;
+    availability_id: string | null;
+    google_event_id: string | null;
+  };
+  slot: { capacity?: number; calendar_id?: string | null };
+  newStart: Date;
+  newEnd: Date;
+  newAvailabilityId: string | null;
+  newStatus: string;
+}): Promise<{ error?: string }> {
+  const { booking, slot, newStart, newEnd, newAvailabilityId, newStatus } = args;
+  const db = getAdminClient();
+
+  const { error } = await db
+    .from("bookings")
+    .update({
+      scheduled_at: newStart.toISOString(),
+      scheduled_end_at: newEnd.toISOString(),
+      availability_id: newAvailabilityId,
+      status: newStatus,
+      reminder_sent_at: null,
+      reschedule_by: null,
+      reschedule_start_at: null,
+      reschedule_end_at: null,
+      reschedule_note: null,
+      reschedule_created_at: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", booking.id);
+  if (error) {
+    console.error("moveBookingTo update", error);
+    return { error: "변경에 실패했어요." };
+  }
+
+  // Move availability occupancy (manual mode mirrors bookSlot's
+  // fill-to-capacity convention: one booking per availability row).
+  if (booking.availability_id) {
+    await db
+      .from("slot_availabilities")
+      .update({ booked_count: 0 })
+      .eq("id", booking.availability_id);
+  }
+  if (newAvailabilityId) {
+    await db
+      .from("slot_availabilities")
+      .update({ booked_count: slot.capacity ?? 1 })
+      .eq("id", newAvailabilityId);
+  }
+
+  // Move the mirrored Google event instead of leaving the old time.
+  if (booking.google_event_id) {
+    try {
+      let calendarId = "primary";
+      if (slot.calendar_id) {
+        const { data: cal } = await db
+          .from("calendars")
+          .select("source, google_calendar_id")
+          .eq("id", slot.calendar_id)
+          .single();
+        if (cal?.source === "google" && cal.google_calendar_id) {
+          calendarId = cal.google_calendar_id as string;
+        }
+        // native/unknown → event lives on the host's primary calendar
+      }
+      if (calendarId) {
+        const calendar = await getAuthenticatedCalendar(booking.host_id);
+        if (calendar) {
+          await calendar.events.patch({
+            calendarId,
+            eventId: booking.google_event_id,
+            sendUpdates: "all",
+            requestBody: {
+              start: { dateTime: newStart.toISOString(), timeZone: "Asia/Seoul" },
+              end: { dateTime: newEnd.toISOString(), timeZone: "Asia/Seoul" },
+            },
+          });
+        }
+      }
+    } catch (err) {
+      console.error("moveBookingTo calendar patch", err);
+    }
+  }
+
+  // Move the native mirrors (host + guest) to the new time and reset their
+  // tentative state to match the new approval status.
+  await db
+    .from("events")
+    .update({
+      start_at: newStart.toISOString(),
+      end_at: newEnd.toISOString(),
+      tentative: newStatus === "pending",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("booking_id", booking.id);
+
+  return {};
+}
+
 export async function rescheduleMyBooking(
   bookingId: string,
   pick: { startAt?: string; availabilityId?: string },
@@ -1507,82 +1643,15 @@ export async function rescheduleMyBooking(
   const autoApprove = (slot.auto_approve as boolean | null) ?? true;
   const newStatus = autoApprove ? "confirmed" : "pending";
 
-  const { error } = await db
-    .from("bookings")
-    .update({
-      scheduled_at: newStart.toISOString(),
-      scheduled_end_at: newEnd.toISOString(),
-      availability_id: newAvailabilityId,
-      status: newStatus,
-      reminder_sent_at: null,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", bookingId)
-    .eq("guest_id", userId);
-  if (error) return { error: "변경에 실패했어요." };
-
-  // Move availability occupancy (manual mode mirrors bookSlot's
-  // fill-to-capacity convention: one booking per availability row).
-  if (booking.availability_id) {
-    await db
-      .from("slot_availabilities")
-      .update({ booked_count: 0 })
-      .eq("id", booking.availability_id);
-  }
-  if (newAvailabilityId) {
-    await db
-      .from("slot_availabilities")
-      .update({ booked_count: (slot.capacity as number) ?? 1 })
-      .eq("id", newAvailabilityId);
-  }
-
-  // Move the mirrored Google event instead of leaving the old time.
-  if (booking.google_event_id) {
-    try {
-      let calendarId = "primary";
-      if (slot.calendar_id) {
-        const { data: cal } = await db
-          .from("calendars")
-          .select("source, google_calendar_id")
-          .eq("id", slot.calendar_id)
-          .single();
-        if (cal?.source === "google" && cal.google_calendar_id) {
-          calendarId = cal.google_calendar_id as string;
-        }
-        // native/unknown → event lives on the host's primary calendar
-      }
-      if (calendarId) {
-        const calendar = await getAuthenticatedCalendar(
-          booking.host_id as string,
-        );
-        if (calendar) {
-          await calendar.events.patch({
-            calendarId,
-            eventId: booking.google_event_id as string,
-            sendUpdates: "all",
-            requestBody: {
-              start: { dateTime: newStart.toISOString(), timeZone: "Asia/Seoul" },
-              end: { dateTime: newEnd.toISOString(), timeZone: "Asia/Seoul" },
-            },
-          });
-        }
-      }
-    } catch (err) {
-      console.error("rescheduleMyBooking calendar patch", err);
-    }
-  }
-
-  // Move the native mirrors (host + guest) to the new time and reset their
-  // tentative state to match the new approval status.
-  await db
-    .from("events")
-    .update({
-      start_at: newStart.toISOString(),
-      end_at: newEnd.toISOString(),
-      tentative: newStatus === "pending",
-      updated_at: new Date().toISOString(),
-    })
-    .eq("booking_id", bookingId);
+  const moved = await moveBookingTo({
+    booking,
+    slot,
+    newStart,
+    newEnd,
+    newAvailabilityId,
+    newStatus,
+  });
+  if (moved.error) return { error: moved.error };
 
   // Tell the host.
   try {
@@ -1639,6 +1708,313 @@ export async function rescheduleMyBooking(
 
   revalidatePath("/", "layout");
   return { success: true as const, status: newStatus };
+}
+
+/** 변경 제안 배너에 쓰는 사람 표시명. */
+function personLabel(
+  user: { display_name?: string | null; username?: string | null } | null,
+  fallback: string,
+) {
+  return (user?.display_name || user?.username || fallback) as string;
+}
+
+/**
+ * 호스트가 예약 시간 변경을 제안한다.
+ *
+ * 게스트 쪽 변경(`rescheduleMyBooking`)과 달리 상대 수락이 필요하다 —
+ * 호스트는 게스트가 그 시간에 올 수 있는지 알 수 없기 때문이다. 그래서
+ * 여기서는 예약을 옮기지 않고 제안만 얹어두고, 게스트가 수락할 때
+ * `respondToReschedule` 이 실제로 옮긴다.
+ *
+ * 예외: 비회원 게스트(guest_id 없음)는 앱에서 수락할 방법이 없으므로
+ * 바로 옮기고 메일로 알린다 — 수락을 기다리다 영영 안 오는 걸 막는다.
+ */
+export async function proposeRescheduleAsHost(
+  bookingId: string,
+  startAt: string,
+  note?: string | null,
+): Promise<
+  { success: true; applied: boolean } | { error: string }
+> {
+  const userId = await requireUserId();
+  const db = getAdminClient();
+
+  const { data: booking } = await db
+    .from("bookings")
+    .select(
+      "id, guest_id, guest_email, guest_name, host_id, slot_id, availability_id, scheduled_at, status, google_event_id",
+    )
+    .eq("id", bookingId)
+    .eq("host_id", userId)
+    .maybeSingle();
+  if (!booking) return { error: "예약을 찾을 수 없어요." };
+  if (booking.status === "canceled" || booking.status === "completed") {
+    return { error: "이미 종료된 예약이에요." };
+  }
+
+  const newStart = new Date(startAt);
+  if (Number.isNaN(newStart.getTime())) {
+    return { error: "시간이 올바르지 않아요." };
+  }
+  if (newStart.getTime() <= Date.now()) {
+    return { error: "지난 시간으로는 옮길 수 없어요." };
+  }
+
+  const { data: slot } = await db
+    .from("time_slots")
+    .select("*")
+    .eq("id", booking.slot_id)
+    .single();
+  if (!slot) return { error: "슬롯을 찾을 수 없어요." };
+
+  const newEnd = new Date(
+    newStart.getTime() + (slot.duration_min as number) * 60_000,
+  );
+  const trimmedNote = note?.trim() ? note.trim().slice(0, 500) : null;
+
+  const [{ data: host }, { data: guest }] = await Promise.all([
+    db
+      .from("users")
+      .select("email, username, display_name")
+      .eq("id", userId)
+      .single(),
+    booking.guest_id
+      ? db
+          .from("users")
+          .select("email, username, display_name")
+          .eq("id", booking.guest_id)
+          .single()
+      : Promise.resolve({ data: null }),
+  ]);
+  const hostLabel = personLabel(host, "호스트");
+
+  // 비회원 게스트 — 수락받을 창구가 없으니 바로 옮긴다.
+  if (!booking.guest_id) {
+    const moved = await moveBookingTo({
+      booking: booking as never,
+      slot: slot as never,
+      newStart,
+      newEnd,
+      newAvailabilityId: null,
+      newStatus: booking.status as string,
+    });
+    if (moved.error) return { error: moved.error };
+    if (booking.guest_email) {
+      try {
+        const { sendBookingRescheduleProposal } = await import("@/lib/email");
+        await sendBookingRescheduleProposal(booking.guest_email as string, {
+          slotTitle: slot.title as string,
+          previousWhen: booking.scheduled_at as string,
+          when: newStart.toISOString(),
+          proposerLabel: hostLabel,
+          note: trimmedNote,
+          decided: true,
+        });
+      } catch (err) {
+        console.error("proposeRescheduleAsHost mail", err);
+      }
+    }
+    revalidatePath("/", "layout");
+    return { success: true as const, applied: true };
+  }
+
+  const { error } = await db
+    .from("bookings")
+    .update({
+      reschedule_by: userId,
+      reschedule_start_at: newStart.toISOString(),
+      reschedule_end_at: newEnd.toISOString(),
+      reschedule_note: trimmedNote,
+      reschedule_created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", bookingId)
+    .eq("host_id", userId);
+  if (error) {
+    console.error("proposeRescheduleAsHost", error);
+    return { error: "제안에 실패했어요." };
+  }
+
+  try {
+    const whenLabel = newStart.toLocaleString("ko-KR", {
+      timeZone: "Asia/Seoul",
+      month: "long",
+      day: "numeric",
+      weekday: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    const { createNotification } = await import("@/lib/notifications");
+    await createNotification({
+      userId: booking.guest_id as string,
+      type: "booking_reschedule_proposed",
+      title: `${hostLabel}님이 '${slot.title}' 시간 변경을 제안했어요`,
+      body: `${whenLabel} · 수락하면 예약이 옮겨져요`,
+      link: `/bookings`,
+      actorId: userId,
+    });
+    const { emailAllowed } = await import("@/lib/notification-prefs");
+    if (
+      guest?.email &&
+      (await emailAllowed(booking.guest_id as string, "booking_confirmed"))
+    ) {
+      const { sendBookingRescheduleProposal } = await import("@/lib/email");
+      await sendBookingRescheduleProposal(guest.email as string, {
+        slotTitle: slot.title as string,
+        previousWhen: booking.scheduled_at as string,
+        when: newStart.toISOString(),
+        proposerLabel: hostLabel,
+        note: trimmedNote,
+        decided: false,
+      });
+    }
+  } catch (err) {
+    console.error("proposeRescheduleAsHost notify", err);
+  }
+
+  revalidatePath("/", "layout");
+  return { success: true as const, applied: false };
+}
+
+/**
+ * 받은 변경 제안에 응답한다 (제안자의 상대만 호출 가능).
+ * 수락하면 그때 실제로 옮기고, 양쪽이 합의한 시간이므로 확정으로 둔다.
+ */
+export async function respondToReschedule(
+  bookingId: string,
+  action: "accept" | "decline",
+): Promise<{ success: true } | { error: string }> {
+  const userId = await requireUserId();
+  const db = getAdminClient();
+
+  const { data: booking } = await db
+    .from("bookings")
+    .select(
+      "id, guest_id, host_id, slot_id, availability_id, scheduled_at, status, google_event_id, reschedule_by, reschedule_start_at, reschedule_end_at, reschedule_created_at",
+    )
+    .eq("id", bookingId)
+    .maybeSingle();
+  if (!booking) return { error: "예약을 찾을 수 없어요." };
+  if (!booking.reschedule_created_at) {
+    return { error: "대기 중인 변경 제안이 없어요." };
+  }
+  // 제안한 사람 말고, 상대만 응답할 수 있다.
+  const isParty = booking.guest_id === userId || booking.host_id === userId;
+  if (!isParty || booking.reschedule_by === userId) {
+    return { error: "응답할 수 있는 제안이 아니에요." };
+  }
+
+  const { data: slot } = await db
+    .from("time_slots")
+    .select("*")
+    .eq("id", booking.slot_id)
+    .single();
+  if (!slot) return { error: "슬롯을 찾을 수 없어요." };
+
+  const proposerId = booking.reschedule_by as string;
+  const [{ data: proposer }, { data: responder }] = await Promise.all([
+    db
+      .from("users")
+      .select("email, username, display_name")
+      .eq("id", proposerId)
+      .single(),
+    db
+      .from("users")
+      .select("email, username, display_name")
+      .eq("id", userId)
+      .single(),
+  ]);
+  const responderLabel = personLabel(responder, "상대");
+
+  if (action === "decline") {
+    const { error } = await db
+      .from("bookings")
+      .update({
+        reschedule_by: null,
+        reschedule_start_at: null,
+        reschedule_end_at: null,
+        reschedule_note: null,
+        reschedule_created_at: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", bookingId);
+    if (error) return { error: "처리에 실패했어요." };
+
+    try {
+      const { createNotification } = await import("@/lib/notifications");
+      await createNotification({
+        userId: proposerId,
+        type: "booking_reschedule_declined",
+        title: `${responderLabel}님이 '${slot.title}' 시간 변경을 거절했어요`,
+        body: "예약은 원래 시간 그대로예요",
+        link: `/bookings`,
+        actorId: userId,
+      });
+    } catch (err) {
+      console.error("respondToReschedule decline notify", err);
+    }
+    revalidatePath("/", "layout");
+    return { success: true as const };
+  }
+
+  const newStart = new Date(booking.reschedule_start_at as string);
+  const newEnd = new Date(booking.reschedule_end_at as string);
+  if (newStart.getTime() <= Date.now()) {
+    return { error: "이미 지나간 시간이에요. 새로 제안해달라고 해주세요." };
+  }
+
+  const moved = await moveBookingTo({
+    booking: booking as never,
+    slot: slot as never,
+    newStart,
+    newEnd,
+    // 호스트가 임의 시각을 제안한 것이라 특정 가용 슬롯 행에 묶이지 않는다
+    // (기존 점유는 moveBookingTo 가 비워준다).
+    newAvailabilityId: null,
+    // 양쪽이 이 시간에 합의했으니 재승인 절차는 필요 없다.
+    newStatus: "confirmed",
+  });
+  if (moved.error) return { error: moved.error };
+
+  try {
+    const whenLabel = newStart.toLocaleString("ko-KR", {
+      timeZone: "Asia/Seoul",
+      month: "long",
+      day: "numeric",
+      weekday: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    const { createNotification } = await import("@/lib/notifications");
+    await createNotification({
+      userId: proposerId,
+      type: "booking_reschedule_accepted",
+      title: `${responderLabel}님이 '${slot.title}' 시간 변경을 수락했어요`,
+      body: whenLabel,
+      link: `/bookings`,
+      actorId: userId,
+    });
+    const { emailAllowed } = await import("@/lib/notification-prefs");
+    if (
+      proposer?.email &&
+      (await emailAllowed(proposerId, "booking_confirmed"))
+    ) {
+      const { sendBookingRescheduleProposal } = await import("@/lib/email");
+      await sendBookingRescheduleProposal(proposer.email as string, {
+        slotTitle: slot.title as string,
+        previousWhen: booking.scheduled_at as string,
+        when: newStart.toISOString(),
+        proposerLabel: responderLabel,
+        note: null,
+        decided: true,
+      });
+    }
+  } catch (err) {
+    console.error("respondToReschedule accept notify", err);
+  }
+
+  revalidatePath("/", "layout");
+  return { success: true as const };
 }
 
 /** Guest cancels their own booking. Emails the host. */

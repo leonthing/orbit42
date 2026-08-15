@@ -72,6 +72,53 @@ struct BookingMenu: Decodable, Sendable {
     let priceCents: Int
 }
 
+extension BookingDateFormatter {
+    /// "15:00" — 상세 화면의 시작~종료 표기용.
+    static let time: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ko_KR")
+        formatter.dateFormat = "HH:mm"
+        formatter.timeZone = .current
+        return formatter
+    }()
+}
+
+// MARK: - 시간 변경 제안
+
+/// 예약에 얹힌 대기 중인 시간 변경 제안 (예약당 최대 1건).
+/// `byMe` 면 내가 제안하고 상대 응답을 기다리는 중, 아니면 내가 응답할 차례.
+struct BookingReschedule: Decodable, Sendable, Equatable {
+    let startAt: Date
+    let endAt: Date
+    let note: String?
+    let byMe: Bool
+
+    private enum CodingKeys: String, CodingKey {
+        case startAt, endAt, note, byMe
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        note = try container.decodeIfPresent(String.self, forKey: .note)
+        byMe = try container.decodeIfPresent(Bool.self, forKey: .byMe) ?? false
+        let rawStart = try container.decode(String.self, forKey: .startAt)
+        let rawEnd = try container.decode(String.self, forKey: .endAt)
+        guard let start = APIDateParser.parse(rawStart),
+              let end = APIDateParser.parse(rawEnd)
+        else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .startAt, in: container,
+                debugDescription: "지원하지 않는 날짜 형식"
+            )
+        }
+        startAt = start
+        endAt = end
+    }
+
+    /// "8월 22일 (토) 11:00"
+    var whenText: String { BookingDateFormatter.dateTime.string(from: startAt) }
+}
+
 /// `GET /api/v1/bookings` 응답의 host 항목.
 struct HostBooking: Decodable, Identifiable, Sendable, BookingDisplayable {
     let id: String
@@ -80,12 +127,16 @@ struct HostBooking: Decodable, Identifiable, Sendable, BookingDisplayable {
     let statusRaw: String
     let message: String?
     let guestName: String
+    let guestUsername: String?
     let slotTitle: String
     let slotSlug: String
+    let locationDetail: String?
     let menus: [BookingMenu]
+    let reschedule: BookingReschedule?
 
     private enum CodingKeys: String, CodingKey {
-        case id, scheduledAt, scheduledEndAt, message, guestName, slotTitle, slotSlug, menus
+        case id, scheduledAt, scheduledEndAt, message, guestName, guestUsername
+        case slotTitle, slotSlug, locationDetail, menus, reschedule
         case statusRaw = "status"
     }
 
@@ -95,9 +146,12 @@ struct HostBooking: Decodable, Identifiable, Sendable, BookingDisplayable {
         statusRaw = try container.decode(String.self, forKey: .statusRaw)
         message = try container.decodeIfPresent(String.self, forKey: .message)
         guestName = try container.decode(String.self, forKey: .guestName)
+        guestUsername = try container.decodeIfPresent(String.self, forKey: .guestUsername)
         slotTitle = try container.decode(String.self, forKey: .slotTitle)
         slotSlug = try container.decode(String.self, forKey: .slotSlug)
+        locationDetail = try container.decodeIfPresent(String.self, forKey: .locationDetail)
         menus = try container.decodeIfPresent([BookingMenu].self, forKey: .menus) ?? []
+        reschedule = try container.decodeIfPresent(BookingReschedule.self, forKey: .reschedule)
         scheduledAt = try Self.date(container, .scheduledAt)
         scheduledEndAt = try Self.date(container, .scheduledEndAt)
     }
@@ -129,10 +183,14 @@ struct GuestBooking: Decodable, Identifiable, Sendable, BookingDisplayable {
     let hostName: String
     let hostUsername: String
     let slotTitle: String
+    let slotSlug: String?
     let locationDetail: String?
+    let menus: [BookingMenu]
+    let reschedule: BookingReschedule?
 
     private enum CodingKeys: String, CodingKey {
-        case id, scheduledAt, scheduledEndAt, message, hostName, hostUsername, slotTitle, locationDetail
+        case id, scheduledAt, scheduledEndAt, message, hostName, hostUsername
+        case slotTitle, slotSlug, locationDetail, menus, reschedule
         case statusRaw = "status"
     }
 
@@ -144,7 +202,10 @@ struct GuestBooking: Decodable, Identifiable, Sendable, BookingDisplayable {
         hostName = try container.decode(String.self, forKey: .hostName)
         hostUsername = try container.decode(String.self, forKey: .hostUsername)
         slotTitle = try container.decode(String.self, forKey: .slotTitle)
+        slotSlug = try container.decodeIfPresent(String.self, forKey: .slotSlug)
         locationDetail = try container.decodeIfPresent(String.self, forKey: .locationDetail)
+        menus = try container.decodeIfPresent([BookingMenu].self, forKey: .menus) ?? []
+        reschedule = try container.decodeIfPresent(BookingReschedule.self, forKey: .reschedule)
         scheduledAt = try Self.date(container, .scheduledAt)
         scheduledEndAt = try Self.date(container, .scheduledEndAt)
     }
@@ -172,6 +233,19 @@ struct BookingsResponse: Decodable {
 }
 
 struct BookingActionRequest: Encodable {
+    let action: String
+}
+
+/// `POST /api/v1/bookings/{id}/reschedule` — 게스트는 startAt 또는
+/// availabilityId 로 호스트 가용 시간을 고르고, 호스트는 startAt 으로 제안한다.
+struct RescheduleRequest: Encodable {
+    let startAt: String?
+    let availabilityId: String?
+    let note: String?
+}
+
+/// `PATCH /api/v1/bookings/{id}/reschedule` — 받은 제안에 응답
+struct RescheduleResponseRequest: Encodable {
     let action: String
 }
 

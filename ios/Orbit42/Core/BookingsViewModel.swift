@@ -98,6 +98,70 @@ final class BookingsViewModel {
         }
     }
 
+    // MARK: - 시간 변경
+
+    /// 시간 변경 요청. 게스트면 호스트 가용 시간에서 고른 것이라 바로 반영되고,
+    /// 호스트면 제안으로 남아 게스트의 수락을 기다린다 (서버가 판단).
+    /// - Returns: 성공 여부. 실패 사유는 `actionMessage` 로 표시된다.
+    @discardableResult
+    /// - Parameter startAt: 서버가 내려준 원문(게스트: `BookingOption.startAtRaw`)
+    ///   또는 호스트가 고른 시각을 인코딩한 값.
+    func requestReschedule(
+        bookingId: String,
+        startAt: String?,
+        availabilityId: String?,
+        note: String?
+    ) async -> Bool {
+        guard !actingIds.contains(bookingId) else { return false }
+        actingIds.insert(bookingId)
+        defer { actingIds.remove(bookingId) }
+
+        do {
+            let _: BookingActionResponse = try await api.post(
+                "/api/v1/bookings/\(bookingId)/reschedule",
+                body: RescheduleRequest(
+                    startAt: startAt,
+                    availabilityId: availabilityId,
+                    note: note
+                )
+            )
+            await load(force: true)
+            return true
+        } catch is CancellationError {
+            return false
+        } catch let urlError as URLError where urlError.code == .cancelled {
+            return false
+        } catch let apiError as APIError {
+            actionMessage = apiError.errorDescription
+        } catch {
+            actionMessage = "시간 변경을 요청하지 못했어요. 네트워크를 확인해 주세요."
+        }
+        return false
+    }
+
+    /// 받은 변경 제안에 응답.
+    func respondToReschedule(bookingId: String, accept: Bool) async {
+        guard !actingIds.contains(bookingId) else { return }
+        actingIds.insert(bookingId)
+        defer { actingIds.remove(bookingId) }
+
+        do {
+            let _: BookingActionResponse = try await api.patch(
+                "/api/v1/bookings/\(bookingId)/reschedule",
+                body: RescheduleResponseRequest(action: accept ? "accept" : "decline")
+            )
+            await load(force: true)
+        } catch is CancellationError {
+            return
+        } catch let urlError as URLError where urlError.code == .cancelled {
+            return
+        } catch let apiError as APIError {
+            actionMessage = apiError.errorDescription
+        } catch {
+            actionMessage = "응답을 처리하지 못했어요. 네트워크를 확인해 주세요."
+        }
+    }
+
     func act(_ action: BookingAction, on bookingId: String) async {
         guard !actingIds.contains(bookingId) else { return }
         actingIds.insert(bookingId)
