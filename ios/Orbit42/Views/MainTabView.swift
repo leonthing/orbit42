@@ -1,6 +1,13 @@
 import Observation
 import SwiftUI
 
+/// 캘린더 탭에서 열어야 할 특정 일정 — 알림 딥링크용.
+struct CalendarEventRequest: Equatable {
+    let eventId: String
+    /// 일정이 있는 날 (해당 달을 불러오고 그 날을 선택하기 위해 필요)
+    let date: Date
+}
+
 /// 탭 간 이동 요청 — 자산 탭 추천 카드 등에서 다른 탭으로 보낼 때 쓴다.
 @MainActor
 @Observable
@@ -8,6 +15,8 @@ final class TabRouter {
     var selection: MainTabView.Tab = MainTabView.initialTab
     /// 캘린더 탭이 다음 표시 때 열어야 할 세그먼트 ("schedule" | "slots") — 소비 후 nil
     var calendarModeRequest: String?
+    /// 캘린더 탭이 열어야 할 일정 상세 — 소비 후 nil
+    var calendarEventRequest: CalendarEventRequest?
 }
 
 /// 메인 5탭: 캘린더(일정/타임슬롯) / 오르빗 / 예약 / 자산 / 프로필

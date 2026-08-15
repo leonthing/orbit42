@@ -36,11 +36,28 @@ struct AppNotification: Decodable, Identifiable, Sendable {
         }
     }
 
-    /// 웹 링크(path)를 앱 화면으로 해석 — "/{username}" 또는 "/{username}/s/{slug}"
+    /// 웹 링크(path)를 앱 화면으로 해석한다.
+    /// - "/calendar?event={id}&date=YYYY-MM-DD" → 캘린더 탭의 그 일정 상세
+    /// - "/bookings", "/{username}/bookings" → 예약 목록
+    /// - "/{username}" → 프로필, "/{username}/s/{slug}" → 타임슬롯 예약 화면
     var destination: Destination? {
-        guard let link, link.hasPrefix("/") else { return nil }
-        let parts = link.dropFirst().split(separator: "/").map(String.init)
-        if parts.count == 1, !parts[0].isEmpty {
+        guard let link, link.hasPrefix("/"),
+              let components = URLComponents(string: link) else { return nil }
+        let parts = components.path.split(separator: "/").map(String.init)
+        guard !parts.isEmpty else { return nil }
+
+        if parts[0] == "calendar" {
+            let query = components.queryItems ?? []
+            guard let eventId = query.first(where: { $0.name == "event" })?.value,
+                  let dateText = query.first(where: { $0.name == "date" })?.value,
+                  let date = Self.dayFormatter.date(from: dateText)
+            else { return nil }
+            return .event(id: eventId, date: date)
+        }
+        if parts.last == "bookings", parts.count <= 2 {
+            return .bookings
+        }
+        if parts.count == 1 {
             return .profile(username: parts[0])
         }
         if parts.count == 3, parts[1] == "s" {
@@ -52,7 +69,18 @@ struct AppNotification: Decodable, Identifiable, Sendable {
     enum Destination {
         case profile(username: String)
         case slot(username: String, slug: String)
+        case event(id: String, date: Date)
+        case bookings
     }
+
+    /// 링크의 date 쿼리("2026-08-14")를 기기 시간대의 그날로 읽는다.
+    private static let dayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = .current
+        return formatter
+    }()
 
     var createdDate: Date? { APIDateParser.parse(createdAt) }
 }
@@ -61,6 +89,7 @@ struct AppNotification: Decodable, Identifiable, Sendable {
 
 /// 알림 목록 — 열면 전체 읽음 처리, 행 탭 → 관련 화면으로 이동.
 struct NotificationsView: View {
+    @Environment(TabRouter.self) private var router
     @State private var notifications: [AppNotification]?
     @State private var errorMessage: String?
 
@@ -169,6 +198,16 @@ struct NotificationsView: View {
         case .slot(let username, let slug):
             NavigationLink { SlotBookingView(username: username, slug: slug) } label: { card }
                 .buttonStyle(.plain)
+        case .bookings:
+            NavigationLink { BookingsView(embedded: true) } label: { card }
+                .buttonStyle(.plain)
+        case .event(let id, let date):
+            // 일정은 캘린더 탭에 있어서 push 가 아니라 탭 전환으로 보낸다.
+            Button {
+                router.calendarEventRequest = CalendarEventRequest(eventId: id, date: date)
+                router.selection = .calendar
+            } label: { card }
+            .buttonStyle(.plain)
         case nil:
             card
         }

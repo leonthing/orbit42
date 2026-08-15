@@ -77,8 +77,13 @@ struct CalendarView: View {
             .onChange(of: router.calendarModeRequest) { _, request in
                 applyModeRequest(request)
             }
+            // 알림에서 넘어온 일정 딥링크.
+            .onChange(of: router.calendarEventRequest) { _, request in
+                applyEventRequest(request)
+            }
             .onAppear {
                 applyModeRequest(router.calendarModeRequest)
+                applyEventRequest(router.calendarEventRequest)
             }
         }
     }
@@ -87,6 +92,23 @@ struct CalendarView: View {
         guard let request, let requested = Mode(rawValue: request) else { return }
         mode = requested
         router.calendarModeRequest = nil
+    }
+
+    /// 알림 딥링크 — 그 일정이 있는 날로 이동해 상세 시트를 연다.
+    /// 해당 달을 새로 불러온 뒤 id 로 찾으며, 못 찾으면 날짜만 선택된 상태로 둔다.
+    private func applyEventRequest(_ request: CalendarEventRequest?) {
+        guard let request else { return }
+        router.calendarEventRequest = nil
+        mode = .schedule
+        scheduleViewMode = .month
+        viewModel.select(date: request.date)
+        Task {
+            await viewModel.loadDisplayedMonth(force: true)
+            if let event = viewModel.currentMonthData?.events
+                .first(where: { $0.id == request.eventId }) {
+                selectedEvent = event
+            }
+        }
     }
 
     // MARK: - 세그먼트
@@ -129,14 +151,14 @@ struct CalendarView: View {
                 Divider()
                     .overlay(Theme.fill(0.08))
                     .padding(.top, 8)
-                eventListSection
+                swipeableEventList
             case .week:
                 weekHeader
                 weekStrip
                 Divider()
                     .overlay(Theme.fill(0.08))
                     .padding(.top, 8)
-                eventListSection
+                swipeableEventList
             }
         }
         .toolbar {
@@ -519,6 +541,27 @@ struct CalendarView: View {
     }
 
     // MARK: - 이벤트 목록
+
+    /// 일정 목록 영역 — 좌우로 스와이프하면 어제/내일로 이동한다.
+    /// 세로 스크롤·당겨서 새로고침을 막지 않도록 simultaneousGesture 로 얹고,
+    /// 가로 이동이 세로보다 확실히 클 때만 날짜를 바꾼다.
+    private var swipeableEventList: some View {
+        eventListSection
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 24)
+                    .onEnded { value in
+                        let horizontal = value.translation.width
+                        guard abs(horizontal) > 48,
+                              abs(horizontal) > abs(value.translation.height) * 1.5
+                        else { return }
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            shiftDays(horizontal < 0 ? 1 : -1)
+                        }
+                    }
+            )
+    }
 
     @ViewBuilder
     private var eventListSection: some View {

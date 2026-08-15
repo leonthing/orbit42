@@ -43,6 +43,29 @@ const KST_FMT: Intl.DateTimeFormatOptions = {
   minute: "2-digit",
 };
 
+/** "2026-08-14" (KST 기준) — 알림 링크에 실어 앱이 해당 날짜를 열게 한다. */
+function kstDateKey(startAt: string): string | null {
+  const date = new Date(startAt);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+/**
+ * 알림에서 해당 일정으로 바로 이동하기 위한 링크.
+ * 웹은 `/calendar` 로 들어가 내 캘린더로 리다이렉트되고,
+ * 앱은 event/date 쿼리를 읽어 그 날짜의 상세 시트를 연다.
+ */
+function calendarEventLink(eventId: string, startAt: string): string {
+  const date = kstDateKey(startAt);
+  const query = date ? `&date=${date}` : "";
+  return `/calendar?event=${encodeURIComponent(eventId)}${query}`;
+}
+
 function whenText(snapshot: EventSnapshot): string {
   const date = new Date(snapshot.start_at);
   if (Number.isNaN(date.getTime())) return snapshot.start_at;
@@ -105,17 +128,22 @@ export async function addParticipantByUsername(
     return { error: "초대할 수 없는 상대예요." };
   }
 
-  const { error } = await db.from("event_participants").insert({
-    owner_id: ownerId,
-    event_key: eventKey,
-    participant_id: target.id,
-    title: snapshot.title,
-    start_at: snapshot.start_at,
-    end_at: snapshot.end_at,
-    all_day: snapshot.all_day,
-    location: snapshot.location ?? null,
-    description: snapshot.description ?? null,
-  });
+  // 알림 링크에 실을 참석자 행 id 가 필요해 insert 결과를 되받는다.
+  const { data: inserted, error } = await db
+    .from("event_participants")
+    .insert({
+      owner_id: ownerId,
+      event_key: eventKey,
+      participant_id: target.id,
+      title: snapshot.title,
+      start_at: snapshot.start_at,
+      end_at: snapshot.end_at,
+      all_day: snapshot.all_day,
+      location: snapshot.location ?? null,
+      description: snapshot.description ?? null,
+    })
+    .select("id")
+    .single();
   if (error) {
     if (error.message.includes("duplicate")) {
       return { error: "이미 초대한 사람이에요." };
@@ -138,7 +166,10 @@ export async function addParticipantByUsername(
     type: "event_invite",
     title: `${label}님이 '${snapshot.title}' 일정에 초대했어요`,
     body: whenText(snapshot),
-    link: `/${owner?.username}`,
+    // 초대받은 쪽 캘린더에서 이 일정의 id 는 `invite_{참석자 행 id}` 다.
+    link: inserted?.id
+      ? calendarEventLink(`invite_${inserted.id as string}`, snapshot.start_at)
+      : `/${owner?.username}`,
     actorId: ownerId,
   });
 
@@ -256,7 +287,7 @@ export async function respondToInvite(
   const db = getAdminClient();
   const { data: row } = await db
     .from("event_participants")
-    .select("id, owner_id, title, start_at, end_at, all_day")
+    .select("id, owner_id, event_key, title, start_at, end_at, all_day")
     .eq("id", participationId)
     .eq("participant_id", participantUserId)
     .maybeSingle();
@@ -290,7 +321,8 @@ export async function respondToInvite(
       end_at: row.end_at as string | null,
       all_day: Boolean(row.all_day),
     }),
-    link: `/${me?.username}`,
+    // 소유자 캘린더에서는 원본 일정 id(event_key)가 그대로 쓰인다.
+    link: calendarEventLink(row.event_key as string, row.start_at as string),
     actorId: participantUserId,
   });
   return { ok: true };
