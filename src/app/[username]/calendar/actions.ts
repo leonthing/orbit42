@@ -11,6 +11,10 @@ import {
   listEventsForUser,
   createEventForUser,
 } from "@/lib/calendar-events";
+import {
+  syncParticipantSnapshots,
+  type EventSnapshot,
+} from "@/lib/event-participants";
 
 export type Event = {
   id: string;
@@ -159,6 +163,18 @@ export async function createEvent(input: EventInput): Promise<Event> {
   return createEventForUser(userId, input);
 }
 
+/** 일정 patch 중 참석자 스냅샷에도 반영해야 하는 필드만 추린다. */
+function snapshotPatch(input: Partial<EventInput>): Partial<EventSnapshot> {
+  const out: Partial<EventSnapshot> = {};
+  if (input.title !== undefined) out.title = input.title;
+  if (input.start_at !== undefined) out.start_at = input.start_at;
+  if (input.end_at !== undefined) out.end_at = input.end_at;
+  if (input.all_day !== undefined) out.all_day = input.all_day;
+  if (input.location !== undefined) out.location = input.location ?? null;
+  if (input.description !== undefined) out.description = input.description ?? null;
+  return out;
+}
+
 export async function updateEvent(id: string, input: Partial<EventInput>): Promise<Event> {
   const userId = await requireUserId();
   const db = getAdminClient();
@@ -170,6 +186,8 @@ export async function updateEvent(id: string, input: Partial<EventInput>): Promi
     .select()
     .single();
   if (error) throw new Error(error.message);
+  // 초대한 참석자가 있으면 그쪽 캘린더의 스냅샷도 따라 바꾼다.
+  await syncParticipantSnapshots(userId, id, snapshotPatch(input));
   return { ...data, source: "local" } as Event;
 }
 
@@ -236,6 +254,12 @@ export async function updateGoogleEvent(
       eventId,
       requestBody: body,
     });
+    // 참석자 행은 클라이언트 원형 id(`gcal_*`)로 붙어 있다.
+    await syncParticipantSnapshots(
+      userId,
+      `gcal_${eventId}`,
+      snapshotPatch(input),
+    );
     return { ok: true };
   } catch (err) {
     console.error("updateGoogleEvent", err);

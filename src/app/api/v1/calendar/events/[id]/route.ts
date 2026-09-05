@@ -149,6 +149,20 @@ export async function PATCH(
       if ("error" in result) {
         return Response.json({ error: result.error }, { status: 400 });
       }
+      // 이동과 함께 온 수정 사항을 참석자 스냅샷에도 반영 (키는 이미 옮겨졌다).
+      const { syncParticipantSnapshots } = await import(
+        "@/lib/event-participants"
+      );
+      await syncParticipantSnapshots(userId, result.newId, {
+        ...(patch.title !== undefined && { title: patch.title }),
+        ...(patch.start_at !== undefined && { start_at: patch.start_at }),
+        ...(patch.end_at !== undefined && { end_at: patch.end_at }),
+        ...(patch.all_day !== undefined && { all_day: patch.all_day }),
+        ...(patch.location !== undefined && { location: patch.location ?? null }),
+        ...(patch.description !== undefined && {
+          description: patch.description ?? null,
+        }),
+      });
       return Response.json({ ok: true, id: result.newId });
     }
 

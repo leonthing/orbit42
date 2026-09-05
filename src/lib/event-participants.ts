@@ -262,6 +262,148 @@ export async function addParticipantByEmail(
   return { ok: true };
 }
 
+/**
+ * 원본 일정이 바뀌었을 때 참석자 행의 스냅샷을 따라 갱신한다.
+ *
+ * 초대 시점 값을 행에 복사해 두는 구조라, 이걸 호출하지 않으면 상대 캘린더와
+ * 초대 목록에는 옛 제목·시간·장소가 그대로 남는다. 일정 수정 경로(로컬·구글·
+ * 캘린더 이동)가 모두 여기를 지나야 한다.
+ *
+ * 시간·장소·제목이 실제로 달라진 경우에만 (거절하지 않은) 가입 참석자에게
+ * 알린다. 메모만 바뀐 건 조용히 반영한다. 실패해도 일정 수정 자체는 이미
+ * 끝난 뒤라 예외를 밖으로 던지지 않는다.
+ */
+export async function syncParticipantSnapshots(
+  ownerId: string,
+  eventKey: string,
+  patch: Partial<EventSnapshot>,
+): Promise<void> {
+  const update: Record<string, unknown> = {};
+  if (patch.title !== undefined) update.title = patch.title;
+  if (patch.start_at !== undefined) update.start_at = patch.start_at;
+  if (patch.end_at !== undefined) update.end_at = patch.end_at;
+  if (patch.all_day !== undefined) update.all_day = patch.all_day;
+  if (patch.location !== undefined) update.location = patch.location ?? null;
+  if (patch.description !== undefined) {
+    update.description = patch.description ?? null;
+  }
+  if (Object.keys(update).length === 0) return;
+
+  try {
+    const db = getAdminClient();
+    const { data: rows } = await db
+      .from("event_participants")
+      .select(
+        "id, participant_id, status, title, start_at, end_at, all_day, location",
+      )
+      .eq("owner_id", ownerId)
+      .eq("event_key", eventKey);
+    if (!rows || rows.length === 0) return;
+
+    const { error } = await db
+      .from("event_participants")
+      .update(update)
+      .eq("owner_id", ownerId)
+      .eq("event_key", eventKey);
+    if (error) {
+      console.error("syncParticipantSnapshots update", error);
+      return;
+    }
+
+    // 알림은 눈에 띄는 변화(제목·시간·장소)가 있을 때만.
+    const sameTime = (a: string | null, b: string | null) => {
+      if (a == null || b == null) return a == b;
+      const ta = Date.parse(a);
+      const tb = Date.parse(b);
+      return Number.isNaN(ta) || Number.isNaN(tb) ? a === b : ta === tb;
+    };
+    const changed = rows.filter((row) => {
+      if (update.title !== undefined && update.title !== row.title) return true;
+      if (
+        update.start_at !== undefined &&
+        !sameTime(update.start_at as string, row.start_at as string | null)
+      ) {
+        return true;
+      }
+      if (
+        update.end_at !== undefined &&
+        !sameTime(update.end_at as string | null, row.end_at as string | null)
+      ) {
+        return true;
+      }
+      if (update.all_day !== undefined && update.all_day !== row.all_day) {
+        return true;
+      }
+      if (
+        update.location !== undefined &&
+        (update.location ?? null) !== ((row.location as string | null) ?? null)
+      ) {
+        return true;
+      }
+      return false;
+    });
+    const recipients = changed.filter(
+      (row) => row.participant_id && row.status !== "declined",
+    );
+    if (recipients.length === 0) return;
+
+    const { data: owner } = await db
+      .from("users")
+      .select("username, display_name")
+      .eq("id", ownerId)
+      .single();
+    const label =
+      (owner?.display_name as string | null) ||
+      (owner?.username as string) ||
+      "누군가";
+    const { createNotification } = await import("@/lib/notifications");
+    for (const row of recipients) {
+      const snapshot: EventSnapshot = {
+        title: (update.title as string | undefined) ?? (row.title as string),
+        start_at:
+          (update.start_at as string | undefined) ?? (row.start_at as string),
+        end_at:
+          (update.end_at as string | null | undefined) ??
+          (row.end_at as string | null),
+        all_day:
+          (update.all_day as boolean | undefined) ?? Boolean(row.all_day),
+        location:
+          (update.location as string | null | undefined) ??
+          (row.location as string | null),
+      };
+      const body = snapshot.location
+        ? `${whenText(snapshot)} · ${snapshot.location}`
+        : whenText(snapshot);
+      await createNotification({
+        userId: row.participant_id as string,
+        type: "event_invite_updated",
+        title: `${label}님이 '${snapshot.title}' 일정을 변경했어요`,
+        body,
+        link: calendarEventLink(`invite_${row.id as string}`, snapshot.start_at),
+        actorId: ownerId,
+      });
+    }
+  } catch (err) {
+    console.error("syncParticipantSnapshots", err);
+  }
+}
+
+/** 일정이 다른 캘린더로 옮겨져 id 가 바뀔 때 참석자 행의 event_key 를 따라 옮긴다. */
+export async function rekeyParticipants(
+  ownerId: string,
+  oldKey: string,
+  newKey: string,
+): Promise<void> {
+  if (oldKey === newKey) return;
+  const db = getAdminClient();
+  const { error } = await db
+    .from("event_participants")
+    .update({ event_key: newKey })
+    .eq("owner_id", ownerId)
+    .eq("event_key", oldKey);
+  if (error) console.error("rekeyParticipants", error);
+}
+
 export async function removeParticipant(
   ownerId: string,
   eventKey: string,

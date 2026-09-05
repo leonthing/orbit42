@@ -28,7 +28,7 @@ struct AppNotification: Decodable, Identifiable, Sendable {
     var systemImage: String {
         switch type {
         case "new_follower": return "person.badge.plus"
-        case "event_invite", "event_invite_response": return "person.2"
+        case let t where t.hasPrefix("event_invite"): return "person.2"
         case "new_slot": return "clock.badge.checkmark"
         case "time_request": return "hand.raised"
         case let t where t.hasPrefix("booking"): return "calendar.badge.clock"

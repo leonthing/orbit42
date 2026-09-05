@@ -405,6 +405,8 @@ async function migrateEventKeys(userId: string, oldId: string, newId: string) {
     .update({ event_key: normalizeEventKey(newId) })
     .eq("user_id", userId)
     .eq("event_key", normalizeEventKey(oldId));
+  const { rekeyParticipants } = await import("@/lib/event-participants");
+  await rekeyParticipants(userId, oldId, newId);
 }
 
 function googleEventBody(input: {
