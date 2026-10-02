@@ -78,6 +78,12 @@ struct SettingsView: View {
             }
 
             NavigationLink {
+                PeopleImportSettingsView()
+            } label: {
+                menuRow(icon: "person.2.circle", title: "사람 찾기")
+            }
+
+            NavigationLink {
                 NotificationPrefsView()
             } label: {
                 menuRow(icon: "bell", title: "알림 설정")

@@ -15,8 +15,16 @@ struct AddEventSheet: View {
     @State private var isSaving = false
     @State private var errorMessage: String?
 
-    init(viewModel: CalendarViewModel, defaultDate: Date) {
+    /// - initialTitle / initialParticipants: 관계 궤도의 "일정 잡기"처럼 상대가 정해진 채로 열 때.
+    init(
+        viewModel: CalendarViewModel,
+        defaultDate: Date,
+        initialTitle: String = "",
+        initialParticipants: [PendingParticipant] = []
+    ) {
         self.viewModel = viewModel
+        _title = State(initialValue: initialTitle)
+        _pendingParticipants = State(initialValue: initialParticipants)
 
         // 선택된 날짜 + 다음 정시로 시작 시각 제안
         let calendar = CalendarViewModel.calendar

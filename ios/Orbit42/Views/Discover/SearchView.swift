@@ -6,6 +6,8 @@ struct SearchView: View {
     @State private var viewModel = SearchViewModel()
     /// 팔로우 추천 — 오르빗 아래 섹션 (온보딩과 같은 API·행 공용).
     @State private var suggestions = FollowSuggestionsViewModel()
+    /// 관계 궤도 — 탭 맨 위 (캘린더 탭의 가로 줄과 같은 store)
+    @Environment(PeopleStore.self) private var people
 
     var body: some View {
         ZStack {
@@ -31,7 +33,16 @@ struct SearchView: View {
             async let orbit: Void = viewModel.loadOrbit()
             async let stream: Void = viewModel.loadStream()
             async let suggested: Void = suggestions.load()
-            _ = await (orbit, stream, suggested)
+            async let contacts: Void = people.refresh()
+            _ = await (orbit, stream, suggested, contacts)
+        }
+        .alert("알림", isPresented: Binding(
+            get: { people.actionMessage != nil },
+            set: { if !$0 { people.actionMessage = nil } }
+        )) {
+            Button("확인", role: .cancel) {}
+        } message: {
+            Text(people.actionMessage ?? "")
         }
     }
 
@@ -40,17 +51,8 @@ struct SearchView: View {
     @ViewBuilder
     private var content: some View {
         if viewModel.trimmedQuery.isEmpty {
-            let orbit = viewModel.orbit ?? []
-            if orbit.isEmpty, suggestions.users?.isEmpty != false,
-               viewModel.stream?.isEmpty != false {
-                hintState(
-                    icon: "sparkle.magnifyingglass",
-                    title: "오르빗이 비어있어요",
-                    message: "관심 있는 사람을 팔로우하면\n그 사람의 열리는 시간이 여기 모여요.\n친구를 초대하면 자동으로 맞팔로우돼요."
-                )
-            } else {
-                orbitList(orbit)
-            }
+            // 관계 궤도가 맨 위에 늘 있으므로 빈 상태 안내 대신 목록을 그린다.
+            orbitList(viewModel.orbit ?? [])
         } else if let message = viewModel.errorMessage {
             errorState(message)
         } else if let results = viewModel.results {
@@ -172,11 +174,14 @@ struct SearchView: View {
     // List 대신 ScrollView — List의 NavigationLink 자동 chevron(들쭉날쭉한
     // 오른쪽 화살표)을 원천 제거하기 위함.
     private func orbitList(_ people: [OrbitPerson]) -> some View {
+        ScrollViewReader { proxy in
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 10) {
+                PeopleOrbitSection()
+
                 if !people.isEmpty {
-                    sectionHeader("내 오르빗")
-                        .padding(.top, 6)
+                    sectionHeader("팔로우한 사람들의 열린 시간")
+                        .padding(.top, 14)
 
                     ForEach(people) { person in
                         OrbitPersonCard(person: person)
@@ -187,8 +192,8 @@ struct SearchView: View {
                         .foregroundStyle(Theme.secondaryText)
                         .padding(.top, 4)
                 } else {
-                    sectionHeader("내 오르빗")
-                        .padding(.top, 6)
+                    sectionHeader("팔로우한 사람들의 열린 시간")
+                        .padding(.top, 14)
                     Text("아직 비어있어요. 아래에서 관심 가는 사람을 팔로우해 보세요.")
                         .font(.caption)
                         .foregroundStyle(Theme.secondaryText)
@@ -221,10 +226,22 @@ struct SearchView: View {
             .padding(.bottom, 24)
         }
         .scrollDismissesKeyboard(.immediately)
+        #if DEBUG
+        // 스크린샷용: DEMO_PEOPLE=cards 면 관계 카드가 보이게 내린다.
+        .onChange(of: self.people.people.count) { _, count in
+            guard count > 0, ProcessInfo.processInfo.environment["DEMO_PEOPLE"] == "cards" else { return }
+            Task {
+                try? await Task.sleep(for: .milliseconds(600))
+                withAnimation { proxy.scrollTo("relationship-cards", anchor: .top) }
+            }
+        }
+        #endif
         .refreshable {
             await viewModel.loadOrbit(force: true)
             await viewModel.loadStream(force: true)
             await suggestions.load(force: true)
+            await self.people.refresh(force: true)
+        }
         }
     }
 

@@ -32,6 +32,8 @@ struct MainTabView: View {
     }
 
     @Environment(TabRouter.self) private var router
+    /// 관계 궤도 — 오르빗 탭과 캘린더 탭이 함께 쓴다.
+    @State private var people = PeopleStore()
 
     /// DEBUG 데모/스크린샷용: DEMO_TAB 환경변수(calendar|orbit|bookings|asset|profile)로
     /// 시작 탭 지정 (simctl launch 는 SIMCTL_CHILD_DEMO_TAB=... 으로 전달)
@@ -71,6 +73,7 @@ struct MainTabView: View {
                 .tabItem { Label("프로필", systemImage: "person.crop.circle") }
                 .tag(Tab.profile)
         }
+        .environment(people)
     }
 }
 
