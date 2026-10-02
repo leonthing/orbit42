@@ -28,6 +28,8 @@ struct PeopleOrbitSection: View {
                 onAdd: { addingPerson = true }
             )
 
+            OrbitRecentStrip()
+
             if !store.importEnabled, store.data != nil {
                 importCard
             } else if !store.suggestions.isEmpty {

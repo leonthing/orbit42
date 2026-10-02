@@ -1,38 +1,29 @@
 import SwiftUI
 
-/// 캘린더 탭 맨 위의 "나의 오르빗" 한 줄 + 안부 넛지.
-/// 달력을 밀어내지 않도록 얇게: 아바타 줄(접을 수 있음)과 넛지 한 건만.
-struct CalendarOrbitStrip: View {
+/// 오르빗 탭 궤도 아래: 최근 만난 순 한 줄 + 안부 넛지.
+/// (처음엔 캘린더 탭 위에 있었지만, 달력은 일정에 집중하도록 오르빗 탭으로 옮겼다.)
+struct OrbitRecentStrip: View {
     @Environment(PeopleStore.self) private var store
-    @Environment(AuthViewModel.self) private var auth
-    @Environment(TabRouter.self) private var router
 
-    @AppStorage("calendarOrbitStripCollapsed") private var collapsed = false
     @State private var quickPerson: Contact?
     @State private var logPerson: Contact?
     @State private var schedulePerson: Contact?
     @State private var requestPerson: Contact?
 
-    private let stripCount = 6
+    /// 최근에 만난 순 — 만난 기록이 없는 사람은 뒤로
+    private var recent: [Contact] {
+        store.people.sorted { ($0.daysSince ?? .max) < ($1.daysSince ?? .max) }
+    }
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 8) {
             if !store.people.isEmpty {
-                VStack(spacing: 6) {
-                    if collapsed {
-                        collapsedRow
-                    } else {
-                        strip
-                    }
-                    if !collapsed, let first = store.nudges.first {
-                        nudgeCard(first.nudge, person: first.person)
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 6)
+                strip
+            }
+            ForEach(store.nudges, id: \.person.id) { item in
+                nudgeCard(item.nudge, person: item.person)
             }
         }
-        .task { await store.refresh() }
         .sheet(item: $quickPerson) { ContactQuickSheet(personId: $0.id, initial: $0) }
         .sheet(item: $logPerson) { LogMeetingSheet(person: $0) }
         .sheet(item: $schedulePerson) { ScheduleWithContactSheet(person: $0) }
@@ -43,30 +34,24 @@ struct CalendarOrbitStrip: View {
         }
     }
 
-    // MARK: - 아바타 줄
+    // MARK: - 최근 만난 순
 
     private var strip: some View {
-        HStack(alignment: .top, spacing: 0) {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("최근 만난 순")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Theme.secondaryText)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .top, spacing: 12) {
-                    VStack(spacing: 3) {
-                        MeAvatar(user: auth.user, size: 38)
-                            .overlay(Circle().strokeBorder(Theme.accent.opacity(0.4), lineWidth: 2))
-                        Text("나")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(Theme.primaryText)
-                        Text(" ")
-                            .font(.system(size: 10))
-                    }
-                    ForEach(store.people.prefix(stripCount)) { person in
+                    ForEach(recent) { person in
                         Button { quickPerson = person } label: {
                             VStack(spacing: 3) {
-                                ContactAvatar(person: person, size: 38)
+                                ContactAvatar(person: person, size: 42)
                                 Text(person.name)
                                     .font(.caption2.weight(.semibold))
                                     .foregroundStyle(Theme.primaryText)
                                     .lineLimit(1)
-                                    .frame(maxWidth: 52)
+                                    .frame(maxWidth: 56)
                                 Text(ContactFormat.daysSince(person.daysSince))
                                     .font(.system(size: 10))
                                     .foregroundStyle(Theme.secondaryText)
@@ -77,66 +62,9 @@ struct CalendarOrbitStrip: View {
                 }
                 .padding(.vertical, 2)
             }
-            VStack(spacing: 10) {
-                Button {
-                    router.selection = .orbit
-                } label: {
-                    HStack(spacing: 2) {
-                        Text("관계")
-                        Image(systemName: "chevron.right")
-                    }
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Theme.accent)
-                }
-                .buttonStyle(.plain)
-                Button {
-                    withAnimation(.snappy) { collapsed = true }
-                } label: {
-                    Image(systemName: "chevron.up")
-                        .font(.caption)
-                        .foregroundStyle(Theme.secondaryText)
-                        .frame(width: 28, height: 22)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("나의 오르빗 접기")
-            }
-            .padding(.leading, 8)
-            .padding(.top, 4)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(12)
         .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
-
-    /// 접힌 상태 — 겹친 아바타 몇 개와 펼치기
-    private var collapsedRow: some View {
-        Button {
-            withAnimation(.snappy) { collapsed = false }
-        } label: {
-            HStack(spacing: 8) {
-                HStack(spacing: -8) {
-                    ForEach(store.people.prefix(4)) { person in
-                        ContactAvatar(person: person, size: 22)
-                            .overlay(Circle().strokeBorder(Theme.surface, lineWidth: 1.5))
-                    }
-                }
-                Text("나의 오르빗")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Theme.primaryText)
-                if !store.nudges.isEmpty {
-                    Circle().fill(Theme.accent).frame(width: 6, height: 6)
-                }
-                Spacer()
-                Image(systemName: "chevron.down")
-                    .font(.caption)
-                    .foregroundStyle(Theme.secondaryText)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .background(Theme.surface, in: Capsule())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("나의 오르빗 펼치기")
     }
 
     // MARK: - 안부 넛지

@@ -145,8 +145,6 @@ struct CalendarView: View {
             case .year:
                 yearView
             case .month:
-                // 나의 오르빗 한 줄 + 안부 넛지 (사람이 없으면 아무것도 그리지 않는다)
-                CalendarOrbitStrip()
                 monthHeader
                 weekdayHeader
                 monthGrid
