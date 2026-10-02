@@ -39,6 +39,7 @@ export const NAV_ITEMS = [
   { href: "/slots", label: "타임슬롯", icon: "clock" },
   { href: "/services", label: "서비스", icon: "ticket" },
   { href: "/bookings", label: "예약", icon: "schedule" },
+  { href: "/people", label: "오르빗", icon: "users" },
   { href: "/insights", label: "시간 자산", icon: "chart" },
   { href: "/blog", label: "블로그", icon: "blog" },
   { href: "/settings", label: "설정", icon: "cog" },

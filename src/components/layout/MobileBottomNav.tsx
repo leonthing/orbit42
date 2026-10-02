@@ -39,13 +39,16 @@ export function MobileBottomNav({ username }: { username: string }) {
       ),
     },
     {
-      href: "/explore",
-      label: "탐색",
-      active: pathname === "/explore",
+      // 탐색(사람 찾기)은 오르빗 화면 안으로 들어갔다 — iOS 의 오르빗 탭과 같은 구성.
+      href: `/${username}/people`,
+      label: "오르빗",
+      active: pathname.startsWith(`/${username}/people`) || pathname === "/explore",
       icon: (
         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-          <circle cx="11" cy="11" r="7" />
-          <path strokeLinecap="round" d="m21 21-4.3-4.3" />
+          <circle cx="12" cy="12" r="2.5" />
+          <circle cx="12" cy="12" r="8.5" strokeDasharray="2.5 2.5" />
+          <circle cx="18" cy="6" r="1.8" fill="currentColor" stroke="none" />
+          <circle cx="5.5" cy="15.5" r="1.4" fill="currentColor" stroke="none" />
         </svg>
       ),
     },

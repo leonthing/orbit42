@@ -8,6 +8,9 @@ import { listMyCalendars } from "@/lib/calendars";
 import CalendarView from "./CalendarView";
 import { SlotPanelProvider } from "@/components/SlotPanel";
 import { OnboardingSection } from "@/components/OnboardingSection";
+import { PeopleStrip } from "@/components/people/PeopleStrip";
+import { getOrbit } from "@/lib/people";
+import { getUserId } from "@/lib/db";
 
 export const metadata: Metadata = { title: "캘린더" };
 export const dynamic = "force-dynamic";
@@ -51,6 +54,10 @@ export default async function CalendarPage({
   const birthDate = profile?.birth_date || null;
   const isOwner = session?.username === params.username;
 
+  // 내 캘린더 위에만 "나의 오르빗" 한 줄 (DB 만 읽는다 — 구글 동기화는 오르빗 화면에서)
+  const ownerId = isOwner ? await getUserId().catch(() => null) : null;
+  const orbit = ownerId ? await getOrbit(ownerId).catch(() => null) : null;
+
   return (
     <SlotPanelProvider username={params.username}>
       {/* 체크리스트와 캘린더를 한 flex 컬럼에 둔다. 캘린더에 h-full 을 주면
@@ -59,6 +66,13 @@ export default async function CalendarPage({
         {/* 홈이 캘린더로 옮겨오면서 시작하기 체크리스트도 함께 이주했다.
             내 캘린더일 때만 보여준다 (남의 캘린더에서는 의미 없음). */}
         {isOwner && <OnboardingSection />}
+        {orbit && profile && (
+          <PeopleStrip
+            username={params.username}
+            me={{ name: profile.display_name || profile.username, avatarUrl: profile.avatar_url ?? null }}
+            orbit={orbit}
+          />
+        )}
         <CalendarView
           username={params.username}
           initialEvents={events}

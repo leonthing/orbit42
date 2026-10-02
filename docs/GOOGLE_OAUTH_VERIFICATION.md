@@ -15,7 +15,7 @@
 | 스코프 | 등급 | 앱에서 쓰는 곳 |
 |---|---|---|
 | `openid` / `userinfo.email` / `userinfo.profile` | 비민감 | Google 로그인/가입 |
-| `https://www.googleapis.com/auth/calendar.readonly` | 민감 | 캘린더 목록·이벤트 읽어 주간 뷰 표시 |
+| `https://www.googleapis.com/auth/calendar.readonly` | 민감 | 캘린더 목록·이벤트 읽어 주간 뷰 표시 + (옵트인) 미팅 참석자로 본인 전용 관계 지도 |
 | `https://www.googleapis.com/auth/calendar.events` | 민감 | 예약 확정 시 사용자 Google 캘린더에 이벤트 생성/수정/삭제 |
 
 > `contacts.readonly`는 네트워크/친구찾기 기능을 보류하면서 요청 스코프에서
@@ -54,6 +54,11 @@
 > 등록하는 서비스입니다. 사용자가 Google 캘린더를 연동하면, 본인의 캘린더
 > 목록과 이벤트를 읽어 앱 내 주간 캘린더 뷰에 표시하고 예약 가능한 시간대를
 > 계산합니다. 읽기 전용 접근만으로 이 표시·계산 기능을 제공합니다.
+>
+> 또한 사용자가 "오르빗" 화면에서 직접 켠 경우에만(기본값 꺼짐), 본인 일정의
+> 참석자 이름·이메일을 읽어 본인만 보는 관계 지도(누구를 언제 만났고 얼마나
+> 시간을 함께 썼는지)를 만듭니다. 참석자에게는 아무것도 전송되지 않고 다른
+> 사용자에게 공개되지 않으며, 기능을 끄면 가져온 만남 기록이 삭제됩니다.
 
 ### calendar.readonly — English
 > Orbit42 lets users manage their schedule in one place and publish bookable
@@ -61,6 +66,13 @@
 > calendar list and events to render the in-app weekly calendar view and to
 > compute which time slots are free for others to book. Read-only access is
 > used solely to display and reconcile the user's own availability.
+>
+> Optionally (off by default, explicit opt-in on the "Orbit" screen), we read
+> the attendee names and email addresses of the user's own meetings from the
+> past 6 months to build a private relationship map visible only to that user
+> (who they met, when, and how much time they spent together). Nothing is sent
+> to attendees, the data is never shown to other users, and turning the
+> feature off deletes the imported meeting records.
 
 ### calendar.events — Korean
 > 다른 사용자가 호스트의 시간을 예약하면, Orbit42는 확정된 예약을 호스트(및
@@ -92,7 +104,10 @@ Google은 영상에서 ① 동의화면에 우리 앱 이름/스코프가 뜨는
 5. **calendar.events**: 예약 슬롯에서 예약을 생성 → 확정 → 사용자 Google
    캘린더(google.com/calendar)에 이벤트가 생성된 것을 보여줌. 이어 취소 →
    해당 이벤트가 사라지는 것까지.
-6. 마무리: 설정에서 Google 연동 해제(권한 회수) 동작 한 번.
+6. (선택) 오르빗: `/[username]/people` 에서 "구글 캘린더에서 찾기"를 눌러
+   옵트인 → 참석자가 제안으로 뜨고 → 추가 → 끄기를 누르면 가져온 기록이
+   지워지는 것까지.
+7. 마무리: 설정에서 Google 연동 해제(권한 회수) 동작 한 번.
 
 영상 설명란에 "Demo for Orbit42 OAuth verification — scopes: calendar.readonly,
 calendar.events"를 적어두면 검토가 매끄럽다.
