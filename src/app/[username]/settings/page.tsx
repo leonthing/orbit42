@@ -25,6 +25,8 @@ import {
 } from "./AccountDangerZone";
 import { SectionNav } from "./SectionNav";
 import { PaymentInstructionsForm } from "./PaymentInstructionsForm";
+import { WeekStartPicker } from "./WeekStartPicker";
+import { normalizeWeekStart } from "@/lib/week-start";
 import { getAdminClient } from "@/lib/supabase";
 
 export const metadata: Metadata = { title: "설정" };
@@ -64,10 +66,11 @@ export default async function SettingsPage({
     ]);
 
   const { data: payRow } = userId
-    ? await getAdminClient().from("users").select("payment_instructions").eq("id", userId).single()
+    ? await getAdminClient().from("users").select("payment_instructions, week_start").eq("id", userId).single()
     : { data: null };
   const paymentInstructions =
     (payRow as { payment_instructions: string | null } | null)?.payment_instructions ?? null;
+  const weekStart = normalizeWeekStart((payRow as { week_start?: string } | null)?.week_start);
 
   return (
     <div className="w-full min-w-0 max-w-5xl">
@@ -130,7 +133,8 @@ export default async function SettingsPage({
             />
           </section>
 
-          <section id="calendars" className="scroll-mt-16">
+          <section id="calendars" className="scroll-mt-16 space-y-6">
+            <WeekStartPicker initial={weekStart} />
             <MyCalendars initial={myCalendars} googleConnected={googleConnected} />
           </section>
 

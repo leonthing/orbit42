@@ -8,7 +8,7 @@ import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
  * Used on /feed, /explore, /[username] and all of its sub-routes
  * whenever the viewer is signed in.
  */
-export function AppShell({
+export async function AppShell({
   viewerUsername,
   viewerDisplayName,
   viewerAvatarUrl = null,
@@ -23,10 +23,19 @@ export function AppShell({
   unreadNotifications?: number;
   children: React.ReactNode;
 }) {
+  // 사이드바 미니 달력도 주 시작 요일 설정을 따른다.
+  const { getAdminClient } = await import("@/lib/supabase");
+  const { data: wsRow } = await getAdminClient()
+    .from("users")
+    .select("week_start")
+    .eq("username", viewerUsername)
+    .maybeSingle();
+  const weekStart = (wsRow as { week_start?: string } | null)?.week_start === "sun" ? "sun" : "mon";
+
   return (
     <MobileMenuProvider>
       <div className="flex h-screen overflow-hidden bg-[rgb(var(--bg-base))]">
-        <Sidebar username={viewerUsername} unreadMessages={unreadMessages} />
+        <Sidebar username={viewerUsername} unreadMessages={unreadMessages} weekStart={weekStart} />
         <div className="flex flex-1 flex-col overflow-hidden">
           <TopBar
             username={viewerUsername}

@@ -3,14 +3,13 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { getEvents } from "@/app/[username]/calendar/actions";
+import { saturdayIndex, sundayIndex, weekdayIndex, weekdayLabels, type WeekStart } from "@/lib/week-start";
 
-const DAYS_MON = ["월", "화", "수", "목", "금", "토", "일"];
 const DAYS_SUN_FIRST = ["일", "월", "화", "수", "목", "금", "토"];
 const STORAGE_KEY = "orbit42.miniMonth.collapsed";
 
-function getCalendarDays(year: number, month: number) {
-  const firstDay = new Date(year, month, 1).getDay();
-  const offset = firstDay === 0 ? 6 : firstDay - 1;
+function getCalendarDays(year: number, month: number, ws: WeekStart) {
+  const offset = weekdayIndex(new Date(year, month, 1), ws);
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const days: (number | null)[] = [];
   for (let i = 0; i < offset; i++) days.push(null);
@@ -25,7 +24,7 @@ function ymd(year: number, month: number, day: number) {
   return `${year}-${mm}-${dd}`;
 }
 
-export function MiniMonth({ username }: { username: string }) {
+export function MiniMonth({ username, weekStart = "mon" }: { username: string; weekStart?: WeekStart }) {
   // "Today" must come from the browser clock, never the SSR pass — the
   // server runs in UTC, so between midnight and 9am KST its date differs
   // from the client's and hydration blows up (React #423). Render an
@@ -102,7 +101,7 @@ export function MiniMonth({ username }: { username: string }) {
     setMonth(today.getMonth());
   };
 
-  const days = getCalendarDays(year, month);
+  const days = getCalendarDays(year, month, weekStart);
   const isCurrentMonth =
     year === today.getFullYear() && month === today.getMonth();
   const todayDate = today.getDate();
@@ -165,13 +164,13 @@ export function MiniMonth({ username }: { username: string }) {
       {!collapsed && (
         <>
           <div className="mt-2 grid grid-cols-7 gap-0.5 px-0.5 text-center">
-            {DAYS_MON.map((d, i) => (
+            {weekdayLabels(weekStart).map((d, i) => (
               <span
                 key={d}
                 className={`text-3xs font-medium ${
-                  i === 5
+                  i === saturdayIndex(weekStart)
                     ? "text-blue-400/70"
-                    : i === 6
+                    : i === sundayIndex(weekStart)
                       ? "text-navy-400/70"
                       : "text-charcoal-500"
                 }`}
@@ -197,9 +196,9 @@ export function MiniMonth({ username }: { username: string }) {
                   className={`relative flex h-6 items-center justify-center rounded text-2xs font-medium transition-colors ${
                     isToday
                       ? "bg-navy-500 text-white"
-                      : colIdx === 5
+                      : colIdx === saturdayIndex(weekStart)
                         ? "text-blue-400/80 hover:bg-charcoal-800/60"
-                        : colIdx === 6
+                        : colIdx === sundayIndex(weekStart)
                           ? "text-navy-400/80 hover:bg-charcoal-800/60"
                           : "text-charcoal-300 hover:bg-charcoal-800/60"
                   }`}

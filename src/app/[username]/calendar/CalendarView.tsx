@@ -1,5 +1,12 @@
 "use client";
 
+import {
+  saturdayIndex,
+  sundayIndex,
+  weekdayIndex,
+  weekdayLabels,
+  type WeekStart,
+} from "@/lib/week-start";
 import { EventAssetPanel } from "./EventAssetPanel";
 import {
   EventParticipantsPanel,
@@ -84,7 +91,6 @@ function parseWeekItemId(
 
 // ─── Helpers ────────────────────────────────────────────────
 
-const DAYS_MON = ["월", "화", "수", "목", "금", "토", "일"];
 
 type ViewMode = "life" | "year" | "quarter" | "month" | "week";
 
@@ -96,11 +102,9 @@ function getISOWeekNumber(date: Date): number {
   return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
 }
 
-/** Get calendar grid days for a month (Monday-start). Returns (number|null)[] */
-function getCalendarDays(year: number, month: number) {
-  const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
-  // Convert Sunday-start to Monday-start: Mon=0, Tue=1 ... Sun=6
-  const offset = firstDay === 0 ? 6 : firstDay - 1;
+/** 한 달 격자 — 앞쪽 빈칸은 주 시작 요일(설정)에 따라 달라진다. Returns (number|null)[] */
+function getCalendarDays(year: number, month: number, ws: WeekStart = "mon") {
+  const offset = weekdayIndex(new Date(year, month, 1), ws);
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const days: (number | null)[] = [];
   for (let i = 0; i < offset; i++) days.push(null);
@@ -119,11 +123,9 @@ function toLocalDateStr(year: number, month: number, day: number) {
   return `${year}-${mm}-${dd}`;
 }
 
-function getWeekDates(year: number, month: number, day: number) {
+function getWeekDates(year: number, month: number, day: number, ws: WeekStart = "mon") {
   const date = new Date(year, month, day);
-  const dow = date.getDay();
-  const mondayOffset = dow === 0 ? -6 : 1 - dow;
-  const monday = new Date(year, month, day + mondayOffset);
+  const monday = new Date(year, month, day - weekdayIndex(date, ws));
   const dates: Date[] = [];
   for (let i = 0; i < 7; i++) {
     const d = new Date(monday);
@@ -186,7 +188,10 @@ export default function CalendarView({
   initialSelectedCalendars,
   myCalendars = [],
   viewerIsOwner = false,
+  weekStart = "mon",
 }: {
+  /** 주 시작 요일 — 보는 사람의 설정 */
+  weekStart?: WeekStart;
   username: string;
   initialEvents: Event[];
   initialYear: number;
@@ -362,8 +367,7 @@ export default function CalendarView({
       // Monday of the week containing the anchor date
       const a = new Date(anchor);
       a.setHours(0, 0, 0, 0);
-      const dow = (a.getDay() + 6) % 7;
-      a.setDate(a.getDate() - dow);
+      a.setDate(a.getDate() - weekdayIndex(a, weekStart));
       startTransition(async () => {
         const days = await fetchWeekDays(
           username,
@@ -377,12 +381,12 @@ export default function CalendarView({
         setWeekDays(revived);
       });
     },
-    [username, selectedCalendars],
+    [username, selectedCalendars, weekStart],
   );
 
   const today = useMemo(() => new Date(), []);
   const isCurrentMonth = year === today.getFullYear() && month === today.getMonth();
-  const days = getCalendarDays(year, month);
+  const days = getCalendarDays(year, month, weekStart);
 
 
   // ── Fetch events for a given month ──
@@ -777,7 +781,7 @@ export default function CalendarView({
     if (viewMode === "year") return `${year}년`;
     if (viewMode === "quarter") return `${year}년 Q${quarter + 1}`;
     if (viewMode === "week") {
-      const weekDates = getWeekDates(year, month, selectedDay ?? today.getDate());
+      const weekDates = getWeekDates(year, month, selectedDay ?? today.getDate(), weekStart);
       const first = weekDates[0];
       const last = weekDates[6];
       if (first.getMonth() === last.getMonth()) {
@@ -794,7 +798,7 @@ export default function CalendarView({
     if (viewMode === "quarter") return year === t.getFullYear() && quarter === getQuarterForMonth(t.getMonth());
     if (viewMode === "month") return isCurrentMonth;
     // week
-    const weekDates = getWeekDates(year, month, selectedDay ?? today.getDate());
+    const weekDates = getWeekDates(year, month, selectedDay ?? today.getDate(), weekStart);
     return weekDates.some(
       (d) => d.getFullYear() === t.getFullYear() && d.getMonth() === t.getMonth() && d.getDate() === t.getDate(),
     );
@@ -1085,11 +1089,11 @@ export default function CalendarView({
             {/* Day headers with week number column */}
             <div className="grid grid-cols-7 gap-0.5 md:grid-cols-[2rem_repeat(7,minmax(0,1fr))] md:gap-1">
               <div className="py-2 text-center text-2xs font-medium text-charcoal-600 max-md:hidden">W</div>
-              {DAYS_MON.map((d, i) => (
+              {weekdayLabels(weekStart).map((d, i) => (
                 <div
                   key={d}
                   className={`py-2 text-center text-xs font-medium ${
-                    i === 5 ? "text-blue-400/70" : i === 6 ? "text-navy-400/70" : "text-charcoal-500"
+                    i === saturdayIndex(weekStart) ? "text-blue-400/70" : i === sundayIndex(weekStart) ? "text-navy-400/70" : "text-charcoal-500"
                   }`}
                 >
                   {d}
@@ -1105,8 +1109,8 @@ export default function CalendarView({
                 const dayEvents = day ? eventsForCurrentDay(day) : [];
                 const dayInvites = day ? invitesForDay(year, month, day) : [];
                 const colIdx = i % 7;
-                const isSaturday = colIdx === 5;
-                const isSunday = colIdx === 6;
+                const isSaturday = colIdx === saturdayIndex(weekStart);
+                const isSunday = colIdx === sundayIndex(weekStart);
 
                 // Show week number at the start of each row (Monday)
                 const showWeekNum = colIdx === 0;
@@ -1473,6 +1477,7 @@ export default function CalendarView({
 
       {viewMode === "year" && (
         <YearView
+          weekStart={weekStart}
           year={year}
           events={events}
           eventsForDay={eventsForDay}
@@ -1488,6 +1493,7 @@ export default function CalendarView({
 
       {viewMode === "quarter" && (
         <QuarterView
+          weekStart={weekStart}
           year={year}
           quarter={quarter}
           events={events}
@@ -2144,7 +2150,9 @@ function YearView({
   eventsForDay,
   today,
   onMonthClick,
+  weekStart = "mon",
 }: {
+  weekStart?: WeekStart;
   year: number;
   events: Event[];
   eventsForDay: (y: number, m: number, d: number) => Event[];
@@ -2156,7 +2164,7 @@ function YearView({
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
       {Array.from({ length: 12 }, (_, monthIdx) => {
-        const miniDays = getCalendarDays(year, monthIdx);
+        const miniDays = getCalendarDays(year, monthIdx, weekStart);
         const isCurrentMonth = year === today.getFullYear() && monthIdx === today.getMonth();
 
         return (
@@ -2174,11 +2182,11 @@ function YearView({
             </h3>
             {/* Mini day headers */}
             <div className="grid grid-cols-7 gap-0">
-              {DAYS_MON.map((d, i) => (
+              {weekdayLabels(weekStart).map((d, i) => (
                 <div
                   key={d}
                   className={`text-center text-3xs font-medium ${
-                    i === 5 ? "text-blue-400/50" : i === 6 ? "text-navy-400/50" : "text-charcoal-600"
+                    i === saturdayIndex(weekStart) ? "text-blue-400/50" : i === sundayIndex(weekStart) ? "text-navy-400/50" : "text-charcoal-600"
                   }`}
                 >
                   {d}
@@ -2231,7 +2239,9 @@ function QuarterView({
   eventsForDay,
   today,
   onDayClick,
+  weekStart = "mon",
 }: {
+  weekStart?: WeekStart;
   year: number;
   quarter: number;
   events: Event[];
@@ -2245,7 +2255,7 @@ function QuarterView({
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
       {months.map((monthIdx) => {
-        const miniDays = getCalendarDays(year, monthIdx);
+        const miniDays = getCalendarDays(year, monthIdx, weekStart);
         const isCurrentMonth = year === today.getFullYear() && monthIdx === today.getMonth();
 
         return (
@@ -2262,11 +2272,11 @@ function QuarterView({
             </h3>
             {/* Day headers */}
             <div className="grid grid-cols-7 gap-1">
-              {DAYS_MON.map((d, i) => (
+              {weekdayLabels(weekStart).map((d, i) => (
                 <div
                   key={d}
                   className={`py-1 text-center text-2xs font-medium ${
-                    i === 5 ? "text-blue-400/60" : i === 6 ? "text-navy-400/60" : "text-charcoal-600"
+                    i === saturdayIndex(weekStart) ? "text-blue-400/60" : i === sundayIndex(weekStart) ? "text-navy-400/60" : "text-charcoal-600"
                   }`}
                 >
                   {d}
@@ -2279,8 +2289,8 @@ function QuarterView({
                 const isToday = isCurrentMonth && day === today.getDate();
                 const dayEvents = day ? eventsForDay(year, monthIdx, day) : [];
                 const colIdx = i % 7;
-                const isSat = colIdx === 5;
-                const isSun = colIdx === 6;
+                const isSat = colIdx === saturdayIndex(weekStart);
+                const isSun = colIdx === sundayIndex(weekStart);
 
                 return (
                   <button

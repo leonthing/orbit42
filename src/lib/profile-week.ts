@@ -138,11 +138,11 @@ export async function getProfileWeek(
   return days;
 }
 
-export function startOfWeek(d: Date) {
-  // Monday-start, in local time
+export function startOfWeek(d: Date, ws: "mon" | "sun" = "mon") {
+  // 주 시작 요일(설정)부터, local time
   const out = new Date(d);
   out.setHours(0, 0, 0, 0);
-  const dow = (out.getDay() + 6) % 7; // 0 = Mon
+  const dow = ws === "sun" ? out.getDay() : (out.getDay() + 6) % 7;
   out.setDate(out.getDate() - dow);
   return out;
 }

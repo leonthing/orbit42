@@ -9,6 +9,9 @@ import CalendarView from "./CalendarView";
 import { SlotPanelProvider } from "@/components/SlotPanel";
 import { OnboardingSection } from "@/components/OnboardingSection";
 import { Segmented } from "@/components/Segmented";
+import { getUserId } from "@/lib/db";
+import { getAdminClient } from "@/lib/supabase";
+import { normalizeWeekStart } from "@/lib/week-start";
 
 export const metadata: Metadata = { title: "캘린더" };
 export const dynamic = "force-dynamic";
@@ -21,7 +24,13 @@ export default async function CalendarPage({
   const today = new Date();
   const year = today.getFullYear();
   const month = today.getMonth();
-  const weekStart = startOfWeek(new Date());
+  // 보는 사람의 주 시작 요일 설정 (월/일)
+  const viewerId = await getUserId().catch(() => null);
+  const { data: wsRow } = viewerId
+    ? await getAdminClient().from("users").select("week_start").eq("id", viewerId).single()
+    : { data: null };
+  const weekStartPref = normalizeWeekStart((wsRow as { week_start?: string } | null)?.week_start);
+  const weekStart = startOfWeek(new Date(), weekStartPref);
   const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60_000);
 
   const [googleConnected, profile, lifeMemories, session] =
@@ -83,6 +92,7 @@ export default async function CalendarPage({
           initialSelectedCalendars={defaultSelection}
           myCalendars={isOwner ? myCalendars : []}
           viewerIsOwner={isOwner}
+          weekStart={weekStartPref}
         />
       </div>
     </SlotPanelProvider>

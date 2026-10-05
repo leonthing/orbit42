@@ -134,7 +134,9 @@ function NavLink({
 export function Sidebar({
   username,
   unreadMessages = 0,
+  weekStart = "mon",
 }: {
+  weekStart?: "mon" | "sun";
   username: string;
   unreadMessages?: number;
 }) {
@@ -159,7 +161,7 @@ export function Sidebar({
       {/* Mini month — desktop, uncollapsed only */}
       {!collapsed && (
         <div className="hidden border-b border-charcoal-800/40 pt-2 md:block">
-          <MiniMonth username={username} />
+          <MiniMonth username={username} weekStart={weekStart} />
         </div>
       )}
 
