@@ -43,6 +43,12 @@ function toApiHostBooking(b: BookingRow) {
     guestName:
       b.guest?.display_name || b.guest?.username || b.guest_name || "게스트",
     guestUsername: b.guest?.username ?? null,
+    // 회원이 아닌 게스트에게 연락할 수 있도록 (호스트에게만 내려준다)
+    guestEmail: b.guest_email ?? null,
+    priceCents: b.slot.price_cents ?? 0,
+    payment: b.payment_status
+      ? { status: b.payment_status, dueAt: b.payment_due_at }
+      : null,
     slotTitle: b.slot.title,
     slotSlug: b.slot.slug,
     locationDetail: b.slot.location_detail ?? null,
@@ -63,6 +69,15 @@ function toApiGuestBooking(b: GuestBookingRow) {
     message: b.message,
     hostName: b.host?.display_name || b.host?.username || "호스트",
     hostUsername: b.host?.username ?? null,
+    priceCents: b.slot.price_cents ?? 0,
+    // 입금 대기 중일 때만 호스트의 입금 안내를 함께 내려준다
+    payment: b.payment_status
+      ? {
+          status: b.payment_status,
+          dueAt: b.payment_due_at,
+          instructions: b.payment_status === "awaiting" ? b.host?.payment_instructions ?? null : null,
+        }
+      : null,
     slotTitle: b.slot.title,
     slotSlug: b.slot.slug,
     locationDetail: b.slot.location_detail,

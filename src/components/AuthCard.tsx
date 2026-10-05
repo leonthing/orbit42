@@ -49,7 +49,9 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
     urlMode === "signup" ||
     !!urlRef ||
     justReset;
-  const [expanded, setExpanded] = useState(cameWithIntent);
+  // 가입이 첫 화면의 목적이라 모바일에서도 펼쳐 둔다 (접힌 트리거는 눈에 띄지 않았다).
+  const [expanded, setExpanded] = useState(true);
+  void cameWithIntent;
   const rootRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     // When the visitor lands here directly via /?mode=..., pull the card

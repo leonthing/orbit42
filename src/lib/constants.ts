@@ -34,13 +34,18 @@ export function slotTypeLabel(t: string | null | undefined): string {
 }
 
 export const NAV_ITEMS = [
+  // 1:1 세션을 파는 사람의 하루 순서: 일정 → 내 예약 링크 → 들어온 예약 → 사람 → 정산
   { href: "/calendar", label: "캘린더", icon: "calendar" },
-  { href: "/timeline", label: "타임라인", icon: "blog" },
-  { href: "/slots", label: "타임슬롯", icon: "clock" },
-  { href: "/services", label: "서비스", icon: "ticket" },
+  { href: "/slots", label: "예약 링크", icon: "clock" },
   { href: "/bookings", label: "예약", icon: "schedule" },
   { href: "/people", label: "오르빗", icon: "users" },
   { href: "/insights", label: "시간 자산", icon: "chart" },
-  { href: "/blog", label: "블로그", icon: "blog" },
   { href: "/settings", label: "설정", icon: "cog" },
+] as const;
+
+/** 사이드바 '더보기' — 쓰는 사람만 쓰는 메뉴는 아래로 (주소는 그대로 살아 있다) */
+export const NAV_MORE_ITEMS = [
+  { href: "/timeline", label: "타임라인", icon: "blog" },
+  { href: "/services", label: "서비스 메뉴", icon: "ticket" },
+  { href: "/blog", label: "블로그", icon: "blog" },
 ] as const;

@@ -1,3 +1,4 @@
+import type { WorkingHours } from "@/lib/slot-availability";
 /** /api/v1/slots 응답 직렬화 — TimeSlot(snake_case) → 모바일 계약(camelCase). */
 
 import type { TimeSlot } from "@/lib/slots";
@@ -45,4 +46,34 @@ export function toApiSlotDetail(
     imageUrls: s.image_urls ?? [],
     menuIds: menuIds ?? [],
   };
+}
+
+const DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/** workingHours 입력을 검증·정제한다. 형식이 어긋나면 null. */
+export function sanitizeWorkingHours(raw: unknown): WorkingHours | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const out: WorkingHours = {};
+  for (const [day, ranges] of Object.entries(raw as Record<string, unknown>)) {
+    if (!DAYS.includes(day)) return null;
+    if (!Array.isArray(ranges) || ranges.length > 4) return null;
+    const clean: { start: string; end: string }[] = [];
+    for (const r of ranges) {
+      const start = (r as { start?: unknown })?.start;
+      const end = (r as { end?: unknown })?.end;
+      if (
+        typeof start !== "string" ||
+        typeof end !== "string" ||
+        !HHMM.test(start) ||
+        !HHMM.test(end) ||
+        start >= end
+      ) {
+        return null;
+      }
+      clean.push({ start, end });
+    }
+    if (clean.length > 0) out[day as keyof WorkingHours] = clean;
+  }
+  return out;
 }

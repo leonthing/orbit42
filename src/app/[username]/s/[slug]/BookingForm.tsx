@@ -46,6 +46,8 @@ export default function BookingForm({
   const [pending, startTransition] = useTransition();
   const [stage, setStage] = useState<Stage>("form");
   const [awaitingHost, setAwaitingHost] = useState(false);
+  const [payment, setPayment] = useState<{ instructions: string; amountCents: number; dueAt: string } | null>(null);
+  const [copiedPay, setCopiedPay] = useState(false);
   const [options, setOptions] = useState<BookableOption[]>(initialOptions);
   const [selectedLocation, setSelectedLocation] = useState<string>(
     locations[0] ?? "",
@@ -168,6 +170,7 @@ export default function BookingForm({
       });
       if (res.error) return toast.error(res.error);
       setAwaitingHost("status" in res && res.status === "pending");
+      setPayment("payment" in res && res.payment ? res.payment : null);
       setStage("done");
       router.refresh();
     });
@@ -204,7 +207,7 @@ export default function BookingForm({
                 <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
               )}
             </svg>
-            {awaitingHost ? "예약 요청을 보냈어요" : "예약이 완료됐어요"}
+            {payment ? "입금하시면 예약이 확정돼요" : awaitingHost ? "예약 요청을 보냈어요" : "예약이 완료됐어요"}
           </p>
           <p className="mt-2 text-sm text-charcoal-100">
             <strong>{slotTitle}</strong> · {hostLabel}
@@ -216,11 +219,54 @@ export default function BookingForm({
             <p className="mt-0.5 text-xs text-charcoal-400">📍 {selectedLocation}</p>
           )}
           <p className="mt-3 text-xs text-charcoal-500">
-            {awaitingHost
+            {payment
+              ? "아래 안내대로 입금하면 호스트가 확인 후 확정 메일을 보내드려요. 같은 안내를 메일로도 보냈어요."
+              : awaitingHost
               ? "호스트가 확인하면 확정 메일을 보내드려요. 그 전까지는 일정이 확정되지 않아요."
               : "등록하신 이메일로 확인 메일이 발송됐어요. 호스트의 캘린더에도 자동으로 일정이 추가됩니다."}
           </p>
         </div>
+
+        {payment && (
+          <div className="rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] p-5">
+            <div className="flex items-baseline justify-between gap-3">
+              <p className="text-sm font-semibold text-charcoal-100">입금 안내</p>
+              <p className="text-lg font-bold text-charcoal-50">
+                {Math.round(payment.amountCents / 100).toLocaleString("ko-KR")}원
+              </p>
+            </div>
+            <p className="mt-3 whitespace-pre-wrap rounded-lg bg-charcoal-800/40 px-3 py-2.5 text-sm text-charcoal-100">
+              {payment.instructions}
+            </p>
+            <div className="mt-3 flex items-center justify-between gap-2">
+              <p className="text-xs text-charcoal-500">
+                {new Date(payment.dueAt).toLocaleString("ko-KR", {
+                  timeZone: "Asia/Seoul",
+                  month: "long",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+                까지 입금해 주세요. 지나면 자동으로 취소돼요.
+              </p>
+              <button
+                type="button"
+                className="shrink-0 rounded-lg border border-charcoal-700 px-3 py-1.5 text-xs font-semibold text-charcoal-200 hover:border-charcoal-500"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(payment.instructions);
+                    setCopiedPay(true);
+                    setTimeout(() => setCopiedPay(false), 2000);
+                  } catch {
+                    /* 클립보드 권한이 없으면 사용자가 직접 복사 */
+                  }
+                }}
+              >
+                {copiedPay ? "복사됨" : "안내 복사"}
+              </button>
+            </div>
+          </div>
+        )}
 
         {!loggedIn && (
           <div className="rounded-xl border border-navy-400/30 bg-gradient-to-br from-navy-500/10 to-charcoal-900/40 p-5">

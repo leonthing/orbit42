@@ -1,5 +1,5 @@
 import { apiSession } from "@/lib/api-auth";
-import { toApiSlotDetail } from "@/lib/api-slots";
+import { toApiSlotDetail, sanitizeWorkingHours } from "@/lib/api-slots";
 import {
   listMySlots,
   updateSlot,
@@ -7,7 +7,6 @@ import {
   type SlotType,
   type SlotMode,
 } from "@/lib/slots";
-import type { WorkingHours } from "@/lib/slot-availability";
 
 export const dynamic = "force-dynamic";
 
@@ -37,36 +36,6 @@ export async function GET(
 
 const SLOT_TYPES: SlotType[] = ["1on1", "companion", "group"];
 const MODES: SlotMode[] = ["manual", "auto"];
-const DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
-const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
-
-/** workingHours 입력을 검증·정제한다. 형식이 어긋나면 null. */
-function sanitizeWorkingHours(raw: unknown): WorkingHours | null {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
-  const out: WorkingHours = {};
-  for (const [day, ranges] of Object.entries(raw as Record<string, unknown>)) {
-    if (!DAYS.includes(day)) return null;
-    if (!Array.isArray(ranges) || ranges.length > 4) return null;
-    const clean: { start: string; end: string }[] = [];
-    for (const r of ranges) {
-      const start = (r as { start?: unknown })?.start;
-      const end = (r as { end?: unknown })?.end;
-      if (
-        typeof start !== "string" ||
-        typeof end !== "string" ||
-        !HHMM.test(start) ||
-        !HHMM.test(end) ||
-        start >= end
-      ) {
-        return null;
-      }
-      clean.push({ start, end });
-    }
-    if (clean.length > 0) out[day as keyof WorkingHours] = clean;
-  }
-  return out;
-}
-
 function parseIsoOrNull(v: unknown): string | null | undefined {
   if (v === undefined) return undefined;
   if (v === null) return null;

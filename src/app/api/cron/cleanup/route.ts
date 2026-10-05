@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getAdminClient } from "@/lib/supabase";
 import { expireStaleReschedules } from "@/lib/booking-reschedule-expiry";
+import { expireUnpaidBookings } from "@/lib/booking-payment-expiry";
 
 import { isAuthorizedCron } from "@/lib/cron-auth";
 
@@ -19,11 +20,13 @@ export async function GET(request: NextRequest) {
   }
   // 시효 지난 예약 시간 변경 제안 정리 — 토큰 정리와 독립적으로 돈다.
   const { expired } = await expireStaleReschedules();
+  // 입금 기한이 지난 계좌이체 예약 취소 — 시간을 다시 연다.
+  const { expired: unpaidExpired } = await expireUnpaidBookings();
   if (!tokensOk) {
     return NextResponse.json(
-      { error: "failed", rescheduleExpired: expired },
+      { error: "failed", rescheduleExpired: expired, unpaidExpired },
       { status: 500 },
     );
   }
-  return NextResponse.json({ ok: true, rescheduleExpired: expired });
+  return NextResponse.json({ ok: true, rescheduleExpired: expired, unpaidExpired });
 }

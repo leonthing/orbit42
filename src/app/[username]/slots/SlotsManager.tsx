@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { SITE } from "@/lib/constants";
 import { slotTypeLabel } from "@/lib/constants";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -24,7 +25,6 @@ import type { WorkingHours } from "@/lib/slot-availability";
 import type { Calendar } from "@/lib/calendars-types";
 import type { Menu } from "@/lib/menus";
 import { setSlotMenus } from "@/lib/menus";
-import { updateCalendar } from "@/lib/calendars";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { buttonClasses } from "@/components/PendingButton";
@@ -48,6 +48,7 @@ export default function SlotsManager({
   myMenus,
   locationPresets,
   googleConnected,
+  hasPaymentInstructions,
 }: {
   username: string;
   initial: Row[];
@@ -55,6 +56,7 @@ export default function SlotsManager({
   myMenus: Menu[];
   locationPresets: string[];
   googleConnected: boolean;
+  hasPaymentInstructions: boolean;
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -81,14 +83,14 @@ export default function SlotsManager({
 
   return (
     <div className="space-y-8">
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-charcoal-100">타임슬롯</h1>
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold text-charcoal-100">예약 링크</h1>
           <p className="mt-1 text-sm text-charcoal-500">
-            내 타임 슬롯을 공유하거나 판매하여 수익을 창출하세요.
+            링크를 보내면 상대가 시간을 골라 예약해요. 유료 세션도 받을 수 있어요.
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => setPresetPicker((v) => !v)}
@@ -102,7 +104,7 @@ export default function SlotsManager({
               onClick={() => setShowNew(true)}
               className={buttonClasses({ variant: "primary", size: "md" })}
             >
-              새 슬롯 만들기
+              새 예약 링크
             </button>
           )}
         </div>
@@ -150,6 +152,7 @@ export default function SlotsManager({
           myMenus={myMenus}
           locationPresets={locationPresets}
           googleConnected={googleConnected}
+          hasPaymentInstructions={hasPaymentInstructions}
           onCancel={() => setShowNew(false)}
           onSaved={() => {
             setShowNew(false);
@@ -161,14 +164,14 @@ export default function SlotsManager({
       {initial.length === 0 && !showNew ? (
         <EmptyState
           title="아직 슬롯이 없어요"
-          body="첫 슬롯을 만들어 누군가의 궤도에 올려보세요."
+          body="무엇을·얼마나·언제만 정하면 링크가 열려요. 인스타 프로필이나 카톡에 붙여 두세요."
           action={
             <button
               type="button"
               onClick={() => setShowNew(true)}
               className={buttonClasses({ variant: "primary", size: "md" })}
             >
-              새 슬롯 만들기
+              새 예약 링크
             </button>
           }
         />
@@ -177,7 +180,7 @@ export default function SlotsManager({
           <div className="space-y-3">
             <div className="flex items-baseline justify-between">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-charcoal-500">
-                내 슬롯 {initial.length}
+                내 예약 링크 {initial.length}
               </h2>
             </div>
             <div className="space-y-3">
@@ -210,6 +213,7 @@ function NewSlotForm({
   locationPresets,
   username,
   googleConnected,
+  hasPaymentInstructions,
 }: {
   onSaved: () => void;
   onCancel: () => void;
@@ -218,6 +222,7 @@ function NewSlotForm({
   locationPresets: string[];
   username: string;
   googleConnected: boolean;
+  hasPaymentInstructions: boolean;
 }) {
   const toast = useToast();
   const defaultCalendarId =
@@ -231,7 +236,11 @@ function NewSlotForm({
   const [paymentMethod, setPaymentMethod] =
     useState<"online" | "offline">("offline");
   const [imageUrls, setImageUrls] = useState<string[]>([]);
-  const [showOnFeed, setShowOnFeed] = useState(true);
+  // 링크로 받는 예약이 기본 — 탐색·피드 노출은 원할 때만 켠다.
+  const [showOnFeed, setShowOnFeed] = useState(false);
+  const [advanced, setAdvanced] = useState(false);
+  const [created, setCreated] = useState<{ slug: string } | null>(null);
+  const [copied, setCopied] = useState(false);
   const [pending, startTransition] = useTransition();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -320,11 +329,50 @@ function NewSlotForm({
       if (res.id && selectedMenus.length > 0) {
         await setSlotMenus(res.id, selectedMenus);
       }
-      toast.success("슬롯을 만들었어요.");
-      onSaved();
+      // 만들자마자 공유 — 링크를 퍼뜨려야 예약이 시작된다.
+      if (res.slug) setCreated({ slug: res.slug });
+      else onSaved();
     });
   };
 
+  if (created) {
+    const url = `${SITE.url}/${username}/s/${created.slug}`;
+    return (
+      <div className="rounded-xl border border-emerald-600/30 bg-emerald-600/5 p-6 text-center">
+        <p className="text-lg font-bold text-charcoal-50">예약 링크가 열렸어요</p>
+        <p className="mt-1 text-sm text-charcoal-400">
+          인스타 프로필·카톡·메일에 이 링크를 붙여 두면 바로 예약받을 수 있어요.
+        </p>
+        <div className="mx-auto mt-4 flex max-w-md items-center gap-2 rounded-lg border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] px-3 py-2">
+          <span className="min-w-0 flex-1 truncate text-left font-mono text-xs text-charcoal-200">{url}</span>
+          <button
+            type="button"
+            className={buttonClasses({ size: "sm" })}
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(url);
+                setCopied(true);
+              } catch {
+                /* 직접 복사 */
+              }
+            }}
+          >
+            {copied ? "복사됨" : "링크 복사"}
+          </button>
+        </div>
+        <div className="mt-4 flex justify-center gap-2">
+          <a href={url} target="_blank" rel="noreferrer" className={buttonClasses({ variant: "secondary", size: "sm" })}>
+            게스트 화면 보기
+          </a>
+          <button type="button" className={buttonClasses({ variant: "ghost", size: "sm" })} onClick={onSaved}>
+            닫기
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const DURATIONS = [30, 50, 60, 90];
   return (
     <form
       onSubmit={submit}
@@ -332,10 +380,8 @@ function NewSlotForm({
     >
       <div className="flex items-center justify-between border-b border-charcoal-800/50 bg-charcoal-900/50 px-6 py-4">
         <div>
-          <h2 className="text-base font-semibold text-charcoal-100">새 슬롯</h2>
-          <p className="mt-0.5 text-xs text-charcoal-500">
-            기본 정보 → 가격 → 시간 순서로 채워주세요.
-          </p>
+          <h2 className="text-base font-semibold text-charcoal-100">새 예약 링크</h2>
+          <p className="mt-0.5 text-xs text-charcoal-500">무엇을, 얼마나, 언제 — 세 가지만 정하면 열려요.</p>
         </div>
         <button
           type="button"
@@ -349,242 +395,103 @@ function NewSlotForm({
         </button>
       </div>
 
-      <div className="space-y-8 px-6 py-6">
-        {/* 캘린더 */}
-        {myCalendars.length > 0 &&
-          (() => {
-            const selectedCal = myCalendars.find((c) => c.id === calendarId);
-            const needsPublic =
-              pricingModel === "fixed" && price > 0;
-            const violating =
-              needsPublic && !!selectedCal && selectedCal.visibility !== "public";
-            return (
-              <Section
-                title="캘린더"
-                hint="예약이 생기면 여기 캘린더에 자동으로 이벤트가 추가돼요. 공개 여부도 이 캘린더 설정을 따릅니다."
-              >
-                <div className="flex items-center gap-2">
-                  <span
-                    className="h-3 w-3 shrink-0 rounded-full"
-                    style={{ backgroundColor: selectedCal?.color ?? "#6366f1" }}
-                  />
-                  <select
-                    value={calendarId}
-                    onChange={(e) => setCalendarId(e.target.value)}
-                    className={INPUT}
-                  >
-                    {myCalendars.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                        {c.is_default ? " (기본)" : ""} ·{" "}
-                        {c.visibility === "public"
-                          ? "공개"
-                          : c.visibility === "followers"
-                            ? "팔로워"
-                            : "비공개"}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                {violating && (
-                  <div className="flex flex-col items-start gap-1 rounded-lg border border-amber-600/40 bg-amber-600/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-200">
-                    <span>
-                      유료 슬롯은 <strong>공개</strong> 캘린더에만 만들 수
-                      있어요.
-                    </span>
-                    <PublishCalendarButton calendarId={calendarId} />
-                  </div>
-                )}
-                {needsPublic &&
-                  !myCalendars.some((c) => c.visibility === "public") && (
-                    <p className="rounded-lg border border-amber-600/40 bg-amber-600/10 px-3 py-2 text-xs text-amber-200">
-                      공개 캘린더가 없어서 유료 슬롯을 만들 수 없어요.{" "}
-                      <a
-                        href={`/${username}/settings`}
-                        className="font-semibold underline"
-                      >
-                        Settings
-                      </a>
-                      에서 공개 캘린더를 먼저 만드세요.
-                    </p>
-                  )}
-              </Section>
-            );
-          })()}
-
-        {/* 서비스 선택 */}
-        <Section
-          title="서비스"
-          hint="예약 시 게스트가 고를 수 있는 서비스를 붙여요. Services 페이지에서 먼저 만들어두세요."
-        >
-          <MenuPicker
-            menus={myMenus}
-            selected={selectedMenus}
-            onChange={setSelectedMenus}
-            username={username}
+      <div className="space-y-7 px-6 py-6">
+        {/* 1. 무엇을 */}
+        <Section title="무엇을">
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="예: 50분 1:1 커리어 코칭"
+            className={INPUT}
+            required
+            autoFocus
           />
-        </Section>
-
-        {/* 기본 정보 */}
-        <Section title="기본 정보" hint="슬롯의 제목·설명과 형식을 정해요.">
-          <Field label="제목">
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="예: 30분 1:1 커피챗"
-              className={INPUT}
-              required
-            />
-          </Field>
-          <Field label="설명">
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              placeholder="이 시간에는 무엇을 함께하나요?"
-              className={INPUT}
-            />
-          </Field>
-          <div className="grid gap-4 md:grid-cols-3">
-            <Field label="소요 시간 (분)">
+          <div className="flex flex-wrap items-center gap-2">
+            {DURATIONS.map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => {
+                  setDuration(d);
+                  setSlotInterval(d < 60 ? d + (60 - d) % 30 : d);
+                }}
+                className={`h-9 rounded-full px-4 text-sm font-semibold transition ${
+                  duration === d
+                    ? "bg-navy-500 text-white"
+                    : "border border-charcoal-800/70 text-charcoal-300 hover:border-charcoal-600"
+                }`}
+              >
+                {d}분
+              </button>
+            ))}
+            <label className="flex items-center gap-1.5 text-xs text-charcoal-500">
+              직접
               <input
                 type="number"
                 min={5}
                 step={5}
                 value={duration}
                 onChange={(e) => setDuration(Number(e.target.value))}
-                className={INPUT}
+                className="h-9 w-20 rounded-lg border border-charcoal-800/70 bg-transparent px-2 text-sm text-charcoal-100"
               />
-            </Field>
-            <Field label="정원">
-              <input
-                type="number"
-                min={1}
-                value={capacity}
-                onChange={(e) => setCapacity(Number(e.target.value))}
-                className={INPUT}
-              />
-            </Field>
-            <Field label="형식">
-              <select
-                value={slotType}
-                onChange={(e) => setSlotType(e.target.value as SlotType)}
-                className={INPUT}
-              >
-                <option value="1on1">1:1</option>
-                <option value="companion">동행</option>
-                <option value="group">그룹</option>
-              </select>
-            </Field>
+              분
+            </label>
           </div>
-          <Field label="장소 (여러 개 등록 가능)">
-            <LocationsInput
-              value={locations}
-              onChange={setLocations}
-              presets={locationPresets}
-            />
-          </Field>
         </Section>
 
-        {/* 가격 */}
-        <Section title="가격" hint="고정가로 받을지, 경매로 진행할지 선택해요.">
-          <div className="grid gap-2 md:grid-cols-2">
-            <PricingButton
-              current={pricingModel}
-              value="fixed"
-              onClick={() => setPricingModel("fixed")}
-              title="고정가"
-              hint="정해진 가격으로 예약"
-            />
-            <PricingButton
-              current={pricingModel}
-              value="auction"
-              onClick={() => setPricingModel("auction")}
-              title="경매"
-              hint="경매로 최고가 낙찰"
-            />
-          </div>
-          {pricingModel === "fixed" ? (
-            <Field label="가격 (KRW) — 0이면 Free">
+        {/* 2. 얼마나 */}
+        {pricingModel === "fixed" && (
+          <Section title="가격">
+            <div className="flex items-center gap-2">
               <input
                 type="number"
                 min={0}
                 step={1000}
                 value={price}
                 onChange={(e) => setPrice(Number(e.target.value))}
-                className={INPUT}
+                className={`${INPUT} max-w-[200px]`}
               />
-            </Field>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2">
-              <Field label="시작가 (KRW)">
-                <input
-                  type="number"
-                  min={0}
-                  step={1000}
-                  value={reservePrice}
-                  onChange={(e) => setReservePrice(Number(e.target.value))}
-                  className={INPUT}
-                />
-              </Field>
-              <Field label="경매 종료 시간">
-                <input
-                  type="datetime-local"
-                  value={auctionEndsAt}
-                  onChange={(e) => setAuctionEndsAt(e.target.value)}
-                  className={INPUT}
-                  required
-                />
-              </Field>
+              <span className="text-sm text-charcoal-400">원</span>
+              {price === 0 && <span className="text-xs font-semibold text-emerald-500">무료</span>}
+            </div>
+            {price > 0 && (
+              <p className="text-xs text-charcoal-500">
+                {hasPaymentInstructions ? (
+                  "예약은 '입금 대기'로 들어오고, 입금을 확인해 확정하면 끝이에요. 24시간 안에 입금이 없으면 자동 취소돼요."
+                ) : (
+                  <>
+                    결제 안내(계좌·송금 링크)를 적어 두면 게스트에게 입금 안내가 자동으로 가요.{" "}
+                    <Link href={`/${username}/settings#payment`} className="font-semibold text-navy-400 underline">
+                      결제 안내 설정
+                    </Link>
+                  </>
+                )}
+              </p>
+            )}
+          </Section>
+        )}
+
+        {/* 3. 언제 */}
+        <Section title="언제">
+          {pricingModel === "fixed" && (
+            <div className="grid gap-2 md:grid-cols-2">
+              <ModeButton
+                current={mode}
+                value="auto"
+                onClick={() => setMode("auto")}
+                title="매주 같은 시간"
+                hint="요일·시간대를 정하면 빈 시간이 자동으로 열려요"
+              />
+              <ModeButton
+                current={mode}
+                value="manual"
+                onClick={() => setMode("manual")}
+                title="직접 고른 시간"
+                hint="날짜와 시간을 하나씩 추가"
+              />
             </div>
           )}
-        </Section>
-
-        {/* 시간 */}
-        <Section
-          title="시간"
-          hint={
-            pricingModel === "auction"
-              ? "경매는 단 하나의 시간만 지정해요."
-              : mode === "manual"
-                ? "예약 가능한 시간을 직접 추가해요."
-                : "Google Calendar의 빈 시간을 자동으로 불러와요."
-          }
-        >
-          {pricingModel === "fixed" && (
-            <>
-              <div className="grid gap-2 md:grid-cols-2">
-                <ModeButton
-                  current={mode}
-                  value="auto"
-                  onClick={() => setMode("auto")}
-                  title="매주 같은 시간"
-                  hint="요일·시간대를 정하면 빈 시간이 자동으로 열려요"
-                />
-                <ModeButton
-                  current={mode}
-                  value="manual"
-                  onClick={() => setMode("manual")}
-                  title="직접 고른 시간"
-                  hint="날짜와 시간을 하나씩 추가"
-                />
-              </div>
-              {mode === "auto" && (
-                <p className="mt-2 text-xs text-charcoal-500">
-                  {googleConnected
-                    ? "구글 캘린더의 기존 일정과 겹치는 시간은 자동으로 빠져요."
-                    : "orbit42 일정과 다른 예약을 피해 열려요. "}
-                  {!googleConnected && (
-                    <Link href={`/${username}/settings#google`} className="font-semibold text-navy-400 underline">
-                      구글 캘린더를 연결하면 기존 일정도 피해요
-                    </Link>
-                  )}
-                </p>
-              )}
-            </>
-          )}
-
           {pricingModel === "auction" ? (
             <ManualWindows
               windows={windows}
@@ -604,104 +511,144 @@ function NewSlotForm({
               setNewWindow={setNewWindow}
             />
           ) : (
-            <AutoConfig
-              workingHours={workingHours}
-              setWorkingHours={setWorkingHours}
-              slotInterval={slotInterval}
-              setSlotInterval={setSlotInterval}
-              minNotice={minNotice}
-              setMinNotice={setMinNotice}
-              maxAdvance={maxAdvance}
-              setMaxAdvance={setMaxAdvance}
-              buffer={buffer}
-              setBuffer={setBuffer}
-            />
+            <>
+              <AutoConfig
+                compact={!advanced}
+                workingHours={workingHours}
+                setWorkingHours={setWorkingHours}
+                slotInterval={slotInterval}
+                setSlotInterval={setSlotInterval}
+                minNotice={minNotice}
+                setMinNotice={setMinNotice}
+                maxAdvance={maxAdvance}
+                setMaxAdvance={setMaxAdvance}
+                buffer={buffer}
+                setBuffer={setBuffer}
+              />
+              <p className="text-xs text-charcoal-500">
+                {googleConnected
+                  ? "구글 캘린더의 기존 일정과 겹치는 시간은 자동으로 빠져요."
+                  : "orbit42 일정과 다른 예약을 피해 열려요. "}
+                {!googleConnected && (
+                  <Link href={`/${username}/settings#google`} className="font-semibold text-navy-400 underline">
+                    구글 캘린더를 연결하면 기존 일정도 피해요
+                  </Link>
+                )}
+              </p>
+            </>
           )}
         </Section>
 
-        {/* 판매 기간 */}
-        <Section
-          title="판매 기간"
-          hint="이 슬롯이 예약 가능한 기간을 정해요. 기본은 무제한."
-        >
-          <ValidityPicker
-            preset={validPreset}
-            setPreset={setValidPreset}
-            from={validFrom}
-            setFrom={setValidFrom}
-            until={validUntil}
-            setUntil={setValidUntil}
-          />
+        <Section title="장소 (선택)">
+          <LocationsInput value={locations} onChange={setLocations} presets={locationPresets} />
         </Section>
 
-        {/* 수락 방식 */}
-        <Section
-          title="수락 방식"
-          hint="예약을 자동으로 확정할지, 직접 확인 후 수락할지 선택해요."
+        <button
+          type="button"
+          onClick={() => setAdvanced((v) => !v)}
+          className="flex w-full items-center justify-between rounded-lg border border-charcoal-800/60 px-4 py-3 text-sm font-medium text-charcoal-300 hover:border-charcoal-700"
         >
-          <ApprovalPicker value={autoApprove} onChange={setAutoApprove} />
-        </Section>
+          <span>고급 설정 — 설명·승인 방식·정원·캘린더·서비스·기간·이미지·노출</span>
+          <span className="text-charcoal-500">{advanced ? "접기" : "펼치기"}</span>
+        </button>
 
-        {/* 결제 방식 */}
-        {pricingModel === "fixed" && price > 0 && (
-          <Section
-            title="결제 방식"
-            hint="온라인 결제는 곧 지원돼요. 지금은 호스트와 직접 만나서 결제하는 방식이 기본이에요."
-          >
-            <PaymentMethodPicker value={paymentMethod} onChange={setPaymentMethod} />
-          </Section>
+        {advanced && (
+          <div className="space-y-7">
+            <Section title="설명">
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+                placeholder="이 시간에는 무엇을 함께하나요?"
+                className={INPUT}
+              />
+            </Section>
+            <Section title="수락 방식" hint="예약을 자동으로 확정할지, 직접 확인 후 수락할지 선택해요.">
+              <ApprovalPicker value={autoApprove} onChange={setAutoApprove} />
+            </Section>
+            <Section title="정원·형식">
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label="정원">
+                  <input
+                    type="number"
+                    min={1}
+                    value={capacity}
+                    onChange={(e) => setCapacity(Number(e.target.value))}
+                    className={INPUT}
+                  />
+                </Field>
+                <Field label="형식">
+                  <select
+                    value={slotType}
+                    onChange={(e) => setSlotType(e.target.value as SlotType)}
+                    className={INPUT}
+                  >
+                    <option value="1on1">1:1</option>
+                    <option value="companion">함께하기</option>
+                    <option value="group">그룹</option>
+                  </select>
+                </Field>
+              </div>
+            </Section>
+            {myCalendars.length > 1 && (
+              <Section title="캘린더" hint="예약이 생기면 이 캘린더에 일정이 추가돼요.">
+                <select value={calendarId} onChange={(e) => setCalendarId(e.target.value)} className={INPUT}>
+                  {myCalendars.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                      {c.is_default ? " (기본)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </Section>
+            )}
+            <Section title="서비스" hint="예약 시 게스트가 함께 고를 수 있는 추가 메뉴예요.">
+              <MenuPicker menus={myMenus} selected={selectedMenus} onChange={setSelectedMenus} username={username} />
+            </Section>
+            <Section title="가격 방식">
+              <div className="grid gap-2 md:grid-cols-2">
+                <PricingButton current={pricingModel} value="fixed" onClick={() => setPricingModel("fixed")} title="고정가" hint="정해진 가격으로 예약" />
+                <PricingButton current={pricingModel} value="auction" onClick={() => setPricingModel("auction")} title="경매" hint="경매로 최고가 낙찰" />
+              </div>
+              {pricingModel === "auction" && (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field label="시작가 (KRW)">
+                    <input type="number" min={0} step={1000} value={reservePrice} onChange={(e) => setReservePrice(Number(e.target.value))} className={INPUT} />
+                  </Field>
+                  <Field label="경매 종료 시간">
+                    <input type="datetime-local" value={auctionEndsAt} onChange={(e) => setAuctionEndsAt(e.target.value)} className={INPUT} />
+                  </Field>
+                </div>
+              )}
+            </Section>
+            <Section title="예약 받는 기간" hint="기본은 기한 없음.">
+              <ValidityPicker preset={validPreset} setPreset={setValidPreset} from={validFrom} setFrom={setValidFrom} until={validUntil} setUntil={setValidUntil} />
+            </Section>
+            {pricingModel === "fixed" && price > 0 && (
+              <Section title="결제 방식">
+                <PaymentMethodPicker value={paymentMethod} onChange={setPaymentMethod} />
+              </Section>
+            )}
+            <Section title="이미지" hint="슬롯 페이지에 함께 보일 사진 (최대 6장).">
+              <SlotImagePicker urls={imageUrls} onChange={setImageUrls} />
+            </Section>
+            <Section title="탐색·피드 노출" hint="꺼 두면 링크를 받은 사람만 이 슬롯을 볼 수 있어요.">
+              <label className="flex items-center gap-3 rounded-lg border border-charcoal-800/60 bg-charcoal-800/10 px-4 py-3 text-sm text-charcoal-200">
+                <input type="checkbox" checked={showOnFeed} onChange={(e) => setShowOnFeed(e.target.checked)} className="h-4 w-4 accent-navy-400" />
+                탐색·피드에 노출
+              </label>
+            </Section>
+          </div>
         )}
-
-        {/* 이미지 */}
-        <Section
-          title="이미지 (선택)"
-          hint="슬롯 페이지에 함께 보일 사진을 최대 6장까지 올릴 수 있어요."
-        >
-          <SlotImagePicker urls={imageUrls} onChange={setImageUrls} />
-        </Section>
-
-        {/* 피드 노출 */}
-        <Section
-          title="피드 노출"
-          hint="꺼두면 이 슬롯이 피드에 나타나지 않아요. 공개 페이지에서는 그대로 보여요."
-        >
-          <label className="flex items-center gap-3 rounded-lg border border-charcoal-800/60 bg-charcoal-800/10 px-4 py-3 text-sm text-charcoal-200">
-            <input
-              type="checkbox"
-              checked={showOnFeed}
-              onChange={(e) => setShowOnFeed(e.target.checked)}
-              className="h-4 w-4 accent-navy-400"
-            />
-            피드에 노출
-          </label>
-        </Section>
       </div>
 
       <div className="flex items-center justify-end gap-2 border-t border-charcoal-800/50 bg-charcoal-900/40 px-6 py-4">
-        <button
-          type="button"
-          onClick={onCancel}
-          className={buttonClasses({ variant: "secondary", size: "md" })}
-        >
+        <button type="button" onClick={onCancel} className={buttonClasses({ variant: "secondary", size: "md" })}>
           취소
         </button>
-        {(() => {
-          const selectedCal = myCalendars.find((c) => c.id === calendarId);
-          const blocked =
-            pricingModel === "fixed" &&
-            price > 0 &&
-            (!selectedCal || selectedCal.visibility !== "public");
-          return (
-            <button
-              type="submit"
-              disabled={pending || blocked}
-              className={buttonClasses({ variant: "primary", size: "md" })}
-              title={blocked ? "유료 슬롯은 공개 캘린더가 필요해요." : undefined}
-            >
-              {pending ? "저장 중…" : "슬롯 만들기"}
-            </button>
-          );
-        })()}
+        <button type="submit" disabled={pending} className={buttonClasses({ variant: "primary", size: "md" })}>
+          {pending ? "만드는 중…" : "예약 링크 만들기"}
+        </button>
       </div>
     </form>
   );
@@ -773,28 +720,6 @@ function ChoiceCard({
   );
 }
 
-function PublishCalendarButton({ calendarId }: { calendarId: string }) {
-  const router = useRouter();
-  const toast = useToast();
-  const [pending, startTransition] = useTransition();
-  return (
-    <button
-      type="button"
-      disabled={pending}
-      onClick={() =>
-        startTransition(async () => {
-          const res = await updateCalendar(calendarId, { visibility: "public" });
-          if (res && "error" in res && res.error) return toast.error(res.error);
-          toast.success("캘린더를 공개로 바꿨어요.");
-          router.refresh();
-        })
-      }
-      className="mt-1 font-semibold underline disabled:opacity-50"
-    >
-      {pending ? "바꾸는 중…" : "이 캘린더를 공개로 바꾸기"}
-    </button>
-  );
-}
 
 function PricingButton({
   current,
@@ -921,7 +846,10 @@ function AutoConfig({
   setMaxAdvance,
   buffer,
   setBuffer,
+  compact = false,
 }: {
+  /** 새 슬롯의 기본 화면 — 요일·시간대만 보이고 간격·통지·버퍼는 '고급'에서 */
+  compact?: boolean;
   workingHours: WorkingHours;
   setWorkingHours: (w: WorkingHours) => void;
   slotInterval: number;
@@ -965,7 +893,7 @@ function AutoConfig({
             return (
               <div
                 key={d.key}
-                className="flex items-center gap-3 rounded-lg px-2 py-1.5"
+                className="flex items-center gap-2 rounded-lg py-1.5"
               >
                 <button
                   type="button"
@@ -979,19 +907,19 @@ function AutoConfig({
                   {d.label}
                 </button>
                 {enabled && range ? (
-                  <div className="flex flex-1 items-center gap-2 text-xs text-charcoal-300">
+                  <div className="flex min-w-0 flex-1 items-center gap-1.5 text-xs text-charcoal-300">
                     <input
                       type="time"
                       value={range[0]?.start ?? "10:00"}
                       onChange={(e) => updateRange(d.key, "start", e.target.value)}
-                      className="rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-2 py-1.5 text-charcoal-100"
+                      className="w-full min-w-0 flex-1 rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-2 py-1.5 text-charcoal-100"
                     />
                     <span className="text-charcoal-600">—</span>
                     <input
                       type="time"
                       value={range[0]?.end ?? "18:00"}
                       onChange={(e) => updateRange(d.key, "end", e.target.value)}
-                      className="rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-2 py-1.5 text-charcoal-100"
+                      className="w-full min-w-0 flex-1 rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-2 py-1.5 text-charcoal-100"
                     />
                   </div>
                 ) : (
@@ -1003,6 +931,8 @@ function AutoConfig({
         </div>
       </div>
 
+      {!compact && (
+        <>
       <div className="grid gap-4 md:grid-cols-4">
         <Field label="슬롯 간격 (분)">
           <input
@@ -1047,6 +977,8 @@ function AutoConfig({
       <p className="text-xs text-charcoal-500">
         Google Calendar 빈 시간을 읽어와 위 근무 시간 안에서 자동으로 예약 가능 시간을 생성해요. 캘린더 연결이 필요합니다.
       </p>
+        </>
+      )}
     </div>
   );
 }
@@ -1549,15 +1481,10 @@ function EditSlotForm({
 
   const isAuction = slot.pricing_model === "auction";
   const selectedCal = myCalendars.find((c) => c.id === calendarId);
-  const needsPublic = !isAuction && price > 0;
-  const violating = needsPublic && !!selectedCal && selectedCal.visibility !== "public";
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return toast.error("제목을 입력하세요.");
-    if (violating) {
-      return toast.error("유료 슬롯은 공개 캘린더에만 만들 수 있어요.");
-    }
     const [vFrom, vUntil] = resolveValidity(validPreset, validFrom, validUntil);
     startTransition(async () => {
       const res = await updateSlot(slot.id, {
@@ -1630,14 +1557,6 @@ function EditSlotForm({
               ))}
             </select>
           </div>
-          {violating && (
-            <div className="flex flex-col items-start gap-1 rounded-lg border border-amber-600/40 bg-amber-600/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-200">
-              <span>
-                유료 슬롯은 <strong>공개</strong> 캘린더에만 올릴 수 있어요.
-              </span>
-              {calendarId && <PublishCalendarButton calendarId={calendarId} />}
-            </div>
-          )}
         </div>
       )}
 
@@ -1799,7 +1718,7 @@ function EditSlotForm({
         </button>
         <button
           type="submit"
-          disabled={pending || violating}
+          disabled={pending}
           className={buttonClasses({ variant: "primary", size: "md" })}
         >
           {pending ? "저장 중…" : "저장"}

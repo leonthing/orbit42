@@ -18,7 +18,7 @@ async function fullUser(username: string) {
     getFollowStats(username),
     getAdminClient()
       .from("users")
-      .select("is_private, apple_sub, share_image_url, link_theme")
+      .select("is_private, apple_sub, share_image_url, link_theme, payment_instructions")
       .eq("username", username)
       .maybeSingle(),
   ]);
@@ -40,6 +40,8 @@ async function fullUser(username: string) {
     shareImageUrl: (privacyRow.data?.share_image_url as string | null) ?? null,
     // 공개 링크 페이지 테마 (lib/link-themes 의 key)
     linkTheme: (privacyRow.data?.link_theme as string | null) ?? "default",
+    // 계좌이체 안내 — 있으면 유료 슬롯 예약이 '입금 대기'로 들어간다
+    paymentInstructions: (privacyRow.data?.payment_instructions as string | null) ?? null,
   };
 }
 
@@ -71,6 +73,7 @@ export async function PATCH(request: Request) {
     interests?: string[];
     isPrivate?: boolean;
     linkTheme?: string;
+    paymentInstructions?: string | null;
   };
   try {
     body = await request.json();
@@ -99,6 +102,26 @@ export async function PATCH(request: Request) {
       body.socialLinks === undefined &&
       body.interests === undefined;
     if (onlyPrivacy) {
+      return Response.json({ user: await fullUser(session.username) });
+    }
+  }
+
+  // 계좌이체 안내 (빈 문자열·null 이면 지운다)
+  if (body.paymentInstructions !== undefined) {
+    const v = (body.paymentInstructions ?? "").toString().trim().slice(0, 500) || null;
+    const { getAdminClient } = await import("@/lib/supabase");
+    await getAdminClient()
+      .from("users")
+      .update({ payment_instructions: v, updated_at: new Date().toISOString() })
+      .eq("username", session.username);
+    if (
+      body.displayName === undefined &&
+      body.bio === undefined &&
+      body.birthDate === undefined &&
+      body.socialLinks === undefined &&
+      body.interests === undefined &&
+      body.linkTheme === undefined
+    ) {
       return Response.json({ user: await fullUser(session.username) });
     }
   }

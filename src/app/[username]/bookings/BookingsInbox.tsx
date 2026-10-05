@@ -103,7 +103,7 @@ export default function BookingsInbox({
         </div>
         {tab === "host" && (
           <div className="flex gap-2">
-            <Stat label="승인 대기" value={pendingCount} accent />
+            <Stat label="승인·입금 대기" value={pendingCount} accent />
             <Stat label="예정" value={confirmedCount} />
             <Stat label="지난 예약" value={past.length} muted />
           </div>
@@ -326,6 +326,18 @@ function HostSection({
                         {b.slot.title}
                       </p>
                       <StatusPill status={b.status} />
+                      {b.payment_status === "awaiting" && b.status === "pending" && (
+                        <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-2xs font-semibold text-amber-700 dark:text-amber-300">
+                          입금 대기 · ₩{Math.round(b.slot.price_cents / 100).toLocaleString("ko-KR")}
+                          {b.payment_due_at &&
+                            ` · ${new Date(b.payment_due_at).toLocaleString("ko-KR", { timeZone: "Asia/Seoul", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}까지`}
+                        </span>
+                      )}
+                      {b.payment_status === "paid" && (
+                        <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-2xs font-semibold text-emerald-700 dark:text-emerald-300">
+                          입금 확인됨
+                        </span>
+                      )}
                     </div>
                     <TimeLine start={start} end={end} />
                     <p className="mt-2 text-sm text-charcoal-200">
@@ -334,6 +346,15 @@ function HostSection({
                         <span className="ml-1.5 text-xs text-charcoal-500">
                           {guestSub}
                         </span>
+                      )}
+                      {/* 회원이 아닌 게스트에게도 바로 연락할 수 있게 */}
+                      {!b.guest && b.guest_email && (
+                        <a
+                          href={`mailto:${b.guest_email}?subject=${encodeURIComponent(`[${b.slot.title}] 예약 관련`)}`}
+                          className="ml-2 text-xs font-medium text-navy-400 hover:underline"
+                        >
+                          메일 보내기
+                        </a>
                       )}
                     </p>
                     {b.selected_menus && b.selected_menus.length > 0 && (
@@ -373,7 +394,7 @@ function HostSection({
                         disabled={pending}
                         className="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-60"
                       >
-                        수락
+                        {b.payment_status === "awaiting" ? "입금 확인 · 확정" : "수락"}
                       </button>
                     )}
                     {b.status !== "canceled" &&
@@ -488,6 +509,16 @@ function GuestSection({
                       <p className="mt-0.5 text-xs text-charcoal-500">
                         📍 {b.slot.location_detail}
                       </p>
+                    )}
+                    {b.payment_status === "awaiting" && b.status === "pending" && b.host?.payment_instructions && (
+                      <div className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs">
+                        <p className="font-semibold text-amber-700 dark:text-amber-300">
+                          입금 대기 · ₩{Math.round(b.slot.price_cents / 100).toLocaleString("ko-KR")}
+                          {b.payment_due_at &&
+                            ` · ${new Date(b.payment_due_at).toLocaleString("ko-KR", { timeZone: "Asia/Seoul", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}까지`}
+                        </p>
+                        <p className="mt-1 whitespace-pre-wrap text-charcoal-200">{b.host.payment_instructions}</p>
+                      </div>
                     )}
                     {b.message && (
                       <p className="mt-2 rounded-lg bg-charcoal-800/40 px-3 py-2 text-xs leading-relaxed text-charcoal-400">

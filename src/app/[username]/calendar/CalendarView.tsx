@@ -210,6 +210,8 @@ export default function CalendarView({
   const [detailEvent, setDetailEvent] = useState<WeekItem | null>(null);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
+  // 일정 추가는 제목·시간만 먼저. 메모·위치·참석자·캘린더는 '더 보기'에서.
+  const [moreOpen, setMoreOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [quickEdit, setQuickEdit] = useState<
     | { event: Event; anchor: { x: number; y: number } }
@@ -597,6 +599,22 @@ export default function CalendarView({
     setEditingEvent(null);
     setForm(emptyForm(dateStr, defaultCalendarId));
     setPendingParticipants([]);
+    setMoreOpen(false);
+    setShowForm(true);
+  };
+
+  /** 주간 뷰 빈 칸 → 그 시각부터 1시간짜리 새 일정 */
+  const openCreateAt = (date: Date, hour: number, minute: number) => {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const endMin = Math.min(hour * 60 + minute + 60, 23 * 60 + 59);
+    setEditingEvent(null);
+    setForm({
+      ...emptyForm(toLocalDateStr(date.getFullYear(), date.getMonth(), date.getDate()), defaultCalendarId),
+      startTime: `${pad(hour)}:${pad(minute)}`,
+      endTime: `${pad(Math.floor(endMin / 60))}:${pad(endMin % 60)}`,
+    });
+    setPendingParticipants([]);
+    setMoreOpen(false);
     setShowForm(true);
   };
 
@@ -619,6 +637,8 @@ export default function CalendarView({
       location: event.location ?? "",
       travelMin: event.travel_min ?? 0,
     });
+    // 수정할 때는 이미 적어 둔 내용이 보이도록 펼친다.
+    setMoreOpen(!!(event.description || event.location));
     setShowForm(true);
   };
 
@@ -1328,6 +1348,11 @@ export default function CalendarView({
             completedKeys={completed}
             onToggleComplete={handleToggleComplete}
             onEventClick={(item) => setDetailEvent(item)}
+            onEmptyClick={
+              viewerIsOwner
+                ? (date, h, m) => openCreateAt(date, h, m)
+                : undefined
+            }
             emptyMessage={
               viewerIsOwner
                 ? "이 주가 비어있어요. 슬롯을 열거나 이벤트를 추가해보세요."
@@ -1484,9 +1509,115 @@ export default function CalendarView({
                   onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                   className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder-charcoal-600 focus:border-navy-400 focus:outline-none"
                   placeholder="일정 제목"
+                  autoFocus
                 />
               </div>
 
+              {/* Date */}
+              <div>
+                <label className="mb-1 block text-xs font-medium text-charcoal-400">날짜</label>
+                <input
+                  type="date"
+                  required
+                  value={form.date}
+                  onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+                  className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 focus:border-navy-400 focus:outline-none"
+                />
+              </div>
+
+              {/* All day toggle */}
+              <label className="flex items-center gap-2 text-sm text-charcoal-300">
+                <input
+                  type="checkbox"
+                  checked={form.allDay}
+                  onChange={(e) => setForm((f) => ({ ...f, allDay: e.target.checked }))}
+                  className="h-4 w-4 rounded border-charcoal-700 bg-charcoal-800/50 text-navy-500 focus:ring-navy-400"
+                />
+                종일
+              </label>
+
+              {/* Time inputs */}
+              {!form.allDay && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-charcoal-400">
+                      시작 시간
+                    </label>
+                    <input
+                      type="time"
+                      value={form.startTime}
+                      onChange={(e) =>
+                        setForm((f) => {
+                          // 시작을 옮기면 길이를 유지한 채 끝도 함께 옮긴다.
+                          const toMin = (t: string) => {
+                            const [h, m] = t.split(":").map(Number);
+                            return h * 60 + m;
+                          };
+                          const dur = Math.max(15, toMin(f.endTime) - toMin(f.startTime));
+                          const next = e.target.value;
+                          if (!next) return { ...f, startTime: next };
+                          const end = Math.min(toMin(next) + dur, 23 * 60 + 59);
+                          return {
+                            ...f,
+                            startTime: next,
+                            endTime: `${String(Math.floor(end / 60)).padStart(2, "0")}:${String(end % 60).padStart(2, "0")}`,
+                          };
+                        })
+                      }
+                      className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 focus:border-navy-400 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-charcoal-400">
+                      종료 시간
+                    </label>
+                    <input
+                      type="time"
+                      value={form.endTime}
+                      onChange={(e) => setForm((f) => ({ ...f, endTime: e.target.value }))}
+                      className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 focus:border-navy-400 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* 길이 칩 — 시작 시각에서 바로 끝 시각을 정한다 */}
+              {!form.allDay && (
+                <div className="flex flex-wrap gap-1.5">
+                  {[30, 60, 90, 120].map((min) => {
+                    const [h, m] = form.startTime.split(":").map(Number);
+                    const total = h * 60 + m + min;
+                    const end = `${String(Math.min(23, Math.floor(total / 60))).padStart(2, "0")}:${String(total >= 24 * 60 ? 59 : total % 60).padStart(2, "0")}`;
+                    const active = form.endTime === end;
+                    return (
+                      <button
+                        key={min}
+                        type="button"
+                        onClick={() => setForm((f) => ({ ...f, endTime: end }))}
+                        className={`h-8 rounded-full px-3 text-xs font-semibold transition ${
+                          active
+                            ? "bg-navy-500 text-white"
+                            : "border border-charcoal-700 text-charcoal-300 hover:border-charcoal-500"
+                        }`}
+                      >
+                        {min < 60 ? `${min}분` : min % 60 === 0 ? `${min / 60}시간` : `${Math.floor(min / 60)}시간 ${min % 60}분`}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setMoreOpen((v) => !v)}
+                className="flex w-full items-center justify-between rounded-lg border border-charcoal-800/70 px-3 py-2 text-xs font-medium text-charcoal-400 hover:border-charcoal-600"
+              >
+                <span>메모 · 위치 · 참석자{myCalendars.length > 1 ? " · 캘린더" : ""}</span>
+                <span>{moreOpen ? "접기" : "더 보기"}</span>
+              </button>
+
+              {moreOpen && (
+                <div className="space-y-4">
               {/* Description */}
               <div>
                 <label className="mb-1 block text-xs font-medium text-charcoal-400">설명</label>
@@ -1538,7 +1669,7 @@ export default function CalendarView({
               </div>
 
               {/* Calendar picker */}
-              {myCalendars.length > 0 && (
+              {myCalendars.length > 1 && (
                 <div>
                   <label className="mb-1 block text-xs font-medium text-charcoal-400">
                     캘린더
@@ -1575,57 +1706,6 @@ export default function CalendarView({
                 </div>
               )}
 
-              {/* Date */}
-              <div>
-                <label className="mb-1 block text-xs font-medium text-charcoal-400">날짜</label>
-                <input
-                  type="date"
-                  required
-                  value={form.date}
-                  onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
-                  className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 focus:border-navy-400 focus:outline-none"
-                />
-              </div>
-
-              {/* All day toggle */}
-              <label className="flex items-center gap-2 text-sm text-charcoal-300">
-                <input
-                  type="checkbox"
-                  checked={form.allDay}
-                  onChange={(e) => setForm((f) => ({ ...f, allDay: e.target.checked }))}
-                  className="h-4 w-4 rounded border-charcoal-700 bg-charcoal-800/50 text-navy-500 focus:ring-navy-400"
-                />
-                종일
-              </label>
-
-              {/* Time inputs */}
-              {!form.allDay && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-charcoal-400">
-                      시작 시간
-                    </label>
-                    <input
-                      type="time"
-                      value={form.startTime}
-                      onChange={(e) => setForm((f) => ({ ...f, startTime: e.target.value }))}
-                      className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 focus:border-navy-400 focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-charcoal-400">
-                      종료 시간
-                    </label>
-                    <input
-                      type="time"
-                      value={form.endTime}
-                      onChange={(e) => setForm((f) => ({ ...f, endTime: e.target.value }))}
-                      className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 focus:border-navy-400 focus:outline-none"
-                    />
-                  </div>
-                </div>
-              )}
-
               {/* 참석자 — 저장된 일정은 바로 붙고, 새 일정은 담아 뒀다가 저장 직후 초대한다. */}
               {editingEvent ? (
                 <EventParticipantsPanel
@@ -1642,6 +1722,9 @@ export default function CalendarView({
                   pending={pendingParticipants}
                   onChange={setPendingParticipants}
                 />
+              )}
+
+                </div>
               )}
 
               {/* Actions */}

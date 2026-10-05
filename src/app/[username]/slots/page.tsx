@@ -5,8 +5,10 @@ import { listMyMenus, listMenusForSlot } from "@/lib/menus";
 import { listLocationBuffers } from "@/lib/location-buffers";
 import { isGoogleCalendarConnected } from "../calendar/actions";
 import SlotsManager from "./SlotsManager";
+import { getUserId } from "@/lib/db";
+import { getAdminClient } from "@/lib/supabase";
 
-export const metadata: Metadata = { title: "타임슬롯" };
+export const metadata: Metadata = { title: "예약 링크" };
 export const dynamic = "force-dynamic";
 
 export default async function SlotsPage({ params }: { params: { username: string } }) {
@@ -26,6 +28,12 @@ export default async function SlotsPage({ params }: { params: { username: string
     })),
   );
 
+  const userId = await getUserId();
+  const { data: payRow } = userId
+    ? await getAdminClient().from("users").select("payment_instructions").eq("id", userId).single()
+    : { data: null };
+  const hasPaymentInstructions = !!(payRow as { payment_instructions: string | null } | null)?.payment_instructions;
+
   return (
     <SlotsManager
       username={params.username}
@@ -34,6 +42,7 @@ export default async function SlotsPage({ params }: { params: { username: string
       myMenus={myMenus}
       locationPresets={locationPresets.map((p) => p.name)}
       googleConnected={googleConnected}
+      hasPaymentInstructions={hasPaymentInstructions}
     />
   );
 }

@@ -145,6 +145,36 @@ export async function sendBookingConfirmedToGuest(
   return send(to, `[Orbit42] 예약 확정: ${args.slotTitle}`, html);
 }
 
+/** 계좌이체 예약 — 게스트에게 금액·입금 안내·기한을 보낸다. 호스트가 확인하면 확정 메일이 따로 간다. */
+export async function sendPaymentInstructionsToGuest(
+  to: string,
+  args: {
+    slotTitle: string;
+    when: string;
+    hostLabel: string;
+    amountCents: number;
+    instructions: string;
+    dueAt: string;
+  },
+) {
+  const amount = `${Math.round(args.amountCents / 100).toLocaleString("ko-KR")}원`;
+  const html = renderEmail({
+    eyebrow: "입금 안내",
+    heading: "입금하시면 예약이 확정돼요",
+    intro: `${escapeHtml(args.hostLabel)}님이 입금을 확인하면 확정 메일을 보내드려요.`,
+    preheader: `${args.slotTitle} · ${amount} · ${fmtWhen(args.dueAt)}까지`,
+    bodyHtml:
+      detailCard(escapeHtml(args.slotTitle), [
+        { label: "일시", value: fmtWhen(args.when) },
+        { label: "금액", value: amount, strong: true },
+        { label: "입금 기한", value: fmtWhen(args.dueAt), strong: true },
+      ]) +
+      quoteBlock(escapeHtml(args.instructions)) +
+      mutedNote("기한까지 입금이 확인되지 않으면 예약은 자동으로 취소돼요."),
+  });
+  return send(to, `[Orbit42] 입금 안내: ${args.slotTitle}`, html);
+}
+
 export async function sendBookingReminderEmail(
   to: string,
   args: {

@@ -50,36 +50,50 @@ export default async function LandingPage() {
         <section className="flex flex-col gap-8 md:grid md:grid-cols-2 md:items-start md:gap-12">
           <div className="order-1 min-w-0 md:col-start-1 md:row-start-1">
             <p className="text-2xs font-semibold uppercase tracking-[0.22em] text-navy-600 dark:text-navy-400">
-              Time is an asset
+              DM 대신, 예약 링크
             </p>
             <h1 className="mt-3 text-3xl font-bold leading-[1.15] tracking-tight text-charcoal-100 sm:text-4xl md:text-5xl lg:text-[56px]">
-              시간을
+              1:1 세션 예약,
               <br />
               <span className="bg-gradient-to-r from-navy-500 to-navy-400 bg-clip-text text-transparent">
-                자산으로
-              </span>
-              <br />
-              만드는 캘린더
+                링크 하나로
+              </span>{" "}
+              끝내세요
             </h1>
             <p className="mt-5 max-w-md text-sm leading-relaxed text-charcoal-400 sm:text-base">
-              캘린더에 쌓인 시간을 돈으로 환산해 보여주고,
+              카톡·구글폼·계좌이체로 오가던 일정 조율을 한 페이지로.
               <br />
-              남는 시간은 팔 수 있게 만들어요.
+              코치·컨설턴트·튜터·크리에이터를 위한 예약 링크예요.
             </p>
 
-            <div className="mt-7 flex justify-center md:justify-start">
-              <Link
-                href="/explore"
-                className="group inline-flex w-full items-center justify-center gap-2.5 rounded-full bg-navy-500 px-6 py-3.5 text-base font-semibold text-white shadow-lg shadow-navy-400/20 transition-all hover:bg-navy-400 hover:shadow-navy-400/30 sm:w-auto md:py-3 md:text-sm"
+            <div className="mt-7 flex flex-col items-center gap-3 sm:flex-row md:justify-start">
+              <a
+                href="#auth"
+                className="group inline-flex w-full items-center justify-center gap-2 rounded-full bg-navy-500 px-6 py-3.5 text-base font-semibold text-white shadow-lg shadow-navy-400/20 transition-all hover:bg-navy-400 sm:w-auto md:py-3 md:text-sm"
               >
-                <svg className="h-5 w-5 md:h-4 md:w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                  <circle cx="11" cy="11" r="7" />
-                  <path d="m21 21-4.3-4.3" />
-                </svg>
-                활동 중인 사람들 둘러보기
+                내 예약 링크 만들기 — 무료
                 <span className="transition-transform group-hover:translate-x-0.5">→</span>
+              </a>
+              <Link href="/explore" className="text-sm text-charcoal-500 hover:text-charcoal-300">
+                다른 사람들 페이지 보기
               </Link>
             </div>
+
+            {/* 처음 보는 서비스에서 가장 먼저 걸리는 건 '내 정보가 어디까지 보이나'다 */}
+            <ul className="mt-6 space-y-1.5 text-xs text-charcoal-500">
+              {[
+                "게스트는 가입 없이 이름·이메일만으로 예약",
+                "캘린더는 기본 비공개 — 남에게는 빈 시간만 보여요",
+                "유료 세션은 계좌이체 안내 → 입금 확인 후 확정",
+              ].map((t) => (
+                <li key={t} className="flex items-center gap-2">
+                  <svg className="h-3.5 w-3.5 shrink-0 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                  </svg>
+                  {t}
+                </li>
+              ))}
+            </ul>
           </div>
 
           <div className="relative order-2 min-w-0 md:col-start-2 md:row-span-2 md:row-start-1">
@@ -91,8 +105,8 @@ export default async function LandingPage() {
         {/* Feature 1: Easy meeting booking */}
         <section className="mt-20 md:mt-28">
           <FeatureHeader
-            eyebrow="남는 시간 팔기"
-            title="비는 시간이 실제 수입이 돼요"
+            eyebrow="예약 링크"
+            title="링크를 보내면 상대가 시간을 골라요"
             body="슬롯을 열고 링크를 보내면, 상대는 이름과 이메일만 남기고 바로 예약 완료. 가입도, 로그인도 필요 없어요."
           />
           <div className="mt-8 grid gap-6 md:grid-cols-2 md:items-start">
@@ -109,8 +123,8 @@ export default async function LandingPage() {
               />
               <Step
                 n={3}
-                title="자동 확정"
-                body="상대가 시간을 고르면 양쪽에 알림 + 캘린더에 자동 등록돼요."
+                title="확정까지 자동"
+                body="상대가 시간을 고르면 양쪽에 알림 + 캘린더에 등록. 유료 세션은 입금 안내가 자동으로 가고, 입금을 확인하면 확정돼요."
               />
             </div>
             <DemoBookingPage />

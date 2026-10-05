@@ -38,7 +38,10 @@ export function WeekCalendar({
   completedKeys,
   onToggleComplete,
   onEventClick,
+  onEmptyClick,
 }: {
+  /** 빈 칸을 누르면 그 날짜·시각(30분 단위)으로 새 일정을 연다 */
+  onEmptyClick?: (date: Date, hour: number, minute: number) => void;
   username: string;
   days: WeekDay[];
   emptyMessage?: string;
@@ -67,6 +70,7 @@ export function WeekCalendar({
         completedKeys={completedKeys}
         onToggleComplete={onToggleComplete}
         onEventClick={onEventClick}
+        onEmptyClick={onEmptyClick}
       />
 
       {days.every((d) => d.items.length === 0) && emptyMessage && (
@@ -178,7 +182,9 @@ function UnifiedScroll({
   completedKeys,
   onToggleComplete,
   onEventClick,
+  onEmptyClick,
 }: {
+  onEmptyClick?: (date: Date, hour: number, minute: number) => void;
   positionedByDay: PositionedItem[][];
   days: WeekDay[];
   username: string;
@@ -245,6 +251,9 @@ function UnifiedScroll({
             completedKeys={completedKeys}
             onToggleComplete={onToggleComplete}
             onEventClick={onEventClick}
+            onEmptyClick={
+              onEmptyClick ? (h, m) => onEmptyClick(days[idx].date, h, m) : undefined
+            }
           />
         ))}
         </div>
@@ -261,7 +270,9 @@ function DayColumn({
   completedKeys,
   onToggleComplete,
   onEventClick,
+  onEmptyClick,
 }: {
+  onEmptyClick?: (hour: number, minute: number) => void;
   items: PositionedItem[];
   isToday: boolean;
   username: string;
@@ -274,7 +285,18 @@ function DayColumn({
     <div
       className={`relative border-r border-charcoal-800/40 last:border-r-0 ${
         isToday ? "bg-navy-500/5" : ""
-      }`}
+      } ${onEmptyClick ? "cursor-cell" : ""}`}
+      onClick={
+        onEmptyClick
+          ? (e) => {
+              // 일정 블록이 아니라 빈 배경을 눌렀을 때만
+              if (e.target !== e.currentTarget) return;
+              const y = e.clientY - e.currentTarget.getBoundingClientRect().top;
+              const totalMin = START_MIN + Math.floor((y / ROW_HEIGHT) * 2) * 30;
+              onEmptyClick(Math.min(23, Math.floor(totalMin / 60)), totalMin % 60);
+            }
+          : undefined
+      }
     >
       {/* Hour grid lines */}
       {Array.from({ length: ROWS }).map((_, i) => (

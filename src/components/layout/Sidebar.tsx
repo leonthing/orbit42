@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { NAV_ITEMS } from "@/lib/constants";
+import { NAV_ITEMS, NAV_MORE_ITEMS } from "@/lib/constants";
 import { useState } from "react";
 import { useMobileMenu } from "./MobileMenuContext";
 import { FeedbackBox } from "./FeedbackBox";
@@ -223,6 +223,20 @@ export function Sidebar({
           collapsed={collapsed}
           onClick={close}
         />
+        {NAV_MORE_ITEMS.map((item) => {
+          const href = `/${username}${item.href}`;
+          return (
+            <NavLink
+              key={item.label}
+              href={href}
+              label={item.label}
+              icon={icons[item.icon]}
+              active={pathname === href || pathname.startsWith(href + "/")}
+              collapsed={collapsed}
+              onClick={close}
+            />
+          );
+        })}
       </nav>
 
       {/* Bottom: Feedback + Collapse */}

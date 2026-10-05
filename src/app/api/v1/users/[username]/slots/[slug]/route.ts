@@ -136,5 +136,7 @@ export async function POST(
     ok: true,
     // auto_approve 슬롯은 바로 확정, 아니면 호스트 승인 대기 (bookSlot 이 실제로 쓴 상태)
     status: "status" in result ? result.status : "confirmed",
+    // 계좌이체 흐름이면 입금 안내·금액·기한 (게스트 완료 화면에 그대로 보여준다)
+    payment: "payment" in result ? result.payment : null,
   });
 }

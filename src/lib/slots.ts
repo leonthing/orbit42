@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { removeBookingCalendarEvent } from "@/lib/booking-calendar";
 import { getAdminClient } from "@/lib/supabase";
 import { getSession } from "@/lib/auth";
 import { getUserId, requireUserId } from "@/lib/db";
@@ -318,17 +319,10 @@ export async function createSlot(input: SlotInput) {
     calendarVisibility = (def?.visibility as string) ?? null;
   }
 
-  // Sellable slots (fixed price) need a publicly-visible calendar so the
-  // public booking page is discoverable. Auction slots bypass this since
-  // they live on the auction landing page.
-  const pricing = input.pricing_model ?? "fixed";
-  const priceGt0 = (input.price_cents ?? 0) > 0;
-  if (pricing === "fixed" && priceGt0 && calendarVisibility !== "public") {
-    return {
-      error:
-        "유료 슬롯은 공개(public) 캘린더에만 만들 수 있어요. 캘린더 공개 설정을 바꾸거나 다른 캘린더를 선택해주세요.",
-    };
-  }
+  // (예전엔 유료 슬롯에 공개 캘린더를 요구했다. 슬롯은 캘린더 공개 여부와 상관없이
+  //  공개 페이지에 나오므로 의미가 없고, 코치가 일정 전체를 공개해야 하는 부작용만
+  //  있어 없앴다 — 캘린더는 기본 비공개로 둔다.)
+  void calendarVisibility;
 
   const slug = slugify(input.title);
   const { data: slot, error } = await db
@@ -730,6 +724,9 @@ export async function removeAvailability(availabilityId: string) {
   return { success: true };
 }
 
+/** 계좌이체 예약의 입금 기한 — 예약 후 24시간(세션 시작이 더 이르면 그때까지) */
+const PAYMENT_WINDOW_MS = 24 * 60 * 60 * 1000;
+
 export async function bookSlot(args: {
   slotId: string;
   /** Manual mode */
@@ -768,7 +765,7 @@ export async function bookSlot(args: {
   const { data: slot } = await db
     .from("time_slots")
     .select(
-      "id, host_id, duration_min, active, mode, pricing_model, title, location_detail, locations, working_hours, slot_interval_min, min_notice_hours, max_advance_days, buffer_min, capacity, calendar_id, valid_from, valid_until, auto_approve",
+      "id, host_id, duration_min, active, mode, pricing_model, price_cents, title, location_detail, locations, working_hours, slot_interval_min, min_notice_hours, max_advance_days, buffer_min, capacity, calendar_id, valid_from, valid_until, auto_approve",
     )
     .eq("id", args.slotId)
     .single();
@@ -867,7 +864,24 @@ export async function bookSlot(args: {
     validMenuIds = args.selected_menu_ids.filter((m) => attached.has(m));
   }
 
-  const autoApprove = (slot.auto_approve as boolean | null) !== false;
+  // 유료 슬롯이고 호스트가 결제 안내(계좌·송금 링크)를 적어 두었으면 계좌이체 흐름:
+  // 입금 확인 전까지는 '입금 대기'(pending)로 두고, 기한이 지나면 cron 이 취소한다.
+  const { data: hostPay } = await db
+    .from("users")
+    .select("payment_instructions")
+    .eq("id", slot.host_id)
+    .single();
+  const paymentInstructions =
+    ((hostPay as { payment_instructions: string | null } | null)?.payment_instructions ?? "").trim() || null;
+  const awaitingPayment =
+    !!paymentInstructions &&
+    ((slot.price_cents as number | null) ?? 0) > 0 &&
+    slot.pricing_model !== "auction";
+  const paymentDueAt = awaitingPayment
+    ? new Date(Math.min(Date.now() + PAYMENT_WINDOW_MS, startAt.getTime()))
+    : null;
+
+  const autoApprove = (slot.auto_approve as boolean | null) !== false && !awaitingPayment;
   const initialStatus = autoApprove ? "confirmed" : "pending";
 
   // Create the booking row first so we never lose it on a Google API failure.
@@ -890,6 +904,8 @@ export async function bookSlot(args: {
       selected_menu_ids: validMenuIds,
       status: initialStatus,
       selected_location: bookingLocation,
+      payment_status: awaitingPayment ? "awaiting" : null,
+      payment_due_at: paymentDueAt ? paymentDueAt.toISOString() : null,
     })
     .select("id")
     .single();
@@ -920,9 +936,11 @@ export async function bookSlot(args: {
     await createNotification({
       userId: slot.host_id as string,
       type: "booking_received",
-      title: autoApprove
-        ? `새 예약: ${slot.title}`
-        : `예약 요청: ${slot.title}`,
+      title: awaitingPayment
+        ? `입금 대기 예약: ${slot.title}`
+        : autoApprove
+          ? `새 예약: ${slot.title}`
+          : `예약 요청: ${slot.title}`,
       body: `${guestLabel} · ${whenLabel}`,
       link: `/${host?.username}/bookings`,
       actorId: guestId,
@@ -948,6 +966,23 @@ export async function bookSlot(args: {
     }
   } catch (err) {
     console.error("host booking_received email", err);
+  }
+
+  // 계좌이체 흐름이면 게스트에게 바로 입금 안내 메일을 보낸다.
+  if (awaitingPayment && guestEmail && paymentDueAt) {
+    try {
+      const { sendPaymentInstructionsToGuest } = await import("@/lib/email");
+      await sendPaymentInstructionsToGuest(guestEmail, {
+        slotTitle: slot.title as string,
+        when: startAt.toISOString(),
+        hostLabel: (host?.display_name || host?.username || "Host") as string,
+        amountCents: (slot.price_cents as number) ?? 0,
+        instructions: paymentInstructions as string,
+        dueAt: paymentDueAt.toISOString(),
+      });
+    } catch (err) {
+      console.error("guest payment instructions email", err);
+    }
   }
 
   // Email to guest (only if auto-confirmed).
@@ -1134,7 +1169,17 @@ export async function bookSlot(args: {
   }
 
   revalidatePath("/", "layout");
-  return { success: true, status: initialStatus as "confirmed" | "pending" };
+  return {
+    success: true,
+    status: initialStatus as "confirmed" | "pending",
+    payment: awaitingPayment
+      ? {
+          instructions: paymentInstructions as string,
+          amountCents: (slot.price_cents as number) ?? 0,
+          dueAt: (paymentDueAt as Date).toISOString(),
+        }
+      : null,
+  };
 }
 
 /**
@@ -1142,51 +1187,6 @@ export async function bookSlot(args: {
  * booking. Called when a booking is canceled from either side so the
  * host's calendar doesn't keep a ghost meeting.
  */
-async function removeBookingCalendarEvent(bookingId: string) {
-  try {
-    const db = getAdminClient();
-    const { data: booking } = await db
-      .from("bookings")
-      .select("google_event_id, host_id, slot:time_slots!bookings_slot_id_fkey(calendar_id)")
-      .eq("id", bookingId)
-      .maybeSingle();
-    const eventId = booking?.google_event_id as string | null | undefined;
-    if (!booking || !eventId) return;
-
-    // Resolve the same calendar the event was created on.
-    const slotInfo = booking.slot as unknown as {
-      calendar_id: string | null;
-    } | null;
-    // We only get here when a Google event exists (eventId set). It lives on
-    // the slot's Google calendar if one is set, otherwise the host's primary
-    // (native-calendar slots are mirrored to primary when Google is linked).
-    let calendarId = "primary";
-    if (slotInfo?.calendar_id) {
-      const { data: cal } = await db
-        .from("calendars")
-        .select("source, google_calendar_id")
-        .eq("id", slotInfo.calendar_id)
-        .single();
-      if (cal?.source === "google" && cal.google_calendar_id) {
-        calendarId = cal.google_calendar_id as string;
-      }
-    }
-
-    const calendar = await getAuthenticatedCalendar(booking.host_id as string);
-    if (!calendar) return;
-    await calendar.events.delete({
-      calendarId,
-      eventId,
-      sendUpdates: "all",
-    });
-    await db
-      .from("bookings")
-      .update({ google_event_id: null })
-      .eq("id", bookingId);
-  } catch (err) {
-    console.error("removeBookingCalendarEvent", err);
-  }
-}
 
 async function getEmailForUser(userId: string | null): Promise<string | null> {
   if (!userId) return null;
@@ -1248,8 +1248,11 @@ export type BookingRow = {
   reschedule_note: string | null;
   /** 대기 중인 제안을 내가 보낸 것인지 — 목록을 부른 사람 기준으로 서버가 채운다. */
   reschedule_by_me?: boolean;
+  /** 계좌이체 예약: awaiting(입금 대기) / paid(입금 확인) / null(해당 없음) */
+  payment_status: "awaiting" | "paid" | null;
+  payment_due_at: string | null;
   guest: { username: string; display_name: string | null } | null;
-  slot: { title: string; slug: string; location_detail: string | null };
+  slot: { title: string; slug: string; location_detail: string | null; price_cents: number };
   selected_menus?: {
     id: string;
     name: string;
@@ -1270,12 +1273,15 @@ export type GuestBookingRow = {
   reschedule_note: string | null;
   /** 대기 중인 제안을 내가 보낸 것인지 — 목록을 부른 사람 기준으로 서버가 채운다. */
   reschedule_by_me?: boolean;
-  host: { username: string; display_name: string | null } | null;
+  payment_status: "awaiting" | "paid" | null;
+  payment_due_at: string | null;
+  host: { username: string; display_name: string | null; payment_instructions: string | null } | null;
   slot: {
     id: string;
     title: string;
     slug: string;
     location_detail: string | null;
+    price_cents: number;
   };
   selected_menus?: {
     id: string;
@@ -1316,7 +1322,7 @@ export async function listMyGuestBookings(): Promise<GuestBookingRow[]> {
   const { data } = await db
     .from("bookings")
     .select(
-      "id, scheduled_at, scheduled_end_at, status, message, selected_menu_ids, reschedule_by, reschedule_start_at, reschedule_end_at, reschedule_note, host:users!bookings_host_id_fkey(username, display_name), slot:time_slots!bookings_slot_id_fkey(id, title, slug, location_detail)",
+      "id, scheduled_at, scheduled_end_at, status, message, selected_menu_ids, reschedule_by, reschedule_start_at, reschedule_end_at, reschedule_note, payment_status, payment_due_at, host:users!bookings_host_id_fkey(username, display_name, payment_instructions), slot:time_slots!bookings_slot_id_fkey(id, title, slug, location_detail, price_cents)",
     )
     .eq("guest_id", userId)
     .eq("hidden_by_guest", false)
@@ -1333,7 +1339,7 @@ export async function listMyHostBookings(): Promise<BookingRow[]> {
   const { data } = await db
     .from("bookings")
     .select(
-      "id, scheduled_at, scheduled_end_at, status, message, guest_name, guest_email, selected_menu_ids, reschedule_by, reschedule_start_at, reschedule_end_at, reschedule_note, guest:users!bookings_guest_id_fkey(username, display_name), slot:time_slots!bookings_slot_id_fkey(title, slug, location_detail)",
+      "id, scheduled_at, scheduled_end_at, status, message, guest_name, guest_email, selected_menu_ids, reschedule_by, reschedule_start_at, reschedule_end_at, reschedule_note, payment_status, payment_due_at, guest:users!bookings_guest_id_fkey(username, display_name), slot:time_slots!bookings_slot_id_fkey(title, slug, location_detail, price_cents)",
     )
     .eq("host_id", userId)
     .eq("hidden_by_host", false)
@@ -1366,6 +1372,15 @@ export async function updateBookingStatus(
     .eq("id", id)
     .eq("host_id", userId);
   if (error) return { error: "변경 실패" };
+
+  // 계좌이체 예약을 확정하면 입금 확인으로 본다.
+  if (status === "confirmed") {
+    await db
+      .from("bookings")
+      .update({ payment_status: "paid" })
+      .eq("id", id)
+      .eq("payment_status", "awaiting");
+  }
 
   // Keep the mirrored calendar events (host + guest) in sync with the decision:
   // - canceled → remove the Google event and delete the native mirrors.

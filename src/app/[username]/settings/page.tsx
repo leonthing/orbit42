@@ -24,6 +24,8 @@ import {
   DeleteAccountSection,
 } from "./AccountDangerZone";
 import { SectionNav } from "./SectionNav";
+import { PaymentInstructionsForm } from "./PaymentInstructionsForm";
+import { getAdminClient } from "@/lib/supabase";
 
 export const metadata: Metadata = { title: "설정" };
 export const dynamic = "force-dynamic";
@@ -33,6 +35,7 @@ const SECTIONS = [
   { id: "google", label: "Google" },
   { id: "calendars", label: "캘린더" },
   { id: "work-hours", label: "근무시간" },
+  { id: "payment", label: "결제 안내" },
   { id: "locations", label: "장소" },
   { id: "referral", label: "추천" },
   { id: "notifications", label: "알림" },
@@ -59,6 +62,12 @@ export default async function SettingsPage({
       userId ? getWorkHours(userId) : Promise.resolve({}),
       listLocationBuffers(userId ?? undefined).catch(() => []),
     ]);
+
+  const { data: payRow } = userId
+    ? await getAdminClient().from("users").select("payment_instructions").eq("id", userId).single()
+    : { data: null };
+  const paymentInstructions =
+    (payRow as { payment_instructions: string | null } | null)?.payment_instructions ?? null;
 
   return (
     <div className="w-full min-w-0 max-w-5xl">
@@ -127,6 +136,10 @@ export default async function SettingsPage({
 
           <section id="work-hours" className="scroll-mt-16">
             <WorkHoursForm initial={workHours} />
+          </section>
+
+          <section id="payment" className="scroll-mt-16">
+            <PaymentInstructionsForm initial={paymentInstructions} />
           </section>
 
           <section id="locations" className="scroll-mt-16">
