@@ -3,62 +3,78 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+/**
+ * 모바일 하단 탭 — iOS 앱(MainTabView)과 같은 5탭·같은 모양.
+ * 캘린더 / 예약 / 오르빗 / 자산 / 프로필. 예약 링크(슬롯)는 앱처럼 캘린더 탭 안의
+ * 세그먼트로 들어가고, 나머지 메뉴는 프로필 탭에서 연다.
+ */
 export function MobileBottomNav({ username }: { username: string }) {
   const pathname = usePathname();
+  const base = `/${username}`;
+  const under = (...paths: string[]) => paths.some((p) => pathname === p || pathname.startsWith(p + "/"));
 
-  // 캘린더가 홈. 유틸리티(캘린더·타임슬롯·예약)를 앞에 두고 소셜은 뒤로 뺀다.
   const items = [
     {
-      href: `/${username}/calendar`,
+      href: `${base}/calendar`,
       label: "캘린더",
-      active: pathname.startsWith(`/${username}/calendar`),
+      active: under(`${base}/calendar`, `${base}/slots`, `${base}/services`),
       icon: (
-        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+          <rect x="2.5" y="4" width="19" height="17" rx="3.5" />
+          <rect x="7" y="2" width="1.8" height="4" rx="0.9" />
+          <rect x="15.2" y="2" width="1.8" height="4" rx="0.9" />
+          {[8, 12, 16].map((x) =>
+            [12, 16].map((y) => <circle key={`${x}-${y}`} cx={x} cy={y} r="1.1" fill="rgb(var(--bg-surface))" />),
+          )}
+          <rect x="2.5" y="8" width="19" height="0.9" fill="rgb(var(--bg-surface))" />
         </svg>
       ),
     },
     {
-      href: `/${username}/slots`,
-      label: "예약 링크",
-      active: pathname.startsWith(`/${username}/slots`),
-      icon: (
-        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-        </svg>
-      ),
-    },
-    {
-      href: `/${username}/bookings`,
+      href: `${base}/bookings`,
       label: "예약",
-      active: pathname.startsWith(`/${username}/bookings`),
+      active: under(`${base}/bookings`),
       icon: (
-        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+          <path fillRule="evenodd" d="M12 2.25a9.75 9.75 0 1 0 0 19.5 9.75 9.75 0 0 0 0-19.5Zm4.28 7.53a.75.75 0 0 0-1.06-1.06l-4.47 4.47-1.97-1.97a.75.75 0 1 0-1.06 1.06l2.5 2.5c.3.3.77.3 1.06 0l5-5Z" clipRule="evenodd" />
         </svg>
       ),
     },
     {
-      // 탐색(사람 찾기)은 오르빗 화면 안으로 들어갔다 — iOS 의 오르빗 탭과 같은 구성.
-      href: `/${username}/people`,
+      href: `${base}/people`,
       label: "오르빗",
-      active: pathname.startsWith(`/${username}/people`) || pathname === "/explore",
+      active: under(`${base}/people`, "/explore", "/search", "/messages"),
       icon: (
-        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-          <circle cx="12" cy="12" r="2.5" />
-          <circle cx="12" cy="12" r="8.5" strokeDasharray="2.5 2.5" />
-          <circle cx="18" cy="6" r="1.8" fill="currentColor" stroke="none" />
-          <circle cx="5.5" cy="15.5" r="1.4" fill="currentColor" stroke="none" />
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+          <path fillRule="evenodd" d="M12 2.25a9.75 9.75 0 1 0 0 19.5 9.75 9.75 0 0 0 0-19.5Z" clipRule="evenodd" />
+          {Array.from({ length: 12 }).map((_, i) => {
+            const a = (i / 12) * Math.PI * 2;
+            return <circle key={i} cx={12 + 5.6 * Math.cos(a)} cy={12 + 5.6 * Math.sin(a)} r="0.85" fill="rgb(var(--bg-surface))" />;
+          })}
         </svg>
       ),
     },
     {
-      href: `/${username}`,
-      label: "나",
-      active: pathname === `/${username}`,
+      href: `${base}/insights`,
+      label: "자산",
+      active: under(`${base}/insights`),
       icon: (
-        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+          <path fillRule="evenodd" d="M12 2.25a9.75 9.75 0 1 0 0 19.5 9.75 9.75 0 0 0 0-19.5Z" clipRule="evenodd" />
+          <path d="M7.2 8h1.3l1.1 4.6L10.8 8h1.4l1.2 4.6L14.5 8h1.3l-1.8 7.2h-1.3L11.5 10.7l-1.2 4.5H9L7.2 8Z" fill="rgb(var(--bg-surface))" />
+          <path d="M6.6 11h10.8v1H6.6z" fill="rgb(var(--bg-surface))" />
+        </svg>
+      ),
+    },
+    {
+      href: base,
+      label: "프로필",
+      active:
+        pathname === base ||
+        under(`${base}/settings`, `${base}/timeline`, `${base}/blog`, `${base}/followers`, `${base}/following`, "/notifications"),
+      icon: (
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+          <path fillRule="evenodd" d="M12 2.25a9.75 9.75 0 1 0 0 19.5 9.75 9.75 0 0 0 0-19.5ZM9 9.5a3 3 0 1 1 6 0 3 3 0 0 1-6 0Zm-2.7 8.1a7.9 7.9 0 0 1 11.4 0A8.2 8.2 0 0 1 12 20.25a8.2 8.2 0 0 1-5.7-2.65Z" clipRule="evenodd" />
         </svg>
       ),
     },
@@ -66,27 +82,24 @@ export function MobileBottomNav({ username }: { username: string }) {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 flex items-stretch border-t border-charcoal-800/60 bg-[rgb(var(--bg-surface))]/95 backdrop-blur md:hidden"
-      style={{
-        // 실제 탭 영역 64px + iPhone 홈 인디케이터만큼 추가 하단 여유
-        height: "calc(4rem + env(safe-area-inset-bottom))",
-        paddingBottom: "env(safe-area-inset-bottom)",
-      }}
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 md:hidden"
+      style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom))" }}
     >
-      {items.map((it) => (
-        <Link
-          key={it.href}
-          href={it.href}
-          className={`relative flex flex-1 flex-col items-center justify-center gap-1 text-2xs font-medium ${
-            it.active ? "text-navy-400" : "text-charcoal-500"
-          }`}
-        >
-          <span className="relative">
-            <span className="[&>svg]:h-6 [&>svg]:w-6">{it.icon}</span>
-          </span>
-          <span>{it.label}</span>
-        </Link>
-      ))}
+      {/* 떠 있는 캡슐 — iOS 탭바와 같은 모양 */}
+      <div className="pointer-events-auto mx-auto flex h-[62px] max-w-md items-center gap-1 rounded-full border border-black/5 bg-[rgb(var(--bg-surface))]/90 p-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.12)] backdrop-blur-xl dark:border-white/10">
+        {items.map((it) => (
+          <Link
+            key={it.label}
+            href={it.href}
+            className={`flex h-full flex-1 flex-col items-center justify-center gap-0.5 rounded-full text-[10px] font-medium transition-colors ${
+              it.active ? "bg-charcoal-800/60 text-navy-500 dark:text-navy-400" : "text-charcoal-100"
+            }`}
+          >
+            <span className="h-[22px] w-[22px] [&>svg]:h-full [&>svg]:w-full">{it.icon}</span>
+            <span>{it.label}</span>
+          </Link>
+        ))}
+      </div>
     </nav>
   );
 }

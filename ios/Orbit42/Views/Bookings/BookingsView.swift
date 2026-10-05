@@ -112,7 +112,7 @@ struct BookingsView: View {
                     emptyState(
                         icon: "tray",
                         title: "받은 예약이 없어요",
-                        message: "타임슬롯을 공유하면 받은 예약이 이곳에 모여요"
+                        message: "예약 링크를 공유하면 받은 예약이 이곳에 모여요"
                     )
                 } else {
                     hostList(data.host)

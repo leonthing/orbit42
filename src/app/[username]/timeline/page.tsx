@@ -194,7 +194,7 @@ export default async function TimelinePage({
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-bold text-charcoal-100">타임라인</h1>
+        <h1 className="max-md:hidden text-2xl font-bold text-charcoal-100">타임라인</h1>
         <p className="mt-1 text-xs text-charcoal-500">
           지나간 일정이 기록으로 쌓여요. 일정에 사진을 붙이면 더 선명해져요.
         </p>

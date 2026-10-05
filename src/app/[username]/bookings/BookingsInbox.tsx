@@ -13,6 +13,7 @@ import {
   withdrawReschedule,
 } from "@/lib/slots";
 import type { BookingRow, GuestBookingRow, BookableOption } from "@/lib/slots";
+import { Segmented } from "@/components/Segmented";
 import { addBookingReview } from "@/lib/reviews";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
@@ -96,7 +97,7 @@ export default function BookingsInbox({
     <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-charcoal-100">예약</h1>
+          <h1 className="max-md:hidden text-2xl font-bold text-charcoal-100">예약</h1>
           <p className="mt-1 text-sm text-charcoal-500">
             받은 예약과 내가 한 예약을 한곳에서 볼 수 있어요.
           </p>
@@ -110,14 +111,14 @@ export default function BookingsInbox({
         )}
       </header>
 
-      <div className="flex rounded-lg bg-charcoal-800/40 p-0.5">
-        <TabButton active={tab === "host"} onClick={() => setTab("host")}>
-          받은 예약 {hostBookings.length > 0 && `(${hostBookings.length})`}
-        </TabButton>
-        <TabButton active={tab === "guest"} onClick={() => setTab("guest")}>
-          내가 한 예약 {guestBookings.length > 0 && `(${guestBookings.length})`}
-        </TabButton>
-      </div>
+      <Segmented
+        value={tab}
+        onChange={(v) => setTab(v)}
+        items={[
+          { value: "host", label: <>받은 예약{hostBookings.length > 0 && ` ${hostBookings.length}`}</> },
+          { value: "guest", label: <>내가 한 예약{guestBookings.length > 0 && ` ${guestBookings.length}`}</> },
+        ]}
+      />
 
       {tab === "host" ? (
         <>
@@ -164,29 +165,6 @@ export default function BookingsInbox({
   );
 }
 
-function TabButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex-1 rounded-sm px-3 py-1.5 text-xs font-semibold transition-colors ${
-        active
-          ? "bg-navy-500 text-white shadow-sm"
-          : "text-charcoal-500 hover:text-charcoal-900 dark:text-charcoal-400 dark:hover:text-charcoal-100"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
 
 function Stat({
   label,

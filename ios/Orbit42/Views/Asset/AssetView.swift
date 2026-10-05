@@ -398,7 +398,7 @@ struct AssetView: View {
                     .font(.caption)
                     .foregroundStyle(Theme.secondaryText)
             } else {
-                Text("타임슬롯 판매와 일정 수익 기록이 여기에 쌓여요.")
+                Text("예약 링크 판매와 일정 수익 기록이 여기에 쌓여요.")
                     .font(.caption)
                     .foregroundStyle(Theme.secondaryText)
             }

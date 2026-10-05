@@ -8,6 +8,7 @@ import { listMyCalendars } from "@/lib/calendars";
 import CalendarView from "./CalendarView";
 import { SlotPanelProvider } from "@/components/SlotPanel";
 import { OnboardingSection } from "@/components/OnboardingSection";
+import { Segmented } from "@/components/Segmented";
 
 export const metadata: Metadata = { title: "캘린더" };
 export const dynamic = "force-dynamic";
@@ -58,6 +59,17 @@ export default async function CalendarPage({
       <div className="flex h-full flex-col gap-4">
         {/* 홈이 캘린더로 옮겨오면서 시작하기 체크리스트도 함께 이주했다.
             내 캘린더일 때만 보여준다 (남의 캘린더에서는 의미 없음). */}
+        {/* 모바일: iOS 캘린더 탭처럼 일정 | 예약 링크 전환 */}
+        {isOwner && (
+          <Segmented
+            className="shrink-0 md:hidden"
+            value="events"
+            items={[
+              { value: "events", label: "일정", href: `/${params.username}/calendar` },
+              { value: "slots", label: "예약 링크", href: `/${params.username}/slots` },
+            ]}
+          />
+        )}
         {isOwner && <OnboardingSection />}
         <CalendarView
           username={params.username}

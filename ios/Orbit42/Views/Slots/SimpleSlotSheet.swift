@@ -94,7 +94,7 @@ struct SimpleSlotSheet: View {
             }
             .scrollContentBackground(.hidden)
             .background(Theme.background)
-            .navigationTitle("새 타임슬롯")
+            .navigationTitle("새 예약 링크")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

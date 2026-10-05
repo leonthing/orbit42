@@ -39,7 +39,7 @@ export function AppShell({
             className="flex-1 overflow-y-auto pb-[var(--mobile-nav-pb)] md:!pb-0"
             style={
               {
-                "--mobile-nav-pb": "calc(4rem + env(safe-area-inset-bottom))",
+                "--mobile-nav-pb": "calc(5.75rem + env(safe-area-inset-bottom))",
               } as React.CSSProperties
             }
           >

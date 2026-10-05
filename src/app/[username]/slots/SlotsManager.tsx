@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { SITE } from "@/lib/constants";
+import { Segmented } from "@/components/Segmented";
 import { slotTypeLabel } from "@/lib/constants";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -83,9 +84,17 @@ export default function SlotsManager({
 
   return (
     <div className="space-y-8">
+      <Segmented
+        className="md:hidden"
+        value="slots"
+        items={[
+          { value: "events", label: "일정", href: `/${username}/calendar` },
+          { value: "slots", label: "예약 링크", href: `/${username}/slots` },
+        ]}
+      />
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold text-charcoal-100">예약 링크</h1>
+          <h1 className="max-md:hidden text-2xl font-bold text-charcoal-100">예약 링크</h1>
           <p className="mt-1 text-sm text-charcoal-500">
             링크를 보내면 상대가 시간을 골라 예약해요. 유료 세션도 받을 수 있어요.
           </p>

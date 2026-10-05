@@ -28,6 +28,7 @@ import { InsightsCard } from "./InsightsCard";
 import { ProfileCalendarCards } from "./ProfileCalendarCards";
 import { PublicLinkProfile } from "./PublicLinkProfile";
 import { ProfileTabs } from "./ProfileTabs";
+import { MobileProfileLinks } from "./MobileProfileLinks";
 import { ShareMenu } from "@/components/ShareMenu";
 import { JsonLd } from "@/components/JsonLd";
 import { SITE } from "@/lib/constants";
@@ -369,6 +370,8 @@ export default async function PublicProfile({
           )}
         </section>
       )}
+
+      {isOwner && <MobileProfileLinks username={params.username} />}
 
       {isOwner ? (
         <ProfileTabs

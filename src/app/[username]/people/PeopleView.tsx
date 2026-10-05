@@ -63,7 +63,7 @@ export function PeopleView({
     <div className="mx-auto w-full max-w-2xl space-y-4 pb-16">
       <header className="flex items-end justify-between gap-3 pt-1">
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight text-charcoal-50">오르빗</h1>
+          <h1 className="max-md:hidden text-2xl font-bold tracking-tight text-charcoal-50">오르빗</h1>
           <p className="mt-1 text-sm text-charcoal-400">나를 중심으로, 시간을 함께 쓰는 사람들</p>
         </div>
         <div className="flex items-center gap-2">

@@ -377,7 +377,7 @@ struct PersonProfileView: View {
     @ViewBuilder
     private func slotsSection(_ data: PersonProfileResponse) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("열린 타임슬롯")
+            Text("열린 예약 링크")
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(Theme.secondaryText)
 

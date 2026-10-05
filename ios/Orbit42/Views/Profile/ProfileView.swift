@@ -346,7 +346,7 @@ private struct MyProfileContent: View {
     @ViewBuilder
     private var slotsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("내 타임슬롯")
+            Text("내 예약 링크")
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(Theme.secondaryText)
 

@@ -13,7 +13,7 @@ struct CalendarView: View {
         var title: String {
             switch self {
             case .schedule: return "일정"
-            case .slots: return "타임슬롯"
+            case .slots: return "예약 링크"
             }
         }
     }

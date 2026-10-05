@@ -192,7 +192,7 @@ struct ServicesView: View {
                             }
                         }
                     } footer: {
-                        Text("타임슬롯 상세에서 이 서비스들을 연결하면, 예약할 때 함께 고를 수 있어요. 결제는 호스트 안내에 따라(현장·계좌이체) 진행해요.")
+                        Text("예약 링크 상세에서 이 서비스들을 연결하면, 예약할 때 함께 고를 수 있어요. 결제는 호스트 안내에 따라(현장·계좌이체) 진행해요.")
                             .foregroundStyle(Theme.secondaryText)
                     }
                     .listRowBackground(Theme.surface)

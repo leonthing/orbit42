@@ -399,7 +399,7 @@ struct BookingDetailView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "clock.badge.checkmark")
                         .font(.footnote)
-                    Text("타임슬롯 보기")
+                    Text("예약 링크 보기")
                         .font(.subheadline.weight(.medium))
                     Spacer(minLength: 0)
                     Image(systemName: "chevron.right")

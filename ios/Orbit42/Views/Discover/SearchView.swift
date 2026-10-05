@@ -153,7 +153,7 @@ struct SearchView: View {
                         .searchRowChrome()
                     }
                 } header: {
-                    sectionHeader("열린 타임슬롯")
+                    sectionHeader("열린 예약 링크")
                 }
             }
         }
@@ -253,7 +253,7 @@ struct SearchView: View {
                 SlotBookingView(username: item.username, slug: slot.slug)
             } label: {
                 VStack(alignment: .leading, spacing: 8) {
-                    streamHeader(item, action: "새 타임슬롯")
+                    streamHeader(item, action: "새 예약 링크")
                     HStack(spacing: 8) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(slot.title)

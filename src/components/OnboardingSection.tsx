@@ -73,7 +73,7 @@ export async function OnboardingSection() {
     },
     {
       key: "slot",
-      label: "첫 타임슬롯 열기",
+      label: "첫 예약 링크 만들기",
       href: `/${session.username}/slots`,
       done: (slotCountRes?.count ?? 0) > 0,
     },

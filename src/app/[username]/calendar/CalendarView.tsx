@@ -208,7 +208,13 @@ export default function CalendarView({
   const [events, setEvents] = useState<Event[]>(initialEvents);
   const [completed, setCompleted] = useState<Set<string>>(new Set());
   const [detailEvent, setDetailEvent] = useState<WeekItem | null>(null);
+  // iOS 앱처럼 오늘이 선택된 채로 시작해 아래에 오늘 일정이 바로 보인다.
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  // 서버(UTC)와 브라우저의 '오늘'이 다를 수 있어 마운트 후에 고른다 (hydration 불일치 방지).
+  useEffect(() => {
+    const now = new Date();
+    if (now.getFullYear() === initialYear && now.getMonth() === initialMonth) setSelectedDay(now.getDate());
+  }, [initialYear, initialMonth]);
   const [showForm, setShowForm] = useState(false);
   // 일정 추가는 제목·시간만 먼저. 메모·위치·참석자·캘린더는 '더 보기'에서.
   const [moreOpen, setMoreOpen] = useState(false);
@@ -242,6 +248,10 @@ export default function CalendarView({
   });
   const [showCalendarPicker, setShowCalendarPicker] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("week");
+  // 모바일은 iOS 앱처럼 월 달력 + 선택한 날의 일정으로 시작한다.
+  useEffect(() => {
+    if (window.matchMedia("(max-width: 767px)").matches) setViewMode("month");
+  }, []);
   const [quarter, setQuarter] = useState(getQuarterForMonth(initialMonth));
   const [weekDays, setWeekDays] = useState<WeekDay[]>(initialWeekDays);
   const [invites, setInvites] = useState<InviteView[]>([]);
@@ -1070,10 +1080,11 @@ export default function CalendarView({
       {viewMode === "month" && (
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           {/* Month Calendar Grid */}
-          <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 p-3 md:p-5">
+          {/* 모바일은 iOS 처럼 촘촘한 월 달력(주차·제목 없이 점) + 아래 선택한 날 목록 */}
+          <div className="rounded-2xl bg-[rgb(var(--bg-surface))] p-2 md:rounded-xl md:border md:border-charcoal-800/60 md:bg-charcoal-900/40 md:p-5">
             {/* Day headers with week number column */}
-            <div className="grid grid-cols-[1.5rem_repeat(7,minmax(0,1fr))] gap-0.5 md:grid-cols-[2rem_repeat(7,minmax(0,1fr))] md:gap-1">
-              <div className="py-2 text-center text-2xs font-medium text-charcoal-600">W</div>
+            <div className="grid grid-cols-7 gap-0.5 md:grid-cols-[2rem_repeat(7,minmax(0,1fr))] md:gap-1">
+              <div className="py-2 text-center text-2xs font-medium text-charcoal-600 max-md:hidden">W</div>
               {DAYS_MON.map((d, i) => (
                 <div
                   key={d}
@@ -1087,7 +1098,7 @@ export default function CalendarView({
             </div>
 
             {/* Date cells with week numbers */}
-            <div className="grid grid-cols-[1.5rem_repeat(7,minmax(0,1fr))] gap-0.5 md:grid-cols-[2rem_repeat(7,minmax(0,1fr))] md:gap-1">
+            <div className="grid grid-cols-7 gap-0.5 md:grid-cols-[2rem_repeat(7,minmax(0,1fr))] md:gap-1">
               {days.map((day, i) => {
                 const isToday = isCurrentMonth && day === today.getDate();
                 const isSelected = day === selectedDay;
@@ -1114,7 +1125,7 @@ export default function CalendarView({
                 return (
                   <>
                     {showWeekNum && (
-                      <div key={`w${i}`} className="flex h-14 items-start justify-center pt-1 md:h-20 md:pt-2">
+                      <div key={`w${i}`} className="flex h-14 items-start justify-center pt-1 max-md:hidden md:h-20 md:pt-2">
                         <span className="text-2xs font-medium text-charcoal-600">
                           {weekNum}
                         </span>
@@ -1134,7 +1145,7 @@ export default function CalendarView({
                           setSelectedDay(day === selectedDay ? null : day);
                         }
                       }}
-                      className={`flex h-20 flex-col items-stretch rounded-lg p-1 text-left text-sm transition-colors md:h-28 md:p-1.5 ${
+                      className={`flex h-14 flex-col items-center rounded-lg p-1 text-left text-sm transition-colors md:h-28 md:items-stretch md:p-1.5 ${
                         !day
                           ? ""
                           : isToday
@@ -1160,7 +1171,17 @@ export default function CalendarView({
                             {day}
                           </span>
                           {(dayEvents.length > 0 || dayInvites.length > 0) && (
-                            <div className="mt-1 flex min-h-0 flex-1 flex-col gap-[2px] overflow-hidden">
+                            <div className="mt-1 flex gap-[3px] md:hidden">
+                              {dayEvents.slice(0, 3).map((ev) => (
+                                <span key={ev.id} className="h-[5px] w-[5px] rounded-full" style={{ backgroundColor: getEventColor(ev) }} />
+                              ))}
+                              {dayEvents.length === 0 && dayInvites.length > 0 && (
+                                <span className="h-[5px] w-[5px] rounded-full bg-amber-500" />
+                              )}
+                            </div>
+                          )}
+                          {(dayEvents.length > 0 || dayInvites.length > 0) && (
+                            <div className="mt-1 flex min-h-0 flex-1 flex-col gap-[2px] overflow-hidden max-md:hidden">
                               {dayEvents.slice(0, 3).map((ev) => {
                                 const color = getEventColor(ev);
                                 const isDone = completed.has(normalizeEventKey(ev.id));

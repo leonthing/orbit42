@@ -49,7 +49,7 @@ final class SlotsViewModel {
         } catch let apiError as APIError {
             errorMessage = apiError.errorDescription
         } catch {
-            errorMessage = "타임슬롯을 불러오지 못했어요. 네트워크를 확인해 주세요."
+            errorMessage = "예약 링크를 불러오지 못했어요. 네트워크를 확인해 주세요."
         }
     }
 

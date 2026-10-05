@@ -72,7 +72,7 @@ export default async function SettingsPage({
   return (
     <div className="w-full min-w-0 max-w-5xl">
       <div className="mb-5">
-        <h1 className="text-2xl font-bold text-charcoal-100">설정</h1>
+        <h1 className="max-md:hidden text-2xl font-bold text-charcoal-100">설정</h1>
         <p className="mt-1 text-sm text-charcoal-500">계정 및 프로필 설정</p>
       </div>
 
