@@ -102,6 +102,12 @@ struct SettingsView: View {
             }
 
             NavigationLink {
+                PaymentInstructionsView()
+            } label: {
+                menuRow(icon: "banknote", title: "결제 안내 (계좌이체)")
+            }
+
+            NavigationLink {
                 ServicesView()
             } label: {
                 menuRow(icon: "list.bullet.rectangle", title: "서비스")

@@ -19,13 +19,14 @@ final class TabRouter {
     var calendarEventRequest: CalendarEventRequest?
 }
 
-/// 메인 5탭: 캘린더(일정/타임슬롯) / 오르빗 / 예약 / 자산 / 프로필
+/// 메인 5탭: 캘린더(일정/타임슬롯) / 예약 / 오르빗 / 자산 / 프로필
+/// 1:1 세션을 파는 사람에게 "새 예약 → 승인·입금 확인"이 핵심이라 예약을 탭으로 올렸다.
 struct MainTabView: View {
     enum Tab: String {
-        case calendar, timeline, orbit, asset, profile
-        /// 구 탭 이름 호환 (bookings → 프로필로 흡수)
+        case calendar, bookings, orbit, asset, profile
+        /// 구 탭 이름 호환 (타임라인 탭은 프로필 안으로 들어갔다)
         static func from(raw: String) -> Tab? {
-            if raw == "bookings" { return .profile }
+            if raw == "timeline" { return .profile }
             if raw == "slots" { return .calendar }
             return Tab(rawValue: raw)
         }
@@ -34,7 +35,7 @@ struct MainTabView: View {
     @Environment(TabRouter.self) private var router
     /// 관계 궤도 — 오르빗 탭과 캘린더 탭이 함께 쓴다.
     @State private var people = PeopleStore()
-    /// 승인 대기 예약 수 — 프로필 탭 배지
+    /// 승인·입금 확인 대기 예약 수 — 예약 탭 배지
     @State private var pendingBookings = PendingBookingsCounter()
     @Environment(\.scenePhase) private var scenePhase
 
@@ -58,9 +59,10 @@ struct MainTabView: View {
                 .tabItem { Label("캘린더", systemImage: "calendar") }
                 .tag(Tab.calendar)
 
-            TimelineView()
-                .tabItem { Label("타임라인", systemImage: "square.stack") }
-                .tag(Tab.timeline)
+            BookingsView()
+                .tabItem { Label("예약", systemImage: "checkmark.circle") }
+                .badge(pendingBookings.count)
+                .tag(Tab.bookings)
 
             NavigationStack {
                 SearchView()
@@ -74,7 +76,6 @@ struct MainTabView: View {
 
             ProfileView()
                 .tabItem { Label("프로필", systemImage: "person.crop.circle") }
-                .badge(pendingBookings.count)
                 .tag(Tab.profile)
         }
         .environment(people)

@@ -204,6 +204,9 @@ struct BookingsView: View {
         let past = bookings
             .filter { $0.scheduledAt < now }
             .sorted { $0.scheduledAt > $1.scheduledAt }
+        // 손이 필요한 것(승인·입금 확인)을 맨 위에 모은다.
+        let needsAction = upcoming.filter { $0.status == .pending }
+        let scheduled = upcoming.filter { $0.status != .pending }
         let pendingCount = bookings.filter { $0.status == .pending }.count
         let upcomingCount = upcoming
             .filter { $0.status == .pending || $0.status == .confirmed }
@@ -213,9 +216,19 @@ struct BookingsView: View {
             hostStats(pendingCount: pendingCount, upcomingCount: upcomingCount)
                 .bookingRowChrome()
 
-            if !upcoming.isEmpty {
+            if !needsAction.isEmpty {
                 Section {
-                    ForEach(upcoming) { booking in
+                    ForEach(needsAction) { booking in
+                        hostRow(booking, isPast: false)
+                    }
+                } header: {
+                    sectionHeader("승인·입금 확인 대기")
+                }
+            }
+
+            if !scheduled.isEmpty {
+                Section {
+                    ForEach(scheduled) { booking in
                         hostRow(booking, isPast: false)
                     }
                 } header: {
@@ -425,9 +438,17 @@ private struct HostBookingRow: View {
                     .foregroundStyle(Theme.secondaryText)
             }
 
+            if let payment = booking.payment {
+                PaymentPill(payment: payment, priceCents: booking.priceCents)
+            }
+
             if booking.status == .pending {
                 HStack(spacing: 8) {
-                    BookingActionButton(title: "수락", prominent: true, disabled: isActing) {
+                    BookingActionButton(
+                        title: booking.payment?.isAwaiting == true ? "입금 확인하고 확정" : "수락",
+                        prominent: true,
+                        disabled: isActing
+                    ) {
                         onAction(.confirm)
                     }
                     BookingActionButton(title: "거절", prominent: false, disabled: isActing) {
@@ -483,6 +504,10 @@ private struct GuestBookingRow: View {
                     .lineLimit(1)
             }
 
+            if let payment = booking.payment {
+                PaymentPill(payment: payment, priceCents: booking.priceCents)
+            }
+
             if canCancel {
                 BookingActionButton(title: "예약 취소", prominent: false, disabled: isActing) {
                     onCancel()
@@ -522,6 +547,29 @@ private struct BookingActionButton: View {
         .buttonStyle(.borderless)
         .disabled(disabled)
         .opacity(disabled ? 0.5 : 1)
+    }
+}
+
+// MARK: - 결제 상태
+
+/// "입금 대기 · ₩50,000 · 10월 6일 (화) 23:00까지" / "입금 확인됨"
+struct PaymentPill: View {
+    let payment: BookingPayment
+    let priceCents: Int
+
+    var body: some View {
+        let text: String = {
+            if payment.isPaid { return "입금 확인됨 · \(PriceFormatter.won(priceCents))" }
+            var parts = ["입금 대기", PriceFormatter.won(priceCents)]
+            if let due = payment.dueText { parts.append(due) }
+            return parts.joined(separator: " · ")
+        }()
+        Label(text, systemImage: payment.isPaid ? "checkmark.seal" : "banknote")
+            .font(.caption.weight(.medium))
+            .foregroundStyle(payment.isPaid ? Color.green : Color.orange)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background((payment.isPaid ? Color.green : Color.orange).opacity(0.12), in: Capsule())
     }
 }
 

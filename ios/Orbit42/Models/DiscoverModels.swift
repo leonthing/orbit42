@@ -470,10 +470,22 @@ struct BookSlotRequest: Encodable {
     var selectedMenuIds: [String]?
 }
 
-/// `{"ok":true,"status":"confirmed"|"pending"}`
+/// 계좌이체 예약의 입금 안내 — 게스트 완료 화면에 그대로 보여준다.
+struct BookSlotPayment: Decodable, Sendable, Equatable {
+    let instructions: String
+    let amountCents: Int
+    let dueAt: String
+
+    var dueText: String? {
+        APIDateParser.parse(dueAt).map { BookingDateFormatter.dateTime.string(from: $0) + "까지" }
+    }
+}
+
+/// `{"ok":true,"status":"confirmed"|"pending","payment":{...}|null}`
 struct BookSlotResponse: Decodable {
     let ok: Bool?
     let status: String
+    let payment: BookSlotPayment?
 
     var isConfirmed: Bool { status == "confirmed" }
 }

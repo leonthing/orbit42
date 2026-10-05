@@ -34,6 +34,8 @@ final class SlotBookingViewModel {
     private(set) var isBooking = false
     /// 예약 성공 시 서버 status ("confirmed" | "pending") — 성공 화면 전환용
     private(set) var bookedStatus: String?
+    /// 계좌이체 예약이면 입금 안내 (성공 화면에 표시)
+    private(set) var bookedPayment: BookSlotPayment?
 
     /// 미니 캘린더가 표시 중인 달 (해당 월 1일 00:00, 로컬 타임존)
     private(set) var displayedMonth = Date()
@@ -206,6 +208,7 @@ final class SlotBookingViewModel {
                 "/api/v1/users/\(username)/slots/\(slug)",
                 body: request
             )
+            bookedPayment = response.payment
             bookedStatus = response.status
             return true
         } catch is CancellationError {

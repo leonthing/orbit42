@@ -30,6 +30,8 @@ struct User: Codable, Equatable, Sendable {
     let shareImageUrl: String?
     /// 공개 링크 페이지 테마 키 (lib/link-themes)
     let linkTheme: String?
+    /// 계좌이체 안내 — 있으면 유료 슬롯 예약이 '입금 대기'로 들어온다
+    let paymentInstructions: String?
 
     init(
         username: String,
@@ -46,7 +48,8 @@ struct User: Codable, Equatable, Sendable {
         isPrivate: Bool? = nil,
         appleLinked: Bool? = nil,
         shareImageUrl: String? = nil,
-        linkTheme: String? = nil
+        linkTheme: String? = nil,
+        paymentInstructions: String? = nil
     ) {
         self.username = username
         self.displayName = displayName
@@ -63,6 +66,7 @@ struct User: Codable, Equatable, Sendable {
         self.appleLinked = appleLinked
         self.shareImageUrl = shareImageUrl
         self.linkTheme = linkTheme
+        self.paymentInstructions = paymentInstructions
     }
 
     /// 화면에 표시할 이름 (displayName 이 없으면 username)

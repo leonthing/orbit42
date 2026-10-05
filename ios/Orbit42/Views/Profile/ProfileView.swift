@@ -68,7 +68,6 @@ struct ProfileView: View {
 
 private struct MyProfileContent: View {
     @Environment(AuthViewModel.self) private var auth
-    @Environment(PendingBookingsCounter.self) private var pendingBookings
     @Environment(\.openURL) private var openURL
     @State private var viewModel: PersonProfileViewModel
     @State private var showingEditProfile = false
@@ -86,7 +85,7 @@ private struct MyProfileContent: View {
                 VStack(alignment: .leading, spacing: 20) {
                     header
                     actionButtons
-                    bookingsLink
+                    timelineLink
                     CalendarCardsSection(username: username, isMe: true)
                     slotsSection
                 }
@@ -312,37 +311,26 @@ private struct MyProfileContent: View {
         }
     }
 
-    // MARK: - 예약 (구 예약 탭)
+    // MARK: - 타임라인 (구 타임라인 탭 — 예약이 탭으로 올라가며 이리로 왔다)
 
-    private var bookingsLink: some View {
+    private var timelineLink: some View {
         NavigationLink {
-            BookingsView(embedded: true)
+            TimelineView(embedded: true)
         } label: {
             HStack(spacing: 12) {
-                Image(systemName: "checkmark.circle")
+                Image(systemName: "square.stack")
                     .font(.body)
                     .foregroundStyle(Theme.accent)
                     .frame(width: 26)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("예약")
+                    Text("타임라인")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(Theme.primaryText)
-                    Text(pendingBookings.count > 0
-                         ? "승인을 기다리는 예약이 있어요"
-                         : "받은 예약과 내가 신청한 예약")
+                    Text("완료한 일정과 팔로잉의 기록")
                         .font(.caption)
-                        .foregroundStyle(pendingBookings.count > 0 ? .orange : Theme.secondaryText)
+                        .foregroundStyle(Theme.secondaryText)
                 }
                 Spacer(minLength: 0)
-                if pendingBookings.count > 0 {
-                    Text("\(pendingBookings.count)")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(Color.red, in: Capsule())
-                        .accessibilityLabel("승인 대기 \(pendingBookings.count)건")
-                }
                 Image(systemName: "chevron.right")
                     .font(.caption)
                     .foregroundStyle(Theme.secondaryText)

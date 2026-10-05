@@ -6,6 +6,7 @@ struct SlotBookingView: View {
     @State private var viewModel: SlotBookingViewModel
     /// 예약 확인 시트에 올라간 옵션
     @State private var confirmingOption: BookingOption?
+    @State private var copied = false
 
     init(username: String, slug: String) {
         _viewModel = State(initialValue: SlotBookingViewModel(username: username, slug: slug))
@@ -374,36 +375,80 @@ struct SlotBookingView: View {
     // MARK: - 성공 화면
 
     private func successView(confirmed: Bool) -> some View {
-        VStack(spacing: 16) {
-            Image(systemName: confirmed ? "checkmark.circle.fill" : "clock.badge.checkmark")
-                .font(.system(size: 56, weight: .light))
-                .foregroundStyle(confirmed ? Color.green : Color.orange)
-            Text(confirmed ? "예약이 확정됐어요" : "예약을 요청했어요")
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(Theme.primaryText)
-            Text(
-                confirmed
-                    ? "예약 탭 > 내가 한 예약에서 확인할 수 있어요"
-                    : "호스트 승인을 기다려요\n예약 탭 > 내가 한 예약에서 확인할 수 있어요"
-            )
-            .font(.subheadline)
-            .multilineTextAlignment(.center)
-            .foregroundStyle(Theme.secondaryText)
+        let payment = viewModel.bookedPayment
+        let title = payment != nil
+            ? "입금하시면 예약이 확정돼요"
+            : (confirmed ? "예약이 확정됐어요" : "예약 요청을 보냈어요")
+        let message = payment != nil
+            ? "호스트가 입금을 확인하면 확정 알림을 보내드려요.\n기한이 지나면 예약은 자동으로 취소돼요."
+            : (confirmed
+                ? "예약 탭 > 내가 한 예약에서 확인할 수 있어요"
+                : "호스트가 확인하면 확정돼요\n예약 탭 > 내가 한 예약에서 확인할 수 있어요")
+        return ScrollView {
+            VStack(spacing: 16) {
+                Image(systemName: payment != nil ? "banknote" : (confirmed ? "checkmark.circle.fill" : "clock.badge.checkmark"))
+                    .font(.system(size: 56, weight: .light))
+                    .foregroundStyle(confirmed && payment == nil ? Color.green : Color.orange)
+                Text(title)
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(Theme.primaryText)
+                Text(message)
+                    .font(.subheadline)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(Theme.secondaryText)
 
-            Button {
-                dismiss()
-            } label: {
-                Text("확인")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 40)
-                    .padding(.vertical, 12)
-                    .background(Theme.accent, in: Capsule())
+                if let payment {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            Text("금액").foregroundStyle(Theme.secondaryText)
+                            Spacer()
+                            Text(PriceFormatter.won(payment.amountCents))
+                                .fontWeight(.semibold)
+                                .foregroundStyle(Theme.primaryText)
+                        }
+                        if let due = payment.dueText {
+                            HStack {
+                                Text("입금 기한").foregroundStyle(Theme.secondaryText)
+                                Spacer()
+                                Text(due).fontWeight(.semibold).foregroundStyle(.orange)
+                            }
+                        }
+                        Text(payment.instructions)
+                            .foregroundStyle(Theme.primaryText)
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(10)
+                            .background(Theme.fill(0.06), in: RoundedRectangle(cornerRadius: 10))
+                        Button {
+                            UIPasteboard.general.string = payment.instructions
+                            copied = true
+                        } label: {
+                            Label(copied ? "복사했어요" : "입금 안내 복사", systemImage: copied ? "checkmark" : "doc.on.doc")
+                                .font(.footnote.weight(.semibold))
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                    .font(.subheadline)
+                    .padding(14)
+                    .background(Theme.surface, in: RoundedRectangle(cornerRadius: 14))
+                }
+
+                Button {
+                    dismiss()
+                } label: {
+                    Text("확인")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 40)
+                        .padding(.vertical, 12)
+                        .background(Theme.accent, in: Capsule())
+                }
+                .padding(.top, 8)
             }
-            .padding(.top, 8)
+            .padding(.horizontal, 32)
+            .padding(.top, 60)
+            .frame(maxWidth: .infinity)
         }
-        .padding(.horizontal, 32)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .navigationBarBackButtonHidden(true)
     }
 }

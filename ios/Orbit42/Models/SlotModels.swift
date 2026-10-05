@@ -111,3 +111,33 @@ struct SlotPresetResponse: Decodable {
 
     var wasSkipped: Bool { skipped == true }
 }
+
+// MARK: - 간단 생성
+
+/// 요일별 시간대 — API 의 workingHours 와 같은 모양 `{ mon: [{start,end}], ... }`
+struct WorkingRange: Codable, Sendable, Equatable {
+    let start: String
+    let end: String
+}
+
+/// 간단 생성 폼의 값. 새 `POST /api/v1/slots` 가 있으면 그대로 보내고,
+/// 없으면(구 서버) 프리셋으로 만든 뒤 같은 값으로 PATCH 한다.
+struct SimpleSlotInput: Encodable, Sendable {
+    let title: String
+    let durationMin: Int
+    let priceCents: Int
+    let mode: String
+    let workingHours: [String: [WorkingRange]]
+    let autoApprove: Bool
+    let showOnFeed: Bool
+}
+
+/// PATCH 로 덮어쓸 필드 (showOnFeed 는 PATCH 가 받지 않아 뺀다)
+struct SimpleSlotPatch: Encodable {
+    let title: String
+    let durationMin: Int
+    let priceCents: Int
+    let mode: String
+    let workingHours: [String: [WorkingRange]]
+    let autoApprove: Bool
+}

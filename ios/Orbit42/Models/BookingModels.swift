@@ -65,6 +65,43 @@ enum BookingDateFormatter {
     }()
 }
 
+// MARK: - 계좌이체 결제
+
+/// 계좌이체 예약의 결제 상태 — 유료 슬롯이고 호스트가 결제 안내를 적어 둔 경우에만 온다.
+/// awaiting: 입금 대기(호스트가 확인하면 확정) / paid: 입금 확인됨
+struct BookingPayment: Decodable, Sendable, Equatable {
+    let status: String
+    let dueAt: Date?
+    /// 게스트 쪽에만, 입금 대기일 때 호스트의 입금 안내가 온다.
+    let instructions: String?
+
+    var isAwaiting: Bool { status == "awaiting" }
+    var isPaid: Bool { status == "paid" }
+
+    private enum CodingKeys: String, CodingKey { case status, dueAt, instructions }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        status = try c.decode(String.self, forKey: .status)
+        instructions = try c.decodeIfPresent(String.self, forKey: .instructions)
+        dueAt = (try c.decodeIfPresent(String.self, forKey: .dueAt)).flatMap { APIDateParser.parse($0) }
+    }
+
+    /// "10월 6일 (화) 23:00까지"
+    var dueText: String? {
+        dueAt.map { BookingDateFormatter.dateTime.string(from: $0) + "까지" }
+    }
+}
+
+enum PriceFormatter {
+    /// 원 단위 표기 — priceCents 는 원 × 100
+    static func won(_ cents: Int) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        return "₩" + (formatter.string(from: NSNumber(value: cents / 100)) ?? "\(cents / 100)")
+    }
+}
+
 // MARK: - 받은 예약 (host)
 
 struct BookingMenu: Decodable, Sendable {
@@ -128,15 +165,19 @@ struct HostBooking: Decodable, Identifiable, Sendable, BookingDisplayable {
     let message: String?
     let guestName: String
     let guestUsername: String?
+    /// 회원이 아닌 게스트의 이메일 (호스트에게만 온다)
+    let guestEmail: String?
     let slotTitle: String
     let slotSlug: String
     let locationDetail: String?
     let menus: [BookingMenu]
     let reschedule: BookingReschedule?
+    let priceCents: Int
+    let payment: BookingPayment?
 
     private enum CodingKeys: String, CodingKey {
-        case id, scheduledAt, scheduledEndAt, message, guestName, guestUsername
-        case slotTitle, slotSlug, locationDetail, menus, reschedule
+        case id, scheduledAt, scheduledEndAt, message, guestName, guestUsername, guestEmail
+        case slotTitle, slotSlug, locationDetail, menus, reschedule, priceCents, payment
         case statusRaw = "status"
     }
 
@@ -147,6 +188,9 @@ struct HostBooking: Decodable, Identifiable, Sendable, BookingDisplayable {
         message = try container.decodeIfPresent(String.self, forKey: .message)
         guestName = try container.decode(String.self, forKey: .guestName)
         guestUsername = try container.decodeIfPresent(String.self, forKey: .guestUsername)
+        guestEmail = try container.decodeIfPresent(String.self, forKey: .guestEmail)
+        priceCents = try container.decodeIfPresent(Int.self, forKey: .priceCents) ?? 0
+        payment = try? container.decodeIfPresent(BookingPayment.self, forKey: .payment)
         slotTitle = try container.decode(String.self, forKey: .slotTitle)
         slotSlug = try container.decode(String.self, forKey: .slotSlug)
         locationDetail = try container.decodeIfPresent(String.self, forKey: .locationDetail)
@@ -187,10 +231,12 @@ struct GuestBooking: Decodable, Identifiable, Sendable, BookingDisplayable {
     let locationDetail: String?
     let menus: [BookingMenu]
     let reschedule: BookingReschedule?
+    let priceCents: Int
+    let payment: BookingPayment?
 
     private enum CodingKeys: String, CodingKey {
         case id, scheduledAt, scheduledEndAt, message, hostName, hostUsername
-        case slotTitle, slotSlug, locationDetail, menus, reschedule
+        case slotTitle, slotSlug, locationDetail, menus, reschedule, priceCents, payment
         case statusRaw = "status"
     }
 
@@ -201,6 +247,8 @@ struct GuestBooking: Decodable, Identifiable, Sendable, BookingDisplayable {
         message = try container.decodeIfPresent(String.self, forKey: .message)
         hostName = try container.decode(String.self, forKey: .hostName)
         hostUsername = try container.decode(String.self, forKey: .hostUsername)
+        priceCents = try container.decodeIfPresent(Int.self, forKey: .priceCents) ?? 0
+        payment = try? container.decodeIfPresent(BookingPayment.self, forKey: .payment)
         slotTitle = try container.decode(String.self, forKey: .slotTitle)
         slotSlug = try container.decodeIfPresent(String.self, forKey: .slotSlug)
         locationDetail = try container.decodeIfPresent(String.self, forKey: .locationDetail)

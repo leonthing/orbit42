@@ -110,36 +110,45 @@ struct TimelineView: View {
         return formatter
     }()
 
+    /// 프로필에서 push 할 때는 자체 NavigationStack 없이 쓴다 (중첩 방지).
+    var embedded = false
+
     var body: some View {
-        NavigationStack {
-            ZStack {
-                Theme.background.ignoresSafeArea()
-                content
-                    .readableWidth()
+        if embedded {
+            inner
+        } else {
+            NavigationStack { inner }
+        }
+    }
+
+    private var inner: some View {
+        ZStack {
+            Theme.background.ignoresSafeArea()
+            content
+                .readableWidth()
+        }
+        .navigationTitle("타임라인")
+        .navigationBarTitleDisplayMode(.inline)
+        .safeAreaInset(edge: .top) {
+            Picker("보기", selection: scopeBinding) {
+                Text("내 기록").tag("me")
+                Text("팔로잉").tag("following")
             }
-            .navigationTitle("타임라인")
-            .navigationBarTitleDisplayMode(.inline)
-            .safeAreaInset(edge: .top) {
-                Picker("보기", selection: scopeBinding) {
-                    Text("내 기록").tag("me")
-                    Text("팔로잉").tag("following")
+            .pickerStyle(.segmented)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 6)
+            .background(Theme.background)
+        }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                if viewModel.scope == "me" {
+                    filterMenu
                 }
-                .pickerStyle(.segmented)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 6)
-                .background(Theme.background)
             }
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    if viewModel.scope == "me" {
-                        filterMenu
-                    }
-                }
-            }
-            .task { await viewModel.load() }
-            .sheet(item: $selectedItem) { item in
-                TimelinePhotoViewer(item: item)
-            }
+        }
+        .task { await viewModel.load() }
+        .sheet(item: $selectedItem) { item in
+            TimelinePhotoViewer(item: item)
         }
     }
 

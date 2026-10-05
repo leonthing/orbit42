@@ -19,6 +19,12 @@ enum APIError: LocalizedError {
             return "서버 응답을 처리하지 못했어요. 잠시 후 다시 시도해 주세요."
         }
     }
+
+    /// 서버에 아직 없는 엔드포인트/메서드 (404·405) — 구 서버 폴백 판단용
+    var isNotSupported: Bool {
+        if case .server(_, let code) = self { return code == 404 || code == 405 }
+        return false
+    }
 }
 
 // MARK: - 요청/응답 페이로드 (API v1 계약)

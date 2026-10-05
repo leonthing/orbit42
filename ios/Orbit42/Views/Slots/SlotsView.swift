@@ -12,6 +12,7 @@ struct SlotsContent: View {
     @Binding var path: NavigationPath
 
     @State private var showingPresetDialog = false
+    @State private var showingSimpleCreate = false
     @State private var didAutoPushDemo = false
 
     var body: some View {
@@ -21,10 +22,21 @@ struct SlotsContent: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    showingPresetDialog = true
+                Menu {
+                    Button {
+                        showingSimpleCreate = true
+                    } label: {
+                        Label("새 타임슬롯", systemImage: "plus")
+                    }
+                    Button {
+                        showingPresetDialog = true
+                    } label: {
+                        Label("템플릿으로 빠르게", systemImage: "square.grid.2x2")
+                    }
                 } label: {
                     Image(systemName: "plus")
+                } primaryAction: {
+                    showingSimpleCreate = true
                 }
                 .accessibilityLabel("타임슬롯 추가")
                 .disabled(viewModel.isCreatingPreset)
@@ -50,6 +62,14 @@ struct SlotsContent: View {
             Button("확인", role: .cancel) {}
         } message: {
             Text(viewModel.actionMessage ?? "")
+        }
+        .sheet(isPresented: $showingSimpleCreate, onDismiss: {
+            if let slot = viewModel.pendingShare {
+                viewModel.pendingShare = nil
+                viewModel.justCreated = slot
+            }
+        }) {
+            SimpleSlotSheet(viewModel: viewModel)
         }
         .sheet(item: Binding(
             get: { viewModel.justCreated },

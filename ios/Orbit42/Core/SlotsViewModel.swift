@@ -15,6 +15,9 @@ final class SlotsViewModel {
     var actionMessage: String?
     /// 방금 만든 슬롯 — 만들자마자 공유 시트를 띄우는 데 쓴다(소비 후 nil).
     var justCreated: TimeSlot?
+    /// 간단 생성 시트에서 만든 슬롯 — 시트가 닫힌 뒤 justCreated 로 옮겨 공유 시트를 띄운다
+    /// (시트 위에 시트를 바로 올리면 표시되지 않는다).
+    var pendingShare: TimeSlot?
     /// 토글 요청이 진행 중인 슬롯 id 들 (중복 요청 방지)
     private(set) var togglingIds: Set<String> = []
     private(set) var isCreatingPreset = false
@@ -114,6 +117,71 @@ final class SlotsViewModel {
             actionMessage = apiError.errorDescription
         } catch {
             actionMessage = "슬롯을 만들지 못했어요. 네트워크를 확인해 주세요."
+        }
+    }
+
+    // MARK: - 간단 생성 (제목·길이·가격·요일·시간대)
+
+    /// 성공하면 true — 시트를 닫고 공유 시트를 띄운다.
+    func createSimple(_ input: SimpleSlotInput) async -> Bool {
+        guard !isCreatingPreset else { return false }
+        isCreatingPreset = true
+        defer { isCreatingPreset = false }
+
+        do {
+            // 1) 새 서버: POST /api/v1/slots 로 한 번에 만든다.
+            do {
+                let response: SlotResponse = try await api.post("/api/v1/slots", body: input)
+                await load(force: true)
+                pendingShare = slots?.first(where: { $0.id == response.slot.id }) ?? response.slot
+                return true
+            } catch let apiError as APIError where apiError.isNotSupported {
+                // 2) 구 서버: 프리셋으로 만든 뒤 같은 값으로 덮어쓴다.
+            }
+            var slug: String?
+            for preset in SlotPreset.allCases {
+                let response: SlotPresetResponse = try await api.post(
+                    "/api/v1/slots/presets",
+                    body: SlotPresetRequest(key: preset.rawValue)
+                )
+                if let created = response.slug, !response.wasSkipped {
+                    slug = created
+                    break
+                }
+            }
+            guard let slug else {
+                actionMessage = "슬롯을 만들지 못했어요. 잠시 후 다시 시도해 주세요."
+                return false
+            }
+            await load(force: true)
+            guard let created = slots?.first(where: { $0.slug == slug }) else {
+                actionMessage = "슬롯을 만들었지만 목록에서 찾지 못했어요."
+                return false
+            }
+            let patched: SlotResponse = try await api.patch(
+                "/api/v1/slots/\(created.id)",
+                body: SimpleSlotPatch(
+                    title: input.title,
+                    durationMin: input.durationMin,
+                    priceCents: input.priceCents,
+                    mode: input.mode,
+                    workingHours: input.workingHours,
+                    autoApprove: input.autoApprove
+                )
+            )
+            applyUpdated(patched.slot)
+            pendingShare = patched.slot
+            return true
+        } catch is CancellationError {
+            return false
+        } catch let urlError as URLError where urlError.code == .cancelled {
+            return false
+        } catch let apiError as APIError {
+            actionMessage = apiError.errorDescription
+            return false
+        } catch {
+            actionMessage = "슬롯을 만들지 못했어요. 네트워크를 확인해 주세요."
+            return false
         }
     }
 }

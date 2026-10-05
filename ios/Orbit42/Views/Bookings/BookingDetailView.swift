@@ -26,6 +26,7 @@ struct BookingDetailView: View {
 
     @State private var showingCancelConfirm = false
     @State private var showingReschedule = false
+    @State private var copiedToast: String?
 
     private var hostBooking: HostBooking? {
         guard role == .host else { return nil }
@@ -52,7 +53,13 @@ struct BookingDetailView: View {
                         if let proposal = detail.reschedule {
                             rescheduleBanner(proposal, detail: detail)
                         }
+                        if let payment = detail.payment {
+                            paymentCard(payment, detail: detail)
+                        }
                         counterpartCard(detail)
+                        if role == .host, let email = detail.guestEmail, !email.isEmpty {
+                            contactCard(email: email)
+                        }
                         if let location = detail.location, !location.isEmpty {
                             infoCard(title: "장소", icon: "mappin.and.ellipse") {
                                 Text(location)
@@ -264,6 +271,93 @@ struct BookingDetailView: View {
         }
     }
 
+    /// 계좌이체 — 호스트는 입금 대기/확인 상태를, 게스트는 금액·기한·입금 안내를 본다.
+    private func paymentCard(_ payment: BookingPayment, detail: Detail) -> some View {
+        infoCard(title: payment.isPaid ? "입금 확인됨" : "입금 대기", icon: payment.isPaid ? "checkmark.seal" : "banknote") {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("금액")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.secondaryText)
+                    Spacer()
+                    Text(PriceFormatter.won(detail.priceCents))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.primaryText)
+                }
+                if payment.isAwaiting, let due = payment.dueText {
+                    HStack {
+                        Text("입금 기한")
+                            .font(.subheadline)
+                            .foregroundStyle(Theme.secondaryText)
+                        Spacer()
+                        Text(due)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.orange)
+                    }
+                }
+                if payment.isAwaiting {
+                    if role == .guest, let instructions = payment.instructions, !instructions.isEmpty {
+                        Text(instructions)
+                            .font(.subheadline)
+                            .foregroundStyle(Theme.primaryText)
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(10)
+                            .background(Theme.fill(0.06), in: RoundedRectangle(cornerRadius: 10))
+                        Button {
+                            UIPasteboard.general.string = instructions
+                            copiedToast = "입금 안내를 복사했어요"
+                        } label: {
+                            Label("입금 안내 복사", systemImage: "doc.on.doc")
+                                .font(.footnote.weight(.semibold))
+                        }
+                        .buttonStyle(.borderless)
+                        Text("호스트가 입금을 확인하면 예약이 확정돼요. 기한이 지나면 자동으로 취소돼요.")
+                            .font(.caption)
+                            .foregroundStyle(Theme.secondaryText)
+                    } else if role == .host {
+                        Text("입금을 확인했다면 아래 \"입금 확인하고 확정\"을 눌러주세요. 기한까지 확인되지 않으면 자동으로 취소되고 시간이 다시 열려요.")
+                            .font(.caption)
+                            .foregroundStyle(Theme.secondaryText)
+                    }
+                }
+            }
+        }
+        .alert(copiedToast ?? "", isPresented: Binding(get: { copiedToast != nil }, set: { if !$0 { copiedToast = nil } })) {
+            Button("확인", role: .cancel) {}
+        }
+    }
+
+    /// 회원이 아닌 게스트에게 연락 — 메일 또는 주소 복사.
+    private func contactCard(email: String) -> some View {
+        infoCard(title: "게스트 연락처", icon: "envelope") {
+            HStack(spacing: 8) {
+                Text(email)
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.primaryText)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .textSelection(.enabled)
+                Spacer(minLength: 8)
+                if let url = URL(string: "mailto:\(email)") {
+                    Link(destination: url) {
+                        Label("메일", systemImage: "paperplane")
+                            .font(.footnote.weight(.semibold))
+                    }
+                }
+                Button {
+                    UIPasteboard.general.string = email
+                    copiedToast = "이메일 주소를 복사했어요"
+                } label: {
+                    Image(systemName: "doc.on.doc")
+                        .font(.footnote)
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel("이메일 복사")
+            }
+        }
+    }
+
     private func menusCard(_ menus: [BookingMenu]) -> some View {
         infoCard(title: "선택한 메뉴", icon: "fork.knife") {
             VStack(alignment: .leading, spacing: 6) {
@@ -364,7 +458,7 @@ struct BookingDetailView: View {
             if role == .host {
                 if detail.status == .pending {
                     HStack(spacing: 8) {
-                        actionButton("수락", prominent: true) {
+                        actionButton(detail.payment?.isAwaiting == true ? "입금 확인하고 확정" : "수락", prominent: true) {
                             Task { await viewModel.act(.confirm, on: bookingId) }
                         }
                         actionButton("거절", prominent: false) {
@@ -430,6 +524,9 @@ struct BookingDetailView: View {
         let slotUsername: String?
         let slotSlug: String?
         let reschedule: BookingReschedule?
+        let payment: BookingPayment?
+        let priceCents: Int
+        let guestEmail: String?
 
         var dayText: String { DiscoverFormat.dayHeader.string(from: start) }
 
@@ -468,7 +565,10 @@ struct BookingDetailView: View {
                 // 받은 예약의 슬롯은 내 슬롯이다.
                 slotUsername: auth.user?.username,
                 slotSlug: booking.slotSlug,
-                reschedule: booking.reschedule
+                reschedule: booking.reschedule,
+                payment: booking.payment,
+                priceCents: booking.priceCents,
+                guestEmail: booking.guestEmail
             )
         }
         if let booking = guestBooking {
@@ -487,7 +587,10 @@ struct BookingDetailView: View {
                 menus: booking.menus,
                 slotUsername: booking.hostUsername,
                 slotSlug: booking.slotSlug,
-                reschedule: booking.reschedule
+                reschedule: booking.reschedule,
+                payment: booking.payment,
+                priceCents: booking.priceCents,
+                guestEmail: nil
             )
         }
         return nil
