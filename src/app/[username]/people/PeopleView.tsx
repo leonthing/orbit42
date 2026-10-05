@@ -74,6 +74,17 @@ export function PeopleView({
         </div>
       </header>
 
+      {/* 팔로잉·팔로워 — 사람에 관한 것은 오르빗 탭 한곳에 */}
+      <div className="flex items-center gap-3 px-1 text-sm">
+        <Link href={`/${username}/following`} className="text-charcoal-300 hover:text-charcoal-100">
+          팔로잉 <span className="font-semibold text-charcoal-100">{orbit.followCounts.following}</span>
+        </Link>
+        <span className="text-charcoal-600">·</span>
+        <Link href={`/${username}/followers`} className="text-charcoal-300 hover:text-charcoal-100">
+          팔로워 <span className="font-semibold text-charcoal-100">{orbit.followCounts.followers}</span>
+        </Link>
+      </div>
+
       <OrbitCanvas
         people={orbit.people}
         me={me}
@@ -117,10 +128,33 @@ export function PeopleView({
 
       {orbit.people.length === 0 && (
         <p className="rounded-2xl border border-dashed border-charcoal-800/60 px-6 py-8 text-center text-sm text-charcoal-400">
-          팔로우하거나 예약으로 만난 사람이 여기 모여요.
+          예약이나 일정으로 함께한 사람이 여기 모여요.
           <br />
           캘린더에서 찾기를 켜면 미팅에서 만난 사람도 제안해 드려요.
         </p>
+      )}
+
+      {orbit.followingOnly.length > 0 && (
+        <section className="pt-4">
+          <p className="text-sm font-bold text-charcoal-200">팔로우 중</p>
+          <p className="text-xs text-charcoal-500">
+            아직 함께한 기록이 없어요 — 예약하거나 일정을 함께하면 궤도에 올라와요
+          </p>
+          <ul className="mt-2 divide-y divide-charcoal-800/50 rounded-2xl border border-charcoal-800/50 bg-[rgb(var(--bg-surface))] px-3">
+            {orbit.followingOnly.map((p) => (
+              <li key={p.id}>
+                <Link
+                  href={p.member ? `/${p.member.username}` : hrefFor(p)}
+                  className="flex items-center gap-3 py-2.5"
+                >
+                  <PersonAvatar person={p} size={32} />
+                  <span className="min-w-0 flex-1 truncate text-sm text-charcoal-100">{p.name}</span>
+                  {p.member && <span className="text-2xs text-charcoal-500">@{p.member.username}</span>}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       {orbit.archived.length > 0 && <Archived people={orbit.archived} hrefFor={hrefFor} />}

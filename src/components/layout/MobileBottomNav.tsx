@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 
 /**
  * 모바일 하단 탭 — iOS 앱(MainTabView)과 같은 5탭·같은 모양.
- * 캘린더 / 예약 / 오르빗 / 자산 / 프로필. 예약 링크(슬롯)는 앱처럼 캘린더 탭 안의
+ * 캘린더 / 예약 / 오르빗 / 리포트 / 프로필. 예약 링크(슬롯)는 앱처럼 예약 탭 안의
  * 세그먼트로 들어가고, 나머지 메뉴는 프로필 탭에서 연다.
  */
 export function MobileBottomNav({ username }: { username: string }) {
@@ -17,7 +17,7 @@ export function MobileBottomNav({ username }: { username: string }) {
     {
       href: `${base}/calendar`,
       label: "캘린더",
-      active: under(`${base}/calendar`, `${base}/slots`, `${base}/services`),
+      active: under(`${base}/calendar`),
       icon: (
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
           <rect x="2.5" y="4" width="19" height="17" rx="3.5" />
@@ -33,7 +33,7 @@ export function MobileBottomNav({ username }: { username: string }) {
     {
       href: `${base}/bookings`,
       label: "예약",
-      active: under(`${base}/bookings`),
+      active: under(`${base}/bookings`, `${base}/slots`, `${base}/services`),
       icon: (
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
           <path fillRule="evenodd" d="M12 2.25a9.75 9.75 0 1 0 0 19.5 9.75 9.75 0 0 0 0-19.5Zm4.28 7.53a.75.75 0 0 0-1.06-1.06l-4.47 4.47-1.97-1.97a.75.75 0 1 0-1.06 1.06l2.5 2.5c.3.3.77.3 1.06 0l5-5Z" clipRule="evenodd" />
@@ -56,13 +56,15 @@ export function MobileBottomNav({ username }: { username: string }) {
     },
     {
       href: `${base}/insights`,
-      label: "자산",
+      label: "리포트",
       active: under(`${base}/insights`),
       icon: (
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
           <path fillRule="evenodd" d="M12 2.25a9.75 9.75 0 1 0 0 19.5 9.75 9.75 0 0 0 0-19.5Z" clipRule="evenodd" />
-          <path d="M7.2 8h1.3l1.1 4.6L10.8 8h1.4l1.2 4.6L14.5 8h1.3l-1.8 7.2h-1.3L11.5 10.7l-1.2 4.5H9L7.2 8Z" fill="rgb(var(--bg-surface))" />
-          <path d="M6.6 11h10.8v1H6.6z" fill="rgb(var(--bg-surface))" />
+          {/* 막대 그래프 — 리포트 */}
+          <rect x="7.2" y="12.5" width="2.2" height="4.5" rx="0.6" fill="rgb(var(--bg-surface))" />
+          <rect x="10.9" y="9.5" width="2.2" height="7.5" rx="0.6" fill="rgb(var(--bg-surface))" />
+          <rect x="14.6" y="7" width="2.2" height="10" rx="0.6" fill="rgb(var(--bg-surface))" />
         </svg>
       ),
     },

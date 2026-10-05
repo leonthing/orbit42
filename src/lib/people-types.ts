@@ -60,7 +60,11 @@ export type PeopleNudge = {
 };
 
 export type OrbitResponse = {
+  /** 궤도 위의 사람 — 실제로 만난 기록(또는 잡힌 약속)이 있거나 직접 추가한 사람 */
   people: OrbitPerson[];
+  /** 팔로우만 하고 아직 만난 기록이 없는 사람 — 궤도 아래 목록 */
+  followingOnly: OrbitPerson[];
+  followCounts: { following: number; followers: number };
   suggestions: OrbitPerson[];
   archived: OrbitPerson[];
   nudges: PeopleNudge[];

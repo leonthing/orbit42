@@ -95,6 +95,15 @@ export default function BookingsInbox({
 
   return (
     <div className="space-y-6">
+      {/* 모바일: iOS 예약 탭처럼 예약 | 예약 링크 */}
+      <Segmented
+        className="md:hidden"
+        value="bookings"
+        items={[
+          { value: "bookings", label: "예약", href: `/${username}/bookings` },
+          { value: "slots", label: "예약 링크", href: `/${username}/slots` },
+        ]}
+      />
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="max-md:hidden text-2xl font-bold text-charcoal-100">예약</h1>

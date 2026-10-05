@@ -23,7 +23,7 @@ import { TimeAssetDashboard } from "./TimeAssetDashboard";
 import { getProfile } from "@/lib/auth";
 import { TimeAssetCard } from "./TimeAssetCard";
 
-export const metadata: Metadata = { title: "시간 자산" };
+export const metadata: Metadata = { title: "리포트" };
 export const dynamic = "force-dynamic";
 
 const TZ = "Asia/Seoul";
@@ -115,7 +115,7 @@ export default async function InsightsPage({
     <div className="space-y-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="max-md:hidden text-2xl font-bold text-charcoal-100">시간 자산</h1>
+          <h1 className="max-md:hidden text-2xl font-bold text-charcoal-100">리포트</h1>
           <p className="mt-1 text-xs text-charcoal-500">
             {fmtRange(weekStart, weekEnd)} · 근무시간 {workDays || "설정 안 됨"}
           </p>

@@ -759,18 +759,52 @@ async function loadPeople(userId: string, contacts: ContactRow[]) {
   );
 }
 
+/** 무료 메일이 아닌 내 이메일 도메인 — 같은 회사 동료는 캘린더 제안에서 뺀다. */
+const FREE_MAIL = new Set([
+  "gmail.com", "googlemail.com", "naver.com", "daum.net", "hanmail.net", "kakao.com",
+  "icloud.com", "me.com", "mac.com", "outlook.com", "hotmail.com", "live.com", "yahoo.com", "nate.com",
+]);
+async function companyDomains(userId: string): Promise<Set<string>> {
+  const out = new Set<string>();
+  for (const e of Array.from(await myEmails(userId))) {
+    const d = e.split("@")[1];
+    if (d && !FREE_MAIL.has(d)) out.add(d);
+  }
+  return out;
+}
+
 export async function getOrbit(userId: string): Promise<OrbitResponse> {
   const db = getAdminClient();
   const contacts = await loadContacts(userId);
   const all = await loadPeople(userId, contacts);
   const rowById = new Map(contacts.map((c) => [c.id, c]));
 
-  const people = all
-    .filter((p) => p.status === "active")
+  // 궤도는 "실제로 만난 사람"의 지도다. 팔로우만 하고 만난 기록이 없는 사람은
+  // 궤도 바깥에 아무 정보 없이 쌓이기만 해서, 아래 '팔로우 중' 목록으로 따로 둔다.
+  // (직접 추가한 사람은 만난 기록이 없어도 사용자가 고른 것이라 궤도에 둔다.)
+  const active = all.filter((p) => p.status === "active");
+  const onOrbit = (p: OrbitPerson) =>
+    p.meetingsTotal > 0 || !!p.nextMeetingAt || p.source === "manual";
+  const people = active
+    .filter(onOrbit)
     .sort((a, b) => closeness(b) - closeness(a) || a.name.localeCompare(b.name));
+  const followingOnly = active
+    .filter((p) => !onOrbit(p))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
+  // 제안 기준을 높인다: 두 번 이상 만났거나(한 번 + 다음 약속), 내 회사 도메인(동료)이 아닌 사람.
+  const myDomains = await companyDomains(userId);
+  const sameCompany = (email: string | null) => {
+    const d = email?.split("@")[1]?.toLowerCase();
+    return !!d && myDomains.has(d);
+  };
   const suggestions = all
-    .filter((p) => p.status === "suggested" && (p.meetingsTotal > 0 || p.nextMeetingAt))
+    .filter(
+      (p) =>
+        p.status === "suggested" &&
+        (p.meetingsTotal >= 2 || (p.meetingsTotal >= 1 && !!p.nextMeetingAt)) &&
+        !sameCompany(p.email),
+    )
     .sort(
       (a, b) =>
         b.meetings90 - a.meetings90 ||
@@ -806,8 +840,15 @@ export async function getOrbit(userId: string): Promise<OrbitResponse> {
     google_refresh_token: string | null;
   } | null;
 
+  const [{ count: following }, { count: followers }] = await Promise.all([
+    db.from("follows").select("id", { count: "exact", head: true }).eq("follower_id", userId),
+    db.from("follows").select("id", { count: "exact", head: true }).eq("following_id", userId),
+  ]);
+
   return {
     people,
+    followingOnly,
+    followCounts: { following: following ?? 0, followers: followers ?? 0 },
     suggestions,
     archived,
     nudges,

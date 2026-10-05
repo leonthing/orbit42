@@ -88,7 +88,7 @@ export default function SlotsManager({
         className="md:hidden"
         value="slots"
         items={[
-          { value: "events", label: "일정", href: `/${username}/calendar` },
+          { value: "bookings", label: "예약", href: `/${username}/bookings` },
           { value: "slots", label: "예약 링크", href: `/${username}/slots` },
         ]}
       />

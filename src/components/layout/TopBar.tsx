@@ -138,10 +138,10 @@ function titleFor(pathname: string, username: string): string {
   const base = `/${username}`;
   const map: Array<[string, string]> = [
     [`${base}/calendar`, "캘린더"],
-    [`${base}/slots`, "캘린더"],
+    [`${base}/slots`, "예약"],
     [`${base}/bookings`, "예약"],
     [`${base}/people`, "오르빗"],
-    [`${base}/insights`, "자산"],
+    [`${base}/insights`, "리포트"],
     [`${base}/settings`, "설정"],
     [`${base}/timeline`, "타임라인"],
     [`${base}/services`, "서비스 메뉴"],
