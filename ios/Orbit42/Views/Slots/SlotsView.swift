@@ -87,6 +87,11 @@ struct SlotsContent: View {
             // 데모/스크린샷용: DEMO_SLOT_ID 환경변수로 상세 화면 자동 진입.
             // `.task` 는 뒤로가기로 리스트가 다시 보일 때마다 재실행되므로
             // 반드시 앱 세션당 1회로 제한한다 (안 그러면 pop 즉시 재푸시됨).
+            // 스크린샷용: DEMO_SHEET=newslot 이면 새 예약 링크 시트를 연다.
+            if !didAutoPushDemo, ProcessInfo.processInfo.environment["DEMO_SHEET"] == "newslot" {
+                didAutoPushDemo = true
+                showingSimpleCreate = true
+            }
             if !didAutoPushDemo,
                let demoId = ProcessInfo.processInfo.environment["DEMO_SLOT_ID"],
                path.isEmpty,

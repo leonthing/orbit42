@@ -84,6 +84,13 @@ struct BookingsView: View {
             }
             .task {
                 await viewModel.load()
+                #if DEBUG
+                // 스크린샷용: DEMO_BOOKING_ID 로 받은 예약 상세를 바로 연다.
+                if detailTarget == nil,
+                   let demoId = ProcessInfo.processInfo.environment["DEMO_BOOKING_ID"] {
+                    detailTarget = BookingDetailTarget(id: demoId, role: .host)
+                }
+                #endif
             }
     }
 
