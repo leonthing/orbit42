@@ -272,7 +272,7 @@ struct SlotBookingView: View {
         }
     }
 
-    /// 유료 예약이면 "만나서 결제" 안내 — 앱에는 결제 모듈이 없다.
+    /// 유료 예약이면 결제 안내 — 앱에는 결제 모듈이 없다.
     @ViewBuilder
     private func paymentNotice(_ data: SlotBookingResponse) -> some View {
         let total = data.slot.priceCents / 100 + viewModel.selectedMenusTotalKrw
@@ -282,10 +282,10 @@ struct SlotBookingView: View {
                     .font(.subheadline)
                     .foregroundStyle(Theme.accent)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("만나서 결제")
+                    Text("결제는 호스트 안내에 따라")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Theme.primaryText)
-                    Text("총 \(DiscoverFormat.priceText(cents: total * 100)) · 현장에서 호스트와 직접 결제해요.")
+                    Text("총 \(DiscoverFormat.priceText(cents: total * 100)) · 현장 또는 계좌이체로 호스트에게 직접 결제해요.")
                         .font(.caption)
                         .foregroundStyle(Theme.secondaryText)
                 }

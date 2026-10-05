@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import { buttonClasses } from "@/components/PendingButton";
+import { SITE } from "@/lib/constants";
 
 export function ReferralLink({ username }: { username: string }) {
   const [copied, setCopied] = useState(false);
-  const origin =
-    typeof window !== "undefined" ? window.location.origin : "https://orbit42.org";
-  const url = `${origin}/signup?ref=${encodeURIComponent(username)}`;
+  // 서버·클라이언트가 같은 값을 그려야 hydration 이 어긋나지 않는다 (window.origin 금지).
+  const url = `${SITE.url}/signup?ref=${encodeURIComponent(username)}`;
 
   const copy = async () => {
     const text = `${url}\n\nOrbit42 에 초대합니다. 제 추천으로 가입하면 자동으로 연결돼요.`;

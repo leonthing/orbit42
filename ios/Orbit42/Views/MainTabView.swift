@@ -34,6 +34,9 @@ struct MainTabView: View {
     @Environment(TabRouter.self) private var router
     /// 관계 궤도 — 오르빗 탭과 캘린더 탭이 함께 쓴다.
     @State private var people = PeopleStore()
+    /// 승인 대기 예약 수 — 프로필 탭 배지
+    @State private var pendingBookings = PendingBookingsCounter()
+    @Environment(\.scenePhase) private var scenePhase
 
     /// DEBUG 데모/스크린샷용: DEMO_TAB 환경변수(calendar|orbit|bookings|asset|profile)로
     /// 시작 탭 지정 (simctl launch 는 SIMCTL_CHILD_DEMO_TAB=... 으로 전달)
@@ -71,9 +74,15 @@ struct MainTabView: View {
 
             ProfileView()
                 .tabItem { Label("프로필", systemImage: "person.crop.circle") }
+                .badge(pendingBookings.count)
                 .tag(Tab.profile)
         }
         .environment(people)
+        .environment(pendingBookings)
+        .task { await pendingBookings.refresh() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { Task { await pendingBookings.refresh() } }
+        }
     }
 }
 

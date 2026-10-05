@@ -55,6 +55,11 @@ final class BookingsViewModel {
             let response: BookingsResponse = try await api.get("/api/v1/bookings")
             data = response
             pickInitialSegmentIfNeeded(response)
+            NotificationCenter.default.post(
+                name: PendingBookingsCounter.didLoad,
+                object: nil,
+                userInfo: ["pending": PendingBookingsCounter.pending(in: response)]
+            )
         } catch is CancellationError {
             return
         } catch let urlError as URLError where urlError.code == .cancelled {

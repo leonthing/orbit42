@@ -51,6 +51,13 @@ struct SlotsContent: View {
         } message: {
             Text(viewModel.actionMessage ?? "")
         }
+        .sheet(item: Binding(
+            get: { viewModel.justCreated },
+            set: { viewModel.justCreated = $0 }
+        )) { slot in
+            SlotCreatedShareSheet(slot: slot)
+                .presentationDetents([.medium])
+        }
         .navigationDestination(for: SlotRoute.self) { route in
             SlotDetailView(route: route, listViewModel: viewModel)
         }
@@ -340,4 +347,70 @@ struct SlotsView: View {
 #Preview {
     SlotsView()
         .tint(Theme.accent)
+}
+
+
+// MARK: - 만든 직후 공유
+
+/// 슬롯을 만들자마자 링크를 퍼뜨릴 수 있게 — 인스타 바이오·카톡 프로필에 붙이는 게 첫 행동이다.
+private struct SlotCreatedShareSheet: View {
+    let slot: TimeSlot
+    @Environment(\.dismiss) private var dismiss
+    @State private var copied = false
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 40))
+                .foregroundStyle(Theme.accent)
+            VStack(spacing: 4) {
+                Text("‘\(slot.title)’ 슬롯을 열었어요")
+                    .font(.headline)
+                    .foregroundStyle(Theme.primaryText)
+                    .multilineTextAlignment(.center)
+                Text("링크를 프로필이나 메시지에 붙이면 바로 예약을 받을 수 있어요")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.secondaryText)
+                    .multilineTextAlignment(.center)
+            }
+            if let url = URL(string: slot.shareUrl) {
+                Text(url.absoluteString)
+                    .font(.footnote.monospaced())
+                    .foregroundStyle(Theme.secondaryText)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity)
+                    .background(Theme.background, in: RoundedRectangle(cornerRadius: 10))
+                HStack(spacing: 10) {
+                    Button {
+                        UIPasteboard.general.url = url
+                        copied = true
+                    } label: {
+                        Label(copied ? "복사했어요" : "링크 복사", systemImage: copied ? "checkmark" : "doc.on.doc")
+                            .font(.subheadline.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Theme.surface, in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    ShareLink(item: url) {
+                        Label("공유", systemImage: "square.and.arrow.up")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Theme.accent, in: Capsule())
+                    }
+                }
+            }
+            Button("나중에") { dismiss() }
+                .font(.subheadline)
+                .foregroundStyle(Theme.secondaryText)
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Theme.background)
+    }
 }

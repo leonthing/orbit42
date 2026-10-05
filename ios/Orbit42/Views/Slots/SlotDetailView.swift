@@ -179,7 +179,7 @@ struct SlotDetailView: View {
 
             Picker("슬롯 유형", selection: $viewModel.slotType) {
                 Text("1:1").tag("1on1")
-                Text("동행").tag("companion")
+                Text("함께하기").tag("companion")
                 Text("그룹").tag("group")
             }
 
@@ -282,7 +282,7 @@ struct SlotDetailView: View {
                     Text("\(minutes)분").tag(minutes)
                 }
             }
-            Picker("최소 통지", selection: $viewModel.minNoticeHours) {
+            Picker("최소 몇 시간 전까지 예약", selection: $viewModel.minNoticeHours) {
                 ForEach(optionList([1, 3, 6, 12, 24, 48], current: viewModel.minNoticeHours), id: \.self) { hours in
                     Text("\(hours)시간 전").tag(hours)
                 }
@@ -292,7 +292,7 @@ struct SlotDetailView: View {
                     Text("\(advanceDays)일 후까지").tag(advanceDays)
                 }
             }
-            Picker("이동 버퍼", selection: $viewModel.bufferMin) {
+            Picker("앞뒤 여유 시간", selection: $viewModel.bufferMin) {
                 ForEach(optionList([0, 10, 15, 30], current: viewModel.bufferMin), id: \.self) { minutes in
                     Text(minutes == 0 ? "없음" : "\(minutes)분").tag(minutes)
                 }
@@ -356,7 +356,7 @@ struct SlotDetailView: View {
                     .tint(Theme.accent)
                     .frame(maxWidth: .infinity)
             } else {
-                Text("등록된 시간 창이 없어요")
+                Text("직접 고른 시간이 없어요")
                     .font(.subheadline)
                     .foregroundStyle(Theme.secondaryText)
             }
@@ -369,7 +369,7 @@ struct SlotDetailView: View {
                     .foregroundStyle(Theme.accent)
             }
         } header: {
-            Text("시간 창")
+            Text("직접 고른 시간")
         } footer: {
             Text("게스트가 예약할 수 있는 시각을 직접 등록해요")
         }
@@ -393,7 +393,7 @@ struct SlotDetailView: View {
                     Spacer()
                 }
             }
-            .navigationTitle("시간 창 추가")
+            .navigationTitle("시간 추가")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -445,7 +445,7 @@ struct SlotDetailView: View {
                 DatePicker("종료", selection: $viewModel.validUntilDate, displayedComponents: [.date, .hourAndMinute])
             }
         } header: {
-            Text("판매 기간")
+            Text("예약 받는 기간")
         } footer: {
             Text("설정하지 않으면 기간 제한 없이 열려요")
         }
@@ -513,7 +513,7 @@ struct SlotDetailView: View {
         } header: {
             Text("서비스")
         } footer: {
-            Text("연결한 서비스는 예약 화면에서 함께 고를 수 있어요. 결제는 만나서 진행해요.")
+            Text("연결한 서비스는 예약 화면에서 함께 고를 수 있어요. 결제는 호스트 안내에 따라(현장·계좌이체) 진행해요.")
         }
         .listRowBackground(Theme.surface)
         .task {

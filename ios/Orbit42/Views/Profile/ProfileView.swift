@@ -68,6 +68,7 @@ struct ProfileView: View {
 
 private struct MyProfileContent: View {
     @Environment(AuthViewModel.self) private var auth
+    @Environment(PendingBookingsCounter.self) private var pendingBookings
     @Environment(\.openURL) private var openURL
     @State private var viewModel: PersonProfileViewModel
     @State private var showingEditProfile = false
@@ -326,11 +327,22 @@ private struct MyProfileContent: View {
                     Text("예약")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(Theme.primaryText)
-                    Text("받은 예약과 내가 신청한 예약")
+                    Text(pendingBookings.count > 0
+                         ? "승인을 기다리는 예약이 있어요"
+                         : "받은 예약과 내가 신청한 예약")
                         .font(.caption)
-                        .foregroundStyle(Theme.secondaryText)
+                        .foregroundStyle(pendingBookings.count > 0 ? .orange : Theme.secondaryText)
                 }
                 Spacer(minLength: 0)
+                if pendingBookings.count > 0 {
+                    Text("\(pendingBookings.count)")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color.red, in: Capsule())
+                        .accessibilityLabel("승인 대기 \(pendingBookings.count)건")
+                }
                 Image(systemName: "chevron.right")
                     .font(.caption)
                     .foregroundStyle(Theme.secondaryText)
@@ -453,5 +465,6 @@ private struct MyProfileContent: View {
 #Preview {
     ProfileView()
         .environment(AuthViewModel())
+        .environment(PendingBookingsCounter())
         .tint(Theme.accent)
 }

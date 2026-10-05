@@ -134,7 +134,7 @@ export async function POST(
   }
   return Response.json({
     ok: true,
-    // auto_approve 슬롯은 바로 확정, 아니면 호스트 승인 대기
-    status: found.slot.auto_approve ? "confirmed" : "pending",
+    // auto_approve 슬롯은 바로 확정, 아니면 호스트 승인 대기 (bookSlot 이 실제로 쓴 상태)
+    status: "status" in result ? result.status : "confirmed",
   });
 }

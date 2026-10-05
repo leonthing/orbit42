@@ -61,13 +61,31 @@ export function GoogleAccountsSection({
             여러 계정을 연결하면 각 계정의 캘린더를 한번에 볼 수 있어요.
           </p>
         </div>
-        <a
-          href="/api/google?return=settings&add=1"
-          className="shrink-0 whitespace-nowrap rounded-lg bg-navy-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-400"
-        >
-          + 계정 추가
-        </a>
+        {primaryConnected && (
+          <a
+            href="/api/google?return=settings&add=1"
+            className="shrink-0 whitespace-nowrap rounded-lg bg-navy-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-400"
+          >
+            + 계정 추가
+          </a>
+        )}
       </div>
+      {/* 연결 버튼을 누르기 직전이 가장 불안한 순간이라, 무엇을 하고 안 하는지를 여기서 바로 말한다. */}
+      <ul className="space-y-1 border-b border-charcoal-800/40 bg-charcoal-900/20 px-5 py-3 text-xs text-charcoal-400">
+        {[
+          "구글 일정은 orbit42에 복사해 두지 않아요 — 볼 때마다 읽기만 해요 (직접 켜는 오르빗 사람 찾기 제외)",
+          "캘린더는 기본 비공개 — 다른 사람에게는 비어 있는 시간만 보여요",
+          "예약이 확정될 때만 내 캘린더에 일정을 추가해요",
+          "언제든 여기서 연결을 해제할 수 있어요",
+        ].map((t) => (
+          <li key={t} className="flex gap-2">
+            <svg className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+            </svg>
+            {t}
+          </li>
+        ))}
+      </ul>
       <ul className="divide-y divide-charcoal-800/40">
         <li className="flex items-center justify-between px-5 py-3">
           <div className="min-w-0">
@@ -97,9 +115,9 @@ export function GoogleAccountsSection({
           ) : (
             <a
               href="/api/google?return=settings"
-              className="shrink-0 rounded-lg border border-charcoal-700 px-3 py-1.5 text-xs text-charcoal-200 hover:border-charcoal-600"
+              className="shrink-0 whitespace-nowrap rounded-lg bg-navy-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-400"
             >
-              연결
+              Google 캘린더 연결
             </a>
           )}
         </li>
@@ -111,6 +129,7 @@ export function GoogleAccountsSection({
               </p>
               <p className="text-xs text-charcoal-500">
                 {new Date(acc.created_at).toLocaleDateString("ko-KR", {
+                  timeZone: "Asia/Seoul",
                   year: "numeric",
                   month: "short",
                   day: "numeric",

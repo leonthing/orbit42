@@ -240,7 +240,7 @@ function NewSlotForm({
   const [capacity, setCapacity] = useState(1);
   const [slotType, setSlotType] = useState<SlotType>("1on1");
   const [locations, setLocations] = useState<string[]>([]);
-  const [mode, setMode] = useState<SlotMode>("manual");
+  const [mode, setMode] = useState<SlotMode>("auto");
   const [pricingModel, setPricingModel] = useState<PricingModel>("fixed");
 
   // Auction
@@ -557,31 +557,29 @@ function NewSlotForm({
               <div className="grid gap-2 md:grid-cols-2">
                 <ModeButton
                   current={mode}
-                  value="manual"
-                  onClick={() => setMode("manual")}
-                  title="직접 추가"
-                  hint="내가 직접 시간을 추가"
+                  value="auto"
+                  onClick={() => setMode("auto")}
+                  title="매주 같은 시간"
+                  hint="요일·시간대를 정하면 빈 시간이 자동으로 열려요"
                 />
                 <ModeButton
                   current={mode}
-                  value="auto"
-                  onClick={() => googleConnected && setMode("auto")}
-                  disabled={!googleConnected}
-                  title="구글 캘린더 자동"
-                  hint={
-                    googleConnected ? "빈 시간 자동 계산" : "구글 연결 필요"
-                  }
+                  value="manual"
+                  onClick={() => setMode("manual")}
+                  title="직접 고른 시간"
+                  hint="날짜와 시간을 하나씩 추가"
                 />
               </div>
-              {!googleConnected && (
-                <p className="mt-2 rounded-lg border border-amber-600/40 bg-amber-600/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-200">
-                  &ldquo;구글 캘린더 자동&rdquo;은 캘린더 연결이 필요해요.{" "}
-                  <Link
-                    href={`/${username}/settings#google`}
-                    className="font-semibold underline"
-                  >
-                    구글 캘린더 연결하기
-                  </Link>
+              {mode === "auto" && (
+                <p className="mt-2 text-xs text-charcoal-500">
+                  {googleConnected
+                    ? "구글 캘린더의 기존 일정과 겹치는 시간은 자동으로 빠져요."
+                    : "orbit42 일정과 다른 예약을 피해 열려요. "}
+                  {!googleConnected && (
+                    <Link href={`/${username}/settings#google`} className="font-semibold text-navy-400 underline">
+                      구글 캘린더를 연결하면 기존 일정도 피해요
+                    </Link>
+                  )}
                 </p>
               )}
             </>

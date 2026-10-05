@@ -244,7 +244,7 @@ export function SettingsForm({
           <div>
             <label className="mb-1.5 block text-xs font-medium text-charcoal-400">가입일</label>
             <div className="text-sm text-charcoal-400">
-              {new Date(createdAt).toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" })}
+              {new Date(createdAt).toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul", year: "numeric", month: "long", day: "numeric" })}
             </div>
           </div>
 

@@ -151,7 +151,25 @@ export async function listPublicSlotsByUsername(username: string): Promise<TimeS
     .eq("host_id", user.id)
     .eq("active", true)
     .order("created_at", { ascending: false });
-  return (data ?? []) as TimeSlot[];
+  const slots = (data ?? []) as TimeSlot[];
+
+  // 시간을 직접 고르는(수동) 슬롯은 앞으로 남은 시간이 하나도 없으면 공개 페이지에서
+  // 뺀다 — 눌렀는데 "예약 가능한 시간이 없어요"만 나오는 막다른 길이 된다.
+  const manualIds = slots
+    .filter((s) => s.mode !== "auto" && s.pricing_model !== "auction")
+    .map((s) => s.id);
+  if (manualIds.length === 0) return slots;
+  const { data: avail } = await db
+    .from("slot_availabilities")
+    .select("slot_id, capacity, booked_count")
+    .in("slot_id", manualIds)
+    .gte("start_at", new Date().toISOString());
+  const open = new Set(
+    ((avail ?? []) as Array<{ slot_id: string; capacity: number; booked_count: number }>)
+      .filter((a) => a.booked_count < a.capacity)
+      .map((a) => a.slot_id),
+  );
+  return slots.filter((s) => !manualIds.includes(s.id) || open.has(s.id));
 }
 
 export async function getSlotBySlug(
@@ -1116,7 +1134,7 @@ export async function bookSlot(args: {
   }
 
   revalidatePath("/", "layout");
-  return { success: true };
+  return { success: true, status: initialStatus as "confirmed" | "pending" };
 }
 
 /**

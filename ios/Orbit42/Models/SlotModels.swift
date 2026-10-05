@@ -26,7 +26,7 @@ struct TimeSlot: Decodable, Identifiable, Sendable {
     var typeBadgeText: String {
         switch slotType {
         case "1on1": return "1:1"
-        case "companion": return "동행"
+        case "companion": return "함께하기"
         case "group": return "그룹"
         default: return slotType
         }

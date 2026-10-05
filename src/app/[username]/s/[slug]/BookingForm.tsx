@@ -45,6 +45,7 @@ export default function BookingForm({
   const toast = useToast();
   const [pending, startTransition] = useTransition();
   const [stage, setStage] = useState<Stage>("form");
+  const [awaitingHost, setAwaitingHost] = useState(false);
   const [options, setOptions] = useState<BookableOption[]>(initialOptions);
   const [selectedLocation, setSelectedLocation] = useState<string>(
     locations[0] ?? "",
@@ -166,6 +167,7 @@ export default function BookingForm({
         selected_location: selectedLocation || undefined,
       });
       if (res.error) return toast.error(res.error);
+      setAwaitingHost("status" in res && res.status === "pending");
       setStage("done");
       router.refresh();
     });
@@ -185,12 +187,24 @@ export default function BookingForm({
       : null;
     return (
       <div className="space-y-5">
-        <div className="rounded-xl border border-emerald-700/40 bg-emerald-700/10 p-5">
-          <p className="flex items-center gap-2 text-sm font-semibold text-emerald-300">
+        <div
+          className={`rounded-xl border p-5 ${
+            awaitingHost ? "border-amber-500/40 bg-amber-500/10" : "border-emerald-600/40 bg-emerald-600/10"
+          }`}
+        >
+          <p
+            className={`flex items-center gap-2 text-sm font-semibold ${
+              awaitingHost ? "text-amber-600 dark:text-amber-300" : "text-emerald-600 dark:text-emerald-300"
+            }`}
+          >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+              {awaitingHost ? (
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+              )}
             </svg>
-            예약이 완료됐어요
+            {awaitingHost ? "예약 요청을 보냈어요" : "예약이 완료됐어요"}
           </p>
           <p className="mt-2 text-sm text-charcoal-100">
             <strong>{slotTitle}</strong> · {hostLabel}
@@ -202,7 +216,9 @@ export default function BookingForm({
             <p className="mt-0.5 text-xs text-charcoal-400">📍 {selectedLocation}</p>
           )}
           <p className="mt-3 text-xs text-charcoal-500">
-            등록하신 이메일로 확인 메일이 발송됐어요. 호스트의 캘린더에도 자동으로 일정이 추가됩니다.
+            {awaitingHost
+              ? "호스트가 확인하면 확정 메일을 보내드려요. 그 전까지는 일정이 확정되지 않아요."
+              : "등록하신 이메일로 확인 메일이 발송됐어요. 호스트의 캘린더에도 자동으로 일정이 추가됩니다."}
           </p>
         </div>
 
@@ -455,11 +471,10 @@ function PaymentStep({
       {paymentMethod === "offline" ? (
         <div className="rounded-lg border border-charcoal-700 bg-charcoal-800/40 p-3 text-xs leading-relaxed text-charcoal-300">
           <p className="font-semibold text-charcoal-100">
-            만나서 호스트에게 직접 결제
+            호스트 안내에 따라 결제
           </p>
           <p className="mt-1">
-            예약을 먼저 확정하고, 호스트가 별도로 결제 안내를 드려요. 약속
-            장소에서 현장 결제하시면 돼요.
+            예약 후 호스트가 결제 방법(계좌이체·현장 결제 등)을 안내해 드려요.
           </p>
         </div>
       ) : (
@@ -478,7 +493,7 @@ function PaymentStep({
         />
         <span>
           {paymentMethod === "offline"
-            ? "호스트와 만나서 직접 결제한다는 점에 동의하고 예약을 확정합니다."
+            ? "호스트 안내에 따라 직접 결제한다는 점에 동의하고 예약합니다."
             : "호스트와 직접 결제를 진행한다는 점에 동의하고 예약을 확정합니다."}
         </span>
       </label>

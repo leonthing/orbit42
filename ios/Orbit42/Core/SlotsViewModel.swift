@@ -13,6 +13,8 @@ final class SlotsViewModel {
     private(set) var errorMessage: String?
     /// 토글·프리셋 생성 등 개별 액션 결과 안내 (alert 로 표시)
     var actionMessage: String?
+    /// 방금 만든 슬롯 — 만들자마자 공유 시트를 띄우는 데 쓴다(소비 후 nil).
+    var justCreated: TimeSlot?
     /// 토글 요청이 진행 중인 슬롯 id 들 (중복 요청 방지)
     private(set) var togglingIds: Set<String> = []
     private(set) var isCreatingPreset = false
@@ -100,6 +102,9 @@ final class SlotsViewModel {
                 actionMessage = "이미 같은 이름의 슬롯이 있어요"
             } else {
                 await load(force: true)
+                if let slug = response.slug {
+                    justCreated = slots?.first(where: { $0.slug == slug })
+                }
             }
         } catch is CancellationError {
             return

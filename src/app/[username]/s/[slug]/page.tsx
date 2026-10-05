@@ -9,7 +9,6 @@ import BookingForm from "./BookingForm";
 import AuctionPanel from "./AuctionPanel";
 import OwnerBookingPreview from "./OwnerBookingPreview";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
-import { PoweredByCta } from "@/components/PoweredByCta";
 import { getHostRating, listHostReviews } from "@/lib/reviews";
 import { Avatar } from "@/components/Avatar";
 import { SITE, slotTypeLabel } from "@/lib/constants";
@@ -346,8 +345,6 @@ export default async function SlotPage({
           </ul>
         </section>
       )}
-
-      {!session && <PoweredByCta hostUsername={params.username} />}
 
       {!isOwner && !session && (
         <div className="pt-2 text-center">

@@ -4,13 +4,14 @@ import UserNotifications
 import UIKit
 
 /// 가입 직후 온보딩 위저드.
-/// 약관 동의 → 프로필(닉네임·사진) → 관심사 → 시급 → 캘린더 → 이메일 인증(이메일 가입만) → 팔로우 추천.
+/// 약관 동의 → 프로필(닉네임·사진) → 관심사 → 캘린더 → 이메일 인증(이메일 가입만) → 팔로우 추천.
 /// 필수는 동의뿐 — 나머지는 건너뛸 수 있고 설정·자산 탭에서 언제든 바꿀 수 있다.
+/// 시급·월급은 가입 직후 묻기엔 부담스러워(개인정보 불안) 자산 탭에서 처음 쓸 때 묻는다.
 struct OnboardingFlowView: View {
     @Environment(AuthViewModel.self) private var auth
 
     private enum Step: Int, CaseIterable {
-        case consent, profile, interests, wage, calendar, notifications, verifyEmail, follow
+        case consent, profile, interests, calendar, notifications, verifyEmail, follow
     }
 
     @State private var steps: [Step] = []
@@ -60,7 +61,6 @@ struct OnboardingFlowView: View {
             case .consent: ConsentStep(onNext: advance)
             case .profile: ProfileStep(onNext: advance)
             case .interests: InterestsStep(onNext: advance)
-            case .wage: WageStep(onNext: advance)
             case .calendar: CalendarStep(onNext: advance)
             case .notifications: NotificationPermissionStep(onNext: advance)
             case .verifyEmail: VerifyEmailStep(onNext: advance)
@@ -513,127 +513,7 @@ private struct FlowChips: View {
     }
 }
 
-// MARK: - 4. 시급 설정
-
-private struct WageStep: View {
-    let onNext: () -> Void
-
-    private enum WageType: String, CaseIterable, Identifiable {
-        case hourly = "시급"
-        case monthly = "월급"
-        var id: String { rawValue }
-    }
-
-    @State private var wageType: WageType = .hourly
-    @State private var amountText = ""
-    @State private var isSaving = false
-    @State private var errorMessage: String?
-
-    var body: some View {
-        VStack(spacing: 0) {
-            stepHeader(
-                icon: "wonsign.circle",
-                title: "지금 내 1시간의 가치는?",
-                subtitle: "시간을 자산으로 보는 출발점이에요.\n자산 탭의 모든 분석이 여기서 시작돼요."
-            )
-
-            Picker("급여 유형", selection: $wageType) {
-                ForEach(WageType.allCases) { type in
-                    Text(type.rawValue).tag(type)
-                }
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal, 40)
-            .padding(.bottom, 16)
-
-            HStack(spacing: 8) {
-                TextField(wageType == .hourly ? "예: 30000" : "예: 4000000", text: $amountText)
-                    .keyboardType(.numberPad)
-                    .foregroundStyle(Theme.primaryText)
-                    .multilineTextAlignment(.trailing)
-                Text("원")
-                    .foregroundStyle(Theme.secondaryText)
-            }
-            .padding(14)
-            .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
-            .padding(.horizontal, 40)
-
-            if let hourlyText {
-                Text(hourlyText)
-                    .font(.footnote)
-                    .foregroundStyle(Theme.accent)
-                    .padding(.top, 12)
-            }
-
-            if let errorMessage {
-                Text(errorMessage)
-                    .font(.footnote)
-                    .foregroundStyle(.red)
-                    .multilineTextAlignment(.center)
-                    .padding(.top, 10)
-                    .padding(.horizontal, 24)
-            }
-
-            Spacer()
-
-            Text("프리랜서라 수입이 매달 다르면 건너뛰고,\n자산 탭에서 월 수입을 기록하면 실효 시급을 계산해 드려요.")
-                .font(.caption)
-                .multilineTextAlignment(.center)
-                .foregroundStyle(Theme.secondaryText)
-                .padding(.horizontal, 24)
-                .padding(.bottom, 12)
-
-            primaryButton("저장하고 다음", disabled: amount == nil, busy: isSaving) { save() }
-            skipButton { onNext() }
-        }
-    }
-
-    private var amount: Double? {
-        let cleaned = amountText.replacingOccurrences(of: ",", with: "")
-        guard let value = Double(cleaned), value > 0 else { return nil }
-        return value
-    }
-
-    /// 월급 입력 시 월 209시간 기준 환산 시급 미리보기.
-    private var hourlyText: String? {
-        guard wageType == .monthly, let amount else { return nil }
-        let hourly = Int(amount / 209)
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        let text = formatter.string(from: NSNumber(value: hourly)) ?? "\(hourly)"
-        return "시간당 약 ₩\(text) (월 209시간 기준)"
-    }
-
-    private func save() {
-        guard let amount else { return }
-        errorMessage = nil
-        isSaving = true
-        Task {
-            defer { isSaving = false }
-            do {
-                struct SaveIncomeRequest: Encodable {
-                    let incomeType: String
-                    let amount: Double
-                }
-                struct SaveAck: Decodable {}
-                let _: SaveAck = try await APIClient.shared.put(
-                    "/api/v1/time-asset/settings",
-                    body: SaveIncomeRequest(
-                        incomeType: wageType == .hourly ? "hourly" : "monthly",
-                        amount: amount
-                    )
-                )
-                onNext()
-            } catch let apiError as APIError {
-                errorMessage = apiError.errorDescription
-            } catch {
-                errorMessage = "저장하지 못했어요. 네트워크를 확인해 주세요."
-            }
-        }
-    }
-}
-
-// MARK: - 5. 캘린더 설정
+// MARK: - 4. 캘린더
 
 private struct CalendarStep: View {
     let onNext: () -> Void

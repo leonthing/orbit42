@@ -192,7 +192,7 @@ struct ServicesView: View {
                             }
                         }
                     } footer: {
-                        Text("타임슬롯 상세에서 이 서비스들을 연결하면, 예약할 때 함께 고를 수 있어요. 결제는 만나서 진행해요.")
+                        Text("타임슬롯 상세에서 이 서비스들을 연결하면, 예약할 때 함께 고를 수 있어요. 결제는 호스트 안내에 따라(현장·계좌이체) 진행해요.")
                             .foregroundStyle(Theme.secondaryText)
                     }
                     .listRowBackground(Theme.surface)
@@ -311,7 +311,7 @@ private struct ServiceEditorSheet: View {
                     } header: {
                         Text("가격")
                     } footer: {
-                        Text("0원이면 무료로 표시돼요. 결제는 만나서 진행하고, 앱에서는 금액만 안내해요.")
+                        Text("0원이면 무료로 표시돼요. 결제는 호스트 안내에 따라(현장·계좌이체) 진행하고, 앱에서는 금액만 안내해요.")
                             .foregroundStyle(Theme.secondaryText)
                     }
                     .listRowBackground(Theme.surface)

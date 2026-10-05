@@ -14,6 +14,9 @@ struct AddEventSheet: View {
     @State private var selectedCalendarId: String?
     @State private var isSaving = false
     @State private var errorMessage: String?
+    @FocusState private var titleFocused: Bool
+    /// 위치·참석자·메모는 "더 보기" 뒤로 접는다. 미리 채워진 값이 있으면 펼친 채로 연다.
+    @State private var showMore = false
 
     /// - initialTitle / initialParticipants: 관계 궤도의 "일정 잡기"처럼 상대가 정해진 채로 열 때.
     init(
@@ -25,6 +28,7 @@ struct AddEventSheet: View {
         self.viewModel = viewModel
         _title = State(initialValue: initialTitle)
         _pendingParticipants = State(initialValue: initialParticipants)
+        _showMore = State(initialValue: !initialParticipants.isEmpty)
 
         // 선택된 날짜 + 다음 정시로 시작 시각 제안
         let calendar = CalendarViewModel.calendar
@@ -92,6 +96,8 @@ struct AddEventSheet: View {
                 Section {
                     TextField("제목", text: $title)
                         .foregroundStyle(Theme.primaryText)
+                        .focused($titleFocused)
+                        .submitLabel(.done)
                 }
                 .listRowBackground(Theme.surface)
 
@@ -103,6 +109,9 @@ struct AddEventSheet: View {
                         selection: $start,
                         displayedComponents: allDay ? [.date] : [.date, .hourAndMinute]
                     )
+                    if !allDay {
+                        durationChips
+                    }
                     DatePicker(
                         "종료",
                         selection: $end,
@@ -112,7 +121,8 @@ struct AddEventSheet: View {
                 }
                 .listRowBackground(Theme.surface)
 
-                if !writableCalendars.isEmpty {
+                // 캘린더가 하나뿐이면 고를 게 없으니 숨긴다(기본 캘린더로 저장).
+                if writableCalendars.count > 1 {
                     Section {
                         Picker("캘린더", selection: $selectedCalendarId) {
                             ForEach(writableCalendars) { calendarInfo in
@@ -129,21 +139,34 @@ struct AddEventSheet: View {
                     .listRowBackground(Theme.surface)
                 }
 
-                EventLocationSection(
-                    locationText: $locationText,
-                    locationLat: $locationLat,
-                    locationLng: $locationLng,
-                    travelMin: $travelMin
-                )
+                if showMore {
+                    EventLocationSection(
+                        locationText: $locationText,
+                        locationLat: $locationLat,
+                        locationLng: $locationLng,
+                        travelMin: $travelMin
+                    )
 
-                participantsSection
+                    participantsSection
 
-                Section {
-                    TextField("메모 (선택)", text: $memo, axis: .vertical)
-                        .lineLimit(3...6)
-                        .foregroundStyle(Theme.primaryText)
+                    Section {
+                        TextField("메모 (선택)", text: $memo, axis: .vertical)
+                            .lineLimit(3...6)
+                            .foregroundStyle(Theme.primaryText)
+                    }
+                    .listRowBackground(Theme.surface)
+                } else {
+                    Section {
+                        Button {
+                            withAnimation { showMore = true }
+                        } label: {
+                            Label("위치 · 참석자 · 메모", systemImage: "plus.circle")
+                                .font(.subheadline)
+                                .foregroundStyle(Theme.accent)
+                        }
+                    }
+                    .listRowBackground(Theme.surface)
                 }
-                .listRowBackground(Theme.surface)
 
                 if let errorMessage {
                     Section {
@@ -191,8 +214,43 @@ struct AddEventSheet: View {
             }
             .interactiveDismissDisabled(isSaving)
             .task { await refreshCalendars() }
+            .onAppear {
+                // 이미 제목이 정해진 채로 열렸으면(오르빗 "일정 잡기") 키보드를 띄우지 않는다.
+                if title.isEmpty {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { titleFocused = true }
+                }
+            }
             .sheet(isPresented: $showingAddParticipant) {
                 ParticipantAddSheet(mode: .collect($pendingParticipants))
+            }
+        }
+    }
+
+    // MARK: - 길이 칩
+
+    private static let durationOptions: [(label: String, minutes: Int)] = [
+        ("30분", 30), ("1시간", 60), ("2시간", 120),
+    ]
+
+    private var durationChips: some View {
+        let current = Int(end.timeIntervalSince(start) / 60)
+        return HStack(spacing: 8) {
+            Text("길이")
+                .foregroundStyle(Theme.primaryText)
+            Spacer()
+            ForEach(Self.durationOptions, id: \.minutes) { option in
+                let selected = current == option.minutes
+                Button {
+                    end = start.addingTimeInterval(TimeInterval(option.minutes * 60))
+                } label: {
+                    Text(option.label)
+                        .font(.subheadline.weight(selected ? .semibold : .regular))
+                        .foregroundStyle(selected ? .white : Theme.primaryText)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(selected ? Theme.accent : Theme.background, in: Capsule())
+                }
+                .buttonStyle(.borderless)
             }
         }
     }
