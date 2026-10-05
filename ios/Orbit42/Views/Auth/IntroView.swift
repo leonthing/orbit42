@@ -13,43 +13,33 @@ struct IntroView: View {
 
     @State private var page = 0
 
+    /// 기능을 글이 아니라 실제 화면으로 보여준다 (스토어 스크린샷과 같은 화면, Assets 의 Intro*).
     private struct IntroPage {
-        let icon: String
-        let iconColor: Color
+        let image: String
         let title: String
         let message: String
     }
 
     private let pages: [IntroPage] = [
         IntroPage(
-            icon: "wonsign.circle.fill",
-            iconColor: Color(red: 0xF5 / 255, green: 0x9E / 255, blue: 0x0B / 255),
-            title: "시간은 자산이니까",
-            message: "매일 주어지는 24시간, 가장 공평한 자산이에요.\n시간을 어디에 쓰는지 돈으로 환산해 확인하고\n수입 · 투자 · 소비로 나눠 분석해요.\n시간을 더 잘 쓰는 것만으로 내일의 자산이 커져요."
+            image: "IntroBookings",
+            title: "예약은 링크로",
+            message: "카톡·DM으로 오가던 일정 조율 대신\n링크 하나로 상대가 직접 시간을 골라요."
         ),
         IntroPage(
-            icon: "clock.badge.checkmark",
-            iconColor: Theme.accent,
-            title: "내 시간을 상품으로",
-            message: "커피챗 30분, 멘토링 1시간 —\n시간을 타임슬롯으로 등록하고\n무료부터 유료, 경매까지 가격을 붙여요."
+            image: "IntroNewLink",
+            title: "30초 만에 만들기",
+            message: "무엇을 · 얼마나 · 언제만 정하면\n내 예약 링크가 열려요."
         ),
         IntroPage(
-            icon: "link.badge.plus",
-            iconColor: Color(red: 0x22 / 255, green: 0xC5 / 255, blue: 0x5E / 255),
-            title: "링크 하나로 판매",
-            message: "예약 페이지 링크를 공유하면 끝.\n비는 시간은 캘린더를 보고 자동 계산되고,\n예약이 들어오면 승인만 하면 돼요.\n상대는 가입 없이도 예약할 수 있어요."
+            image: "IntroPayment",
+            title: "입금 확인 후 확정",
+            message: "유료 세션은 계좌 안내가 자동으로 가고,\n입금을 확인하면 예약이 확정돼요."
         ),
         IntroPage(
-            icon: "circle.dotted.circle",
-            iconColor: Theme.accent,
-            title: "팔로우하면 시간이 모여요",
-            message: "관심 있는 사람을 팔로우하면\n열리는 시간이 오르빗 탭에 모여요.\n친구를 초대하면 자동으로 맞팔로우."
-        ),
-        IntroPage(
-            icon: "calendar.badge.checkmark",
-            iconColor: Color(red: 0x06 / 255, green: 0xB6 / 255, blue: 0xD4 / 255),
-            title: "캘린더, 하나로",
-            message: "구글 캘린더까지 한곳에 모아 보고,\n일정을 만들면 구글에도 함께 저장돼요."
+            image: "IntroCalendar",
+            title: "캘린더와 한 화면",
+            message: "구글 캘린더와 예약을 한곳에서 —\n일정마다 내 시간의 가치(₩)도 보여줘요."
         ),
     ]
 
@@ -74,20 +64,30 @@ struct IntroView: View {
 
                 TabView(selection: $page) {
                     ForEach(Array(pages.enumerated()), id: \.offset) { index, intro in
-                        VStack(spacing: 20) {
-                            Image(systemName: intro.icon)
-                                .font(.system(size: 64, weight: .light))
-                                .foregroundStyle(intro.iconColor)
-                                .frame(height: 90)
-                            Text(intro.title)
-                                .font(.title.weight(.bold))
-                                .foregroundStyle(Theme.primaryText)
-                            Text(intro.message)
-                                .font(.body)
-                                .foregroundStyle(Theme.secondaryText)
-                                .multilineTextAlignment(.center)
-                                .lineSpacing(4)
+                        VStack(spacing: 18) {
+                            Spacer(minLength: 0)
+                            Image(intro.image)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 270, height: 400, alignment: .top)
+                                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                                .shadow(color: .black.opacity(0.12), radius: 18, y: 8)
+                                .accessibilityHidden(true)
+                            VStack(spacing: 8) {
+                                Text(intro.title)
+                                    .font(.title2.weight(.bold))
+                                    .foregroundStyle(Theme.primaryText)
+                                Text(intro.message)
+                                    .font(.callout)
+                                    .foregroundStyle(Theme.secondaryText)
+                                    .multilineTextAlignment(.center)
+                                    .lineSpacing(3)
+                            }
+                            .fixedSize(horizontal: false, vertical: true)
+                            Spacer(minLength: 0)
                         }
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 8)
                         .padding(.horizontal, 36)
                         .tag(index)
                     }

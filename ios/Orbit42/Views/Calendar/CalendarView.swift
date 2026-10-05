@@ -1,61 +1,23 @@
 import SwiftUI
 
-/// 캘린더 탭 — 상단 세그먼트로 "일정"(월 그리드 + 이벤트 목록)과
-/// "타임슬롯"(`SlotsContent`, 내가 열어둔 슬롯 관리)을 오간다.
+/// 캘린더 탭 — 일정(연·월·주 드릴다운 + 이벤트 목록).
+/// 예약 링크(슬롯 관리)는 예약 탭의 "예약 링크" 구역에 있다.
 struct CalendarView: View {
-    /// 상단 세그먼트 구분.
-    private enum Mode: String, CaseIterable, Identifiable {
-        case schedule
-        case slots
-
-        var id: String { rawValue }
-
-        var title: String {
-            switch self {
-            case .schedule: return "일정"
-            case .slots: return "예약 링크"
-            }
-        }
-    }
-
     @State private var viewModel = CalendarViewModel()
     @State private var showingAddSheet = false
     @State private var selectedEvent: CalendarEvent?
     @State private var completionErrorMessage: String?
 
     @Environment(TabRouter.self) private var router
-    @State private var mode: Mode = CalendarView.initialMode
-    /// 세그먼트 전환에도 슬롯 목록 캐시가 유지되도록 여기서 소유한다.
-    @State private var slotsViewModel = SlotsViewModel()
-    /// 슬롯 상세 push 용 path — `SlotsContent` 의 DEMO_SLOT_ID 자동 진입에도 쓰인다.
-    @State private var path = NavigationPath()
-
-    /// DEBUG 데모/스크린샷용: 구 DEMO_TAB=slots 는 이제 캘린더 탭의
-    /// "타임슬롯" 세그먼트로 통합되었으므로 초기 세그먼트를 그쪽으로 연다.
-    private static var initialMode: Mode {
-        #if DEBUG
-        if ProcessInfo.processInfo.environment["DEMO_TAB"] == "slots" {
-            return .slots
-        }
-        #endif
-        return .schedule
-    }
 
     private var calendar: Calendar { CalendarViewModel.calendar }
 
     var body: some View {
-        NavigationStack(path: $path) {
+        NavigationStack {
             ZStack {
                 Theme.background.ignoresSafeArea()
-                VStack(spacing: 0) {
-                    modePicker
-                    switch mode {
-                    case .schedule:
-                        scheduleContent
-                    case .slots:
-                        SlotsContent(viewModel: slotsViewModel, path: $path)
-                    }
-                }
+                // 캘린더 탭은 일정만 — 예약 링크는 예약 탭으로 옮겼다.
+                scheduleContent
             }
             .navigationTitle("캘린더")
             .navigationBarTitleDisplayMode(.inline)
@@ -73,25 +35,14 @@ struct CalendarView: View {
             } message: {
                 Text(completionErrorMessage ?? "")
             }
-            // 자산 탭 추천 카드 등 다른 탭에서 요청한 세그먼트로 전환.
-            .onChange(of: router.calendarModeRequest) { _, request in
-                applyModeRequest(request)
-            }
             // 알림에서 넘어온 일정 딥링크.
             .onChange(of: router.calendarEventRequest) { _, request in
                 applyEventRequest(request)
             }
             .onAppear {
-                applyModeRequest(router.calendarModeRequest)
                 applyEventRequest(router.calendarEventRequest)
             }
         }
-    }
-
-    private func applyModeRequest(_ request: String?) {
-        guard let request, let requested = Mode(rawValue: request) else { return }
-        mode = requested
-        router.calendarModeRequest = nil
     }
 
     /// 알림 딥링크 — 그 일정이 있는 날로 이동해 상세 시트를 연다.
@@ -99,7 +50,6 @@ struct CalendarView: View {
     private func applyEventRequest(_ request: CalendarEventRequest?) {
         guard let request else { return }
         router.calendarEventRequest = nil
-        mode = .schedule
         scheduleViewMode = .month
         viewModel.select(date: request.date)
         Task {
@@ -109,20 +59,6 @@ struct CalendarView: View {
                 selectedEvent = event
             }
         }
-    }
-
-    // MARK: - 세그먼트
-
-    private var modePicker: some View {
-        Picker("캘린더 보기", selection: $mode) {
-            ForEach(Mode.allCases) { mode in
-                Text(mode.title).tag(mode)
-            }
-        }
-        .pickerStyle(.segmented)
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
-        .padding(.bottom, 4)
     }
 
     // MARK: - 일정 콘텐츠

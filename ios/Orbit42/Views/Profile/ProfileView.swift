@@ -415,7 +415,7 @@ private struct MyProfileContent: View {
             Text("아직 열어둔 시간이 없어요")
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(Theme.primaryText)
-            Text("캘린더 탭의 타임슬롯에서 시간을 열어보세요")
+            Text("예약 탭의 예약 링크에서 시간을 열어보세요")
                 .font(.footnote)
                 .foregroundStyle(Theme.secondaryText)
         }

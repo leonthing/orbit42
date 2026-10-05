@@ -16,6 +16,9 @@ struct PeopleOrbitSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
+            if let counts = store.followCounts, let username = auth.user?.username {
+                followCountsRow(counts, username: username)
+            }
             Text("나를 중심으로, 요즘 만나는 사람들")
                 .font(.subheadline)
                 .foregroundStyle(Theme.secondaryText)
@@ -64,6 +67,10 @@ struct PeopleOrbitSection: View {
                         .padding(.vertical, 10)
                 }
                 .buttonStyle(.plain)
+            }
+
+            if !store.followingOnly.isEmpty {
+                followingOnlySection
             }
 
             if !store.archived.isEmpty {
@@ -205,6 +212,90 @@ struct PeopleOrbitSection: View {
         if parts.isEmpty, let next = person.nextMeetingDate { parts.append("\(ContactFormat.short(next)) 예정") }
         if let email = person.email { parts.append(email) }
         return parts.joined(separator: " · ")
+    }
+
+    // MARK: - 팔로잉 · 팔로워
+
+    /// 오르빗이 "사람" 탭이라 팔로잉·팔로워 목록도 여기서 바로 연다.
+    private func followCountsRow(_ counts: FollowCounts, username: String) -> some View {
+        HStack(spacing: 8) {
+            NavigationLink {
+                ConnectionsView(username: username, initialType: .orbiting)
+            } label: {
+                (Text("팔로잉 ").foregroundStyle(Theme.secondaryText)
+                    + Text("\(counts.following)").fontWeight(.semibold).foregroundStyle(Theme.primaryText))
+                    .font(.subheadline)
+            }
+            .buttonStyle(.plain)
+            Text("·").foregroundStyle(Theme.secondaryText)
+            NavigationLink {
+                ConnectionsView(username: username, initialType: .orbiters)
+            } label: {
+                (Text("팔로워 ").foregroundStyle(Theme.secondaryText)
+                    + Text("\(counts.followers)").fontWeight(.semibold).foregroundStyle(Theme.primaryText))
+                    .font(.subheadline)
+            }
+            .buttonStyle(.plain)
+            Spacer()
+        }
+        .padding(.top, 4)
+    }
+
+    // MARK: - 팔로우 중 (아직 만난 기록 없음)
+
+    private var followingOnlySection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("팔로우 중")
+                    .font(.headline)
+                    .foregroundStyle(Theme.primaryText)
+                Text("아직 함께한 기록이 없어요 — 예약하거나 일정을 함께하면 궤도에 올라와요")
+                    .font(.caption)
+                    .foregroundStyle(Theme.secondaryText)
+            }
+            VStack(spacing: 0) {
+                ForEach(store.followingOnly) { person in
+                    Group {
+                        if let member = person.member {
+                            NavigationLink {
+                                PersonProfileView(username: member.username)
+                            } label: { followRow(person) }
+                        } else {
+                            NavigationLink {
+                                ContactDetailView(personId: person.id, initial: person)
+                            } label: { followRow(person) }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    if person.id != store.followingOnly.last?.id {
+                        Divider().overlay(Theme.fill(0.06)).padding(.leading, 48)
+                    }
+                }
+            }
+            .peopleCard(padding: 12)
+        }
+        .padding(.top, 8)
+    }
+
+    private func followRow(_ person: Contact) -> some View {
+        HStack(spacing: 12) {
+            ContactAvatar(person: person, size: 36)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(person.name)
+                    .foregroundStyle(Theme.primaryText)
+                if let username = person.member?.username {
+                    Text("@\(username)")
+                        .font(.caption)
+                        .foregroundStyle(Theme.secondaryText)
+                }
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundStyle(Theme.secondaryText)
+        }
+        .padding(.vertical, 8)
+        .contentShape(Rectangle())
     }
 
     // MARK: - 보관함

@@ -77,14 +77,40 @@ struct PeopleNudge: Decodable, Hashable, Sendable {
     let days: Int
 }
 
+struct FollowCounts: Decodable, Sendable {
+    let following: Int
+    let followers: Int
+}
+
 struct PeopleOrbitResponse: Decodable, Sendable {
+    /// 궤도 위 — 실제로 만난 기록(또는 잡힌 약속)이 있거나 직접 추가한 사람
     let people: [Contact]
+    /// 팔로우만 하고 아직 만난 기록이 없는 사람 (구 서버엔 없어서 빈 배열)
+    let followingOnly: [Contact]
+    let followCounts: FollowCounts?
     let suggestions: [Contact]
     let archived: [Contact]
     let nudges: [PeopleNudge]
     let importEnabled: Bool
     let googleConnected: Bool
     let syncedAt: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case people, followingOnly, followCounts, suggestions, archived, nudges, importEnabled, googleConnected, syncedAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        people = try c.decode([Contact].self, forKey: .people)
+        followingOnly = try c.decodeIfPresent([Contact].self, forKey: .followingOnly) ?? []
+        followCounts = try c.decodeIfPresent(FollowCounts.self, forKey: .followCounts)
+        suggestions = try c.decode([Contact].self, forKey: .suggestions)
+        archived = try c.decode([Contact].self, forKey: .archived)
+        nudges = try c.decode([PeopleNudge].self, forKey: .nudges)
+        importEnabled = try c.decode(Bool.self, forKey: .importEnabled)
+        googleConnected = try c.decode(Bool.self, forKey: .googleConnected)
+        syncedAt = try c.decodeIfPresent(String.self, forKey: .syncedAt)
+    }
 }
 
 struct ContactDetailResponse: Decodable, Sendable {
@@ -166,6 +192,17 @@ enum ContactFormat {
         if days <= 0 { return "오늘" }
         if days == 1 { return "어제" }
         return "\(days)일 전"
+    }
+
+    /// 궤도 라벨: 만난 적이 있으면 "3일 전", 아직 없고 약속만 있으면 "10/7 예정"
+    static func metOrNext(_ person: Contact) -> String {
+        if person.daysSince == nil, let next = person.nextMeetingDate {
+            let f = DateFormatter()
+            f.locale = Locale(identifier: "ko_KR")
+            f.dateFormat = "M/d"
+            return "\(f.string(from: next)) 예정"
+        }
+        return daysSince(person.daysSince)
     }
 
     /// 23 → "23시간", 1.5 → "1.5시간", 0 → "–"

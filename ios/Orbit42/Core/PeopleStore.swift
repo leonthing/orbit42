@@ -26,6 +26,9 @@ final class PeopleStore {
     var people: [Contact] { data?.people ?? [] }
     var suggestions: [Contact] { data?.suggestions ?? [] }
     var archived: [Contact] { data?.archived ?? [] }
+    /// 팔로우만 하고 아직 만난 기록이 없는 사람 — 궤도 아래 "팔로우 중"
+    var followingOnly: [Contact] { data?.followingOnly ?? [] }
+    var followCounts: FollowCounts? { data?.followCounts }
     var importEnabled: Bool { data?.importEnabled ?? false }
 
     /// 안부 넛지와 그 사람을 짝지어 돌려준다.
@@ -38,7 +41,7 @@ final class PeopleStore {
 
     func person(id: String) -> Contact? {
         guard let data else { return nil }
-        return (data.people + data.suggestions + data.archived).first { $0.id == id }
+        return (data.people + data.followingOnly + data.suggestions + data.archived).first { $0.id == id }
     }
 
     // MARK: - 불러오기

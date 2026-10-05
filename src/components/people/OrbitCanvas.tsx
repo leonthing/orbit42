@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
   ORBIT_LIMIT,
-  daysSinceLabel,
+  metOrNextLabel,
   type OrbitPerson,
 } from "@/lib/people-types";
 import { PersonAvatar } from "./PersonAvatar";
@@ -111,7 +111,7 @@ export function OrbitCanvas({
           const label = (
             <span className="flex h-8 flex-col items-center leading-tight">
               <span className="max-w-[84px] truncate text-2xs font-semibold text-charcoal-100">{p.name}</span>
-              <span className="text-3xs text-charcoal-500">{daysSinceLabel(p.daysSince)}</span>
+              <span className="text-3xs text-charcoal-500">{metOrNextLabel(p)}</span>
             </span>
           );
           return (
@@ -123,7 +123,7 @@ export function OrbitCanvas({
                 left: x,
                 top: above ? y - nodeSize / 2 - 36 : y - nodeSize / 2,
               }}
-              aria-label={`${p.name}, ${daysSinceLabel(p.daysSince)}`}
+              aria-label={`${p.name}, ${metOrNextLabel(p)}`}
             >
               {above && label}
               <PersonAvatar

@@ -17,7 +17,7 @@ struct AssetView: View {
                 content
                     .readableWidth()
             }
-            .navigationTitle("자산")
+            .navigationTitle("리포트")
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showingSettingsSheet) {
                 AssetSettingsSheet(viewModel: viewModel)
@@ -841,10 +841,9 @@ struct AssetView: View {
     private func perform(_ action: TimeAssetAction) {
         switch action.target {
         case "slots":
-            router.calendarModeRequest = "slots"
-            router.selection = .calendar
+            router.bookingsSectionRequest = "links"
+            router.selection = .bookings
         case "calendar":
-            router.calendarModeRequest = "schedule"
             router.selection = .calendar
         case "profile":
             router.selection = .profile

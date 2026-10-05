@@ -230,7 +230,7 @@ struct EventDetailSheet: View {
                         Text(bucketErrorMessage ?? "")
                     }
                 } footer: {
-                    Text("자산 탭 분석에서 이 일정만 다른 분류로 계산돼요.")
+                    Text("리포트 탭 분석에서 이 일정만 다른 분류로 계산돼요.")
                 }
                 .listRowBackground(Theme.surface)
 
@@ -449,7 +449,7 @@ struct EventDetailSheet: View {
                 }
                 Button("취소", role: .cancel) {}
             } message: {
-                Text("실제 번 금액을 기록하면 자산 탭 수입 계산에 시급 대신 이 금액이 쓰여요.")
+                Text("실제 번 금액을 기록하면 리포트 탭 수입 계산에 시급 대신 이 금액이 쓰여요.")
             }
             .alert("수익을 저장하지 못했어요", isPresented: showEarningErrorAlert) {
                 Button("확인", role: .cancel) { earningErrorMessage = nil }

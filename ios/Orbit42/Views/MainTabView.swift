@@ -13,13 +13,13 @@ struct CalendarEventRequest: Equatable {
 @Observable
 final class TabRouter {
     var selection: MainTabView.Tab = MainTabView.initialTab
-    /// 캘린더 탭이 다음 표시 때 열어야 할 세그먼트 ("schedule" | "slots") — 소비 후 nil
-    var calendarModeRequest: String?
+    /// 예약 탭이 다음 표시 때 열어야 할 구역 ("bookings" | "links") — 소비 후 nil
+    var bookingsSectionRequest: String?
     /// 캘린더 탭이 열어야 할 일정 상세 — 소비 후 nil
     var calendarEventRequest: CalendarEventRequest?
 }
 
-/// 메인 5탭: 캘린더(일정/타임슬롯) / 예약 / 오르빗 / 자산 / 프로필
+/// 메인 5탭: 캘린더 / 예약(예약·예약 링크) / 오르빗 / 리포트 / 프로필
 /// 1:1 세션을 파는 사람에게 "새 예약 → 승인·입금 확인"이 핵심이라 예약을 탭으로 올렸다.
 struct MainTabView: View {
     enum Tab: String {
@@ -27,7 +27,8 @@ struct MainTabView: View {
         /// 구 탭 이름 호환 (타임라인 탭은 프로필 안으로 들어갔다)
         static func from(raw: String) -> Tab? {
             if raw == "timeline" { return .profile }
-            if raw == "slots" { return .calendar }
+            // 예약 링크는 예약 탭 안의 구역이 됐다
+            if raw == "slots" { return .bookings }
             return Tab(rawValue: raw)
         }
     }
@@ -41,7 +42,7 @@ struct MainTabView: View {
 
     /// DEBUG 데모/스크린샷용: DEMO_TAB 환경변수(calendar|orbit|bookings|asset|profile)로
     /// 시작 탭 지정 (simctl launch 는 SIMCTL_CHILD_DEMO_TAB=... 으로 전달)
-    /// 구 rawValue "slots" 는 캘린더 탭으로 통합되었으므로 calendar 로 매핑한다.
+    /// 구 rawValue "slots" 는 예약 탭의 "예약 링크" 구역으로 연다.
     static var initialTab: Tab {
         #if DEBUG
         if let raw = ProcessInfo.processInfo.environment["DEMO_TAB"],
@@ -59,7 +60,7 @@ struct MainTabView: View {
                 .tabItem { Label("캘린더", systemImage: "calendar") }
                 .tag(Tab.calendar)
 
-            BookingsView()
+            BookingsTabView()
                 .tabItem { Label("예약", systemImage: "checkmark.circle") }
                 .badge(pendingBookings.count)
                 .tag(Tab.bookings)
@@ -71,7 +72,7 @@ struct MainTabView: View {
             .tag(Tab.orbit)
 
             AssetView()
-                .tabItem { Label("자산", systemImage: "wonsign.circle") }
+                .tabItem { Label("리포트", systemImage: "chart.bar") }
                 .tag(Tab.asset)
 
             ProfileView()

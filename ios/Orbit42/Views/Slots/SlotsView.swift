@@ -3,7 +3,7 @@ import SwiftUI
 /// 타임슬롯 목록 콘텐츠 — 내가 열어둔 슬롯 목록 + 프리셋 빠른 생성.
 /// 자체 NavigationStack 없이, 감싸는 쪽(캘린더 탭)의 스택 안에서 동작한다.
 /// toolbar(+)·navigationDestination·alert 등은 모두 여기에 붙어 있어
-/// 캘린더 탭의 "타임슬롯" 세그먼트에서 그대로 쓸 수 있다.
+/// 예약 탭의 "예약 링크" 구역에서 그대로 쓸 수 있다.
 /// 행을 탭하면 상세 편집(`SlotDetailView`)으로 이동한다.
 struct SlotsContent: View {
     /// 세그먼트 전환 시 캐시가 유지되도록 뷰모델은 감싸는 쪽에서 소유한다.
@@ -26,7 +26,7 @@ struct SlotsContent: View {
                     Button {
                         showingSimpleCreate = true
                     } label: {
-                        Label("새 타임슬롯", systemImage: "plus")
+                        Label("새 예약 링크", systemImage: "plus")
                     }
                     Button {
                         showingPresetDialog = true
@@ -38,7 +38,7 @@ struct SlotsContent: View {
                 } primaryAction: {
                     showingSimpleCreate = true
                 }
-                .accessibilityLabel("타임슬롯 추가")
+                .accessibilityLabel("예약 링크 추가")
                 .disabled(viewModel.isCreatingPreset)
             }
         }

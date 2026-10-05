@@ -116,7 +116,7 @@ struct ContactOrbitView: View {
                 .foregroundStyle(Theme.primaryText)
                 .lineLimit(1)
                 .frame(maxWidth: 76)
-            Text(ContactFormat.daysSince(person.daysSince))
+            Text(ContactFormat.metOrNext(person))
                 .font(.caption2)
                 .foregroundStyle(Theme.secondaryText)
         }
@@ -138,6 +138,6 @@ struct ContactOrbitView: View {
             .padding(labelAbove ? .bottom : .top, 34 - (54 - nodeSize) / 2)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("\(person.name), \(ContactFormat.daysSince(person.daysSince)) 만남")
+        .accessibilityLabel("\(person.name), \(ContactFormat.metOrNext(person))")
     }
 }

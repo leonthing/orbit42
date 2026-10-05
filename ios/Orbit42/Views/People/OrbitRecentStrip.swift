@@ -52,7 +52,7 @@ struct OrbitRecentStrip: View {
                                     .foregroundStyle(Theme.primaryText)
                                     .lineLimit(1)
                                     .frame(maxWidth: 56)
-                                Text(ContactFormat.daysSince(person.daysSince))
+                                Text(ContactFormat.metOrNext(person))
                                     .font(.system(size: 10))
                                     .foregroundStyle(Theme.secondaryText)
                             }

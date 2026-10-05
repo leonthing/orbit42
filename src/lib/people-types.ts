@@ -124,6 +124,16 @@ export function daysSinceLabel(days: number | null): string {
   return `${days}일 전`;
 }
 
+/** 궤도 라벨: 만난 적이 있으면 "3일 전", 아직 없고 약속만 있으면 "10/7 예정" */
+export function metOrNextLabel(p: Pick<OrbitPerson, "daysSince" | "nextMeetingAt">): string {
+  if (p.daysSince == null && p.nextMeetingAt) {
+    const d = new Date(p.nextMeetingAt);
+    const md = d.toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul", month: "numeric", day: "numeric" });
+    return `${md.replace(/\.\s?/g, "/").replace(/\/$/, "")} 예정`;
+  }
+  return daysSinceLabel(p.daysSince);
+}
+
 /** 아바타 이니셜: 한글은 첫 글자, 영문은 첫 글자 대문자 */
 export function personInitial(name: string): string {
   const t = name.trim();
