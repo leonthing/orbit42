@@ -2,7 +2,11 @@ import { google } from "googleapis";
 import { getAdminClient } from "@/lib/supabase";
 
 const SCOPES = [
-  "https://www.googleapis.com/auth/calendar.readonly",
+  // 최소 권한: 일정 읽기·쓰기는 calendar.events 하나로 충분하다(읽기 포함).
+  // 캘린더 목록(calendarList.list)만 따로 필요해서 calendar.readonly 대신
+  // 더 좁은 calendar.calendarlist.readonly 를 쓴다 (Google OAuth 검증 '최소 권한' 요건).
+  // 예전 calendar.readonly 로 연결한 사용자 토큰도 그대로 동작한다.
+  "https://www.googleapis.com/auth/calendar.calendarlist.readonly",
   "https://www.googleapis.com/auth/calendar.events",
   // contacts.readonly intentionally omitted — the network/친구찾기 feature is
   // shelved (hidden from nav). Re-add here + restore the Contacts disclosure in
@@ -231,8 +235,31 @@ export async function saveExtraGoogleAccount(
   return data?.id ?? null;
 }
 
+/**
+ * Google 쪽 권한까지 회수한다 — 연결 해제 시 토큰을 지우기만 하면 사용자 Google 계정의
+ * '서드파티 액세스'에 orbit42 가 남는다. 실패해도 로컬 삭제는 계속한다.
+ */
+export async function revokeGoogleToken(token: string | null | undefined) {
+  if (!token) return;
+  try {
+    await fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(token)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    });
+  } catch (err) {
+    console.error("revokeGoogleToken", err);
+  }
+}
+
 export async function deleteExtraGoogleAccount(accountId: string, userId: string) {
   const db = getAdminClient();
+  const { data } = await db
+    .from("google_accounts")
+    .select("refresh_token")
+    .eq("id", accountId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  await revokeGoogleToken((data as { refresh_token: string | null } | null)?.refresh_token);
   await db.from("google_accounts").delete().eq("id", accountId).eq("user_id", userId);
 }
 

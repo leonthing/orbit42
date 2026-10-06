@@ -24,7 +24,7 @@ export default function PrivacyPage() {
       <main className="mx-auto max-w-3xl px-4 pb-24 pt-6 sm:px-6">
         <h1 className="text-3xl font-bold text-charcoal-100">개인정보처리방침</h1>
         <p className="mt-2 text-sm text-charcoal-500">
-          최종 업데이트: 2026년 7월 27일
+          최종 업데이트: 2026년 10월 7일
         </p>
 
         <div className="mt-10 space-y-8">
@@ -244,12 +244,118 @@ export default function PrivacyPage() {
             </p>
           </Section>
 
-          <Section title="11. 변경 이력">
+          <Section title="11. Google 사용자 데이터의 처리 (Google User Data)">
+            <p id="google-user-data">
+              이용자가 Google 계정을 연결하면 서비스는 아래와 같이 Google 사용자
+              데이터를 다룹니다.
+            </p>
+            <List>
+              <li>
+                <b>접근하는 데이터</b>: 로그인 시 Google 계정의 이메일·이름·프로필
+                사진. Google 캘린더 연결 시(권한: calendar.calendarlist.readonly,
+                calendar.events) 이용자 본인 캘린더의 목록과 일정(제목·시각·장소·참석자).
+              </li>
+              <li>
+                <b>사용 목적</b>: 캘린더 화면에 일정을 표시하고, 다른 사람이 예약할 수
+                있는 빈 시간을 계산하며, 확정된 예약을 이용자의 Google 캘린더에 일정으로
+                추가·수정·삭제합니다. 이용자가 직접 켠 경우에만 일정 참석자의
+                이름·이메일로 본인만 보는 관계 지도(오르빗)를 만듭니다. 그 밖의 목적
+                (광고, 데이터 판매, 신용 평가, AI·머신러닝 모델 학습 등)에는 사용하지
+                않습니다.
+              </li>
+              <li>
+                <b>공유</b>: Google 사용자 데이터를 제3자에게 판매하거나 제공하지
+                않습니다. 다른 이용자에게는 이용자가 공개로 정한 범위(기본값: 비어 있는
+                시간만)만 보입니다. 데이터는 서비스 운영을 위한 처리 위탁사(5항의
+                Supabase·Vercel)에서만 처리됩니다.
+              </li>
+              <li>
+                <b>보호</b>: 모든 전송은 HTTPS(TLS)로 암호화되며, Google 토큰과 데이터는
+                저장 시 암호화(AES-256)되는 데이터베이스에 보관되고 서버에서만
+                접근할 수 있습니다.
+              </li>
+              <li>
+                <b>보관 및 삭제</b>: Google 캘린더 일정은 서비스에 복사해 두지 않고
+                화면을 볼 때마다 읽어 옵니다(관계 지도를 켠 경우의 참석자 기록은 예외이며
+                기능을 끄면 즉시 삭제). 이용자가 설정에서 Google 연결을 해제하면 저장된
+                토큰을 삭제하고 Google에 권한 회수를 요청하며, 회원 탈퇴 시 모든 관련
+                데이터를 즉시 삭제합니다. 이용자는 Google 계정의 보안 설정
+                (myaccount.google.com/permissions)에서도 언제든 권한을 회수할 수
+                있습니다.
+              </li>
+            </List>
+            <p className="mt-3 rounded-lg bg-charcoal-800/40 px-3 py-2 text-xs">
+              오르빗42의 Google API에서 받은 정보의 사용 및 다른 앱으로의 전송은{" "}
+              <a
+                href="https://developers.google.com/terms/api-services-user-data-policy"
+                className="underline"
+              >
+                Google API 서비스 사용자 데이터 정책
+              </a>
+              (제한적 사용 요건 포함)을 준수합니다.
+            </p>
+
+            <SubHead>English summary</SubHead>
+            <div className="mt-2 space-y-2 text-sm leading-relaxed" lang="en">
+              <p>
+                <b>Data accessed.</b> With Google Sign-In: email, name and profile
+                photo. When the user connects Google Calendar (scopes:
+                calendar.calendarlist.readonly, calendar.events): the user&apos;s own
+                calendar list and events (title, time, location, attendees).
+              </p>
+              <p>
+                <b>Data use.</b> To display the user&apos;s events in Orbit42, compute
+                free time that others can book, and create/update/delete the
+                confirmed booking events on the user&apos;s Google Calendar. Only if the
+                user explicitly turns it on, attendee names and emails are used to
+                build a private relationship map visible only to that user. Google
+                user data is not used for advertising, sale, credit decisions, or
+                training AI/ML models.
+              </p>
+              <p>
+                <b>Data sharing.</b> We do not sell or transfer Google user data to
+                third parties. Other users only see what the user makes public (by
+                default, free/busy time only). Data is processed only by our
+                infrastructure providers (Supabase, Vercel) to operate the service.
+              </p>
+              <p>
+                <b>Data protection.</b> All data is transmitted over HTTPS (TLS) and
+                stored in databases encrypted at rest (AES-256); OAuth tokens are
+                accessible only server-side.
+              </p>
+              <p>
+                <b>Retention &amp; deletion.</b> Google Calendar events are read live
+                and not stored, except attendee records for the opt-in relationship
+                map, which are deleted immediately when the feature is turned off.
+                Disconnecting Google in Settings deletes the stored tokens and
+                revokes access with Google; deleting the account deletes all related
+                data immediately. Users can also revoke access anytime at
+                myaccount.google.com/permissions.
+              </p>
+              <p className="rounded-lg bg-charcoal-800/40 px-3 py-2 text-xs">
+                Orbit42&apos;s use and transfer to any other app of information received
+                from Google APIs will adhere to the{" "}
+                <a
+                  href="https://developers.google.com/terms/api-services-user-data-policy"
+                  className="underline"
+                >
+                  Google API Services User Data Policy
+                </a>
+                , including the Limited Use requirements.
+              </p>
+            </div>
+          </Section>
+
+          <Section title="12. 변경 이력">
             <List>
               <li>2026-04-15: 최초 제정</li>
               <li>
                 2026-07-27: Apple 로그인 도입에 따라 수집 항목 및 처리 위탁
                 내역 갱신
+              </li>
+              <li>
+                2026-10-07: Google 사용자 데이터 처리(접근·사용·공유·보호·보관/삭제,
+                제한적 사용 준수) 항목 추가, 캘린더 권한을 최소 범위로 변경
               </li>
             </List>
           </Section>

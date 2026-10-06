@@ -134,6 +134,18 @@ export async function isGoogleCalendarConnected(): Promise<boolean> {
 export async function disconnectGoogleCalendar(): Promise<void> {
   const userId = await requireUserId();
   const db = getAdminClient();
+  // Google 계정의 서드파티 액세스에서도 orbit42 를 지운다.
+  const { data: tok } = await db
+    .from("users")
+    .select("google_refresh_token, google_access_token")
+    .eq("id", userId)
+    .single();
+  const { revokeGoogleToken } = await import("@/lib/google");
+  await revokeGoogleToken(
+    (tok as { google_refresh_token: string | null; google_access_token: string | null } | null)
+      ?.google_refresh_token ??
+      (tok as { google_access_token: string | null } | null)?.google_access_token,
+  );
   await db
     .from("users")
     .update({

@@ -15,8 +15,10 @@
 | 스코프 | 등급 | 앱에서 쓰는 곳 |
 |---|---|---|
 | `openid` / `userinfo.email` / `userinfo.profile` | 비민감 | Google 로그인/가입 |
-| `https://www.googleapis.com/auth/calendar.readonly` | 민감 | 캘린더 목록·이벤트 읽어 주간 뷰 표시 + (옵트인) 미팅 참석자로 본인 전용 관계 지도 |
-| `https://www.googleapis.com/auth/calendar.events` | 민감 | 예약 확정 시 사용자 Google 캘린더에 이벤트 생성/수정/삭제 |
+| `https://www.googleapis.com/auth/calendar.calendarlist.readonly` | 민감 | 연결할 캘린더 목록 조회(calendarList.list)만 |
+| `https://www.googleapis.com/auth/calendar.events` | 민감 | 일정 읽기(주간 뷰·빈 시간 계산·옵트인 관계 지도) + 예약 확정 일정 생성/수정/삭제 |
+
+> 2026-10-07: Google 체크리스트 메일(최소 권한) 대응으로 `calendar.readonly` → `calendar.calendarlist.readonly` 로 좁혔다. 일정 읽기는 `calendar.events` 가 포함한다. 개인정보 처리방침 11항에 Google 사용자 데이터(접근·사용·공유·보호·보관/삭제 + Limited Use 문구, 한/영)를 추가했다.
 
 > `contacts.readonly`는 네트워크/친구찾기 기능을 보류하면서 요청 스코프에서
 > 제외했다. 기능이 돌아오면 `src/lib/google.ts`의 SCOPES, `/privacy` 고지,
