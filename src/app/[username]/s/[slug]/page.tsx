@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AppStoreAwareLink } from "@/components/AppStoreAwareLink";
 import { notFound } from "next/navigation";
 import { getSlotBySlug, getBookableOptions, getUpcomingAvailabilities } from "@/lib/slots";
 import { listBids } from "@/lib/auctions";
@@ -348,12 +349,13 @@ export default async function SlotPage({
 
       {!isOwner && !session && (
         <div className="pt-2 text-center">
-          <Link
+          <AppStoreAwareLink
             href={`/signup?ref=${params.username}`}
+            iosLabel="앱으로 나도 예약 링크 만들기"
             className="inline-block rounded-full bg-charcoal-100 px-6 py-3 text-sm font-bold text-charcoal-950 transition-transform hover:scale-[1.02]"
           >
             나도 예약 링크 만들기
-          </Link>
+          </AppStoreAwareLink>
           <p className="mt-3 text-2xs text-charcoal-600">
             orbit42 · 링크 하나로 내 시간을 예약받아요
           </p>

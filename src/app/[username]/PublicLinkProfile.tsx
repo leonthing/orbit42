@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AppStoreAwareLink } from "@/components/AppStoreAwareLink";
 import { FollowButton } from "./FollowButton";
 import type { SocialLinks } from "@/lib/auth";
 import { resolveLinkTheme } from "@/lib/link-themes";
@@ -322,19 +323,20 @@ export function PublicLinkProfile({
 
         {/* 가입 CTA */}
         {!loggedIn && (
-          <Link
+          <AppStoreAwareLink
             href={`/signup?ref=${username}`}
+            iosLabel="앱으로 나도 예약 링크 만들기"
             className="mt-10 inline-block rounded-full px-6 py-3 text-sm font-bold transition-transform hover:scale-[1.02]"
             style={{ backgroundColor: theme.accent, color: theme.onAccent }}
           >
             나도 예약 링크 만들기
-          </Link>
+          </AppStoreAwareLink>
         )}
 
         <p className="mt-6 text-2xs leading-relaxed" style={{ color: theme.muted }}>
-          <Link href="/" className="font-semibold">
+          <AppStoreAwareLink href="/" className="font-semibold">
             orbit42
-          </Link>{" "}
+          </AppStoreAwareLink>{" "}
           · 링크 하나로 내 시간을 예약받고, 쓴 시간을 자산으로 관리해요
         </p>
       </div>

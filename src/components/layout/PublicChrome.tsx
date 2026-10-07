@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AppStoreAwareLink } from "@/components/AppStoreAwareLink";
 
 export function PublicChrome({
   children,
@@ -29,9 +30,9 @@ export function PublicChrome({
               내 orbit
             </Link>
           ) : (
-            <Link href="/?mode=signin#auth" className="hover:text-charcoal-300">
+            <AppStoreAwareLink href="/?mode=signin#auth" iosLabel="앱 받기" className="hover:text-charcoal-300">
               로그인
-            </Link>
+            </AppStoreAwareLink>
           )}
           <span aria-hidden>·</span>
           <Link href="/terms" className="hover:text-charcoal-300">
