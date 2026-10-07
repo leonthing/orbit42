@@ -8,8 +8,11 @@ struct SlotBookingView: View {
     @State private var confirmingOption: BookingOption?
     @State private var copied = false
 
-    init(username: String, slug: String) {
+    private let title: String
+
+    init(username: String, slug: String, title: String = "예약") {
         _viewModel = State(initialValue: SlotBookingViewModel(username: username, slug: slug))
+        self.title = title
     }
 
     var body: some View {
@@ -17,7 +20,7 @@ struct SlotBookingView: View {
             Theme.background.ignoresSafeArea()
             content
         }
-        .navigationTitle("예약")
+        .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $confirmingOption) { option in
             BookingConfirmSheet(viewModel: viewModel, option: option)

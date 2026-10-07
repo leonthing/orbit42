@@ -94,6 +94,9 @@ struct SlotsContent: View {
         .navigationDestination(for: SlotRoute.self) { route in
             SlotDetailView(route: route, listViewModel: viewModel)
         }
+        .navigationDestination(for: MySlotRoute.self) { route in
+            MySlotView(route: route, listViewModel: viewModel)
+        }
         .navigationDestination(for: SlotGuestPreviewRoute.self) { route in
             SlotBookingView(username: route.username, slug: route.slug)
         }
@@ -120,7 +123,7 @@ struct SlotsContent: View {
                path.isEmpty,
                let slot = viewModel.slots?.first(where: { $0.id == demoId }) {
                 didAutoPushDemo = true
-                path.append(SlotRoute(id: slot.id, title: slot.title))
+                path.append(MySlotRoute(id: slot.id, slug: slot.slug, title: slot.title))
             }
             #endif
         }
@@ -191,7 +194,7 @@ struct SlotsContent: View {
                 ZStack {
                     SlotRow(slot: slot, onPreview: previewAction(slot)) { storySubject = .slot(slot) }
                     // 카드 스타일을 유지하면서 행 전체 탭 → 상세 push (chevron 숨김용 투명 링크)
-                    NavigationLink(value: SlotRoute(id: slot.id, title: slot.title)) {
+                    NavigationLink(value: MySlotRoute(id: slot.id, slug: slot.slug, title: slot.title)) {
                         EmptyView()
                     }
                     .opacity(0)

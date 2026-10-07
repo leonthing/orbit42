@@ -413,14 +413,14 @@ private struct MyProfileContent: View {
                 } else {
                     ForEach(data.slots) { slot in
                         NavigationLink {
-                            // 예약 탭의 예약 링크와 같은 상세(편집) 화면. 게스트 화면 미리보기는 그 안에 있다.
-                            SlotDetailView(route: SlotRoute(id: slot.id, title: slot.title), listViewModel: slotsViewModel)
+                            // 예약 탭과 같다: 게스트 화면을 먼저, 오른쪽 위 '편집'으로 수정 화면.
+                            MySlotView(route: MySlotRoute(id: slot.id, slug: slot.slug, title: slot.title), listViewModel: slotsViewModel)
                         } label: {
                             slotRow(slot)
                         }
                         .buttonStyle(.plain)
                     }
-                    Text("탭하면 수정할 수 있어요 · 게스트 화면은 상세의 '게스트에게 보이는 화면'에서")
+                    Text("탭하면 게스트에게 보이는 화면이 열려요 · 오른쪽 위 '편집'으로 수정")
                         .font(.caption)
                         .foregroundStyle(Theme.secondaryText)
                 }
