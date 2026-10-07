@@ -73,6 +73,10 @@ private struct MyProfileContent: View {
     @State private var showingEditProfile = false
     /// 프로필 → 인스타 스토리용 이미지
     @State private var showingStory = false
+    /// 프로필의 '내 예약 링크' 행 → 예약 탭과 같은 상세(편집) 화면
+    @State private var slotsViewModel = SlotsViewModel()
+    /// 내 공개 페이지(게스트에게 보이는 링크 페이지)를 앱 안 Safari 로
+    @State private var publicPageURL: IdentifiableURL?
 
     init(username: String) {
         _viewModel = State(initialValue: PersonProfileViewModel(username: username))
@@ -87,6 +91,7 @@ private struct MyProfileContent: View {
                 VStack(alignment: .leading, spacing: 20) {
                     header
                     actionButtons
+                    publicPageLink
                     timelineLink
                     CalendarCardsSection(username: username, isMe: true)
                     slotsSection
@@ -329,6 +334,38 @@ private struct MyProfileContent: View {
                 }
             }
         }
+        .sheet(item: $publicPageURL) { item in
+            SafariView(url: item.url).ignoresSafeArea()
+        }
+    }
+
+    /// 게스트가 내 링크를 열었을 때 보는 공개 페이지
+    private var publicPageLink: some View {
+        Button {
+            if let shareURL { publicPageURL = IdentifiableURL(url: shareURL) }
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "eye")
+                    .font(.body)
+                    .foregroundStyle(Theme.accent)
+                    .frame(width: 26)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("내 공개 페이지 보기")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.primaryText)
+                    Text("링크를 받은 사람에게 보이는 화면")
+                        .font(.caption)
+                        .foregroundStyle(Theme.secondaryText)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.secondaryText)
+            }
+            .padding(14)
+            .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - 타임라인 (구 타임라인 탭 — 예약이 탭으로 올라가며 이리로 왔다)
@@ -376,15 +413,14 @@ private struct MyProfileContent: View {
                 } else {
                     ForEach(data.slots) { slot in
                         NavigationLink {
-                            // isMine 이라 예약 버튼 없이 미리보기로 동작 —
-                            // 내 예약 페이지가 남에게 어떻게 보이는지 확인용.
-                            SlotBookingView(username: username, slug: slot.slug)
+                            // 예약 탭의 예약 링크와 같은 상세(편집) 화면. 게스트 화면 미리보기는 그 안에 있다.
+                            SlotDetailView(route: SlotRoute(id: slot.id, title: slot.title), listViewModel: slotsViewModel)
                         } label: {
                             slotRow(slot)
                         }
                         .buttonStyle(.plain)
                     }
-                    Text("탭하면 상대에게 보이는 예약 화면을 미리 볼 수 있어요")
+                    Text("탭하면 수정할 수 있어요 · 게스트 화면은 상세의 '게스트에게 보이는 화면'에서")
                         .font(.caption)
                         .foregroundStyle(Theme.secondaryText)
                 }

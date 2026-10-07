@@ -86,10 +86,10 @@ export default function SlotsManager({
   return (
     <div className="space-y-8">
       <Segmented
-        className="md:hidden"
         value="slots"
         items={[
-          { value: "bookings", label: "예약", href: `/${username}/bookings` },
+          { value: "host", label: "받은 예약", href: `/${username}/bookings?tab=host` },
+          { value: "guest", label: "내가 한 예약", href: `/${username}/bookings?tab=guest` },
           { value: "slots", label: "예약 링크", href: `/${username}/slots` },
         ]}
       />

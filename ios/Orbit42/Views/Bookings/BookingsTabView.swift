@@ -1,17 +1,29 @@
 import SwiftUI
 
-/// 예약 탭 — 위쪽 세그먼트로 "예약"(받은·내가 한 예약)과 "예약 링크"(내가 연 슬롯)를 오간다.
-/// 예약을 받는 도구와 받은 예약이 한 탭에 있어야 헷갈리지 않아서, 예약 링크를 캘린더 탭에서 옮겨 왔다.
+/// 예약 탭 — 세그먼트 하나로 "받은 예약 · 내가 한 예약 · 예약 링크"를 오간다.
+/// 예전엔 "예약 | 예약 링크" 아래에 "받은 | 내가 한"이 똑같은 모양으로 한 번 더 쌓여 헷갈렸다.
 struct BookingsTabView: View {
     enum Section: String, CaseIterable, Identifiable {
-        case bookings
+        case received
+        case sent
         case links
 
         var id: String { rawValue }
         var title: String {
             switch self {
-            case .bookings: return "예약"
+            case .received: return "받은 예약"
+            case .sent: return "내가 한 예약"
             case .links: return "예약 링크"
+            }
+        }
+
+        /// 다른 화면이 보내는 구역 요청("bookings" | "links" | 이 enum 값)
+        init?(request: String) {
+            switch request {
+            case "bookings", "received": self = .received
+            case "sent", "guest": self = .sent
+            case "links", "slots": self = .links
+            default: return nil
             }
         }
     }
@@ -30,7 +42,7 @@ struct BookingsTabView: View {
             return .links
         }
         #endif
-        return .bookings
+        return .received
     }
 
     var body: some View {
@@ -49,8 +61,9 @@ struct BookingsTabView: View {
                     .padding(.bottom, 4)
 
                     switch section {
-                    case .bookings:
-                        BookingsView(embedded: true)
+                    case .received, .sent:
+                        // 같은 인스턴스를 유지해야 받은/내가 한 예약 사이를 오갈 때 다시 불러오지 않는다.
+                        BookingsView(embedded: true, forcedSegment: section == .sent ? .guest : .host)
                     case .links:
                         SlotsContent(viewModel: slotsViewModel, path: $path)
                     }
@@ -66,7 +79,7 @@ struct BookingsTabView: View {
     }
 
     private func applySectionRequest(_ request: String?) {
-        guard let request, let requested = Section(rawValue: request) else { return }
+        guard let request, let requested = Section(request: request) else { return }
         section = requested
         router.bookingsSectionRequest = nil
     }

@@ -13,6 +13,8 @@ struct BookingsView: View {
 
     /// 프로필에서 push 할 때는 자체 NavigationStack 없이 쓴다 (중첩 방지).
     var embedded = false
+    /// 예약 탭처럼 바깥에서 받은/내가 한 예약을 고르는 경우 — 자체 세그먼트를 숨기고 이 값을 따른다.
+    var forcedSegment: BookingsViewModel.Segment? = nil
 
     var body: some View {
         if embedded {
@@ -26,9 +28,17 @@ struct BookingsView: View {
         ZStack {
             Theme.background.ignoresSafeArea()
             VStack(spacing: 0) {
-                segmentPicker
+                if forcedSegment == nil {
+                    segmentPicker
+                }
                 content
             }
+        }
+        .onAppear {
+            if let forcedSegment { viewModel.segment = forcedSegment }
+        }
+        .onChange(of: forcedSegment) { _, new in
+            if let new { viewModel.segment = new }
         }
         .navigationTitle("예약")
         .navigationBarTitleDisplayMode(.inline)

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   updateBookingStatus,
   cancelMyBooking,
@@ -48,8 +48,11 @@ export default function BookingsInbox({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [tab, setTab] = useState<Tab>(
-    hostBookings.length === 0 && guestBookings.length > 0 ? "guest" : "host",
+  const searchParams = useSearchParams();
+  const [tab, setTab] = useState<Tab | "slots">(
+    searchParams.get("tab") === "guest" || searchParams.get("tab") === "host"
+      ? (searchParams.get("tab") as Tab)
+      : hostBookings.length === 0 && guestBookings.length > 0 ? "guest" : "host",
   );
 
   const upcoming = hostBookings.filter(
@@ -95,15 +98,6 @@ export default function BookingsInbox({
 
   return (
     <div className="space-y-6">
-      {/* 모바일: iOS 예약 탭처럼 예약 | 예약 링크 */}
-      <Segmented
-        className="md:hidden"
-        value="bookings"
-        items={[
-          { value: "bookings", label: "예약", href: `/${username}/bookings` },
-          { value: "slots", label: "예약 링크", href: `/${username}/slots` },
-        ]}
-      />
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="max-md:hidden text-2xl font-bold text-charcoal-100">예약</h1>
@@ -120,12 +114,14 @@ export default function BookingsInbox({
         )}
       </header>
 
+      {/* iOS 예약 탭과 같은 한 줄 세 칸 — 예약 링크는 같은 탭의 세 번째 칸 */}
       <Segmented
         value={tab}
-        onChange={(v) => setTab(v)}
+        onChange={(v) => v !== "slots" && setTab(v)}
         items={[
-          { value: "host", label: <>받은 예약{hostBookings.length > 0 && ` ${hostBookings.length}`}</> },
-          { value: "guest", label: <>내가 한 예약{guestBookings.length > 0 && ` ${guestBookings.length}`}</> },
+          { value: "host", label: "받은 예약" },
+          { value: "guest", label: "내가 한 예약" },
+          { value: "slots", label: "예약 링크", href: `/${username}/slots` },
         ]}
       />
 

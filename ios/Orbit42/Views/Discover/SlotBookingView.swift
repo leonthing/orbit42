@@ -88,11 +88,10 @@ struct SlotBookingView: View {
                 slotInfo(data.slot)
 
                 if data.slot.isMine {
-                    noteCard(
-                        icon: "person.crop.circle.badge.checkmark",
-                        text: "내가 연 슬롯이에요. 예약 현황은 예약 탭에서 확인해요."
-                    )
-                } else if let notice = data.auctionNotice {
+                    // 내 예약 링크 미리보기 — 게스트와 똑같은 화면을 보여주되 예약만 막는다.
+                    previewBanner
+                }
+                if let notice = data.auctionNotice {
                     noteCard(icon: "hammer", text: notice)
                 } else {
                     if data.slot.locations.count > 1 {
@@ -108,6 +107,27 @@ struct SlotBookingView: View {
         .refreshable {
             await viewModel.load(force: true)
         }
+    }
+
+    // MARK: - 미리보기 배너
+
+    private var previewBanner: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "eye")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Theme.accent)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("내 예약 링크 미리보기")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.primaryText)
+                Text("게스트에게 이렇게 보여요. 시간을 눌러도 예약되지 않아요.")
+                    .font(.caption)
+                    .foregroundStyle(Theme.secondaryText)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .background(Theme.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     // MARK: - 슬롯 정보
@@ -349,7 +369,11 @@ struct SlotBookingView: View {
 
     private func timeChip(_ option: BookingOption) -> some View {
         Button {
-            confirmingOption = option
+            if viewModel.data?.slot.isMine == true {
+                viewModel.actionMessage = "미리보기에서는 예약할 수 없어요. 게스트는 이 시간을 눌러 바로 예약해요."
+            } else {
+                confirmingOption = option
+            }
         } label: {
             VStack(spacing: 2) {
                 Text(option.timeText)
