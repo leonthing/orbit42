@@ -14,6 +14,8 @@ struct SlotsContent: View {
     @State private var showingPresetDialog = false
     @State private var showingSimpleCreate = false
     @State private var didAutoPushDemo = false
+    /// 인스타 스토리용 이미지 작성 화면
+    @State private var storySubject: StorySubject?
 
     var body: some View {
         ZStack {
@@ -75,8 +77,18 @@ struct SlotsContent: View {
             get: { viewModel.justCreated },
             set: { viewModel.justCreated = $0 }
         )) { slot in
-            SlotCreatedShareSheet(slot: slot)
-                .presentationDetents([.medium])
+            SlotCreatedShareSheet(slot: slot) {
+                // 시트를 닫은 뒤 전체 화면 작성기를 연다 (시트 위에 바로 올리면 안 뜬다)
+                viewModel.justCreated = nil
+                Task {
+                    try? await Task.sleep(for: .milliseconds(450))
+                    storySubject = .slot(slot)
+                }
+            }
+            .presentationDetents([.medium, .large])
+        }
+        .fullScreenCover(item: $storySubject) { subject in
+            StoryComposerView(subject: subject)
         }
         .navigationDestination(for: SlotRoute.self) { route in
             SlotDetailView(route: route, listViewModel: viewModel)
@@ -91,6 +103,13 @@ struct SlotsContent: View {
             if !didAutoPushDemo, ProcessInfo.processInfo.environment["DEMO_SHEET"] == "newslot" {
                 didAutoPushDemo = true
                 showingSimpleCreate = true
+            }
+            // 스크린샷용: DEMO_STORY_SLOT_ID 로 그 슬롯의 스토리 이미지 작성기를 연다.
+            if !didAutoPushDemo,
+               let storyId = ProcessInfo.processInfo.environment["DEMO_STORY_SLOT_ID"],
+               let slot = viewModel.slots?.first(where: { $0.id == storyId }) {
+                didAutoPushDemo = true
+                storySubject = .slot(slot)
             }
             if !didAutoPushDemo,
                let demoId = ProcessInfo.processInfo.environment["DEMO_SLOT_ID"],
@@ -160,7 +179,7 @@ struct SlotsContent: View {
         List {
             ForEach(slots) { slot in
                 ZStack {
-                    SlotRow(slot: slot)
+                    SlotRow(slot: slot) { storySubject = .slot(slot) }
                     // 카드 스타일을 유지하면서 행 전체 탭 → 상세 push (chevron 숨김용 투명 링크)
                     NavigationLink(value: SlotRoute(id: slot.id, title: slot.title)) {
                         EmptyView()
@@ -194,6 +213,11 @@ struct SlotsContent: View {
                             ShareLink(item: url) {
                                 Label("공유", systemImage: "square.and.arrow.up")
                             }
+                        }
+                        Button {
+                            storySubject = .slot(slot)
+                        } label: {
+                            Label("인스타 스토리용 이미지", systemImage: "photo.on.rectangle.angled")
                         }
                     }
             }
@@ -287,6 +311,8 @@ struct SlotsContent: View {
 
 private struct SlotRow: View {
     let slot: TimeSlot
+    /// 인스타 스토리용 이미지 만들기
+    var onStory: () -> Void = {}
 
     var body: some View {
         HStack(spacing: 12) {
@@ -315,7 +341,16 @@ private struct SlotRow: View {
             Spacer(minLength: 0)
 
             if let url = URL(string: slot.shareUrl) {
-                ShareLink(item: url) {
+                Menu {
+                    ShareLink(item: url) {
+                        Label("링크 공유", systemImage: "link")
+                    }
+                    Button {
+                        onStory()
+                    } label: {
+                        Label("인스타 스토리용 이미지", systemImage: "photo.on.rectangle.angled")
+                    }
+                } label: {
                     Image(systemName: "square.and.arrow.up")
                         .font(.body)
                         .foregroundStyle(Theme.secondaryText)
@@ -380,6 +415,8 @@ struct SlotsView: View {
 /// 슬롯을 만들자마자 링크를 퍼뜨릴 수 있게 — 인스타 바이오·카톡 프로필에 붙이는 게 첫 행동이다.
 private struct SlotCreatedShareSheet: View {
     let slot: TimeSlot
+    /// 인스타 스토리용 이미지 만들기
+    var onStory: () -> Void = {}
     @Environment(\.dismiss) private var dismiss
     @State private var copied = false
 
@@ -430,6 +467,28 @@ private struct SlotCreatedShareSheet: View {
                     }
                 }
             }
+            Button {
+                onStory()
+            } label: {
+                Label("인스타 스토리용 이미지 만들기", systemImage: "photo.on.rectangle.angled")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(
+                        LinearGradient(
+                            colors: [
+                                Color(red: 0.96, green: 0.52, blue: 0.16),
+                                Color(red: 0.87, green: 0.16, blue: 0.48),
+                                Color(red: 0.51, green: 0.20, blue: 0.69),
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        ),
+                        in: Capsule()
+                    )
+            }
+            .buttonStyle(.plain)
             Button("나중에") { dismiss() }
                 .font(.subheadline)
                 .foregroundStyle(Theme.secondaryText)

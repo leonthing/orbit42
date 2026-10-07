@@ -71,6 +71,8 @@ private struct MyProfileContent: View {
     @Environment(\.openURL) private var openURL
     @State private var viewModel: PersonProfileViewModel
     @State private var showingEditProfile = false
+    /// 프로필 → 인스타 스토리용 이미지
+    @State private var showingStory = false
 
     init(username: String) {
         _viewModel = State(initialValue: PersonProfileViewModel(username: username))
@@ -104,8 +106,17 @@ private struct MyProfileContent: View {
                 EditProfileSheet(user: user)
             }
         }
+        .fullScreenCover(isPresented: $showingStory) {
+            StoryComposerView(subject: .profile)
+        }
         .task {
             await viewModel.load()
+            #if DEBUG
+            // 스크린샷용: DEMO_STORY_PROFILE=1 이면 프로필 스토리 작성기를 연다.
+            if ProcessInfo.processInfo.environment["DEMO_STORY_PROFILE"] == "1" {
+                showingStory = true
+            }
+            #endif
         }
     }
 
@@ -295,7 +306,16 @@ private struct MyProfileContent: View {
             }
 
             if let shareURL {
-                ShareLink(item: shareURL) {
+                Menu {
+                    ShareLink(item: shareURL) {
+                        Label("링크 공유", systemImage: "link")
+                    }
+                    Button {
+                        showingStory = true
+                    } label: {
+                        Label("인스타 스토리용 이미지", systemImage: "photo.on.rectangle.angled")
+                    }
+                } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "square.and.arrow.up")
                             .font(.footnote)

@@ -30,6 +30,7 @@ import { PublicLinkProfile } from "./PublicLinkProfile";
 import { ProfileTabs } from "./ProfileTabs";
 import { MobileProfileLinks } from "./MobileProfileLinks";
 import { ShareMenu } from "@/components/ShareMenu";
+import { StoryShareButton } from "@/components/StoryShare";
 import { JsonLd } from "@/components/JsonLd";
 import { SITE } from "@/lib/constants";
 import {
@@ -321,6 +322,14 @@ export default async function PublicProfile({
             }
             compact={!isOwner}
           />
+          {isOwner && (
+            <StoryShareButton
+              imagePath={`/api/story/${params.username}`}
+              linkUrl={profileUrl}
+              fileName={`orbit42-${params.username}`}
+              label="스토리 이미지"
+            />
+          )}
           {!isOwner && session && (
             <BlockMenu
               targetUsername={params.username}

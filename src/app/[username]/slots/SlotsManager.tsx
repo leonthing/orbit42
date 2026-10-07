@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { SITE } from "@/lib/constants";
 import { Segmented } from "@/components/Segmented";
+import { StoryShareButton } from "@/components/StoryShare";
 import { slotTypeLabel } from "@/lib/constants";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -373,6 +374,12 @@ function NewSlotForm({
           <a href={url} target="_blank" rel="noreferrer" className={buttonClasses({ variant: "secondary", size: "sm" })}>
             게스트 화면 보기
           </a>
+          <StoryShareButton
+            imagePath={`/api/story/${username}/${encodeURIComponent(created.slug)}`}
+            linkUrl={url}
+            fileName={`orbit42-${created.slug}`}
+            label="인스타 스토리 이미지"
+          />
           <button type="button" className={buttonClasses({ variant: "ghost", size: "sm" })} onClick={onSaved}>
             닫기
           </button>
@@ -1296,6 +1303,13 @@ function SlotCard({
           >
             {copied ? "복사됨" : "링크"}
           </button>
+          <StoryShareButton
+            imagePath={`/api/story/${username}/${encodeURIComponent(row.slot.slug)}`}
+            linkUrl={`${SITE.url}/${username}/s/${row.slot.slug}`}
+            fileName={`orbit42-${row.slot.slug}`}
+            label="스토리"
+            className="rounded-lg border border-charcoal-800 px-2.5 py-1.5 text-xs text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
+          />
           <button
             type="button"
             onClick={() => setEditing((v) => !v)}
