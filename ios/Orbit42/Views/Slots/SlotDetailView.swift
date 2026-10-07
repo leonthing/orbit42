@@ -141,7 +141,6 @@ struct SlotDetailView: View {
 
     private var editorForm: some View {
         Form {
-            guestPreviewSection
             basicSection
             priceSection
             locationSection
@@ -159,34 +158,6 @@ struct SlotDetailView: View {
         }
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
-    }
-
-    // MARK: 게스트 화면 미리보기
-
-    /// 게스트가 링크를 열었을 때 보는 예약 화면을 앱 안에서 그대로 본다 (예약만 막힌 미리보기).
-    @ViewBuilder
-    private var guestPreviewSection: some View {
-        if let detail = viewModel.detail, let username = auth.user?.username {
-            Section {
-                NavigationLink {
-                    SlotBookingView(username: username, slug: detail.slug)
-                } label: {
-                    Label {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("게스트에게 보이는 화면")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(Theme.primaryText)
-                            Text("예약 가능한 날짜와 시간을 게스트처럼 확인해요")
-                                .font(.caption)
-                                .foregroundStyle(Theme.secondaryText)
-                        }
-                    } icon: {
-                        Image(systemName: "eye")
-                            .foregroundStyle(Theme.accent)
-                    }
-                }
-            }
-        }
     }
 
     // MARK: 기본 정보

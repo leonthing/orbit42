@@ -224,6 +224,37 @@ final class SlotBookingViewModel {
         }
     }
 
+    // MARK: - 내 예약 링크: 이 시간 예약 안 받기
+
+    /// 호스트가 자기 예약 링크에서 시간을 눌러 닫는다.
+    /// 직접 고른 시간(availabilityId)은 그 시간 창을 지우고, 자동 시간은
+    /// 캘린더에 '예약 안 받음' 일정을 넣어 막는다(그 일정을 지우면 다시 열린다).
+    func blockTime(_ option: BookingOption) async -> Bool {
+        guard let slot = data?.slot else { return false }
+        do {
+            if let windowId = option.availabilityId {
+                let _: OkResponse = try await api.delete("/api/v1/slots/\(slot.id)/availability/\(windowId)")
+            } else {
+                let body = CreateEventRequest(
+                    title: "예약 안 받음",
+                    description: "\(slot.title) 예약 링크에서 닫은 시간이에요. 이 일정을 지우면 다시 예약받아요.",
+                    startAt: APIDateParser.encodeDateTime(option.startAt),
+                    endAt: APIDateParser.encodeDateTime(option.endAt),
+                    allDay: false,
+                    calendarId: nil
+                )
+                let _: CreateEventResponse = try await api.post("/api/v1/calendar/events", body: body)
+            }
+            await load(force: true)
+            return true
+        } catch let apiError as APIError {
+            actionMessage = apiError.errorDescription
+        } catch {
+            actionMessage = "시간을 닫지 못했어요. 네트워크를 확인해 주세요."
+        }
+        return false
+    }
+
     // MARK: - 내부
 
     private func path(location: String?) -> String {

@@ -16,7 +16,7 @@ struct MySlotView: View {
     var body: some View {
         Group {
             if let username = auth.user?.username {
-                SlotBookingView(username: username, slug: route.slug, title: "게스트 화면")
+                SlotBookingView(username: username, slug: route.slug, title: route.title)
             } else {
                 ProgressView().tint(Theme.accent)
             }

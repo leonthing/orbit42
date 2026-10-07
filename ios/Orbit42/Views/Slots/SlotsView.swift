@@ -97,9 +97,6 @@ struct SlotsContent: View {
         .navigationDestination(for: MySlotRoute.self) { route in
             MySlotView(route: route, listViewModel: viewModel)
         }
-        .navigationDestination(for: SlotGuestPreviewRoute.self) { route in
-            SlotBookingView(username: route.username, slug: route.slug)
-        }
         .task {
             await viewModel.load()
             #if DEBUG
@@ -180,19 +177,13 @@ struct SlotsContent: View {
         .padding(.horizontal, 32)
     }
 
-    /// 게스트에게 보이는 예약 화면(SlotBookingView 미리보기 모드)으로 push
-    private func previewAction(_ slot: TimeSlot) -> (() -> Void)? {
-        guard let username = auth.user?.username else { return nil }
-        return { path.append(SlotGuestPreviewRoute(username: username, slug: slot.slug)) }
-    }
-
     // MARK: - 슬롯 목록
 
     private func slotList(_ slots: [TimeSlot]) -> some View {
         List {
             ForEach(slots) { slot in
                 ZStack {
-                    SlotRow(slot: slot, onPreview: previewAction(slot)) { storySubject = .slot(slot) }
+                    SlotRow(slot: slot) { storySubject = .slot(slot) }
                     // 카드 스타일을 유지하면서 행 전체 탭 → 상세 push (chevron 숨김용 투명 링크)
                     NavigationLink(value: MySlotRoute(id: slot.id, slug: slot.slug, title: slot.title)) {
                         EmptyView()
@@ -231,11 +222,6 @@ struct SlotsContent: View {
                             storySubject = .slot(slot)
                         } label: {
                             Label("인스타 스토리용 이미지", systemImage: "photo.on.rectangle.angled")
-                        }
-                        if let preview = previewAction(slot) {
-                            Button(action: preview) {
-                                Label("게스트 화면 미리보기", systemImage: "eye")
-                            }
                         }
                     }
             }
@@ -317,7 +303,7 @@ struct SlotsContent: View {
     // MARK: - 안내 푸터
 
     private var footerNote: some View {
-        Text("슬롯을 탭하면 가격·시간 등 상세 편집을 할 수 있어요")
+        Text("탭하면 게스트에게 보이는 화면이 열려요. 시간을 눌러 닫거나 '편집'으로 수정해요")
             .font(.caption)
             .foregroundStyle(Theme.secondaryText)
             .frame(maxWidth: .infinity)
@@ -325,18 +311,11 @@ struct SlotsContent: View {
     }
 }
 
-/// 예약 링크 → 게스트에게 보이는 예약 화면 미리보기 push 용 값
-struct SlotGuestPreviewRoute: Hashable {
-    let username: String
-    let slug: String
-}
 
 // MARK: - 슬롯 행
 
 private struct SlotRow: View {
     let slot: TimeSlot
-    /// 게스트 화면 미리보기 (로그인 정보가 없으면 nil)
-    var onPreview: (() -> Void)? = nil
     /// 인스타 스토리용 이미지 만들기
     var onStory: () -> Void = {}
 
@@ -375,11 +354,6 @@ private struct SlotRow: View {
                         onStory()
                     } label: {
                         Label("인스타 스토리용 이미지", systemImage: "photo.on.rectangle.angled")
-                    }
-                    if let onPreview {
-                        Button(action: onPreview) {
-                            Label("게스트 화면 미리보기", systemImage: "eye")
-                        }
                     }
                 } label: {
                     Image(systemName: "square.and.arrow.up")

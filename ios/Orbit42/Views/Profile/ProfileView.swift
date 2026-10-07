@@ -420,7 +420,7 @@ private struct MyProfileContent: View {
                         }
                         .buttonStyle(.plain)
                     }
-                    Text("탭하면 게스트에게 보이는 화면이 열려요 · 오른쪽 위 '편집'으로 수정")
+                    Text("오른쪽 위 '편집'으로 수정할 수 있어요")
                         .font(.caption)
                         .foregroundStyle(Theme.secondaryText)
                 }

@@ -7,6 +7,8 @@ struct SlotBookingView: View {
     /// 예약 확인 시트에 올라간 옵션
     @State private var confirmingOption: BookingOption?
     @State private var copied = false
+    /// 내 예약 링크에서 누른 시간 — '이 시간 예약 안 받기' 확인용
+    @State private var blockingOption: BookingOption?
 
     private let title: String
 
@@ -36,6 +38,24 @@ struct SlotBookingView: View {
             Button("확인", role: .cancel) {}
         } message: {
             Text(viewModel.actionMessage ?? "")
+        }
+        .confirmationDialog(
+            blockingOption.map { "\(viewModel.selectedDayText ?? "") \($0.timeText)" } ?? "",
+            isPresented: Binding(
+                get: { blockingOption != nil },
+                set: { if !$0 { blockingOption = nil } }
+            ),
+            titleVisibility: .visible,
+            presenting: blockingOption
+        ) { option in
+            Button("이 시간 예약 안 받기", role: .destructive) {
+                Task { _ = await viewModel.blockTime(option) }
+            }
+            Button("취소", role: .cancel) {}
+        } message: { option in
+            Text(option.availabilityId == nil
+                 ? "캘린더에 '예약 안 받음' 일정을 넣어 이 시간을 닫아요. 그 일정을 지우면 다시 열려요."
+                 : "이 시간을 예약 가능한 시간에서 빼요.")
         }
         .task {
             await viewModel.load()
@@ -90,10 +110,6 @@ struct SlotBookingView: View {
             VStack(alignment: .leading, spacing: 20) {
                 slotInfo(data.slot)
 
-                if data.slot.isMine {
-                    // 내 예약 링크 미리보기 — 게스트와 똑같은 화면을 보여주되 예약만 막는다.
-                    previewBanner
-                }
                 if let notice = data.auctionNotice {
                     noteCard(icon: "hammer", text: notice)
                 } else {
@@ -110,27 +126,6 @@ struct SlotBookingView: View {
         .refreshable {
             await viewModel.load(force: true)
         }
-    }
-
-    // MARK: - 미리보기 배너
-
-    private var previewBanner: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "eye")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(Theme.accent)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("내 예약 링크 미리보기")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Theme.primaryText)
-                Text("게스트에게 이렇게 보여요. 시간을 눌러도 예약되지 않아요.")
-                    .font(.caption)
-                    .foregroundStyle(Theme.secondaryText)
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(12)
-        .background(Theme.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     // MARK: - 슬롯 정보
@@ -326,9 +321,17 @@ struct SlotBookingView: View {
     @ViewBuilder
     private func optionsSection(_ data: SlotBookingResponse) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("예약 가능 시간")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(Theme.secondaryText)
+            HStack {
+                Text("예약 가능 시간")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Theme.secondaryText)
+                Spacer()
+                if data.slot.isMine && !data.options.isEmpty {
+                    Text("시간을 눌러 닫을 수 있어요")
+                        .font(.caption)
+                        .foregroundStyle(Theme.secondaryText)
+                }
+            }
 
             if data.options.isEmpty {
                 VStack(spacing: 8) {
@@ -338,7 +341,7 @@ struct SlotBookingView: View {
                     Text("지금은 예약 가능한 시간이 없어요")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(Theme.primaryText)
-                    Text("나중에 다시 확인해보세요")
+                    Text(data.slot.isMine ? "오른쪽 위 '편집'에서 시간을 열어 보세요" : "나중에 다시 확인해보세요")
                         .font(.footnote)
                         .foregroundStyle(Theme.secondaryText)
                 }
@@ -373,7 +376,8 @@ struct SlotBookingView: View {
     private func timeChip(_ option: BookingOption) -> some View {
         Button {
             if viewModel.data?.slot.isMine == true {
-                viewModel.actionMessage = "미리보기에서는 예약할 수 없어요. 게스트는 이 시간을 눌러 바로 예약해요."
+                // 내 예약 링크 — 본인은 예약할 수 없으니, 대신 이 시간을 닫을 수 있게 한다.
+                blockingOption = option
             } else {
                 confirmingOption = option
             }
