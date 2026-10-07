@@ -429,6 +429,8 @@ struct BookingOption: Decodable, Identifiable, Sendable {
     let endAt: Date
     let remaining: Int
     let availabilityId: String?
+    /// 호스트가 닫은 시간 — 호스트 본인 화면에서만 온다(게스트에겐 아예 안 보임)
+    let closed: Bool
     /// 서버가 내려준 startAt 원문 — POST 에 그대로 사용
     let startAtRaw: String
 
@@ -438,13 +440,14 @@ struct BookingOption: Decodable, Identifiable, Sendable {
     var timeText: String { DiscoverFormat.time.string(from: startAt) }
 
     private enum CodingKeys: String, CodingKey {
-        case startAt, endAt, remaining, availabilityId
+        case startAt, endAt, remaining, availabilityId, closed
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         remaining = try container.decodeIfPresent(Int.self, forKey: .remaining) ?? 1
         availabilityId = try container.decodeIfPresent(String.self, forKey: .availabilityId)
+        closed = try container.decodeIfPresent(Bool.self, forKey: .closed) ?? false
 
         let startRaw = try container.decode(String.self, forKey: .startAt)
         let endRaw = try container.decode(String.self, forKey: .endAt)

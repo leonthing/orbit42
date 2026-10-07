@@ -25,7 +25,9 @@ export async function GET(
 
   const location = new URL(request.url).searchParams.get("location");
   const isAuction = slot.pricing_model === "auction";
-  const options = isAuction ? [] : await getBookableOptions(slot, location);
+  const isMine = session.username === host.username;
+  // 호스트 본인에겐 닫은 시간도 '예약 안 받음'으로 보여 다시 열 수 있게 한다.
+  const options = isAuction ? [] : await getBookableOptions(slot, location, { includeClosed: isMine });
 
   return Response.json({
     slot: {
@@ -43,7 +45,7 @@ export async function GET(
       imageUrls: slot.image_urls ?? [],
       hostUsername: host.username,
       hostName: host.display_name ?? host.username,
-      isMine: session.username === host.username,
+      isMine,
       // 결제 방식 — 현재는 만나서 결제(offline)만 지원
       paymentMethod: slot.payment_method ?? "offline",
     },
@@ -62,6 +64,7 @@ export async function GET(
       endAt: o.end_at,
       remaining: o.remaining,
       availabilityId: o.availability_id,
+      closed: o.closed ?? false,
     })),
     // 경매 슬롯 입찰은 웹에서 — 앱 v1은 고정가 예약만 지원
     auctionNotice: isAuction ? "경매 슬롯이에요. 입찰은 웹에서 할 수 있어요." : null,

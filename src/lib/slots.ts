@@ -213,12 +213,78 @@ export type BookableOption = {
   start_at: string;
   end_at: string;
   remaining: number;
+  /** 호스트가 닫은 시간 — includeClosed 일 때만 담겨 온다. */
+  closed?: boolean;
 };
 
+/** 호스트가 닫은 앞으로의 시작 시각(ms) 집합 */
+async function closedStartTimes(slotId: string): Promise<Set<number>> {
+  const { data } = await getAdminClient()
+    .from("slot_closed_times")
+    .select("start_at")
+    .eq("slot_id", slotId)
+    .gte("start_at", new Date().toISOString());
+  return new Set(((data ?? []) as { start_at: string }[]).map((r) => new Date(r.start_at).getTime()));
+}
+
+/**
+ * 예약 가능한 시간. 호스트가 닫은 시간은 빼고 돌려주며,
+ * includeClosed(호스트 본인 화면)면 빼지 않고 closed 로 표시한다.
+ */
 export async function getBookableOptions(
   slot: TimeSlot,
   /** When the slot offers multiple locations, the guest's pick drives
    * which times are bookable. Defaults to the slot's first location. */
+  pickedLocation?: string | null,
+  opts: { includeClosed?: boolean } = {},
+): Promise<BookableOption[]> {
+  const [options, closed] = await Promise.all([
+    computeBookableOptions(slot, pickedLocation),
+    closedStartTimes(slot.id),
+  ]);
+  if (closed.size === 0) return options;
+  const isClosed = (o: BookableOption) => closed.has(new Date(o.start_at).getTime());
+  return opts.includeClosed
+    ? options.map((o) => (isClosed(o) ? { ...o, closed: true } : o))
+    : options.filter((o) => !isClosed(o));
+}
+
+/** 호스트가 예약 링크의 한 시간을 닫는다(게스트에게 숨김). */
+export async function closeSlotTime(slotId: string, startAt: string) {
+  const userId = await requireUserId();
+  const db = getAdminClient();
+  const { data: slot } = await db.from("time_slots").select("host_id").eq("id", slotId).single();
+  if (!slot || slot.host_id !== userId) return { error: "권한 없음" };
+  const t = new Date(startAt);
+  if (Number.isNaN(t.getTime())) return { error: "시간이 올바르지 않아요." };
+  const { error } = await db
+    .from("slot_closed_times")
+    .upsert({ slot_id: slotId, start_at: t.toISOString() }, { onConflict: "slot_id,start_at" });
+  if (error) return { error: "시간을 닫지 못했어요." };
+  revalidatePath("/", "layout");
+  return { success: true };
+}
+
+/** 닫았던 시간을 다시 연다. */
+export async function reopenSlotTime(slotId: string, startAt: string) {
+  const userId = await requireUserId();
+  const db = getAdminClient();
+  const { data: slot } = await db.from("time_slots").select("host_id").eq("id", slotId).single();
+  if (!slot || slot.host_id !== userId) return { error: "권한 없음" };
+  const t = new Date(startAt);
+  if (Number.isNaN(t.getTime())) return { error: "시간이 올바르지 않아요." };
+  const { error } = await db
+    .from("slot_closed_times")
+    .delete()
+    .eq("slot_id", slotId)
+    .eq("start_at", t.toISOString());
+  if (error) return { error: "다시 열지 못했어요." };
+  revalidatePath("/", "layout");
+  return { success: true };
+}
+
+async function computeBookableOptions(
+  slot: TimeSlot,
   pickedLocation?: string | null,
 ): Promise<BookableOption[]> {
   const from = slot.valid_from ? new Date(slot.valid_from).getTime() : null;
@@ -847,6 +913,11 @@ export async function bookSlot(args: {
       return { error: "아직 예약 가능한 기간이 아니에요." };
     if (windowUntil !== null && t > windowUntil)
       return { error: "예약 가능한 기간이 끝났어요." };
+  }
+
+  // 호스트가 닫은 시간은 예약할 수 없다.
+  if ((await closedStartTimes(slot.id as string)).has(startAt.getTime())) {
+    return { error: "이미 지나갔거나 잡을 수 없는 시간입니다." };
   }
 
   const endAt = new Date(startAt.getTime() + (slot.duration_min as number) * 60_000);

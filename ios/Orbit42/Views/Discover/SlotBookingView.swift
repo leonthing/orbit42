@@ -48,14 +48,20 @@ struct SlotBookingView: View {
             titleVisibility: .visible,
             presenting: blockingOption
         ) { option in
-            Button("이 시간 예약 안 받기", role: .destructive) {
-                Task { _ = await viewModel.blockTime(option) }
+            if option.closed {
+                Button("다시 예약 받기") {
+                    Task { await viewModel.setClosed(option, closed: false) }
+                }
+            } else {
+                Button("이 시간 예약 안 받기", role: .destructive) {
+                    Task { await viewModel.setClosed(option, closed: true) }
+                }
             }
             Button("취소", role: .cancel) {}
         } message: { option in
-            Text(option.availabilityId == nil
-                 ? "캘린더에 '예약 안 받음' 일정을 넣어 이 시간을 닫아요. 그 일정을 지우면 다시 열려요."
-                 : "이 시간을 예약 가능한 시간에서 빼요.")
+            Text(option.closed
+                 ? "게스트에게 이 시간이 다시 보여요."
+                 : "게스트에게는 이 시간이 보이지 않아요. 언제든 다시 열 수 있어요.")
         }
         .task {
             await viewModel.load()
@@ -327,7 +333,7 @@ struct SlotBookingView: View {
                     .foregroundStyle(Theme.secondaryText)
                 Spacer()
                 if data.slot.isMine && !data.options.isEmpty {
-                    Text("시간을 눌러 닫을 수 있어요")
+                    Text("시간을 눌러 닫거나 다시 열 수 있어요")
                         .font(.caption)
                         .foregroundStyle(Theme.secondaryText)
                 }
@@ -376,7 +382,7 @@ struct SlotBookingView: View {
     private func timeChip(_ option: BookingOption) -> some View {
         Button {
             if viewModel.data?.slot.isMine == true {
-                // 내 예약 링크 — 본인은 예약할 수 없으니, 대신 이 시간을 닫을 수 있게 한다.
+                // 내 예약 링크 — 본인은 예약할 수 없으니, 대신 이 시간을 닫거나 다시 연다.
                 blockingOption = option
             } else {
                 confirmingOption = option
@@ -385,8 +391,13 @@ struct SlotBookingView: View {
             VStack(spacing: 2) {
                 Text(option.timeText)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Theme.primaryText)
-                if option.remaining > 1 {
+                    .strikethrough(option.closed)
+                    .foregroundStyle(option.closed ? Theme.secondaryText : Theme.primaryText)
+                if option.closed {
+                    Text("예약 안 받음")
+                        .font(.caption2)
+                        .foregroundStyle(Theme.secondaryText)
+                } else if option.remaining > 1 {
                     Text("\(option.remaining)자리")
                         .font(.caption2)
                         .foregroundStyle(Theme.secondaryText)
@@ -394,10 +405,13 @@ struct SlotBookingView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)
-            .background(Theme.surface, in: RoundedRectangle(cornerRadius: 10))
+            .background(option.closed ? Theme.secondaryText.opacity(0.08) : Theme.surface, in: RoundedRectangle(cornerRadius: 10))
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
-                    .strokeBorder(Theme.accent.opacity(0.4), lineWidth: 1)
+                    .strokeBorder(
+                        option.closed ? Theme.secondaryText.opacity(0.3) : Theme.accent.opacity(0.4),
+                        style: StrokeStyle(lineWidth: 1, dash: option.closed ? [4, 3] : [])
+                    )
             )
         }
         .disabled(viewModel.isReloadingOptions)

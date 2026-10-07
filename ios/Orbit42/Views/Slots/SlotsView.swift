@@ -303,7 +303,7 @@ struct SlotsContent: View {
     // MARK: - 안내 푸터
 
     private var footerNote: some View {
-        Text("탭하면 게스트에게 보이는 화면이 열려요. 시간을 눌러 닫거나 '편집'으로 수정해요")
+        Text("탭하면 게스트에게 보이는 화면이 열려요. 시간을 눌러 열고 닫거나 '편집'으로 수정해요")
             .font(.caption)
             .foregroundStyle(Theme.secondaryText)
             .frame(maxWidth: .infinity)
