@@ -6,6 +6,8 @@ import {
   saveExtraGoogleAccount,
   fetchGoogleEmail,
   fetchGoogleProfile,
+  hasCalendarScopes,
+  revokeGoogleToken,
 } from "@/lib/google";
 import { getAdminClient } from "@/lib/supabase";
 import { loginOrSignupWithGoogle, getSession } from "@/lib/auth";
@@ -94,6 +96,11 @@ export async function GET(request: NextRequest) {
 
     try {
       const tokens = await exchangeCode(code);
+      // 캘린더 권한을 빼고 허용했으면 연결하지 않고 토큰도 돌려준다.
+      if (!hasCalendarScopes(tokens)) {
+        await revokeGoogleToken(tokens.refresh_token ?? tokens.access_token);
+        return fail("missing_scopes");
+      }
       const db = getAdminClient();
       const { data: user } = await db
         .from("users")
@@ -137,6 +144,14 @@ export async function GET(request: NextRequest) {
 
   try {
     const tokens = await exchangeCode(code);
+
+    // 캘린더 권한을 빼고 허용했으면 연결하지 않고 토큰도 돌려준다.
+    if (!hasCalendarScopes(tokens)) {
+      await revokeGoogleToken(tokens.refresh_token ?? tokens.access_token);
+      return NextResponse.redirect(
+        new URL(`/${username}/settings?error=google_missing_scopes#google`, request.url),
+      );
+    }
 
     const db = getAdminClient();
     const { data: user } = await db

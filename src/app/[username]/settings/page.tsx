@@ -46,11 +46,20 @@ const SECTIONS = [
   { id: "danger", label: "계정 삭제" },
 ];
 
+const GOOGLE_ERRORS: Record<string, string> = {
+  google_missing_scopes:
+    "캘린더 권한이 허용되지 않아 연결하지 않았어요. 다시 연결하면서 Google 화면의 항목을 모두 체크해 주세요.",
+  google_auth_failed: "Google 연결에 실패했어요. 잠시 후 다시 시도해 주세요.",
+};
+
 export default async function SettingsPage({
   params,
+  searchParams,
 }: {
   params: { username: string };
+  searchParams?: { error?: string };
 }) {
+  const googleError = GOOGLE_ERRORS[searchParams?.error ?? ""] ?? null;
   const profile = await getProfile(params.username);
   if (!profile) notFound();
 
@@ -113,6 +122,11 @@ export default async function SettingsPage({
           </section>
 
           <section id="google" className="scroll-mt-16">
+            {googleError && (
+              <p role="alert" className="mb-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-500">
+                {googleError}
+              </p>
+            )}
             <GoogleAccountsSection
               primaryConnected={googleConnected}
               primaryEmail={null}

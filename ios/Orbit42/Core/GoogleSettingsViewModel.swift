@@ -78,7 +78,11 @@ final class GoogleSettingsViewModel {
                 await load(force: true)
             } else {
                 // orbit42://google-error?reason=... 포함 그 외 콜백은 실패로 처리
-                actionMessage = "연결에 실패했어요"
+                let reason = URLComponents(url: callback, resolvingAgainstBaseURL: false)?
+                    .queryItems?.first { $0.name == "reason" }?.value
+                actionMessage = reason == "missing_scopes"
+                    ? "캘린더 권한이 허용되지 않아 연결하지 않았어요. 다시 연결하면서 Google 화면의 항목을 모두 체크해 주세요."
+                    : "연결에 실패했어요"
             }
         } catch let authError as ASWebAuthenticationSessionError where authError.code == .canceledLogin {
             // 사용자가 브라우저 시트를 닫음 — 조용히 무시

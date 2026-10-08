@@ -239,6 +239,21 @@ export async function saveExtraGoogleAccount(
  * Google 쪽 권한까지 회수한다 — 연결 해제 시 토큰을 지우기만 하면 사용자 Google 계정의
  * '서드파티 액세스'에 orbit42 가 남는다. 실패해도 로컬 삭제는 계속한다.
  */
+/**
+ * 동의 화면에서 캘린더 권한 체크를 풀고 '계속'을 누르면, 코드는 정상 발급되지만
+ * 토큰에 캘린더 범위가 빠져 있다. 그대로 저장하면 '연결됨'인데 아무것도 안 되므로
+ * 연결 전에 확인한다. 예전 calendar.readonly/calendar 로 받은 토큰도 인정한다.
+ */
+export function hasCalendarScopes(tokens: { scope?: string | null }): boolean {
+  const granted = new Set((tokens.scope ?? "").split(/\s+/).filter(Boolean));
+  const base = "https://www.googleapis.com/auth/";
+  const full = granted.has(base + "calendar");
+  const canWriteEvents = full || granted.has(base + "calendar.events");
+  const canListCalendars =
+    full || granted.has(base + "calendar.calendarlist.readonly") || granted.has(base + "calendar.readonly");
+  return canWriteEvents && canListCalendars;
+}
+
 export async function revokeGoogleToken(token: string | null | undefined) {
   if (!token) return;
   try {
