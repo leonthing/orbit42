@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import { buttonClasses } from "@/components/PendingButton";
 import { useToast } from "@/components/Toast";
 import { PersonAvatar } from "@/components/people/PersonAvatar";
+import { CheckInButton } from "@/components/people/CheckInButton";
 import {
   SOURCE_LABELS,
   daysSinceLabel,
@@ -113,8 +114,14 @@ export function PersonDetail({
         <StatTile label="만남" value={`${p.meetingsTotal}번`} color={p.color} />
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-4 gap-2">
         <ActionTile label="만났어요" onClick={() => setLogging((v) => !v)} color={p.color} icon="check" />
+        <CheckInButton person={p} username={username} className="flex w-full flex-col items-center gap-1.5 rounded-2xl border border-charcoal-800/50 bg-[rgb(var(--bg-surface))] py-3.5 transition hover:border-charcoal-700 active:scale-[0.98]">
+          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke={p.color} strokeWidth={1.8}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.27 3.13a59.77 59.77 0 0 1 18.22 8.87 59.77 59.77 0 0 1-18.22 8.88L6 12Zm0 0h7.5" />
+          </svg>
+          <span className="text-xs font-semibold text-charcoal-200">안부</span>
+        </CheckInButton>
         <ActionTile label="일정 잡기" href={`/${username}/calendar`} color={p.color} icon="calendar" />
         {p.member ? (
           <ActionTile label="시간 요청" href={`/${p.member.username}`} color={p.color} icon="clock" />

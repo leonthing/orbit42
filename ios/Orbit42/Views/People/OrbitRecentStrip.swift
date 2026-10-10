@@ -82,7 +82,11 @@ struct OrbitRecentStrip: View {
                         .foregroundStyle(Theme.secondaryText)
                 }
                 HStack(spacing: 8) {
-                    nudgeButton("시간 제안", symbol: "paperplane") {
+                    CheckInMenu(person: person) {
+                        nudgeLabel("안부 보내기", symbol: "paperplane")
+                    }
+                    .buttonStyle(.plain)
+                    nudgeButton("시간 제안", symbol: "calendar.badge.plus") {
                         if person.member != nil {
                             requestPerson = person
                         } else {
@@ -112,13 +116,17 @@ struct OrbitRecentStrip: View {
 
     private func nudgeButton(_ title: String, symbol: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Label(title, systemImage: symbol)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Theme.primaryText)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(Theme.surface, in: Capsule())
+            nudgeLabel(title, symbol: symbol)
         }
         .buttonStyle(.plain)
+    }
+
+    private func nudgeLabel(_ title: String, symbol: String) -> some View {
+        Label(title, systemImage: symbol)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(Theme.primaryText)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Theme.surface, in: Capsule())
     }
 }

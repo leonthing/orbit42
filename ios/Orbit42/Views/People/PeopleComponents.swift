@@ -112,6 +112,33 @@ struct DashedPlusButton: View {
     }
 }
 
+/// 액션 타일 모양 — 버튼이 아닌 Menu 등의 라벨로도 쓴다.
+struct ContactActionTileLabel: View {
+    let symbol: String
+    let title: String
+    let tint: Color
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Image(systemName: symbol)
+                .font(.title3)
+                .foregroundStyle(tint)
+            Text(title)
+                .font(.footnote.weight(.medium))
+                .foregroundStyle(Theme.primaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(Theme.fill(0.06), lineWidth: 1)
+        )
+    }
+}
+
 /// 액션 타일 — 퀵 시트의 "만났어요 / 일정 잡기 / 시간 요청 / 프로필"
 struct ContactActionTile: View {
     let symbol: String

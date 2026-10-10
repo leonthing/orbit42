@@ -7,6 +7,7 @@ import { useToast } from "@/components/Toast";
 import { logMeetingAction, updatePersonAction } from "@/app/[username]/people/actions";
 import type { OrbitPerson } from "@/lib/people-types";
 import { PersonAvatar } from "./PersonAvatar";
+import { CheckInButton } from "./CheckInButton";
 
 /**
  * 안부 넛지 — 두 번 이상 만난 사이인데 3주 넘게 못 본 사람.
@@ -37,12 +38,6 @@ export function NudgeCard({
       } else toast.error(r.error ?? "처리하지 못했어요.");
     });
 
-  // 회원이면 그 사람 프로필(열린 슬롯·시간 요청)로, 아니면 메일로 안부를 보낸다.
-  const reachHref = p.member
-    ? `/${p.member.username}`
-    : p.email
-      ? `mailto:${p.email}?subject=${encodeURIComponent("안부 인사드려요")}`
-      : `/${username}/people/${p.id}`;
 
   return (
     <div className="flex items-start gap-3 rounded-2xl border border-charcoal-800/50 bg-[rgb(var(--bg-surface))] p-4">
@@ -53,12 +48,15 @@ export function NudgeCard({
         </p>
         <p className="mt-0.5 text-xs text-charcoal-400">짧은 안부나 시간 제안으로 다시 가까워져 볼까요?</p>
         <div className="mt-2.5 flex flex-wrap gap-2">
-          <a
-            href={reachHref}
-            className={buttonClasses({ variant: "secondary", size: "sm" })}
-          >
-            {p.member ? "시간 제안하기" : "안부 보내기"}
-          </a>
+          <CheckInButton person={p} username={username} className={buttonClasses({ variant: "secondary", size: "sm" })}>
+            안부 보내기
+          </CheckInButton>
+          {p.member && (
+            // 회원이면 그 사람 프로필(열린 슬롯·시간 요청)로
+            <a href={`/${p.member.username}`} className={buttonClasses({ variant: "ghost", size: "sm" })}>
+              시간 제안하기
+            </a>
+          )}
           <button
             type="button"
             disabled={pending}

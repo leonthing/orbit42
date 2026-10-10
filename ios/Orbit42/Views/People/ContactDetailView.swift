@@ -14,6 +14,7 @@ struct ContactDetailView: View {
     @State private var showingLog = false
     @State private var showingSchedule = false
     @State private var confirmRemove = false
+    @State private var showingProfile = false
 
     private var person: Contact { detail?.person ?? store.person(id: personId) ?? initial }
 
@@ -130,6 +131,11 @@ struct ContactDetailView: View {
         .background(Theme.background.ignoresSafeArea())
         .navigationTitle(person.name)
         .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(isPresented: $showingProfile) {
+            if let member = person.member {
+                PersonProfileView(username: member.username)
+            }
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("편집") { showingEditor = true }
@@ -239,26 +245,18 @@ struct ContactDetailView: View {
             ContactActionTile(symbol: "hand.wave", title: "만났어요", tint: person.displayColor) {
                 showingLog = true
             }
+            CheckInMenu(person: person) {
+                ContactActionTileLabel(symbol: "paperplane", title: "안부", tint: Theme.accent)
+            }
+            .buttonStyle(.plain)
             ContactActionTile(symbol: "calendar.badge.plus", title: "일정 잡기", tint: Theme.accent) {
                 showingSchedule = true
             }
-            if let member = person.member {
-                NavigationLink {
-                    PersonProfileView(username: member.username)
-                } label: {
-                    VStack(spacing: 8) {
-                        Image(systemName: "person.crop.circle")
-                            .font(.title3)
-                            .foregroundStyle(Theme.accent)
-                        Text("프로필")
-                            .font(.footnote.weight(.medium))
-                            .foregroundStyle(Theme.primaryText)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(Theme.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            if person.member != nil {
+                // 목록 행 안의 NavigationLink 는 오른쪽에 '>'가 붙어서, 버튼 + navigationDestination 으로 연다.
+                ContactActionTile(symbol: "person.crop.circle", title: "프로필", tint: Theme.accent) {
+                    showingProfile = true
                 }
-                .buttonStyle(.plain)
             }
         }
     }

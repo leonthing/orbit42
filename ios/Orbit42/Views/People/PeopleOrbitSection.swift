@@ -14,15 +14,47 @@ struct PeopleOrbitSection: View {
 
     private let initialCardCount = 8
 
+    // MARK: - 인사 (Clique 처럼 날짜 + 시간대 인사)
+
+    private var greeting: some View {
+        SwiftUI.TimelineView(.periodic(from: .now, by: 60)) { context in
+            VStack(alignment: .leading, spacing: 4) {
+                Text(context.date.formatted(.dateTime.locale(Locale(identifier: "ko_KR")).month().day().weekday(.wide)))
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Theme.secondaryText)
+                Text("\(Self.greetingText(for: context.date)),\n\(myName)")
+                    .font(.largeTitle.weight(.bold))
+                    .foregroundStyle(Theme.primaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("나를 중심으로, 요즘 만나는 사람들")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.secondaryText)
+                    .padding(.top, 2)
+            }
+            .padding(.top, 4)
+        }
+    }
+
+    private var myName: String {
+        let name = auth.user?.displayName ?? auth.user?.username ?? ""
+        return name.isEmpty ? "반가워요" : "\(name)님"
+    }
+
+    static func greetingText(for date: Date) -> String {
+        switch Calendar.current.component(.hour, from: date) {
+        case 5..<11: "좋은 아침이에요"
+        case 11..<17: "좋은 오후예요"
+        case 17..<22: "좋은 저녁이에요"
+        default: "편안한 밤이에요"
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
+            greeting
             if let counts = store.followCounts, let username = auth.user?.username {
                 followCountsRow(counts, username: username)
             }
-            Text("나를 중심으로, 요즘 만나는 사람들")
-                .font(.subheadline)
-                .foregroundStyle(Theme.secondaryText)
-                .padding(.top, 6)
 
             ContactOrbitView(
                 people: store.people,
