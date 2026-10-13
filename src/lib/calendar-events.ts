@@ -6,6 +6,7 @@
  * one implementation. Callers are responsible for resolving a trusted userId.
  */
 
+import type { calendar_v3 } from "googleapis";
 import { getAdminClient } from "@/lib/supabase";
 import {
   getAuthenticatedCalendar,
@@ -35,6 +36,17 @@ export type CalendarEvent = {
   /** 공유 캘린더에서 남이 만든 일정일 때의 작성자 */
   authorUsername?: string | null;
   authorName?: string | null;
+  /** 구글 일정의 참석자 — 저장하지 않고 읽을 때마다 그대로 전달 (회의실 등 resource 는 제외) */
+  attendees?: GoogleAttendee[];
+};
+
+export type GoogleAttendee = {
+  email: string;
+  name: string | null;
+  /** "accepted" | "declined" | "tentative" | "needsAction" */
+  response: string;
+  organizer: boolean;
+  self: boolean;
 };
 
 export type CalendarEventInput = {
@@ -58,6 +70,29 @@ export type CalendarEventInput = {
  *   When provided, filters BOTH local events (by calendar_id) AND Google
  *   events (by resolving each native calendar's `google_calendar_id`).
  */
+/** 구글 일정 참석자 — 회의실(resource) 제외. API 로 만든 일정처럼 주최자가 목록에 없으면 맨 앞에 넣는다. */
+function googleAttendees(item: calendar_v3.Schema$Event): GoogleAttendee[] {
+  const list: GoogleAttendee[] = (item.attendees ?? [])
+    .filter((a) => a.email && !a.resource)
+    .map((a) => ({
+      email: a.email as string,
+      name: a.displayName || null,
+      response: a.responseStatus || "needsAction",
+      organizer: !!a.organizer,
+      self: !!a.self,
+    }));
+  if (list.length > 0 && !list.some((a) => a.organizer) && item.organizer?.email) {
+    list.unshift({
+      email: item.organizer.email,
+      name: item.organizer.displayName || null,
+      response: "accepted",
+      organizer: true,
+      self: !!item.organizer.self,
+    });
+  }
+  return list;
+}
+
 function parseCoord(raw: string | null | undefined): number | null {
   if (!raw) return null;
   const n = Number(raw);
@@ -221,6 +256,7 @@ export async function listEventsForUser(
         tentative: item.status === "tentative",
         created_at: item.created || "",
         updated_at: item.updated || "",
+        attendees: googleAttendees(item),
       }));
     }
   } catch (err) {
