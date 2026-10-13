@@ -18,6 +18,7 @@ struct Orbit42App: App {
                         : nil
                 )
                 .tint(Theme.accent)
+                .onOpenURL { url in router.handle(url: url) }
         }
     }
 }

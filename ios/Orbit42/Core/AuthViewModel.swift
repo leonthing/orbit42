@@ -38,6 +38,7 @@ final class AuthViewModel {
         }
         #endif
         guard KeychainStore.loadToken() != nil else { return }
+        KeychainStore.syncSharedCopy()
         do {
             let response: MeResponse = try await api.get("/api/v1/me")
             user = response.user
@@ -135,6 +136,7 @@ final class AuthViewModel {
 
     func logout() {
         KeychainStore.deleteToken()
+        WidgetBridge.reload()
         user = nil
         needsOnboarding = false
     }

@@ -150,6 +150,10 @@ final class AppSettings {
     }
 
     private static func makeCalendar(firstWeekday: Int) -> Calendar {
+        // 위젯 월 달력도 같은 시작 요일로 그린다.
+        if SharedDisplaySettings.update({ $0.firstWeekday = firstWeekday }) {
+            WidgetBridge.reload()
+        }
         var calendar = Calendar(identifier: .gregorian)
         calendar.locale = Locale(identifier: "ko_KR")
         calendar.firstWeekday = firstWeekday

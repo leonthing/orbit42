@@ -23,6 +23,9 @@ targets:
     # 별도 `resources:` 키는 존재하지 않는 키라 조용히 무시되니 쓰지 말 것.
     sources:
       - path: Orbit42
+      - path: Shared
+    dependencies:
+      - target: Orbit42Widget
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: org.orbit42.app
@@ -32,8 +35,8 @@ targets:
         # UISupportedInterfaceOrientations~ipad 를 따로 준다.
         TARGETED_DEVICE_FAMILY: "1,2"
         CODE_SIGN_STYLE: Automatic
-        MARKETING_VERSION: "1.3.2"
-        CURRENT_PROJECT_VERSION: 11
+        MARKETING_VERSION: "1.4.0"
+        CURRENT_PROJECT_VERSION: 12
         ENABLE_PREVIEWS: YES
     info:
       path: Orbit42/Info.plist
@@ -70,6 +73,41 @@ targets:
       properties:
         com.apple.developer.applesignin:
           - Default
+        # 홈 화면 위젯과 토큰 사본·표시 설정 공유 (App Group 없이 키체인 공유만)
+        # 앱 전용 그룹을 맨 앞에 둬서 기본 저장 위치는 그대로, 위젯용 사본은 shared 그룹에
+        keychain-access-groups:
+          - $(AppIdentifierPrefix)org.orbit42.app
+          - $(AppIdentifierPrefix)org.orbit42.shared
+
+  # 홈 화면 위젯 (WidgetKit) — 월 달력+다가오는 일정 / 오늘+내일 / 다음 일정
+  Orbit42Widget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Orbit42Widget
+      - path: Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.orbit42.app.widget
+        PRODUCT_NAME: Orbit42Widget
+        TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGN_STYLE: Automatic
+        MARKETING_VERSION: "1.4.0"
+        CURRENT_PROJECT_VERSION: 12
+        SKIP_INSTALL: YES
+    info:
+      path: Orbit42Widget/Info.plist
+      properties:
+        CFBundleDisplayName: Orbit42
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: Orbit42Widget/Orbit42Widget.entitlements
+      properties:
+        keychain-access-groups:
+          - $(AppIdentifierPrefix)org.orbit42.shared
 
 schemes:
   Orbit42:

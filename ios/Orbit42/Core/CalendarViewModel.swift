@@ -50,9 +50,14 @@ final class CalendarViewModel {
     // MARK: - 표시 캘린더 필터
 
     /// 캘린더 탭에서 숨긴 캘린더 id — 기기별 설정으로 유지된다.
-    private(set) var hiddenCalendarIds: Set<String> = Set(
-        UserDefaults.standard.stringArray(forKey: "hiddenCalendarIds") ?? []
-    )
+    private(set) var hiddenCalendarIds: Set<String> = CalendarViewModel.loadHiddenCalendarIds()
+
+    /// 위젯도 같은 캘린더를 숨기도록 공유 설정에 맞춰 둔다.
+    private static func loadHiddenCalendarIds() -> Set<String> {
+        let ids = UserDefaults.standard.stringArray(forKey: "hiddenCalendarIds") ?? []
+        SharedDisplaySettings.update { $0.hiddenCalendarIds = ids.sorted() }
+        return Set(ids)
+    }
 
     func isCalendarVisible(_ id: String) -> Bool {
         !hiddenCalendarIds.contains(id)
@@ -65,6 +70,8 @@ final class CalendarViewModel {
             hiddenCalendarIds.insert(id)
         }
         UserDefaults.standard.set(Array(hiddenCalendarIds), forKey: "hiddenCalendarIds")
+        SharedDisplaySettings.update { $0.hiddenCalendarIds = hiddenCalendarIds.sorted() }
+        WidgetBridge.reload()
     }
 
     /// 선택된 날짜의 이벤트 — 종일 먼저, 그다음 시작 시각 순.
@@ -150,6 +157,8 @@ final class CalendarViewModel {
                 "/api/v1/calendar/events?year=\(key.year)&month=\(key.month)"
             )
             cache[key] = MonthData(events: response.events, calendars: response.calendars)
+            // 일정 추가·수정·삭제 뒤의 강제 새로고침 — 홈 화면 위젯도 다시 받게 한다.
+            if force { WidgetBridge.reload() }
         } catch is CancellationError {
             return
         } catch let urlError as URLError where urlError.code == .cancelled {
@@ -294,6 +303,7 @@ final class CalendarViewModel {
                 "/api/v1/calendar/events/\(event.id)/completion",
                 body: UpdateEventCompletionRequest(completed: completed)
             )
+            WidgetBridge.reload()
         } catch {
             applyCompletion(eventId: event.id, completed: previous)
             throw error

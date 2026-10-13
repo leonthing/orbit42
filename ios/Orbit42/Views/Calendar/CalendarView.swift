@@ -41,8 +41,22 @@ struct CalendarView: View {
             }
             .onAppear {
                 applyEventRequest(router.calendarEventRequest)
+                applyDateRequest(router.calendarDateRequest)
+            }
+            // 홈 화면 위젯에서 누른 날짜.
+            .onChange(of: router.calendarDateRequest) { _, date in
+                applyDateRequest(date)
             }
         }
+    }
+
+    /// 위젯 딥링크 — 월 보기로 그 날짜를 선택한다.
+    private func applyDateRequest(_ date: Date?) {
+        guard let date else { return }
+        router.calendarDateRequest = nil
+        selectedEvent = nil
+        scheduleViewMode = .month
+        viewModel.select(date: date)
     }
 
     /// 알림 딥링크 — 그 일정이 있는 날로 이동해 상세 시트를 연다.
