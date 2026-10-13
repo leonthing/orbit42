@@ -39,7 +39,7 @@ const KST_FMT: Intl.DateTimeFormatOptions = {
   month: "long",
   day: "numeric",
   weekday: "short",
-  hour: "2-digit",
+  hour: "numeric",
   minute: "2-digit",
 };
 

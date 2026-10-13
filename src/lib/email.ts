@@ -4,6 +4,7 @@ import {
   emailButton,
   detailCard,
   quoteBlock,
+  listBlock,
   mutedNote,
   escapeHtml,
 } from "@/lib/email-layout";
@@ -52,32 +53,38 @@ export function siteUrl(path: string) {
   return `${SITE_URL.replace(/\/$/, "")}${path}`;
 }
 
-/** Korean KST long date/time, e.g. "2026년 6월 27일 토 오후 4:00". */
+/** 한국 시간, 예: "10월 28일 (화) 오전 11:00" — 올해가 아니면 연도를 붙인다. */
 function fmtWhen(when: string) {
-  return new Date(when).toLocaleString("ko-KR", {
+  const date = new Date(when);
+  const kstYear = (d: Date) =>
+    Number(new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Seoul", year: "numeric" }).format(d));
+  const day = new Intl.DateTimeFormat("ko-KR", {
     timeZone: "Asia/Seoul",
-    year: "numeric",
+    ...(kstYear(date) !== kstYear(new Date()) ? { year: "numeric" as const } : {}),
     month: "long",
     day: "numeric",
-    weekday: "short",
-    hour: "2-digit",
+  }).format(date);
+  const weekday = new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", weekday: "short" }).format(date);
+  const time = new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    hour: "numeric",
     minute: "2-digit",
-  });
+  }).format(date);
+  return `${day} (${weekday}) ${time}`;
 }
 
 export async function sendVerifyEmail(to: string, token: string) {
   const url = siteUrl(`/verify-email?token=${encodeURIComponent(token)}`);
   const html = renderEmail({
     eyebrow: "이메일 인증",
-    heading: "이메일 주소를 확인해주세요",
-    intro: "아래 버튼을 눌러 Orbit42 가입을 완료하세요.",
-    preheader: "Orbit42 이메일 인증 — 24시간 내에 확인해주세요.",
+    heading: "이메일 주소를 확인해 주세요",
+    intro: "아래 버튼을 누르면 가입이 끝나요. 링크는 24시간 동안 쓸 수 있어요.",
+    preheader: "Orbit42 이메일 확인",
     bodyHtml:
       emailButton("이메일 확인하기", url) +
       mutedNote(
-        `버튼이 안 되면 이 링크를 복사해 붙여넣으세요:<br><a href="${url}">${url}</a>`,
-      ) +
-      mutedNote("링크는 24시간 동안 유효합니다."),
+        `버튼이 안 되면 이 링크를 복사해 붙여 넣으세요.<br><a href="${url}">${url}</a>`,
+      ),
   });
   return send(to, "[Orbit42] 이메일 확인", html);
 }
@@ -108,7 +115,7 @@ export async function sendBookingReceivedToHost(
     preheader: `${args.slotTitle} · ${fmtWhen(args.when)}`,
     bodyHtml:
       detailCard(escapeHtml(args.slotTitle), [
-        { label: "일시", value: fmtWhen(args.when), strong: true },
+        { label: "일시", value: fmtWhen(args.when) },
         { label: "게스트", value: guestValue },
       ]) +
       (args.message ? quoteBlock(escapeHtml(args.message)) : "") +
@@ -116,7 +123,7 @@ export async function sendBookingReceivedToHost(
       mutedNote(
         args.autoApprove
           ? "자동으로 확정된 예약이에요. 캘린더에서 확인하실 수 있어요."
-          : "호스트 확인을 기다리는 예약입니다. 수락하거나 거절해주세요.",
+          : "내 확인을 기다리는 예약이에요. 수락하거나 거절해 주세요.",
       ),
   });
   return send(to, `[Orbit42] 새 예약: ${args.slotTitle}`, html);
@@ -129,18 +136,16 @@ export async function sendBookingConfirmedToGuest(
   const html = renderEmail({
     eyebrow: "예약 확정",
     heading: "예약이 확정됐어요",
-    intro: `${escapeHtml(args.hostLabel)}님과의 일정이 확정되었어요.`,
+    intro: `${escapeHtml(args.hostLabel)}님과의 일정이 확정됐어요.`,
     preheader: `${args.slotTitle} · ${fmtWhen(args.when)}`,
     bodyHtml:
       detailCard(escapeHtml(args.slotTitle), [
         { label: "호스트", value: escapeHtml(args.hostLabel) },
-        { label: "일시", value: fmtWhen(args.when), strong: true },
+        { label: "일시", value: fmtWhen(args.when) },
         { label: "장소", value: args.location ? escapeHtml(args.location) : "" },
       ]) +
       emailButton("내 예약 보기", siteUrl("/bookings")) +
-      mutedNote(
-        "일정에 맞춰 찾아뵐게요. 변경이 필요하면 호스트에게 미리 알려주세요.",
-      ),
+      mutedNote("시간을 바꿔야 하면 호스트에게 미리 알려 주세요."),
   });
   return send(to, `[Orbit42] 예약 확정: ${args.slotTitle}`, html);
 }
@@ -166,8 +171,8 @@ export async function sendPaymentInstructionsToGuest(
     bodyHtml:
       detailCard(escapeHtml(args.slotTitle), [
         { label: "일시", value: fmtWhen(args.when) },
-        { label: "금액", value: amount, strong: true },
-        { label: "입금 기한", value: fmtWhen(args.dueAt), strong: true },
+        { label: "금액", value: amount },
+        { label: "입금 기한", value: fmtWhen(args.dueAt) },
       ]) +
       quoteBlock(escapeHtml(args.instructions)) +
       mutedNote("기한까지 입금이 확인되지 않으면 예약은 자동으로 취소돼요."),
@@ -192,7 +197,7 @@ export async function sendBookingReminderEmail(
     preheader: `${args.slotTitle} · ${fmtWhen(args.when)}`,
     bodyHtml:
       detailCard(escapeHtml(args.slotTitle), [
-        { label: "일시", value: fmtWhen(args.when), strong: true },
+        { label: "일시", value: fmtWhen(args.when) },
         {
           label: args.role === "host" ? "게스트" : "호스트",
           value: escapeHtml(args.otherLabel),
@@ -200,7 +205,7 @@ export async function sendBookingReminderEmail(
         { label: "장소", value: args.location ? escapeHtml(args.location) : "" },
       ]) +
       emailButton("예약 확인하기", siteUrl(args.manageUrl)) +
-      mutedNote("일정 변경이 필요하면 미리 상대방에게 알려주세요."),
+      mutedNote("시간을 바꿔야 하면 상대에게 미리 알려 주세요."),
   });
   return send(to, `[Orbit42] 내일 예약: ${args.slotTitle}`, html);
 }
@@ -211,8 +216,7 @@ export async function sendBookingCanceledToGuest(
 ) {
   const html = renderEmail({
     eyebrow: "예약 취소",
-    heading: "예약이 취소되었어요",
-    intro: "불편을 드려 죄송해요.",
+    heading: "예약이 취소됐어요",
     preheader: `${args.slotTitle} · ${fmtWhen(args.when)}`,
     bodyHtml:
       detailCard(escapeHtml(args.slotTitle), [
@@ -220,7 +224,7 @@ export async function sendBookingCanceledToGuest(
         { label: "일시", value: fmtWhen(args.when) },
       ]) +
       emailButton("다른 시간 찾기", siteUrl("/explore")) +
-      mutedNote("다른 시간을 원하시면 Orbit42에서 다시 예약해주세요."),
+      mutedNote("다른 시간이 필요하면 Orbit42에서 다시 예약해 주세요."),
   });
   return send(to, `[Orbit42] 예약 취소: ${args.slotTitle}`, html);
 }
@@ -243,10 +247,10 @@ export async function sendBookingRescheduleProposal(
   const html = renderEmail({
     eyebrow: args.decided ? "예약 시간 변경" : "시간 변경 제안",
     heading: args.decided
-      ? "예약 시간이 변경되었어요"
+      ? "예약 시간이 바뀌었어요"
       : `${args.proposerLabel}님이 시간 변경을 제안했어요`,
     intro: args.decided
-      ? "새 시간으로 캘린더도 함께 옮겨두었어요."
+      ? "캘린더의 일정도 새 시간으로 옮겼어요."
       : "수락하면 예약이 새 시간으로 옮겨져요.",
     preheader: `${args.slotTitle} · ${fmtWhen(args.when)}`,
     bodyHtml:
@@ -388,7 +392,7 @@ export async function sendTimeRequestEmail(
     preheader: args.message.slice(0, 80),
     bodyHtml:
       detailCard("요청 내용", [
-        { label: "시간", value: `${args.durationMin}분`, strong: true },
+        { label: "시간", value: `${args.durationMin}분` },
         { label: "제안 금액", value: budgetValue },
         {
           label: "희망 시간",
@@ -412,16 +416,7 @@ export async function sendWeeklyDigestEmail(
     upcomingBookings: number;
   },
 ) {
-  const FONT =
-    "-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Pretendard',Roboto,'Segoe UI',sans-serif";
-  const listHtml = args.lines.length
-    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:18px 0">${args.lines
-        .map(
-          (l) =>
-            `<tr><td style="padding:9px 0;border-bottom:1px solid #f0f0f0;font-family:${FONT};font-size:14px;line-height:1.5;color:#3f3f46">${escapeHtml(l)}</td></tr>`,
-        )
-        .join("")}</table>`
-    : "";
+  const listHtml = listBlock(args.lines.map(escapeHtml));
   const extras: string[] = [];
   if (args.unreadMessages > 0) {
     extras.push(`안 읽은 메시지가 ${args.unreadMessages}개 있어요.`);
@@ -451,16 +446,15 @@ export async function sendPasswordResetEmail(to: string, token: string) {
   const url = siteUrl(`/reset-password?token=${encodeURIComponent(token)}`);
   const html = renderEmail({
     eyebrow: "비밀번호",
-    heading: "비밀번호를 재설정하세요",
+    heading: "비밀번호를 새로 정해 주세요",
     intro:
-      "비밀번호 재설정을 요청하셨다면 아래 버튼을 눌러주세요. 요청하지 않았다면 이 메일을 무시해도 됩니다.",
-    preheader: "Orbit42 비밀번호 재설정 — 1시간 내에 완료해주세요.",
+      "아래 버튼을 누르면 새 비밀번호를 정할 수 있어요. 링크는 1시간 동안 쓸 수 있어요. 요청하지 않았다면 이 메일은 무시해도 돼요.",
+    preheader: "Orbit42 비밀번호 재설정",
     bodyHtml:
       emailButton("비밀번호 재설정", url) +
       mutedNote(
-        `버튼이 안 되면 이 링크를 복사해 붙여넣으세요:<br><a href="${url}">${url}</a>`,
-      ) +
-      mutedNote("링크는 1시간 동안 유효합니다."),
+        `버튼이 안 되면 이 링크를 복사해 붙여 넣으세요.<br><a href="${url}">${url}</a>`,
+      ),
   });
   return send(to, "[Orbit42] 비밀번호 재설정", html);
 }
