@@ -22,6 +22,7 @@ export async function completedKeysFor(
       .from("event_completions")
       .select("event_key")
       .eq("user_id", userId)
+      .eq("status", "done")
       .in("event_key", keys.slice(i, i + CHUNK));
     for (const r of data ?? []) found.add(r.event_key as string);
   }
@@ -45,6 +46,7 @@ export async function completedPairsFor(
       .from("event_completions")
       .select("user_id, event_key")
       .in("user_id", userIds)
+      .eq("status", "done")
       .in("event_key", keys.slice(i, i + CHUNK));
     for (const r of data ?? []) {
       found.add(`${r.user_id as string}|${r.event_key as string}`);
