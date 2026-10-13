@@ -24,7 +24,7 @@ export default function PrivacyPage() {
       <main className="mx-auto max-w-3xl px-4 pb-24 pt-6 sm:px-6">
         <h1 className="text-3xl font-bold text-charcoal-100">개인정보처리방침</h1>
         <p className="mt-2 text-sm text-charcoal-500">
-          최종 업데이트: 2026년 10월 7일
+          최종 업데이트: 2026년 10월 14일
         </p>
 
         <div className="mt-10 space-y-8">
@@ -261,7 +261,9 @@ export default function PrivacyPage() {
                 추가·수정·삭제합니다. 이용자가 직접 켠 경우에만 일정 참석자의
                 이름·이메일로 본인만 보는 관계 지도(오르빗)를 만듭니다. 그 밖의 목적
                 (광고, 데이터 판매, 신용 평가, AI·머신러닝 모델 학습 등)에는 사용하지
-                않습니다.
+                않습니다. 이용자가 Orbit42에서 Google 캘린더 일정에 참석자를 추가하면,
+                확인을 받은 뒤 그 일정에 참석자 이메일을 추가하고 Google이 참석자에게
+                초대 메일을 보냅니다. 참석자 정보는 서비스에 따로 저장하지 않습니다.
               </li>
               <li>
                 <b>공유</b>: Google 사용자 데이터를 제3자에게 판매하거나 제공하지
@@ -310,7 +312,10 @@ export default function PrivacyPage() {
                 user explicitly turns it on, attendee names and emails are used to
                 build a private relationship map visible only to that user. Google
                 user data is not used for advertising, sale, credit decisions, or
-                training AI/ML models.
+                training AI/ML models. When the user adds an attendee to a Google
+                Calendar event in Orbit42 (after a confirmation step), the
+                attendee&apos;s email is added to that event and Google sends them an
+                invitation. Attendee data is not stored by Orbit42.
               </p>
               <p>
                 <b>Data sharing.</b> We do not sell or transfer Google user data to
@@ -356,6 +361,10 @@ export default function PrivacyPage() {
               <li>
                 2026-10-07: Google 사용자 데이터 처리(접근·사용·공유·보호·보관/삭제,
                 제한적 사용 준수) 항목 추가, 캘린더 권한을 최소 범위로 변경
+              </li>
+              <li>
+                2026-10-14: Google 캘린더 일정 참석자 추가(초대 메일 발송) 사용 목적
+                추가
               </li>
             </List>
           </Section>
