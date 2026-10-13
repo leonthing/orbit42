@@ -22,6 +22,7 @@ struct AddEventSheet: View {
     init(
         viewModel: CalendarViewModel,
         defaultDate: Date,
+        defaultStart: Date? = nil,
         initialTitle: String = "",
         initialParticipants: [PendingParticipant] = []
     ) {
@@ -35,7 +36,8 @@ struct AddEventSheet: View {
         let now = Date()
         let hour = calendar.component(.hour, from: now)
         let suggestedHour = min(hour + 1, 23)
-        let startDate = calendar.date(
+        // 하루 보기에서 빈 시간을 누르면 그 시각(defaultStart)으로 연다.
+        let startDate = defaultStart ?? calendar.date(
             bySettingHour: suggestedHour, minute: 0, second: 0,
             of: calendar.startOfDay(for: defaultDate)
         ) ?? defaultDate

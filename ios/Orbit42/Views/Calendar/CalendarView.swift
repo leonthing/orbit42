@@ -5,6 +5,10 @@ import SwiftUI
 struct CalendarView: View {
     @State private var viewModel = CalendarViewModel()
     @State private var showingAddSheet = false
+    /// 하루 보기에서 빈 시간을 눌렀을 때의 시작 시각 (+ 버튼은 nil)
+    @State private var addStart: Date?
+    /// 마지막으로 고른 보기 — "day" 면 하루 보기로 연다.
+    @AppStorage("calendarScheduleMode") private var storedScheduleMode = "month"
     @State private var selectedEvent: CalendarEvent?
     @State private var completionErrorMessage: String?
 
@@ -22,7 +26,7 @@ struct CalendarView: View {
             .navigationTitle("캘린더")
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showingAddSheet) {
-                AddEventSheet(viewModel: viewModel, defaultDate: viewModel.selectedDate)
+                AddEventSheet(viewModel: viewModel, defaultDate: viewModel.selectedDate, defaultStart: addStart)
             }
             .sheet(item: $selectedEvent) { event in
                 EventDetailSheet(viewModel: viewModel, event: event)
@@ -40,6 +44,7 @@ struct CalendarView: View {
                 applyEventRequest(request)
             }
             .onAppear {
+                if storedScheduleMode == "day" && scheduleViewMode == .month { scheduleViewMode = .day }
                 applyEventRequest(router.calendarEventRequest)
                 applyDateRequest(router.calendarDateRequest)
             }
@@ -50,12 +55,12 @@ struct CalendarView: View {
         }
     }
 
-    /// 위젯 딥링크 — 월 보기로 그 날짜를 선택한다.
+    /// 위젯 딥링크 — 그 날짜의 하루 보기로 연다.
     private func applyDateRequest(_ date: Date?) {
         guard let date else { return }
         router.calendarDateRequest = nil
         selectedEvent = nil
-        scheduleViewMode = .month
+        scheduleViewMode = .day
         viewModel.select(date: date)
     }
 
@@ -85,9 +90,17 @@ struct CalendarView: View {
         case year
         case month
         case week
+        /// 하루 보기(시간축) — 툴바의 보기 전환으로 월 보기와 오간다.
+        case day
     }
 
-    @State private var scheduleViewMode: ScheduleViewMode = .month
+    @State private var scheduleViewMode: ScheduleViewMode = .month {
+        didSet {
+            // 월↔일 전환만 기억한다(연·주는 월에서 드릴다운하는 중간 단계).
+            if scheduleViewMode == .day { storedScheduleMode = "day" }
+            else if scheduleViewMode == .month { storedScheduleMode = "month" }
+        }
+    }
 
     private var scheduleContent: some View {
         VStack(spacing: 0) {
@@ -109,6 +122,13 @@ struct CalendarView: View {
                     .overlay(Theme.fill(0.08))
                     .padding(.top, 8)
                 swipeableEventList
+            case .day:
+                dayHeader
+                swipeableWeekStrip
+                Divider()
+                    .overlay(Theme.fill(0.08))
+                    .padding(.top, 8)
+                dayTimeline
             }
         }
         .toolbar {
@@ -121,8 +141,18 @@ struct CalendarView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 calendarFilterMenu
             }
+            // 보기 전환 — 월 ↔ 일(시간축)
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
+                    withAnimation { scheduleViewMode = scheduleViewMode == .day ? .month : .day }
+                } label: {
+                    Image(systemName: scheduleViewMode == .day ? "calendar" : "calendar.day.timeline.left")
+                }
+                .accessibilityLabel(scheduleViewMode == .day ? "월 보기" : "하루 보기")
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    addStart = nil
                     showingAddSheet = true
                 } label: {
                     Image(systemName: "plus")
@@ -306,6 +336,97 @@ struct CalendarView: View {
             )
         }
         .buttonStyle(.plain)
+    }
+
+    // MARK: - 하루 보기
+
+    private static let dayTitleFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ko_KR")
+        formatter.dateFormat = "M월 d일 (E)"
+        return formatter
+    }()
+
+    private var dayHeader: some View {
+        HStack(spacing: 4) {
+            Button {
+                withAnimation { scheduleViewMode = .month }
+            } label: {
+                HStack(spacing: 3) {
+                    Image(systemName: "chevron.left")
+                        .font(.subheadline.weight(.semibold))
+                    Text("\(calendar.component(.month, from: viewModel.selectedDate))월")
+                        .font(.subheadline.weight(.medium))
+                }
+                .foregroundStyle(Theme.accent)
+                .frame(height: 44)
+            }
+            .accessibilityLabel("월간 보기")
+
+            Spacer()
+
+            Text(Self.dayTitleFormatter.string(from: viewModel.selectedDate))
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Theme.primaryText)
+
+            Spacer()
+
+            Button {
+                withAnimation { shiftDays(-1) }
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.body.weight(.semibold))
+                    .frame(width: 40, height: 44)
+            }
+            .accessibilityLabel("전날")
+            Button {
+                withAnimation { shiftDays(1) }
+            } label: {
+                Image(systemName: "chevron.right")
+                    .font(.body.weight(.semibold))
+                    .frame(width: 40, height: 44)
+            }
+            .accessibilityLabel("다음날")
+        }
+        .padding(.horizontal, 8)
+        .padding(.top, 4)
+    }
+
+    /// 주간 날짜 띠 — 좌우로 밀면 지난주/다음 주.
+    private var swipeableWeekStrip: some View {
+        weekStrip
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 20)
+                    .onEnded { value in
+                        let dx = value.translation.width
+                        guard abs(dx) > 40, abs(dx) > abs(value.translation.height) else { return }
+                        withAnimation { shiftDays(dx < 0 ? 7 : -7) }
+                    }
+            )
+    }
+
+    @ViewBuilder
+    private var dayTimeline: some View {
+        if viewModel.currentMonthData == nil {
+            eventListSection
+        } else {
+            DayTimelineView(
+                date: viewModel.selectedDate,
+                events: viewModel.events(on: viewModel.selectedDate),
+                calendars: viewModel.calendars,
+                calendar: calendar,
+                onOpen: { selectedEvent = $0 },
+                onToggleCompletion: { toggleCompletion($0) },
+                onAddAt: { start in
+                    addStart = start
+                    showingAddSheet = true
+                },
+                onSwipeDay: { delta in
+                    withAnimation(.easeInOut(duration: 0.2)) { shiftDays(delta) }
+                }
+            )
+        }
     }
 
     private func shiftDays(_ delta: Int) {
