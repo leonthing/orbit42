@@ -261,6 +261,27 @@ enum WidgetStore {
         save(feed)
     }
 
+    static func isCompleted(eventId: String) -> Bool? {
+        load()?.months.values.lazy.flatMap(\.events).first(where: { $0.id == eventId })?.completed
+    }
+
+    // 체크 직후엔 서버를 다시 받지 않고 캐시로 그린다 — 저장 전 서버 값이 체크를 덮어쓰지 않게, 그리고 바로 보이게.
+    private static let localChangeKey = "widgetLocalChangeAt"
+
+    static func markLocalChange() {
+        UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: localChangeKey)
+    }
+
+    static func clearLocalChange() {
+        UserDefaults.standard.removeObject(forKey: localChangeKey)
+    }
+
+    /// 마지막 체크 후 30초 안이면 true
+    static var hasRecentLocalChange: Bool {
+        let at = UserDefaults.standard.double(forKey: localChangeKey)
+        return at > 0 && Date().timeIntervalSince1970 - at < 30
+    }
+
     static func clear() {
         guard let url = fileURL else { return }
         try? FileManager.default.removeItem(at: url)

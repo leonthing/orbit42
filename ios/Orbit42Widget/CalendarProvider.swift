@@ -67,7 +67,8 @@ struct CalendarProvider: TimelineProvider {
     func getTimeline(in context: Context, completion: @escaping (Timeline<CalendarEntry>) -> Void) {
         Task {
             let now = Date()
-            let entry = await Self.loadEntry(now: now, fetch: true)
+            // 체크박스를 누른 직후면 캐시로 바로 그린다 (서버 저장은 Intent 가 이어서 한다)
+            let entry = await Self.loadEntry(now: now, fetch: !WidgetStore.hasRecentLocalChange)
             completion(Timeline(entries: Self.entries(from: entry), policy: .after(now.addingTimeInterval(15 * 60))))
         }
     }

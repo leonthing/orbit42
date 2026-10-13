@@ -78,7 +78,8 @@ struct CompletionCheckbox: View {
             Image(systemName: event.completed ? "checkmark.circle.fill" : "circle")
                 .font(.system(size: size, weight: .medium))
                 .foregroundStyle(tint)
-                .frame(width: size + 6, height: size + 6)
+                // 최소 28pt 터치 영역 — 옆의 카드 링크(앱 열기)와 겹치지 않게 칸을 고정한다
+                .frame(width: 28, height: 28)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -186,7 +187,7 @@ struct TintedEventRow: View {
     }
 
     /// 배치 계산용 대략 높이 (pt)
-    static func height(_ event: WidgetEvent) -> CGFloat { event.allDay ? 22 : 36 }
+    static func height(_ event: WidgetEvent) -> CGFloat { event.allDay ? 30 : 38 }
 }
 
 // MARK: - 중형 A: 월 달력 + 다가오는 일정 3개
