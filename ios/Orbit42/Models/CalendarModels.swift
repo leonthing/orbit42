@@ -66,6 +66,8 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
     let travelMin: Int?
     /// endAt 이 "2026-07-26" 처럼 날짜만으로 왔는지 (종일 이벤트의 마지막 날 포함 여부 판단용)
     let endWasDateOnly: Bool
+    /// 구글 일정의 참석자 (구글 캘린더에서 초대한 사람 — Orbit42 사용자가 아니어도). 없으면 빈 배열.
+    let attendees: [GoogleAttendee]
 
     var isGoogle: Bool { source == "google" }
     /// 초대받은 일정 (읽기 전용 — 수락/거절만 가능)
@@ -76,6 +78,7 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
         case bucketOverride, earningKrw, autoValueKrw, completed
         case inviteId, inviteStatus, inviterName
         case location, locationLat, locationLng, travelMin
+        case attendees
     }
 
     init(from decoder: Decoder) throws {
@@ -98,6 +101,7 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
         locationLat = try container.decodeIfPresent(Double.self, forKey: .locationLat)
         locationLng = try container.decodeIfPresent(Double.self, forKey: .locationLng)
         travelMin = try container.decodeIfPresent(Int.self, forKey: .travelMin)
+        attendees = (try? container.decodeIfPresent([GoogleAttendee].self, forKey: .attendees)) ?? []
 
         let startRaw = try container.decode(String.self, forKey: .startAt)
         let endRaw = try container.decode(String.self, forKey: .endAt)
@@ -147,6 +151,36 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
               let info = calendars.first(where: { $0.id == calendarId })
         else { return Theme.accent }
         return info.displayColor
+    }
+}
+
+/// 구글 일정 참석자 — 서버가 구글에서 읽은 그대로 전달 (저장하지 않음)
+struct GoogleAttendee: Decodable, Hashable, Identifiable, Sendable {
+    let email: String
+    let name: String?
+    /// "accepted" | "declined" | "tentative" | "needsAction"
+    let response: String
+    let organizer: Bool
+    let isSelf: Bool
+    /// 이메일이 Orbit42 사용자와 같으면 그 username — 프로필로 연결
+    let username: String?
+
+    var id: String { email }
+    var label: String { (name?.isEmpty == false ? name : nil) ?? email }
+
+    private enum CodingKeys: String, CodingKey {
+        case email, name, response, organizer, username
+        case isSelf = "self"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        email = try c.decode(String.self, forKey: .email)
+        name = try c.decodeIfPresent(String.self, forKey: .name)
+        response = try c.decodeIfPresent(String.self, forKey: .response) ?? "needsAction"
+        organizer = try c.decodeIfPresent(Bool.self, forKey: .organizer) ?? false
+        isSelf = try c.decodeIfPresent(Bool.self, forKey: .isSelf) ?? false
+        username = try c.decodeIfPresent(String.self, forKey: .username)
     }
 }
 

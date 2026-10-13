@@ -157,7 +157,8 @@ struct DayTimelineView: View {
                             .lineLimit(1)
                     }
                     if block.height > 44 {
-                        Text(timeText(event))
+                        // 참석자가 있으면 시간 옆에 👤n (공간 될 때만)
+                        Text(timeText(event) + (event.attendees.count > 1 ? "  👤\(event.attendees.count)" : ""))
                             .font(.caption2)
                             .lineLimit(1)
                             .opacity(0.9)

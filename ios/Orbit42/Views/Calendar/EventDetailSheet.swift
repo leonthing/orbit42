@@ -173,6 +173,9 @@ struct EventDetailSheet: View {
 
                 locationMapSection
 
+                // 참석자는 구글·애플 캘린더처럼 시간·장소 바로 아래
+                participantsSection
+
                 if let description = event.description, !description.isEmpty {
                     Section("메모") {
                         Text(description)
@@ -237,8 +240,6 @@ struct EventDetailSheet: View {
                 earningSection
 
                 timelogSection
-
-                participantsSection
 
                 Section {
                     Button {
@@ -905,6 +906,10 @@ struct EventDetailSheet: View {
 
     private var participantsSection: some View {
         Section {
+            // 구글 캘린더에서 초대한 참석자 (읽기 전용)
+            ForEach(event.attendees) { attendee in
+                googleAttendeeRow(attendee)
+            }
             if let participants, !participants.isEmpty {
                 ForEach(participants) { participant in
                     HStack(spacing: 10) {
@@ -953,11 +958,60 @@ struct EventDetailSheet: View {
         } header: {
             Text("참석자")
         } footer: {
-            Text("orbit42 사용자를 태그하거나 이메일로 초대할 수 있어요. 태그하면 상대 캘린더에도 이 일정이 보여요.")
+            Text(event.attendees.isEmpty
+                 ? "orbit42 사용자를 태그하거나 이메일로 초대할 수 있어요. 태그하면 상대 캘린더에도 이 일정이 보여요."
+                 : "'Google' 표시는 구글 캘린더에서 초대한 참석자예요(여기서는 보기만 해요). 추가는 orbit42 태그·이메일 초대로 돼요.")
         }
         .listRowBackground(Theme.surface)
         // 주의: sheet/task 를 이 Section 에 붙이면 목록 리빌드 때 시트가 바로
         // 닫히는 문제가 있어 최상위(NavigationStack)에 붙인다.
+    }
+
+    @ViewBuilder
+    private func googleAttendeeRow(_ attendee: GoogleAttendee) -> some View {
+        let row = HStack(spacing: 10) {
+            DiscoverAvatar(url: nil, name: attendee.label, size: 30)
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: 6) {
+                    Text(attendee.label + (attendee.isSelf ? " (나)" : ""))
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.primaryText)
+                        .lineLimit(1)
+                    Text("Google")
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(Theme.secondaryText)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Theme.fill(0.08), in: Capsule())
+                }
+                if attendee.organizer || attendee.label != attendee.email {
+                    Text(attendee.organizer ? "주최자" + (attendee.label != attendee.email ? " · \(attendee.email)" : "") : attendee.email)
+                        .font(.caption)
+                        .foregroundStyle(Theme.secondaryText)
+                        .lineLimit(1)
+                }
+            }
+            Spacer()
+            responseIcon(attendee.response)
+        }
+        if let username = attendee.username, !attendee.isSelf {
+            NavigationLink { PersonProfileView(username: username) } label: { row }
+        } else {
+            row
+        }
+    }
+
+    /// 응답 상태 — 수락 ✓ · 거절 ✕ · 미정 ? · 미응답 ○
+    private func responseIcon(_ response: String) -> some View {
+        let (symbol, color, label): (String, Color, String) = switch response {
+        case "accepted": ("checkmark.circle.fill", .green, "수락")
+        case "declined": ("xmark.circle.fill", .orange, "거절")
+        case "tentative": ("questionmark.circle.fill", Theme.secondaryText, "미정")
+        default: ("circle", Theme.secondaryText, "미응답")
+        }
+        return Image(systemName: symbol)
+            .foregroundStyle(color)
+            .accessibilityLabel(label)
     }
 
     /// 참석자 초대에 함께 보내는 일정 스냅샷 (장소·메모 포함 — 초대 메일용).
