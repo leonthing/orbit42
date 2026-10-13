@@ -2,7 +2,7 @@ import SwiftUI
 
 /// 하루 보기 — 맨 위 종일 줄 + 0~24시 시간축에 일정 블록 (구글 캘린더 하루 보기식).
 /// 겹치는 일정은 옆으로 나눠 그리고, 오늘이면 현재 시각에 빨간 선을 긋는다.
-/// 블록 탭 = 상세, 길게 누르기 = 완료 체크, 빈 시간 탭 = 그 시각으로 새 일정, 가로 스와이프 = 전날/다음날.
+/// 블록 탭 = 상세, 블록 앞 체크박스 = 완료 토글, 빈 시간 탭 = 그 시각으로 새 일정, 가로 스와이프 = 전날/다음날.
 struct DayTimelineView: View {
     let date: Date
     /// 그 날에 걸친 일정 (숨긴 캘린더 제외 — `CalendarViewModel.events(on:)`)
@@ -61,20 +61,24 @@ struct DayTimelineView: View {
                 .padding(.top, 5)
             VStack(spacing: 3) {
                 ForEach(allDayEvents) { event in
-                    Button { onOpen(event) } label: {
-                        Text(event.title)
-                            .font(.caption.weight(.semibold))
-                            .strikethrough(event.completed)
-                            .lineLimit(1)
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(event.displayColor(in: calendars), in: RoundedRectangle(cornerRadius: 6))
-                            .opacity(event.completed ? 0.55 : 1)
+                    HStack(spacing: 0) {
+                        checkbox(event, size: 14)
+                        Button { onOpen(event) } label: {
+                            Text(event.title)
+                                .font(.caption.weight(.semibold))
+                                .strikethrough(event.completed)
+                                .lineLimit(1)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.vertical, 4)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
-                    .contextMenu { completionMenu(event) }
+                    .foregroundStyle(.white)
+                    .padding(.leading, 3)
+                    .padding(.trailing, 8)
+                    .background(event.displayColor(in: calendars), in: RoundedRectangle(cornerRadius: 6))
+                    .opacity(event.completed ? 0.55 : 1)
                 }
             }
             .padding(.trailing, 12)
@@ -147,48 +151,53 @@ struct DayTimelineView: View {
 
     private func eventBlock(_ block: Block) -> some View {
         let event = block.event
-        return Button { onOpen(event) } label: {
-            VStack(alignment: .leading, spacing: 1) {
-                Text(event.title)
-                    .font(.caption.weight(.semibold))
-                    .strikethrough(event.completed)
-                    .lineLimit(block.height > 44 ? 2 : 1)
-                if block.height > 30, let location = event.location, !location.isEmpty {
-                    Text(location)
-                        .font(.caption2)
-                        .lineLimit(1)
+        // 짧은 블록(30분 이하)은 체크박스와 제목을 한 줄에, 긴 블록은 체크박스 옆에 제목·장소·시간.
+        return HStack(alignment: .top, spacing: 0) {
+            checkbox(event, size: block.height > 22 ? 15 : 12)
+            Button { onOpen(event) } label: {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(event.title)
+                        .font(.caption.weight(.semibold))
+                        .strikethrough(event.completed)
+                        .lineLimit(block.height > 44 ? 2 : 1)
+                    if block.height > 30, let location = event.location, !location.isEmpty {
+                        Text(location)
+                            .font(.caption2)
+                            .lineLimit(1)
+                    }
+                    if block.height > 44 {
+                        Text(timeText(event))
+                            .font(.caption2)
+                            .lineLimit(1)
+                            .opacity(0.9)
+                    }
+                    Spacer(minLength: 0)
                 }
-                if block.height > 44 {
-                    Text(timeText(event))
-                        .font(.caption2)
-                        .lineLimit(1)
-                        .opacity(0.9)
-                }
-                Spacer(minLength: 0)
+                .padding(.vertical, block.height > 22 ? 4 : 1)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .contentShape(Rectangle())
             }
-            .foregroundStyle(.white)
-            .padding(.horizontal, 6)
-            .padding(.vertical, block.height > 22 ? 4 : 1)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .background(event.displayColor(in: calendars), in: RoundedRectangle(cornerRadius: 6))
-            .opacity(event.completed ? 0.55 : (event.tentative ? 0.7 : 1))
-            .clipped()
+            .buttonStyle(.plain)
         }
-        .buttonStyle(.plain)
-        .contextMenu { completionMenu(event) }
+        .foregroundStyle(.white)
+        .padding(.leading, 1)
+        .padding(.trailing, 6)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(event.displayColor(in: calendars), in: RoundedRectangle(cornerRadius: 6))
+        .opacity(event.completed ? 0.55 : (event.tentative ? 0.7 : 1))
+        .clipped()
     }
 
-    @ViewBuilder
-    private func completionMenu(_ event: CalendarEvent) -> some View {
-        Button {
-            onToggleCompletion(event)
-        } label: {
-            Label(event.completed ? "완료 해제" : "완료로 표시",
-                  systemImage: event.completed ? "circle" : "checkmark.circle")
+    /// 위젯과 같은 모양의 완료 체크 — 누르면 바로 토글 (`CalendarViewModel.setCompletion`, 낙관적 반영)
+    private func checkbox(_ event: CalendarEvent, size: CGFloat) -> some View {
+        Button { onToggleCompletion(event) } label: {
+            Image(systemName: event.completed ? "checkmark.circle.fill" : "circle")
+                .font(.system(size: size, weight: .medium))
+                .frame(width: size + 10, height: size + 8)
+                .contentShape(Rectangle())
         }
-        Button { onOpen(event) } label: {
-            Label("상세 보기", systemImage: "info.circle")
-        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(event.completed ? "완료 해제" : "완료로 표시")
     }
 
     private static let timeFormatter: DateFormatter = {
