@@ -55,7 +55,8 @@ async function hmacKey(): Promise<CryptoKey> {
 // mobile bearer tokens embed their expiry so a leaked token eventually dies.
 // `purpose` marks single-purpose tokens (e.g. mobile OAuth state) — these are
 // NOT general sessions; apiSession/getSession callers must reject them.
-export type SessionData = { username: string; exp?: number; purpose?: string };
+// `pat` is the personal_access_tokens row id for purpose "personal_access" (revocable).
+export type SessionData = { username: string; exp?: number; purpose?: string; pat?: string };
 
 /** Produce a signed `<payload>.<sig>` token for the given session data. */
 export async function signSession(data: SessionData): Promise<string> {
@@ -100,9 +101,11 @@ export async function verifySession(
       const exp = (data as SessionData).exp;
       if (typeof exp === "number" && exp < Date.now() / 1000) return null;
       const purpose = (data as SessionData).purpose;
+      const pat = (data as SessionData).pat;
       return {
         username: (data as SessionData).username,
         ...(typeof purpose === "string" ? { purpose } : {}),
+        ...(typeof pat === "string" ? { pat } : {}),
       };
     }
     return null;

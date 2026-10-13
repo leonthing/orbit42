@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { verifySession } from "@/lib/session";
+import { PAT_PURPOSE, patAllows } from "@/lib/pat-scope";
 
 const PUBLIC_PATHS = [
   "/",
@@ -28,6 +29,16 @@ export async function middleware(request: NextRequest) {
     return NextResponse.rewrite(url);
   }
 
+  // 개인 액세스 토큰은 허용 목록(일정·예약 읽기 + 완료 체크) 밖에서는 아예 막는다 —
+  // 서버 액션처럼 Bearer 를 받아 주는 다른 경로로 새지 않게.
+  const authorization = request.headers.get("authorization") ?? "";
+  if (authorization.toLowerCase().startsWith("bearer ")) {
+    const bearer = await verifySession(authorization.slice(7).trim());
+    if (bearer?.purpose === PAT_PURPOSE && !patAllows(request.method, pathname)) {
+      return NextResponse.json({ error: "이 토큰으로는 쓸 수 없는 기능이에요." }, { status: 403 });
+    }
+  }
+
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
@@ -51,7 +62,7 @@ export async function middleware(request: NextRequest) {
   const session = await verifySession(
     request.cookies.get("orbit42_session")?.value,
   );
-  if (!session) {
+  if (!session || session.purpose) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
   if (session.username !== urlUsername) {

@@ -296,12 +296,21 @@ export async function logout() {
 
 export async function getSession() {
   const fromCookie = await verifySession(cookies().get(COOKIE_NAME)?.value);
-  if (fromCookie) return fromCookie;
+  // 쿠키 자리에 목적 토큰(연동 토큰 등)을 넣어도 웹 세션이 되지 않게.
+  if (fromCookie && !fromCookie.purpose) return fromCookie;
   // 모바일 /api/v1: 쿠키 대신 같은 서명 포맷의 Bearer 토큰(lib/api-auth 발급)을
   // 허용한다. 이 폴백 덕에 requireUserId() 기반 도메인 함수를 그대로 재사용한다.
   const auth = headers().get("authorization") ?? "";
   if (auth.toLowerCase().startsWith("bearer ")) {
     const session = await verifySession(auth.slice(7).trim());
+    // 개인 액세스 토큰: 부를 수 있는 경로는 미들웨어가 이미 허용 목록으로 막았다
+    // (서버 액션 등 다른 경로는 403). 여기서는 폐기 여부만 본다.
+    if (session?.purpose === "personal_access") {
+      if (!session.pat) return null;
+      const { isPersonalAccessTokenActive } = await import("@/lib/pat");
+      if (!(await isPersonalAccessTokenActive(session.pat, session.username))) return null;
+      return { username: session.username };
+    }
     // 단일 목적 토큰(OAuth state 등)은 세션으로 인정하지 않는다.
     if (session?.purpose) return null;
     return session;

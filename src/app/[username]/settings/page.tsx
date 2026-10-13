@@ -28,6 +28,8 @@ import { PaymentInstructionsForm } from "./PaymentInstructionsForm";
 import { WeekStartPicker } from "./WeekStartPicker";
 import { normalizeWeekStart } from "@/lib/week-start";
 import { getAdminClient } from "@/lib/supabase";
+import { IntegrationTokens } from "./IntegrationTokens";
+import { listPersonalAccessTokens } from "@/lib/pat";
 
 export const metadata: Metadata = { title: "설정" };
 export const dynamic = "force-dynamic";
@@ -42,6 +44,7 @@ const SECTIONS = [
   { id: "referral", label: "추천" },
   { id: "notifications", label: "알림" },
   { id: "theme", label: "테마" },
+  { id: "integrations", label: "연동 토큰" },
   { id: "account", label: "계정" },
   { id: "danger", label: "계정 삭제" },
 ];
@@ -64,7 +67,7 @@ export default async function SettingsPage({
   if (!profile) notFound();
 
   const userId = await getUserId();
-  const [googleConnected, myCalendars, extras, notifPrefs, workHours, locationBuffers] =
+  const [googleConnected, myCalendars, extras, notifPrefs, workHours, locationBuffers, patRows] =
     await Promise.all([
       isGoogleCalendarConnected().catch(() => false),
       listMyCalendars().catch(() => []),
@@ -72,6 +75,7 @@ export default async function SettingsPage({
       getMyPrefs().catch(() => ({})),
       userId ? getWorkHours(userId) : Promise.resolve({}),
       listLocationBuffers(userId ?? undefined).catch(() => []),
+      userId ? listPersonalAccessTokens(userId).catch(() => []) : Promise.resolve([]),
     ]);
 
   const { data: payRow } = userId
@@ -174,6 +178,10 @@ export default async function SettingsPage({
 
           <section id="theme" className="scroll-mt-16">
             <ThemeSection />
+          </section>
+
+          <section id="integrations" className="scroll-mt-16">
+            <IntegrationTokens initial={patRows} />
           </section>
 
           <section id="account" className="scroll-mt-16">

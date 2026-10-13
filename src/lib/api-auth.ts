@@ -8,6 +8,7 @@
 
 import { getAdminClient } from "@/lib/supabase";
 import { signSession, verifySession, type SessionData } from "@/lib/session";
+import { PAT_PURPOSE, patAllows } from "@/lib/pat-scope";
 
 const TOKEN_MAX_AGE_SEC = 60 * 60 * 24 * 90; // 90 days
 
@@ -24,6 +25,14 @@ export async function apiSession(
   const header = request.headers.get("authorization") ?? "";
   if (!header.toLowerCase().startsWith("bearer ")) return null;
   const session = await verifySession(header.slice(7).trim());
+  // 개인 액세스 토큰: 허용 목록(읽기 + 완료 체크)의 API 만, 폐기되지 않았을 때만.
+  if (session?.purpose === PAT_PURPOSE) {
+    if (!session.pat) return null;
+    if (!patAllows(request.method, new URL(request.url).pathname)) return null;
+    const { isPersonalAccessTokenActive } = await import("@/lib/pat");
+    if (!(await isPersonalAccessTokenActive(session.pat, session.username))) return null;
+    return { username: session.username };
+  }
   // 단일 목적 토큰(OAuth state 등)은 API 세션으로 인정하지 않는다.
   if (session?.purpose) return null;
   return session;

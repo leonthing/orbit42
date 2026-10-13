@@ -47,7 +47,47 @@ async function listApiCalendars(userId: string) {
   }));
 }
 
+/** "2026-10-13" → 그 날 00:00 KST (잘못된 값이면 null) */
+function kstDayStart(raw: string | null): Date | null {
+  if (!raw || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) return null;
+  const date = new Date(`${raw}T00:00:00+09:00`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/** 범위 조회 — 걸친 달마다 읽어 합치고, 범위와 겹치는 일정만 남긴다. */
+async function listEventsInRange(userId: string, from: Date, to: Date) {
+  // 달 경계는 서버 시간대 기준이라 앞뒤 하루씩 넉넉히 잡아 걸친 달을 모두 읽는다.
+  const months: Array<[number, number]> = [];
+  const cursor = new Date(from.getTime() - 86_400_000);
+  cursor.setUTCDate(1);
+  const last = new Date(to.getTime() + 86_400_000);
+  while (
+    cursor.getUTCFullYear() < last.getUTCFullYear() ||
+    (cursor.getUTCFullYear() === last.getUTCFullYear() &&
+      cursor.getUTCMonth() <= last.getUTCMonth())
+  ) {
+    months.push([cursor.getUTCFullYear(), cursor.getUTCMonth()]);
+    cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+  }
+  const lists = await Promise.all(
+    months.map(([y, m]) => listEventsForUser(userId, y, m)),
+  );
+  const seen = new Set<string>();
+  return lists
+    .flat()
+    .filter((e) => {
+      if (seen.has(e.id)) return false;
+      seen.add(e.id);
+      const start = Date.parse(e.start_at);
+      const end = Date.parse(e.end_at || e.start_at);
+      // 종일 일정의 end 는 다음 날(배타) — 그대로 비교해도 범위 시작과 같으면 빠진다.
+      return start < to.getTime() && (Number.isNaN(end) ? start : end) > from.getTime();
+    })
+    .sort((a, b) => Date.parse(a.start_at) - Date.parse(b.start_at));
+}
+
 // GET ?year=2026&month=7  (month: 1-12)
+// GET ?from=2026-10-13&to=2026-10-19 — KST 날짜 범위(양 끝 포함, 최대 93일)
 export async function GET(request: Request) {
   const userId = await apiUserId(request);
   if (!userId) {
@@ -55,8 +95,24 @@ export async function GET(request: Request) {
   }
 
   const url = new URL(request.url);
-  const year = Number(url.searchParams.get("year"));
-  const month = Number(url.searchParams.get("month"));
+  const rangeFrom = kstDayStart(url.searchParams.get("from"));
+  const rangeToDay = kstDayStart(url.searchParams.get("to"));
+  const isRange = url.searchParams.has("from") || url.searchParams.has("to");
+  if (isRange) {
+    if (!rangeFrom || !rangeToDay || rangeToDay < rangeFrom) {
+      return Response.json(
+        { error: "from/to 는 YYYY-MM-DD 형식이고 from ≤ to 여야 해요." },
+        { status: 400 },
+      );
+    }
+    if (rangeToDay.getTime() - rangeFrom.getTime() > 92 * 86_400_000) {
+      return Response.json({ error: "범위는 최대 93일이에요." }, { status: 400 });
+    }
+  }
+  const rangeTo = rangeToDay ? new Date(rangeToDay.getTime() + 86_400_000) : null;
+  const kstNow = new Date(Date.now() + 9 * 3_600_000);
+  const year = isRange ? kstNow.getUTCFullYear() : Number(url.searchParams.get("year"));
+  const month = isRange ? kstNow.getUTCMonth() + 1 : Number(url.searchParams.get("month"));
   if (
     !Number.isInteger(year) ||
     !Number.isInteger(month) ||
@@ -78,7 +134,9 @@ export async function GET(request: Request) {
   const db = getAdminClient();
   const [events, calendars, overrides, earnings, income, calRatesRes] =
     await Promise.all([
-      listEventsForUser(userId, year, month - 1),
+      isRange && rangeFrom && rangeTo
+        ? listEventsInRange(userId, rangeFrom, rangeTo)
+        : listEventsForUser(userId, year, month - 1),
       listApiCalendars(userId),
       listEventBucketOverrides(userId),
       listEventEarnings(userId),
@@ -119,8 +177,11 @@ export async function GET(request: Request) {
 
   // 내가 초대받은 일정 — 읽기 전용 항목으로 병합 (거절한 초대는 제외).
   const { listMyInvites } = await import("@/lib/event-participants");
-  const monthStart = new Date(year, month - 1, 1);
-  const monthEnd = new Date(year, month, 0, 23, 59, 59, 999);
+  const monthStart = isRange && rangeFrom ? rangeFrom : new Date(year, month - 1, 1);
+  const monthEnd =
+    isRange && rangeTo
+      ? new Date(rangeTo.getTime() - 1)
+      : new Date(year, month, 0, 23, 59, 59, 999);
   const invites = await listMyInvites(userId, monthStart, monthEnd);
 
   return Response.json({
