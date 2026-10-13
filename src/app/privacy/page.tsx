@@ -24,7 +24,7 @@ export default function PrivacyPage() {
       <main className="mx-auto max-w-3xl px-4 pb-24 pt-6 sm:px-6">
         <h1 className="text-3xl font-bold text-charcoal-100">개인정보처리방침</h1>
         <p className="mt-2 text-sm text-charcoal-500">
-          최종 업데이트: 2026년 10월 14일
+          최종 업데이트: 2026년 10월 13일
         </p>
 
         <div className="mt-10 space-y-8">
@@ -363,7 +363,7 @@ export default function PrivacyPage() {
                 제한적 사용 준수) 항목 추가, 캘린더 권한을 최소 범위로 변경
               </li>
               <li>
-                2026-10-14: Google 캘린더 일정 참석자 추가(초대 메일 발송) 사용 목적
+                2026-10-13: Google 캘린더 일정 참석자 추가(초대 메일 발송) 사용 목적
                 추가
               </li>
             </List>
