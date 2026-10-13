@@ -70,6 +70,14 @@ struct AddEventSheet: View {
     /// 일정은 저장됐는데 초대만 실패한 상태 — 다시 "저장" 을 눌러도 일정이
     /// 두 번 만들어지지 않도록 붙잡아 둔다.
     @State private var createdEvent: CalendarEvent?
+    /// 구글 캘린더에 저장하면서 참석자를 넣을 때 — 구글 초대 메일 확인
+    @State private var confirmingGoogleInvite = false
+
+    /// 고른 캘린더가 구글 연동이면 참석자는 구글 일정 참석자로 들어가고 구글이 메일을 보낸다.
+    private var savesToGoogle: Bool {
+        guard let id = selectedCalendarId else { return false }
+        return writableCalendars.first(where: { $0.id == id }).map { !$0.isNative } ?? false
+    }
 
     private var writableCalendars: [CalendarInfo] {
         freshCalendars ?? viewModel.calendars
@@ -194,7 +202,13 @@ struct AddEventSheet: View {
                         ProgressView()
                             .tint(Theme.accent)
                     } else {
-                        Button("저장") { save() }
+                        Button("저장") {
+                            if savesToGoogle, !pendingParticipants.isEmpty {
+                                confirmingGoogleInvite = true
+                            } else {
+                                save()
+                            }
+                        }
                             .fontWeight(.semibold)
                             .disabled(!canSave)
                     }
@@ -224,6 +238,12 @@ struct AddEventSheet: View {
             }
             .sheet(isPresented: $showingAddParticipant) {
                 ParticipantAddSheet(mode: .collect($pendingParticipants))
+            }
+            .alert("참석자 \(pendingParticipants.count)명을 초대할까요?", isPresented: $confirmingGoogleInvite) {
+                Button("취소", role: .cancel) {}
+                Button("저장하고 초대") { save() }
+            } message: {
+                Text("구글 캘린더 초대 메일이 갑니다.")
             }
         }
     }
@@ -298,7 +318,9 @@ struct AddEventSheet: View {
             Text(
                 pendingParticipants.isEmpty
                     ? "orbit42 사용자를 태그하거나 이메일로 초대할 수 있어요."
-                    : "일정을 저장하면 \(pendingParticipants.count)명에게 초대가 나가요."
+                    : savesToGoogle
+                        ? "일정을 저장하면 \(pendingParticipants.count)명에게 구글 캘린더 초대 메일이 가요."
+                        : "일정을 저장하면 \(pendingParticipants.count)명에게 초대가 나가요."
             )
         }
         .listRowBackground(Theme.surface)
@@ -353,6 +375,23 @@ struct AddEventSheet: View {
         guard !pendingParticipants.isEmpty else { return [] }
         // 장소·메모까지 담긴 스냅샷 — 초대 메일에 함께 나간다.
         let snapshot = ParticipantEventSnapshot(event: event)
+        if event.isGoogle {
+            // 구글 일정은 한 번에 넣는다 — 한 명씩 넣으면 앞서 넣은 사람에게 '변경' 메일이 거듭 간다.
+            var request = snapshot.request(username: nil, email: nil)
+            request.googleInvite = true
+            request.invitees = pendingParticipants.map {
+                AddParticipantRequest.Invitee(username: $0.username, email: $0.email)
+            }
+            do {
+                let _: ParticipantsResponse = try await APIClient.shared.post(
+                    "/api/v1/calendar/events/\(event.id)/participants",
+                    body: request
+                )
+                return []
+            } catch {
+                return pendingParticipants
+            }
+        }
         var failed: [PendingParticipant] = []
         for pending in pendingParticipants {
             do {

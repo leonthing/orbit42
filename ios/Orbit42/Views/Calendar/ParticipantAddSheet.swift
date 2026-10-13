@@ -55,14 +55,19 @@ struct PendingParticipant: Identifiable, Equatable {
 struct ParticipantAddSheet: View {
     /// 저장된 일정은 고르는 즉시 서버에 붙이고(attach), 아직 저장 전인 새 일정은
     /// 목록에만 담아 뒀다가(collect) 일정이 만들어진 뒤 한꺼번에 초대한다.
+    /// 구글 일정(attachGoogle)은 구글 이벤트에 참석자로 넣고 구글이 초대 메일을 보낸다 —
+    /// 보내기 전에 한 번 확인받는다.
     enum Mode {
         case attach(eventId: String, snapshot: ParticipantEventSnapshot)
+        case attachGoogle(eventId: String, snapshot: ParticipantEventSnapshot)
         case collect(Binding<[PendingParticipant]>)
     }
 
     let mode: Mode
     /// attach 모드에서 추가 성공 시 최신 참석자 목록 전달.
     var onUpdated: ([EventParticipant]) -> Void = { _ in }
+    /// attachGoogle 모드에서 추가 성공 시 구글이 돌려준 최신 참석자 목록 전달.
+    var onGoogleUpdated: ([GoogleAttendee]) -> Void = { _ in }
 
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
@@ -71,6 +76,8 @@ struct ParticipantAddSheet: View {
     @State private var submittingKey: String?
     @State private var errorMessage: String?
     @State private var pendingSearch: Task<Void, Never>?
+    /// 구글 초대 확인을 기다리는 참석자
+    @State private var confirmingGoogle: PendingParticipant?
 
     private var trimmed: String {
         query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -78,6 +85,11 @@ struct ParticipantAddSheet: View {
 
     private var isEmail: Bool {
         trimmed.contains("@") && trimmed.contains(".")
+    }
+
+    private var isGoogle: Bool {
+        if case .attachGoogle = mode { return true }
+        return false
     }
 
     private var collected: Binding<[PendingParticipant]>? {
@@ -100,7 +112,9 @@ struct ParticipantAddSheet: View {
                                 queryChanged()
                             }
                     } footer: {
-                        Text("가입자는 알림과 메일로, 비가입자는 초대 메일로 알려드려요.")
+                        Text(isGoogle
+                             ? "구글 캘린더 일정이라 구글이 초대 메일을 보내요. orbit42 사용자를 태그해도 그 사람의 이메일로 구글 초대가 가요."
+                             : "가입자는 알림과 메일로, 비가입자는 초대 메일로 알려드려요.")
                     }
                     .listRowBackground(Theme.surface)
 
@@ -110,7 +124,8 @@ struct ParticipantAddSheet: View {
                                 invite(email: trimmed)
                             } label: {
                                 HStack {
-                                    Label("\(trimmed) 이메일로 초대", systemImage: "envelope")
+                                    Label(isGoogle ? "\(trimmed) 구글 초대" : "\(trimmed) 이메일로 초대",
+                                          systemImage: "envelope")
                                         .foregroundStyle(Theme.accent)
                                         .lineLimit(1)
                                     Spacer()
@@ -216,6 +231,19 @@ struct ParticipantAddSheet: View {
             }
             .navigationTitle("참석자 추가")
             .navigationBarTitleDisplayMode(.inline)
+            .alert(
+                "\(confirmingGoogle?.label ?? "")님을 추가할까요?",
+                isPresented: Binding(
+                    get: { confirmingGoogle != nil },
+                    set: { if !$0 { confirmingGoogle = nil } }
+                ),
+                presenting: confirmingGoogle
+            ) { pending in
+                Button("취소", role: .cancel) {}
+                Button("초대 보내기") { submit(pending) }
+            } message: { _ in
+                Text("구글 캘린더 초대 메일이 갑니다.")
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(collected == nil ? "닫기" : "완료") { dismiss() }
@@ -282,21 +310,42 @@ struct ParticipantAddSheet: View {
             return
         }
 
-        guard case .attach(let eventId, let snapshot) = mode else { return }
+        guard submittingKey == nil else { return }
+        if isGoogle {
+            // 구글이 초대 메일을 보내므로 먼저 확인받는다.
+            confirmingGoogle = pending
+            return
+        }
+        submit(pending)
+    }
+
+    private func submit(_ pending: PendingParticipant) {
+        let eventId: String, snapshot: ParticipantEventSnapshot
+        switch mode {
+        case .attach(let id, let snap), .attachGoogle(let id, let snap):
+            eventId = id
+            snapshot = snap
+        case .collect:
+            return
+        }
         let key = pending.username ?? pending.email ?? ""
         guard submittingKey == nil else { return }
         submittingKey = key
         Task {
             defer { submittingKey = nil }
             do {
+                var request = snapshot.request(username: pending.username, email: pending.email)
+                if isGoogle { request.googleInvite = true }
                 let response: ParticipantsResponse = try await APIClient.shared.post(
                     "/api/v1/calendar/events/\(eventId)/participants",
-                    body: snapshot.request(
-                        username: pending.username,
-                        email: pending.email
-                    )
+                    body: request
                 )
-                onUpdated(response.participants)
+                // 구글 쓰기가 실패하면 서버가 오류를 돌려주고 아무것도 바꾸지 않는다 → 아래 catch 로.
+                if let attendees = response.attendees {
+                    onGoogleUpdated(attendees)
+                } else {
+                    onUpdated(response.participants)
+                }
                 if pending.email != nil { query = "" }
             } catch let apiError as APIError {
                 errorMessage = apiError.errorDescription

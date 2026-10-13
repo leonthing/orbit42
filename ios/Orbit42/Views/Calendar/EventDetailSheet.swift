@@ -66,6 +66,8 @@ struct EventDetailSheet: View {
     @State private var participants: [EventParticipant]?
     @State private var showingAddParticipant = false
     @State private var participantErrorMessage: String?
+    /// 구글 일정의 참석자 — 여기서 추가하면 구글이 돌려준 목록으로 바로 바뀐다
+    @State private var googleAttendees: [GoogleAttendee]
     /// 초대받은 일정의 응답 진행 상태
     @State private var isResponding = false
 
@@ -83,6 +85,12 @@ struct EventDetailSheet: View {
         _selectedBucket = State(initialValue: event.bucketOverride)
         _earningKrw = State(initialValue: event.earningKrw)
         _isCompleted = State(initialValue: event.completed)
+        _googleAttendees = State(initialValue: event.attendees)
+    }
+
+    /// 구글 일정은 주최자만 참석자를 추가할 수 있다 (구글 이벤트에 attendee 로 들어가 초대 메일이 간다).
+    private var canAddParticipants: Bool {
+        !event.isGoogle || event.isOrganizer
     }
 
     private var calendar: Calendar { CalendarViewModel.calendar }
@@ -323,10 +331,18 @@ struct EventDetailSheet: View {
             }
             .sheet(isPresented: $showingAddParticipant) {
                 ParticipantAddSheet(
-                    mode: .attach(eventId: event.id, snapshot: participantSnapshot)
-                ) { updated in
-                    participants = updated
-                }
+                    mode: event.isGoogle
+                        ? .attachGoogle(eventId: event.id, snapshot: participantSnapshot)
+                        : .attach(eventId: event.id, snapshot: participantSnapshot),
+                    onUpdated: { updated in
+                        participants = updated
+                    },
+                    onGoogleUpdated: { updated in
+                        googleAttendees = updated
+                        // 달력 캐시의 이 일정도 새 참석자로 — 다시 열었을 때 옛 목록이 보이지 않게
+                        Task { await viewModel.reloadMonth(around: event) }
+                    }
+                )
             }
             .task {
                 guard !event.isInvite, participants == nil else { return }
@@ -907,7 +923,7 @@ struct EventDetailSheet: View {
     private var participantsSection: some View {
         Section {
             // 구글 캘린더에서 초대한 참석자 (읽기 전용)
-            ForEach(event.attendees) { attendee in
+            ForEach(googleAttendees) { attendee in
                 googleAttendeeRow(attendee)
             }
             if let participants, !participants.isEmpty {
@@ -943,11 +959,17 @@ struct EventDetailSheet: View {
                 }
             }
 
-            Button {
-                showingAddParticipant = true
-            } label: {
-                Label("참석자 추가", systemImage: "person.badge.plus")
-                    .foregroundStyle(Theme.accent)
+            if canAddParticipants {
+                Button {
+                    showingAddParticipant = true
+                } label: {
+                    Label("참석자 추가", systemImage: "person.badge.plus")
+                        .foregroundStyle(Theme.accent)
+                }
+            } else {
+                Label("주최자만 참석자를 추가할 수 있어요", systemImage: "lock")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.secondaryText)
             }
 
             if let participantErrorMessage {
@@ -958,9 +980,11 @@ struct EventDetailSheet: View {
         } header: {
             Text("참석자")
         } footer: {
-            Text(event.attendees.isEmpty
-                 ? "orbit42 사용자를 태그하거나 이메일로 초대할 수 있어요. 태그하면 상대 캘린더에도 이 일정이 보여요."
-                 : "'Google' 표시는 구글 캘린더에서 초대한 참석자예요(여기서는 보기만 해요). 추가는 orbit42 태그·이메일 초대로 돼요.")
+            Text(event.isGoogle
+                 ? (event.isOrganizer
+                    ? "구글 캘린더 일정이라 추가한 사람은 구글 일정 참석자로 들어가고, 구글이 초대 메일을 보내요."
+                    : "구글 캘린더에서 초대받은 일정이라 여기서는 참석자를 보기만 해요.")
+                 : "orbit42 사용자를 태그하거나 이메일로 초대할 수 있어요. 태그하면 상대 캘린더에도 이 일정이 보여요.")
         }
         .listRowBackground(Theme.surface)
         // 주의: sheet/task 를 이 Section 에 붙이면 목록 리빌드 때 시트가 바로

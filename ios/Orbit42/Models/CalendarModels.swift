@@ -68,6 +68,8 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
     let endWasDateOnly: Bool
     /// 구글 일정의 참석자 (구글 캘린더에서 초대한 사람 — Orbit42 사용자가 아니어도). 없으면 빈 배열.
     let attendees: [GoogleAttendee]
+    /// 구글 일정에서 내가 주최자인지 — 주최자만 참석자를 추가할 수 있다 (구글이 아니면 false)
+    let isOrganizer: Bool
 
     var isGoogle: Bool { source == "google" }
     /// 초대받은 일정 (읽기 전용 — 수락/거절만 가능)
@@ -78,7 +80,7 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
         case bucketOverride, earningKrw, autoValueKrw, completed
         case inviteId, inviteStatus, inviterName
         case location, locationLat, locationLng, travelMin
-        case attendees
+        case attendees, isOrganizer
     }
 
     init(from decoder: Decoder) throws {
@@ -102,6 +104,7 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
         locationLng = try container.decodeIfPresent(Double.self, forKey: .locationLng)
         travelMin = try container.decodeIfPresent(Int.self, forKey: .travelMin)
         attendees = (try? container.decodeIfPresent([GoogleAttendee].self, forKey: .attendees)) ?? []
+        isOrganizer = try container.decodeIfPresent(Bool.self, forKey: .isOrganizer) ?? false
 
         let startRaw = try container.decode(String.self, forKey: .startAt)
         let endRaw = try container.decode(String.self, forKey: .endAt)
@@ -307,6 +310,8 @@ struct EventParticipant: Decodable, Identifiable, Sendable {
 
 struct ParticipantsResponse: Decodable, Sendable {
     let participants: [EventParticipant]
+    /// 구글 일정에 추가했을 때 — 구글이 돌려준 최신 참석자 목록
+    let attendees: [GoogleAttendee]?
 }
 
 /// POST — username 또는 email 중 하나 + 일정 스냅샷.
@@ -320,6 +325,17 @@ struct AddParticipantRequest: Encodable {
     let allDay: Bool
     var location: String?
     var description: String?
+    /// 구글 일정 — 일정이 속한 캘린더 (서버가 구글 캘린더 id 를 찾는 데 쓴다)
+    var calendarId: String?
+    /// 구글 일정에 여러 명을 한 번에 넣을 때 (초대 메일이 한 번씩만 가도록)
+    var invitees: [Invitee]?
+    /// 구글 일정 — 확인을 받았으니 구글 참석자로 넣어 달라는 표시 (없으면 서버가 예전 방식으로 처리)
+    var googleInvite: Bool?
+
+    struct Invitee: Encodable {
+        var username: String?
+        var email: String?
+    }
 }
 
 /// 참석자를 초대할 때 함께 보내는 일정 정보.
@@ -330,6 +346,7 @@ struct ParticipantEventSnapshot {
     let allDay: Bool
     var location: String?
     var description: String?
+    var calendarId: String?
 
     /// 초대 대상만 채워 넣으면 되는 요청 본문.
     func request(username: String?, email: String?) -> AddParticipantRequest {
@@ -341,7 +358,8 @@ struct ParticipantEventSnapshot {
             endAt: endAt,
             allDay: allDay,
             location: location,
-            description: description
+            description: description,
+            calendarId: calendarId
         )
     }
 }
@@ -359,7 +377,8 @@ extension ParticipantEventSnapshot {
                 : APIDateParser.encodeDateTime(event.endAt),
             allDay: event.allDay,
             location: event.location,
-            description: event.description
+            description: event.description,
+            calendarId: event.calendarId
         )
     }
 }
