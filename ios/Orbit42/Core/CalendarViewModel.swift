@@ -77,7 +77,8 @@ final class CalendarViewModel {
     /// 선택된 날짜의 이벤트 — 종일 먼저, 그다음 시작 시각 순.
     /// 숨긴 캘린더의 이벤트는 제외한다 (calendarId 없는 이벤트는 항상 표시).
     func events(on date: Date) -> [CalendarEvent] {
-        guard let data = currentMonthData else { return [] }
+        // 하루 보기에서 옆 날짜를 넘겨 볼 때를 위해 그 날짜가 속한 달의 캐시를 본다.
+        guard let data = cache[Self.key(for: date)] ?? currentMonthData else { return [] }
         return data.events
             .filter { event in
                 guard let calendarId = event.calendarId else { return true }
@@ -173,6 +174,21 @@ final class CalendarViewModel {
             }
         }
     }
+
+    /// 하루 보기에서 달 경계 너머 날짜를 미리 받아 둔다 (표시 달·에러 표시는 건드리지 않음).
+    func prefetchMonth(containing date: Date) async {
+        let key = Self.key(for: date)
+        guard cache[key] == nil, !inFlight.contains(key) else { return }
+        inFlight.insert(key)
+        defer { inFlight.remove(key) }
+        if let response: CalendarEventsResponse = try? await api.get(
+            "/api/v1/calendar/events?year=\(key.year)&month=\(key.month)"
+        ) {
+            cache[key] = MonthData(events: response.events, calendars: response.calendars)
+        }
+    }
+
+    func hasMonthData(for date: Date) -> Bool { cache[Self.key(for: date)] != nil }
 
     // MARK: - 이벤트 생성
 

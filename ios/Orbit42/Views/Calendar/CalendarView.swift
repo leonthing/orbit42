@@ -411,21 +411,28 @@ struct CalendarView: View {
         if viewModel.currentMonthData == nil {
             eventListSection
         } else {
-            DayTimelineView(
-                date: viewModel.selectedDate,
-                events: viewModel.events(on: viewModel.selectedDate),
-                calendars: viewModel.calendars,
+            DayPager(
+                selectedDate: viewModel.selectedDate,
                 calendar: calendar,
-                onOpen: { selectedEvent = $0 },
-                onToggleCompletion: { toggleCompletion($0) },
-                onAddAt: { start in
-                    addStart = start
-                    showingAddSheet = true
-                },
-                onSwipeDay: { delta in
-                    withAnimation(.easeInOut(duration: 0.2)) { shiftDays(delta) }
+                onSettle: { day in viewModel.select(date: day) }
+            ) { day in
+                DayTimelineView(
+                    date: day,
+                    events: viewModel.events(on: day),
+                    calendars: viewModel.calendars,
+                    calendar: calendar,
+                    onOpen: { selectedEvent = $0 },
+                    onToggleCompletion: { toggleCompletion($0) },
+                    onAddAt: { start in
+                        addStart = start
+                        showingAddSheet = true
+                    }
+                )
+                // 달 경계 너머 날짜는 미리 받아 둔다
+                .task(id: day) {
+                    if !viewModel.hasMonthData(for: day) { await viewModel.prefetchMonth(containing: day) }
                 }
-            )
+            }
         }
     }
 

@@ -2,7 +2,8 @@ import SwiftUI
 
 /// 하루 보기 — 맨 위 종일 줄 + 0~24시 시간축에 일정 블록 (구글 캘린더 하루 보기식).
 /// 겹치는 일정은 옆으로 나눠 그리고, 오늘이면 현재 시각에 빨간 선을 긋는다.
-/// 블록 탭 = 상세, 블록 앞 체크박스 = 완료 토글, 빈 시간 탭 = 그 시각으로 새 일정, 가로 스와이프 = 전날/다음날.
+/// 블록 탭 = 상세, 블록 앞 체크박스 = 완료 토글, 빈 시간 탭 = 그 시각으로 새 일정.
+/// 전날/다음날 넘기기는 바깥의 `DayPager`(가로 페이징 스크롤)가 맡는다.
 struct DayTimelineView: View {
     let date: Date
     /// 그 날에 걸친 일정 (숨긴 캘린더 제외 — `CalendarViewModel.events(on:)`)
@@ -12,7 +13,6 @@ struct DayTimelineView: View {
     let onOpen: (CalendarEvent) -> Void
     let onToggleCompletion: (CalendarEvent) -> Void
     let onAddAt: (Date) -> Void
-    let onSwipeDay: (Int) -> Void
 
     private let hourHeight: CGFloat = 56
     private let labelWidth: CGFloat = 52
@@ -38,15 +38,6 @@ struct DayTimelineView: View {
                 .onChange(of: dayStart) { _, _ in scrollToAnchor(proxy, animated: true) }
             }
         }
-        .contentShape(Rectangle())
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 30)
-                .onEnded { value in
-                    let dx = value.translation.width, dy = value.translation.height
-                    guard abs(dx) > abs(dy) * 1.5, abs(dx) > 50 else { return }
-                    onSwipeDay(dx < 0 ? 1 : -1)
-                }
-        )
     }
 
     // MARK: - 종일 줄
@@ -292,5 +283,59 @@ struct DayTimelineView: View {
         }
         flush()
         return blocks
+    }
+}
+
+/// 하루 보기 페이저 — 날짜마다 한 페이지인 가로 페이징 스크롤(iOS 기본 페이징 애니메이션).
+/// 넘기는 동안 블록 탭은 스크롤 뷰가 취소하므로 상세가 잘못 열리지 않는다.
+/// 기준일 ±400일을 지연 생성하고, 페이지가 멈추면 선택 날짜를 바꾼다.
+struct DayPager<Page: View>: View {
+    let selectedDate: Date
+    let calendar: Calendar
+    let onSettle: (Date) -> Void
+    @ViewBuilder let page: (Date) -> Page
+
+    @State private var base = Date()
+    @State private var position: Int?
+
+    private static var span: Int { 400 }
+
+    var body: some View {
+        ScrollView(.horizontal) {
+            LazyHStack(spacing: 0) {
+                ForEach(-Self.span...Self.span, id: \.self) { offset in
+                    page(day(at: offset))
+                        .containerRelativeFrame(.horizontal)
+                        .id(offset)
+                }
+            }
+            .scrollTargetLayout()
+        }
+        .scrollTargetBehavior(.paging)
+        .scrollIndicators(.hidden)
+        .scrollPosition(id: $position)
+        .onAppear {
+            base = calendar.startOfDay(for: Date())
+            position = offset(of: selectedDate)
+        }
+        // 날짜 띠·화살표·위젯 링크로 날짜가 바뀌면 그 페이지로
+        .onChange(of: calendar.startOfDay(for: selectedDate)) { _, day in
+            let target = offset(of: day)
+            if position != target { position = target }
+        }
+        .onChange(of: position) { _, new in
+            guard let new else { return }
+            let day = day(at: new)
+            if !calendar.isDate(day, inSameDayAs: selectedDate) { onSettle(day) }
+        }
+    }
+
+    private func day(at offset: Int) -> Date {
+        calendar.date(byAdding: .day, value: offset, to: base) ?? base
+    }
+
+    private func offset(of date: Date) -> Int {
+        let days = calendar.dateComponents([.day], from: base, to: calendar.startOfDay(for: date)).day ?? 0
+        return max(-Self.span, min(Self.span, days))
     }
 }
