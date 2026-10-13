@@ -38,6 +38,8 @@ export type CalendarEvent = {
   authorName?: string | null;
   /** 구글 일정의 참석자 — 저장하지 않고 읽을 때마다 그대로 전달 (회의실 등 resource 는 제외) */
   attendees?: GoogleAttendee[];
+  /** 구글 일정에서 내가 주최자인지 — 주최자만 참석자를 추가할 수 있다 */
+  organizer_self?: boolean;
 };
 
 export type GoogleAttendee = {
@@ -91,6 +93,103 @@ function googleAttendees(item: calendar_v3.Schema$Event): GoogleAttendee[] {
     });
   }
   return list;
+}
+
+/**
+ * 구글 일정에 참석자를 추가한다 — 구글이 초대 메일을 보낸다(sendUpdates=all).
+ * 주최자가 아니거나 구글 쓰기가 실패하면 아무것도 바꾸지 않고 오류를 돌려준다.
+ * 참석자는 DB 에 저장하지 않는다 (읽을 때마다 구글에서 그대로 받는다).
+ */
+export async function addGoogleAttendees(
+  userId: string,
+  eventId: string,
+  nativeCalendarId: string | null,
+  emails: string[],
+): Promise<{ attendees: GoogleAttendee[] } | { error: string }> {
+  const googleEventId = eventId.replace(/^gcal_/, "");
+  const calendar = await getAuthenticatedCalendar(userId);
+  if (!calendar) return { error: "Google 캘린더 연결이 필요해요." };
+
+  let gcalId = "primary";
+  if (nativeCalendarId) {
+    const { data } = await getAdminClient()
+      .from("calendars")
+      .select("google_calendar_id")
+      .eq("id", nativeCalendarId)
+      .eq("user_id", userId)
+      .eq("source", "google")
+      .maybeSingle();
+    if (!data?.google_calendar_id) return { error: "캘린더를 찾을 수 없어요." };
+    gcalId = data.google_calendar_id as string;
+  }
+
+  try {
+    const { data: event } = await calendar.events.get({
+      calendarId: gcalId,
+      eventId: googleEventId,
+    });
+    if (event.organizer?.self !== true) {
+      return { error: "주최자만 참석자를 추가할 수 있어요." };
+    }
+    const existing = event.attendees ?? [];
+    const known = new Set(existing.map((a) => (a.email ?? "").toLowerCase()));
+    if (event.organizer?.email) known.add(event.organizer.email.toLowerCase());
+    const added = Array.from(new Set(emails.map((e) => e.trim().toLowerCase())))
+      .filter((e) => !known.has(e));
+    if (added.length === 0) return { error: "이미 참석자예요." };
+
+    // 주최자가 목록에 없으면(API 로 만든 일정) 함께 넣는다 — 안 넣으면 구글 화면에서 주최자가 빠져 보인다.
+    const organizerRow =
+      existing.length === 0 && event.organizer?.email
+        ? [{ email: event.organizer.email, organizer: true, responseStatus: "accepted" }]
+        : [];
+    const { data: updated } = await calendar.events.patch({
+      calendarId: gcalId,
+      eventId: googleEventId,
+      sendUpdates: "all",
+      requestBody: {
+        attendees: [...organizerRow, ...existing, ...added.map((email) => ({ email }))],
+      },
+    });
+    return { attendees: googleAttendees(updated) };
+  } catch (err) {
+    console.error("addGoogleAttendees", err);
+    return { error: "구글 캘린더에 참석자를 추가하지 못했어요. 권한이나 네트워크를 확인해 주세요." };
+  }
+}
+
+/** 구글 참석자 이메일 중 Orbit42 사용자인 것 → 프로필로 연결할 username */
+export async function attendeeUsersByEmail(emails: string[]) {
+  const unique = Array.from(new Set(emails.map((e) => e.toLowerCase())));
+  const map = new Map<string, { username: string; displayName: string | null }>();
+  if (unique.length === 0) return map;
+  const { data } = await getAdminClient()
+    .from("users")
+    .select("username, display_name, email")
+    .in("email", unique.slice(0, 500));
+  for (const u of (data ?? []) as { username: string; display_name: string | null; email: string | null }[]) {
+    if (u.email) map.set(u.email.toLowerCase(), { username: u.username, displayName: u.display_name });
+  }
+  return map;
+}
+
+/** API 응답용 참석자 — Orbit42 사용자면 username 을 붙인다. */
+export function toApiAttendees(
+  attendees: GoogleAttendee[] | undefined,
+  users: Map<string, { username: string; displayName: string | null }>,
+) {
+  if (!attendees?.length) return undefined;
+  return attendees.map((a) => {
+    const user = users.get(a.email.toLowerCase());
+    return {
+      email: a.email,
+      name: a.name ?? user?.displayName ?? null,
+      response: a.response,
+      organizer: a.organizer,
+      self: a.self,
+      username: user?.username ?? null,
+    };
+  });
 }
 
 function parseCoord(raw: string | null | undefined): number | null {
@@ -257,6 +356,7 @@ export async function listEventsForUser(
         created_at: item.created || "",
         updated_at: item.updated || "",
         attendees: googleAttendees(item),
+        organizer_self: item.organizer?.self === true,
       }));
     }
   } catch (err) {
@@ -370,6 +470,7 @@ export async function createEventForUser(
       tentative: false,
       created_at: now,
       updated_at: now,
+      organizer_self: true,
     };
   }
 

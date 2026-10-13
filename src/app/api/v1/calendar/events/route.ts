@@ -3,45 +3,12 @@ import { getAdminClient } from "@/lib/supabase";
 import {
   listEventsForUser,
   createEventForUser,
+  attendeeUsersByEmail,
+  toApiAttendees,
   type CalendarEvent,
 } from "@/lib/calendar-events";
 
 export const dynamic = "force-dynamic";
-
-/** 구글 참석자 이메일 중 Orbit42 사용자인 것 → 프로필로 연결할 username */
-async function usernamesByEmail(events: CalendarEvent[]) {
-  const emails = Array.from(new Set(
-    events.flatMap((e) => (e.attendees ?? []).map((a) => a.email.toLowerCase())),
-  ));
-  const map = new Map<string, { username: string; displayName: string | null }>();
-  if (emails.length === 0) return map;
-  const { data } = await getAdminClient()
-    .from("users")
-    .select("username, display_name, email")
-    .in("email", emails.slice(0, 500));
-  for (const u of (data ?? []) as { username: string; display_name: string | null; email: string | null }[]) {
-    if (u.email) map.set(u.email.toLowerCase(), { username: u.username, displayName: u.display_name });
-  }
-  return map;
-}
-
-function toApiAttendees(
-  e: CalendarEvent,
-  users: Map<string, { username: string; displayName: string | null }>,
-) {
-  if (!e.attendees?.length) return undefined;
-  return e.attendees.map((a) => {
-    const user = users.get(a.email.toLowerCase());
-    return {
-      email: a.email,
-      name: a.name ?? user?.displayName ?? null,
-      response: a.response,
-      organizer: a.organizer,
-      self: a.self,
-      username: user?.username ?? null,
-    };
-  });
-}
 
 function toApiEvent(e: CalendarEvent) {
   return {
@@ -58,6 +25,8 @@ function toApiEvent(e: CalendarEvent) {
     locationLat: e.location_lat ?? null,
     locationLng: e.location_lng ?? null,
     travelMin: e.travel_min ?? null,
+    // 구글 일정에서 내가 주최자인지 — 아니면 앱이 참석자 추가를 숨긴다
+    isOrganizer: e.source === "google" ? e.organizer_self === true : undefined,
   };
 }
 
@@ -144,7 +113,9 @@ export async function GET(request: Request) {
     return Math.round(hours * rate);
   };
 
-  const attendeeUsers = await usernamesByEmail(events);
+  const attendeeUsers = await attendeeUsersByEmail(
+    events.flatMap((e) => (e.attendees ?? []).map((a) => a.email)),
+  );
 
   // 내가 초대받은 일정 — 읽기 전용 항목으로 병합 (거절한 초대는 제외).
   const { listMyInvites } = await import("@/lib/event-participants");
@@ -161,7 +132,7 @@ export async function GET(request: Request) {
         autoValueKrw: autoValueOf(e),
         completed: completedSet.has(normalizeEventKey(e.id)),
         // 구글 일정의 참석자 (Orbit42 사용자면 username 포함)
-        attendees: toApiAttendees(e, attendeeUsers),
+        attendees: toApiAttendees(e.attendees, attendeeUsers),
       })),
       ...invites.map((inv) => ({
         id: `invite_${inv.id}`,
