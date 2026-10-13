@@ -1,6 +1,6 @@
 import { apiSession } from "@/lib/api-auth";
 import { listMyMenus, updateMenu, deleteMenu } from "@/lib/menus";
-import { toApiMenu } from "../route";
+import { toApiMenu } from "@/lib/menu-api";
 
 export const dynamic = "force-dynamic";
 
