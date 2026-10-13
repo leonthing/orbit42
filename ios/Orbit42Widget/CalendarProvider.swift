@@ -14,6 +14,8 @@ struct CalendarEntry: TimelineEntry {
     let events: [WidgetEvent]
     let colors: [String: String]
     let calendar: Calendar
+    /// 승인 대기 예약 + 답하지 않은 시간 요청 (없거나 모르면 0)
+    var pendingRequests: Int = 0
 
     func color(of event: WidgetEvent) -> Color {
         guard let id = event.calendarId, let hex = colors[id], let color = Color(widgetHex: hex) else {
@@ -107,7 +109,8 @@ struct CalendarProvider: TimelineProvider {
                 events.append(event)
             }
         }
-        return CalendarEntry(date: now, state: .ready, events: events, colors: colors, calendar: calendar)
+        return CalendarEntry(date: now, state: .ready, events: events, colors: colors, calendar: calendar,
+                             pendingRequests: feed?.pendingBookings ?? 0)
     }
 
     /// - Returns: 토큰이 무효(401)면 true
@@ -136,7 +139,27 @@ struct CalendarProvider: TimelineProvider {
             months[WidgetFeed.monthKey(year: year, month: month)] = decoded
         }
         if !months.isEmpty { WidgetStore.merge(months, now: now) }
+        if let pending = await fetchPendingRequests(token: token) { WidgetStore.setPendingBookings(pending) }
         return false
+    }
+
+    /// 답해야 할 요청 수 — 받은 예약 중 승인 대기 + 프로필로 받은 시간 요청 중 미답.
+    private static func fetchPendingRequests(token: String) async -> Int? {
+        struct Response: Decodable {
+            struct Host: Decodable { let status: String }
+            let host: [Host]
+            let pendingTimeRequests: Int?
+        }
+        var components = URLComponents(url: SharedConfig.baseURL, resolvingAgainstBaseURL: false)!
+        components.path = "/api/v1/bookings"
+        var request = URLRequest(url: components.url!, timeoutInterval: 15)
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              (response as? HTTPURLResponse)?.statusCode == 200,
+              let decoded = try? JSONDecoder().decode(Response.self, from: data)
+        else { return nil }
+        return decoded.host.filter { $0.status == "pending" }.count + (decoded.pendingTimeRequests ?? 0)
     }
 
     /// 지금 + 앞으로 12시간 안에 끝나는 일정마다 + 자정 — 다음 갱신 전에도 지난 일정이 빠지도록.
@@ -150,7 +173,8 @@ struct CalendarProvider: TimelineProvider {
             dates.insert(midnight)
         }
         let later = dates.sorted().prefix(12).map {
-            CalendarEntry(date: $0, state: .ready, events: entry.events, colors: entry.colors, calendar: entry.calendar)
+            CalendarEntry(date: $0, state: .ready, events: entry.events, colors: entry.colors,
+                          calendar: entry.calendar, pendingRequests: entry.pendingRequests)
         }
         return [entry] + later
     }
@@ -177,7 +201,8 @@ struct CalendarProvider: TimelineProvider {
         return CalendarEntry(
             date: now, state: .ready, events: events,
             colors: ["work": "#6366f1", "meet": "#0ea5e9", "life": "#ef4444"],
-            calendar: calendar
+            calendar: calendar,
+            pendingRequests: 2
         )
     }
 }

@@ -20,10 +20,17 @@ final class TabRouter {
     /// 캘린더 탭이 선택해야 할 날짜 — 홈 화면 위젯 딥링크용, 소비 후 nil
     var calendarDateRequest: Date?
 
-    /// orbit42://calendar?date=2026-10-13 — 위젯을 누르면 그 날짜의 캘린더로.
+    /// 위젯 딥링크 — orbit42://calendar?date=2026-10-13 (그 날짜의 캘린더),
+    /// orbit42://bookings (받은 예약 목록).
     @discardableResult
     func handle(url: URL) -> Bool {
-        guard url.scheme == "orbit42", url.host == "calendar" else { return false }
+        guard url.scheme == "orbit42" else { return false }
+        if url.host == "bookings" {
+            selection = .bookings
+            bookingsSectionRequest = "received"
+            return true
+        }
+        guard url.host == "calendar" else { return false }
         let raw = URLComponents(url: url, resolvingAgainstBaseURL: false)?
             .queryItems?.first(where: { $0.name == "date" })?.value
         selection = .calendar

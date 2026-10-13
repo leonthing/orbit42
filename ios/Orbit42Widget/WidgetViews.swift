@@ -67,24 +67,72 @@ struct LoggedOutView: View {
     }
 }
 
+/// 위젯 체크박스 — 누르면 앱을 열지 않고 완료/해제 (iOS 17 인터랙티브 위젯)
+struct CompletionCheckbox: View {
+    let event: WidgetEvent
+    let tint: Color
+    var size: CGFloat = 15
+
+    var body: some View {
+        Button(intent: ToggleCompletionIntent(eventId: event.id, completed: !event.completed)) {
+            Image(systemName: event.completed ? "checkmark.circle.fill" : "circle")
+                .font(.system(size: size, weight: .medium))
+                .foregroundStyle(tint)
+                .frame(width: size + 6, height: size + 6)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(event.completed ? "완료 해제" : "완료로 표시")
+    }
+}
+
+/// 답해야 할 요청 수 — 없으면 아무것도 그리지 않는다. 누르면 받은 예약 목록.
+struct RequestBadge: View {
+    let count: Int
+
+    var body: some View {
+        if count > 0 {
+            Link(destination: SharedConfig.bookingsURL) {
+                Text("요청 \(count)건")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.orange, in: Capsule())
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+        }
+    }
+}
+
 /// 꽉 찬 색 카드 (구글 캘린더 위젯식) — 다가오는 일정
 struct SolidEventCard: View {
     let event: WidgetEvent
     let entry: CalendarEntry
+    let destination: URL
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text(event.title)
-                .font(.caption.weight(.semibold))
-                .strikethrough(event.completed)
-                .lineLimit(1)
-            Text([WidgetText.dayPrefix(event, entry: entry), WidgetText.range(event)].compactMap { $0 }.joined(separator: " "))
-                .font(.caption2)
-                .lineLimit(1)
+        HStack(spacing: 2) {
+            CompletionCheckbox(event: event, tint: .white, size: 14)
+            Link(destination: destination) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(event.title)
+                        .font(.caption.weight(.semibold))
+                        .strikethrough(event.completed)
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Text([WidgetText.dayPrefix(event, entry: entry), WidgetText.range(event)].compactMap { $0 }.joined(separator: " "))
+                        .font(.caption2)
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            }
         }
         .foregroundStyle(.white)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .padding(.horizontal, 8)
+        .padding(.leading, 3)
+        .padding(.trailing, 8)
         .background(entry.color(of: event), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         .opacity(event.completed ? WidgetPalette.completedOpacity : (event.tentative ? 0.7 : 1))
     }
@@ -94,42 +142,43 @@ struct SolidEventCard: View {
 struct TintedEventRow: View {
     let event: WidgetEvent
     let entry: CalendarEntry
+    let destination: URL
 
     var body: some View {
         let color = entry.color(of: event)
-        Group {
-            if event.allDay {
-                HStack(spacing: 5) {
-                    Circle().fill(color).frame(width: 6, height: 6)
-                    Text(event.title)
-                        .font(.caption.weight(.semibold))
-                        .strikethrough(event.completed)
-                        .lineLimit(1)
-                    Spacer(minLength: 0)
-                }
-                .padding(.horizontal, 6)
-                .padding(.vertical, 3)
-            } else {
-                HStack(spacing: 5) {
-                    RoundedRectangle(cornerRadius: 1.5).fill(color).frame(width: 3)
-                    VStack(alignment: .leading, spacing: 0) {
+        HStack(spacing: 2) {
+            CompletionCheckbox(event: event, tint: color, size: event.allDay ? 12 : 14)
+            Link(destination: destination) {
+                if event.allDay {
+                    HStack {
                         Text(event.title)
                             .font(.caption.weight(.semibold))
                             .strikethrough(event.completed)
                             .lineLimit(1)
-                        Text(WidgetText.range(event))
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
+                        Spacer(minLength: 0)
                     }
-                    Spacer(minLength: 0)
+                } else {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text(event.title)
+                                .font(.caption.weight(.semibold))
+                                .strikethrough(event.completed)
+                                .lineLimit(1)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            Text(WidgetText.range(event))
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                        Spacer(minLength: 0)
+                    }
                 }
-                .padding(.vertical, 3)
-                .padding(.trailing, 4)
-                .padding(.leading, 3)
-                .fixedSize(horizontal: false, vertical: true)
             }
         }
+        .padding(.vertical, event.allDay ? 1 : 3)
+        .padding(.leading, 1)
+        .padding(.trailing, 4)
+        .fixedSize(horizontal: false, vertical: true)
         // Link 안이라 기본 tint(액센트)가 글자에 묻지 않도록 명시
         .foregroundStyle(Color.primary)
         .background(color.opacity(0.14), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
@@ -169,9 +218,8 @@ struct MonthUpcomingView: View {
         } else {
             VStack(spacing: 4) {
                 ForEach(events) { event in
-                    Link(destination: SharedConfig.calendarURL(for: max(event.start, entry.calendar.startOfDay(for: entry.date)))) {
-                        SolidEventCard(event: event, entry: entry)
-                    }
+                    SolidEventCard(event: event, entry: entry,
+                                   destination: SharedConfig.calendarURL(for: max(event.start, entry.calendar.startOfDay(for: entry.date))))
                 }
                 ForEach(0..<(3 - events.count), id: \.self) { _ in
                     Color.clear
@@ -195,10 +243,14 @@ struct MonthGrid: View {
         let symbols = rotated(calendar.veryShortWeekdaySymbols, firstWeekday: calendar.firstWeekday)
 
         VStack(alignment: .leading, spacing: 2) {
-            Text("\(calendar.component(.month, from: today))월")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(WidgetPalette.accent)
-                .padding(.leading, 2)
+            HStack(spacing: 4) {
+                Text("\(calendar.component(.month, from: today))월")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(WidgetPalette.accent)
+                Spacer(minLength: 0)
+                RequestBadge(count: entry.pendingRequests)
+            }
+            .padding(.leading, 2)
             HStack(spacing: 0) {
                 ForEach(Array(symbols.enumerated()), id: \.offset) { _, symbol in
                     Text(symbol)
@@ -271,9 +323,12 @@ struct TodayTomorrowView: View {
         return HStack(alignment: .top, spacing: 10) {
             VStack(alignment: .leading, spacing: 4) {
                 VStack(alignment: .leading, spacing: -2) {
-                    Text(WidgetText.weekdayName(today, calendar: calendar))
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(WidgetPalette.accent)
+                    HStack(spacing: 4) {
+                        Text(WidgetText.weekdayName(today, calendar: calendar))
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(WidgetPalette.accent)
+                        RequestBadge(count: entry.pendingRequests)
+                    }
                     Text("\(calendar.component(.day, from: today))")
                         .font(.system(size: 34, weight: .regular))
                 }
@@ -283,9 +338,7 @@ struct TodayTomorrowView: View {
                         .foregroundStyle(.secondary)
                 }
                 ForEach(left) { event in
-                    Link(destination: SharedConfig.calendarURL(for: today)) {
-                        TintedEventRow(event: event, entry: entry)
-                    }
+                    TintedEventRow(event: event, entry: entry, destination: SharedConfig.calendarURL(for: today))
                 }
                 Spacer(minLength: 0)
             }
@@ -293,9 +346,7 @@ struct TodayTomorrowView: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 ForEach(rightToday) { event in
-                    Link(destination: SharedConfig.calendarURL(for: today)) {
-                        TintedEventRow(event: event, entry: entry)
-                    }
+                    TintedEventRow(event: event, entry: entry, destination: SharedConfig.calendarURL(for: today))
                 }
                 Text("내일")
                     .font(.caption2.weight(.bold))
@@ -307,9 +358,7 @@ struct TodayTomorrowView: View {
                         .foregroundStyle(.secondary)
                 }
                 ForEach(tomorrowShown) { event in
-                    Link(destination: SharedConfig.calendarURL(for: tomorrow)) {
-                        TintedEventRow(event: event, entry: entry)
-                    }
+                    TintedEventRow(event: event, entry: entry, destination: SharedConfig.calendarURL(for: tomorrow))
                 }
                 Spacer(minLength: 0)
             }
@@ -343,23 +392,26 @@ struct NextEventView: View {
             let calendar = entry.calendar
             VStack(alignment: .leading, spacing: 6) {
                 VStack(alignment: .leading, spacing: -2) {
-                    Text(WidgetText.weekdayName(entry.date, calendar: calendar))
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(WidgetPalette.accent)
+                    HStack(spacing: 4) {
+                        Text(WidgetText.weekdayName(entry.date, calendar: calendar))
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(WidgetPalette.accent)
+                        Spacer(minLength: 0)
+                        RequestBadge(count: entry.pendingRequests)
+                    }
                     Text("\(calendar.component(.day, from: entry.date))")
                         .font(.system(size: 34, weight: .regular))
                 }
                 Spacer(minLength: 0)
                 if let event = entry.upcoming(limit: 1).first {
-                    HStack(spacing: 6) {
-                        RoundedRectangle(cornerRadius: 1.5)
-                            .fill(entry.color(of: event))
-                            .frame(width: 3)
+                    HStack(alignment: .top, spacing: 3) {
+                        CompletionCheckbox(event: event, tint: entry.color(of: event), size: 16)
                         VStack(alignment: .leading, spacing: 1) {
                             Text(event.title)
                                 .font(.subheadline.weight(.semibold))
                                 .strikethrough(event.completed)
                                 .lineLimit(2)
+                                .frame(maxWidth: .infinity, alignment: .leading)
                             Text([WidgetText.dayPrefix(event, entry: entry), WidgetText.range(event)].compactMap { $0 }.joined(separator: " "))
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)

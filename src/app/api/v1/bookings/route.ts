@@ -5,6 +5,7 @@ import {
   type BookingRow,
   type GuestBookingRow,
 } from "@/lib/slots";
+import { listRequestsForHost } from "@/lib/time-requests";
 
 export const dynamic = "force-dynamic";
 
@@ -95,12 +96,15 @@ export async function GET(request: Request) {
   if (!session) {
     return Response.json({ error: "로그인이 필요해요." }, { status: 401 });
   }
-  const [host, guest] = await Promise.all([
+  const [host, guest, timeRequests] = await Promise.all([
     listMyHostBookings(),
     listMyGuestBookings(),
+    listRequestsForHost(),
   ]);
   return Response.json({
     host: host.map(toApiHostBooking),
     guest: guest.map(toApiGuestBooking),
+    // 프로필로 받은 시간 요청 중 아직 답하지 않은 것 (홈 화면 위젯 "요청 n건")
+    pendingTimeRequests: timeRequests.length,
   });
 }

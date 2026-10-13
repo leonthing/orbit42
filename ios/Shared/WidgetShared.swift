@@ -16,6 +16,9 @@ enum SharedConfig {
         #endif
     }
 
+    /// 위젯 → 앱 딥링크: 받은 예약 목록
+    static let bookingsURL = URL(string: "orbit42://bookings")!
+
     /// 위젯 → 앱 딥링크: orbit42://calendar?date=2026-10-13
     static func calendarURL(for day: Date) -> URL {
         URL(string: "orbit42://calendar?date=\(APIDateParser.encodeDateOnly(day))")!
@@ -121,7 +124,8 @@ struct WidgetEvent: Codable, Hashable, Identifiable, Sendable {
     /// 실질 종료 시각 — 종일 일정은 마지막 날 23:59:59, 자정 끝은 직전 초 (앱 effectiveEnd 와 같은 규칙)
     let end: Date
     let allDay: Bool
-    let completed: Bool
+    /// 위젯 체크박스로 바꾼 뒤 캐시에 바로 반영하려고 var
+    var completed: Bool
     let tentative: Bool
     let calendarId: String?
 
@@ -142,6 +146,8 @@ struct WidgetFeed: Codable, Sendable {
     var updatedAt: Date
     /// "2026-10" → 그 달 일정
     var months: [String: WidgetMonth]
+    /// 받은 예약 중 승인 대기 건수 (앱 예약 탭 배지와 같은 수) — 못 받았으면 nil
+    var pendingBookings: Int?
 
     static func monthKey(year: Int, month: Int) -> String {
         String(format: "%04d-%02d", year, month)
@@ -233,6 +239,25 @@ enum WidgetStore {
         let cutoffKey = WidgetFeed.monthKey(year: comps.year ?? 0, month: comps.month ?? 0)
         feed.months = feed.months.filter { $0.key >= cutoffKey }
         feed.updatedAt = now
+        save(feed)
+    }
+
+    static func setPendingBookings(_ count: Int) {
+        guard var feed = load() else { return }
+        feed.pendingBookings = count
+        save(feed)
+    }
+
+    /// 위젯 체크박스 — 서버 저장이 끝난 완료 상태를 캐시의 모든 달에 반영한다.
+    static func setCompleted(eventId: String, completed: Bool) {
+        guard var feed = load() else { return }
+        for key in feed.months.keys {
+            guard var month = feed.months[key] else { continue }
+            for index in month.events.indices where month.events[index].id == eventId {
+                month.events[index].completed = completed
+            }
+            feed.months[key] = month
+        }
         save(feed)
     }
 
