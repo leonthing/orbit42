@@ -55,7 +55,7 @@ struct DayTimelineView: View {
                     HStack(spacing: 0) {
                         checkbox(event, size: 14)
                         Button { onOpen(event) } label: {
-                            Text(event.title)
+                            Text(titleText(event))
                                 .font(.caption.weight(.semibold))
                                 .strikethrough(event.completed)
                                 .lineLimit(1)
@@ -68,8 +68,8 @@ struct DayTimelineView: View {
                     .foregroundStyle(.white)
                     .padding(.leading, 3)
                     .padding(.trailing, 8)
-                    .background(event.displayColor(in: calendars), in: RoundedRectangle(cornerRadius: 6))
-                    .opacity(event.completed ? 0.55 : 1)
+                    .background(blockColor(event), in: RoundedRectangle(cornerRadius: 6))
+                    .opacity(blockOpacity(event))
                 }
             }
             .padding(.trailing, 12)
@@ -147,7 +147,7 @@ struct DayTimelineView: View {
             checkbox(event, size: block.height > 22 ? 15 : 12)
             Button { onOpen(event) } label: {
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(event.title)
+                    Text(titleText(event))
                         .font(.caption.weight(.semibold))
                         .strikethrough(event.completed)
                         .lineLimit(block.height > 44 ? 2 : 1)
@@ -175,9 +175,29 @@ struct DayTimelineView: View {
         .padding(.leading, 1)
         .padding(.trailing, 6)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(event.displayColor(in: calendars), in: RoundedRectangle(cornerRadius: 6))
-        .opacity(event.completed ? 0.55 : (event.tentative ? 0.7 : 1))
+        .background(blockColor(event), in: RoundedRectangle(cornerRadius: 6))
+        .opacity(blockOpacity(event))
         .clipped()
+    }
+
+    // 보관한 일정은 회색 블록 + 제목 앞 "보관" — 완료(취소선)와 구분된다.
+    private func titleText(_ event: CalendarEvent) -> AttributedString {
+        var title = AttributedString(event.title)
+        guard event.archived else { return title }
+        var tag = AttributedString("보관 ")
+        tag.font = .caption2.weight(.bold)
+        title = tag + title
+        return title
+    }
+
+    private func blockColor(_ event: CalendarEvent) -> Color {
+        event.archived ? Color.gray : event.displayColor(in: calendars)
+    }
+
+    private func blockOpacity(_ event: CalendarEvent) -> Double {
+        if event.archived { return 0.75 }
+        if event.completed { return 0.55 }
+        return event.tentative ? 0.7 : 1
     }
 
     /// 위젯과 같은 모양의 완료 체크 — 누르면 바로 토글 (`CalendarViewModel.setCompletion`, 낙관적 반영)

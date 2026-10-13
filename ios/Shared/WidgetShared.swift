@@ -176,11 +176,14 @@ enum WidgetFeedDecoder {
         let calendarId: String?
         let completed: Bool?
         let tentative: Bool?
+        /// "done" | "archived" | nil — 보관한 일정은 위젯에 넣지 않는다
+        let status: String?
     }
 
     static func decodeMonth(_ data: Data, calendar: Calendar) throws -> WidgetMonth {
         let raw = try JSONDecoder().decode(RawResponse.self, from: data)
         let events: [WidgetEvent] = raw.events.compactMap { event in
+            guard event.status != "archived" else { return nil }
             guard let start = APIDateParser.parse(event.startAt),
                   let endAt = APIDateParser.parse(event.endAt)
             else { return nil }

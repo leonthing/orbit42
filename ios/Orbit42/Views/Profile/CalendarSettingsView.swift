@@ -118,11 +118,19 @@ struct CalendarSettingsView: View {
                     Text(option.label).tag(option)
                 }
             }
+            Toggle(
+                "보관한 일정 보기",
+                isOn: Binding(
+                    get: { settings.showArchived },
+                    set: { settings.setShowArchived($0) }
+                )
+            )
+            .tint(Theme.accent)
         } header: {
             Text("보기 설정")
                 .foregroundStyle(Theme.secondaryText)
         } footer: {
-            Text("새 일정을 만들 때 종료 시각이 이만큼 뒤로 잡혀요.")
+            Text("새 일정을 만들 때 종료 시각이 이만큼 뒤로 잡혀요. 보관한 일정은 켜 두면 흐리게, 끄면 보이지 않아요.")
                 .foregroundStyle(Theme.secondaryText)
         }
         .listRowBackground(Theme.surface)

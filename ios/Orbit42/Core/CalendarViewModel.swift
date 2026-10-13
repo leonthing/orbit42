@@ -84,6 +84,7 @@ final class CalendarViewModel {
                 guard let calendarId = event.calendarId else { return true }
                 return !hiddenCalendarIds.contains(calendarId)
             }
+            .filter { !$0.archived || AppSettings.shared.showArchived }
             .filter { $0.occurs(on: date, calendar: Self.calendar) }
             .sorted { lhs, rhs in
                 if lhs.allDay != rhs.allDay { return lhs.allDay }
@@ -326,6 +327,53 @@ final class CalendarViewModel {
         }
     }
 
+    // MARK: - 보관
+
+    /// 보관/보관 해제 — 낙관적으로 캐시에 먼저 반영하고 `PUT .../completion {status}` 로 저장.
+    /// 보관하면 완료는 꺼진다 (상태는 하나). 실패하면 원복하고 에러를 다시 던진다.
+    func setArchived(_ event: CalendarEvent, archived: Bool) async throws {
+        let previous = currentState(of: event)
+        guard previous.archived != archived else { return }
+        applyState(eventId: event.id, completed: archived ? false : previous.completed, archived: archived)
+        do {
+            let _: EventCompletionResponse = try await api.put(
+                "/api/v1/calendar/events/\(event.id)/completion",
+                body: UpdateEventStatusRequest(status: archived ? "archived" : "none")
+            )
+            WidgetBridge.reload()
+        } catch {
+            applyState(eventId: event.id, completed: previous.completed, archived: previous.archived)
+            throw error
+        }
+    }
+
+    /// 캐시에 반영된 최신 보관 상태.
+    func isArchived(_ event: CalendarEvent) -> Bool {
+        currentState(of: event).archived
+    }
+
+    private func currentState(of event: CalendarEvent) -> (completed: Bool, archived: Bool) {
+        for data in cache.values {
+            if let cached = data.events.first(where: { $0.id == event.id }) {
+                return (cached.completed, cached.archived)
+            }
+        }
+        return (event.completed, event.archived)
+    }
+
+    private func applyState(eventId: String, completed: Bool, archived: Bool) {
+        for key in cache.keys {
+            guard var data = cache[key] else { continue }
+            var changed = false
+            for index in data.events.indices where data.events[index].id == eventId {
+                data.events[index].completed = completed
+                data.events[index].archived = archived
+                changed = true
+            }
+            if changed { cache[key] = data }
+        }
+    }
+
     /// 캐시에 반영된 최신 완료 상태. (상세 시트가 든 스냅샷이 낡았을 수 있어 캐시 우선)
     private func currentCompleted(of event: CalendarEvent) -> Bool {
         for data in cache.values {
@@ -343,6 +391,8 @@ final class CalendarViewModel {
             var changed = false
             for index in data.events.indices where data.events[index].id == eventId {
                 data.events[index].completed = completed
+                // 완료로 체크하면 서버가 보관을 완료로 바꾼다 — 화면도 같이.
+                if completed { data.events[index].archived = false }
                 changed = true
             }
             if changed { cache[key] = data }

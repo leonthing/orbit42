@@ -68,6 +68,7 @@ final class AppSettings {
 
     private static let weekStartKey = "weekStart"
     private static let eventDurationKey = "eventDuration"
+    private static let showArchivedKey = "showArchivedEvents"
 
     /// 캘린더 주 시작 요일 — 기본값은 기기 설정 따름.
     /// 쓰기는 `setWeekStart(_:)` 로만 한다(파생 `calendar` 를 함께 갱신해야 해서).
@@ -80,6 +81,9 @@ final class AppSettings {
     /// 새 일정 기본 길이 — 기본값 1시간.
     private(set) var eventDuration: EventDuration
 
+    /// 보관한 일정 보기 — 켜면 흐리게 표시, 끄면 숨김. 기본 켬.
+    private(set) var showArchived: Bool
+
     @ObservationIgnored private var foregroundObserver: NSObjectProtocol?
 
     private init() {
@@ -91,6 +95,7 @@ final class AppSettings {
             EventDuration(
                 rawValue: UserDefaults.standard.integer(forKey: Self.eventDurationKey)
             ) ?? .hour1
+        showArchived = UserDefaults.standard.object(forKey: Self.showArchivedKey) as? Bool ?? true
 
         // `.system` 인 동안 사용자가 기기 설정을 바꾸고 돌아올 수 있다.
         foregroundObserver = NotificationCenter.default.addObserver(
@@ -134,6 +139,11 @@ final class AppSettings {
         if resolved != calendar.firstWeekday {
             calendar = Self.makeCalendar(firstWeekday: resolved)
         }
+    }
+
+    func setShowArchived(_ value: Bool) {
+        showArchived = value
+        UserDefaults.standard.set(value, forKey: Self.showArchivedKey)
     }
 
     func setEventDuration(_ value: EventDuration) {

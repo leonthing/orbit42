@@ -861,6 +861,9 @@ private struct EventRow: View {
                                 .foregroundStyle(Theme.primaryText)
                                 .strikethrough(event.completed)
                                 .lineLimit(2)
+                            if event.archived {
+                                ArchivedTag()
+                            }
                             if event.isGoogle {
                                 Text("Google")
                                     .font(.caption2.weight(.medium))
@@ -915,9 +918,11 @@ private struct EventRow: View {
         .opacity(rowOpacity)
         .fixedSize(horizontal: false, vertical: true)
         .animation(.easeInOut(duration: 0.15), value: event.completed)
+        .animation(.easeInOut(duration: 0.15), value: event.archived)
     }
 
     private var rowOpacity: Double {
+        if event.archived { return CalendarEvent.archivedOpacity }
         if event.completed { return 0.55 }
         return event.tentative ? 0.65 : 1
     }

@@ -54,6 +54,8 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
     let autoValueKrw: Int?
     /// 완료 체크(투두) 상태 — 낙관적 업데이트를 위해 var (서버가 안 주면 false)
     var completed: Bool
+    /// 보관 — 원본은 그대로 두고 흐리게 보이거나(설정) 숨긴다. 완료와 함께 켜지지 않는다.
+    var archived: Bool
     /// 초대받은 일정(source == "invite")일 때의 참여 행 id / 상태 / 보낸 사람
     let inviteId: String?
     let inviteStatus: String?
@@ -77,7 +79,7 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
 
     private enum CodingKeys: String, CodingKey {
         case id, title, description, startAt, endAt, allDay, calendarId, source, tentative
-        case bucketOverride, earningKrw, autoValueKrw, completed
+        case bucketOverride, earningKrw, autoValueKrw, completed, status
         case inviteId, inviteStatus, inviterName
         case location, locationLat, locationLng, travelMin
         case attendees, isOrganizer
@@ -96,6 +98,7 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
         earningKrw = try container.decodeIfPresent(Int.self, forKey: .earningKrw)
         autoValueKrw = try container.decodeIfPresent(Int.self, forKey: .autoValueKrw)
         completed = try container.decodeIfPresent(Bool.self, forKey: .completed) ?? false
+        archived = (try? container.decodeIfPresent(String.self, forKey: .status)) == "archived"
         inviteId = try container.decodeIfPresent(String.self, forKey: .inviteId)
         inviteStatus = try container.decodeIfPresent(String.self, forKey: .inviteStatus)
         inviterName = try container.decodeIfPresent(String.self, forKey: .inviterName)
@@ -240,6 +243,11 @@ struct EventMutationResponse: Decodable {
 /// `PUT /api/v1/calendar/events/{id}/completion` — 일정 완료 체크(투두).
 struct UpdateEventCompletionRequest: Encodable {
     let completed: Bool
+}
+
+/// `PUT .../completion` — 완료·보관 지정/해제 ("done" | "archived" | "none")
+struct UpdateEventStatusRequest: Encodable {
+    let status: String
 }
 
 /// 완료 토글 성공 응답 — `{"ok": true, "completed": Bool}`

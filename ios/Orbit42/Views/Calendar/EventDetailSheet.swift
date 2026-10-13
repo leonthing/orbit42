@@ -73,6 +73,10 @@ struct EventDetailSheet: View {
 
     /// 완료 체크(투두) — 시트가 든 event 는 스냅샷이므로 표시는 이 상태로 한다.
     @State private var isCompleted: Bool
+    /// 보관 — 원본은 그대로 두고 표시만 바꾼다 (완료와 함께 켜지지 않는다)
+    @State private var isArchived: Bool
+    @State private var isSavingArchive = false
+    @State private var showingMove = false
     @State private var isSavingCompletion = false
     @State private var completionErrorMessage: String?
 
@@ -85,6 +89,7 @@ struct EventDetailSheet: View {
         _selectedBucket = State(initialValue: event.bucketOverride)
         _earningKrw = State(initialValue: event.earningKrw)
         _isCompleted = State(initialValue: event.completed)
+        _isArchived = State(initialValue: viewModel.isArchived(event))
         _googleAttendees = State(initialValue: event.attendees)
     }
 
@@ -118,6 +123,9 @@ struct EventDetailSheet: View {
                                     .font(.subheadline)
                                     .foregroundStyle(Self.completedGreen)
                                     .accessibilityLabel("완료됨")
+                            }
+                            if isArchived {
+                                ArchivedTag()
                             }
                             if event.isGoogle {
                                 Text("Google")
@@ -268,11 +276,32 @@ struct EventDetailSheet: View {
                         }
                     }
                     .disabled(isSavingCompletion || isDeleting)
-                    .alert("완료 상태를 저장하지 못했어요", isPresented: showCompletionErrorAlert) {
+                    .alert("상태를 저장하지 못했어요", isPresented: showCompletionErrorAlert) {
                         Button("확인", role: .cancel) { completionErrorMessage = nil }
                     } message: {
                         Text(completionErrorMessage ?? "")
                     }
+
+                    Button {
+                        toggleArchive()
+                    } label: {
+                        HStack {
+                            Label(isArchived ? "보관 해제" : "보관",
+                                  systemImage: isArchived ? "archivebox.fill" : "archivebox")
+                            Spacer()
+                            if isSavingArchive {
+                                ProgressView().tint(Theme.secondaryText)
+                            }
+                        }
+                    }
+                    .disabled(isSavingArchive || isDeleting)
+
+                    Button {
+                        showingMove = true
+                    } label: {
+                        Label("다른 날로", systemImage: "calendar.badge.clock")
+                    }
+                    .disabled(isDeleting)
 
                     Button {
                         showingEdit = true
@@ -322,6 +351,12 @@ struct EventDetailSheet: View {
                 Button("확인", role: .cancel) { errorMessage = nil }
             } message: {
                 Text(errorMessage ?? "")
+            }
+            .sheet(isPresented: $showingMove) {
+                MoveEventSheet(viewModel: viewModel, event: event) {
+                    // 새 일정이 생기고 원본은 보관됐다 — 상세도 닫는다.
+                    dismiss()
+                }
             }
             .sheet(isPresented: $showingEdit) {
                 EditEventSheet(viewModel: viewModel, event: event) {
@@ -377,6 +412,28 @@ struct EventDetailSheet: View {
         )
     }
 
+    // MARK: - 보관
+
+    private func toggleArchive() {
+        guard !isSavingArchive else { return }
+        let newValue = !isArchived
+        let previousCompleted = isCompleted
+        isArchived = newValue
+        if newValue { isCompleted = false }
+        isSavingArchive = true
+        Task {
+            defer { isSavingArchive = false }
+            do {
+                try await viewModel.setArchived(event, archived: newValue)
+            } catch {
+                isArchived = !newValue
+                isCompleted = previousCompleted
+                completionErrorMessage = (error as? APIError)?.errorDescription
+                    ?? "보관 상태를 저장하지 못했어요. 잠시 후 다시 시도해 주세요."
+            }
+        }
+    }
+
     // MARK: - 완료 체크
 
     /// 시트 표시를 낙관적으로 뒤집고 저장한다. 뷰모델이 월 캐시를 함께 갱신하므로
@@ -384,7 +441,10 @@ struct EventDetailSheet: View {
     private func toggleCompletion() {
         guard !isSavingCompletion else { return }
         let newValue = !isCompleted
+        let wasArchived = isArchived
         isCompleted = newValue
+        // 완료로 체크하면 보관은 풀린다 (상태는 하나).
+        if newValue { isArchived = false }
         isSavingCompletion = true
         Task {
             defer { isSavingCompletion = false }
@@ -392,9 +452,11 @@ struct EventDetailSheet: View {
                 try await viewModel.setCompletion(event, completed: newValue)
             } catch let apiError as APIError {
                 isCompleted = !newValue
+                isArchived = wasArchived
                 completionErrorMessage = apiError.errorDescription
             } catch {
                 isCompleted = !newValue
+                isArchived = wasArchived
                 completionErrorMessage = "완료 상태를 저장하지 못했어요. 잠시 후 다시 시도해 주세요."
             }
         }
