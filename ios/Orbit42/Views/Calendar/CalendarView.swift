@@ -108,7 +108,7 @@ struct CalendarView: View {
         router.calendarDateRequest = nil
         selectedEvent = nil
         scheduleViewMode = .day
-        viewModel.select(date: date)
+        viewModel.selectFromLink(date: date)
     }
 
     /// 알림 딥링크 — 그 일정이 있는 날로 이동해 상세 시트를 연다.
@@ -117,7 +117,7 @@ struct CalendarView: View {
         guard let request else { return }
         router.calendarEventRequest = nil
         scheduleViewMode = .month
-        viewModel.select(date: request.date)
+        viewModel.selectFromLink(date: request.date)
         Task {
             await viewModel.loadDisplayedMonth(force: true)
             if let event = viewModel.currentMonthData?.events

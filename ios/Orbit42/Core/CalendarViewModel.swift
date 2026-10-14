@@ -111,16 +111,34 @@ final class CalendarViewModel {
 
     /// 마지막으로 앱을 본 시각 — 날이 바뀌었거나 오래 떠나 있다 돌아오면 오늘로 돌아간다.
     @ObservationIgnored private var lastActiveAt = Date()
+    /// 위젯·알림 링크로 날짜를 고른 시각 — 그 직후의 '오늘로'가 링크 날짜를 덮지 않게
+    @ObservationIgnored private var linkSelectedAt = Date.distantPast
+
+    /// 위젯·알림 링크가 고른 날 — 앞으로 올 때의 '오늘로'보다 앞선다
+    func selectFromLink(date: Date) {
+        linkSelectedAt = Date()
+        select(date: date)
+    }
 
     /// 앱이 다시 앞으로 올 때 — iOS 는 앱을 며칠씩 메모리에 두므로 그대로 두면
     /// 전에 보던 날(또는 앱을 처음 켠 날)에서 시작해 '엉뚱한 날짜'로 보인다.
     /// 날이 바뀌었거나 1시간 넘게 떠나 있었으면 오늘로 맞춘다(아이폰 캘린더와 같은 손).
     func returnToTodayIfStale(now: Date = Date()) {
         defer { lastActiveAt = now }
+        // 링크로 막 날짜를 골랐으면 그대로 둔다 (활성화와 링크 처리 순서는 iOS 가 정한다)
+        guard now.timeIntervalSince(linkSelectedAt) > 5 else { return }
         let dayChanged = !Self.calendar.isDate(lastActiveAt, inSameDayAs: now)
-        guard dayChanged || now.timeIntervalSince(lastActiveAt) > 3600 else { return }
+        guard dayChanged || now.timeIntervalSince(lastActiveAt) > Self.staleInterval else { return }
         guard !Self.calendar.isDate(selectedDate, inSameDayAs: now) else { return }
         showToday()
+    }
+
+    /// 이만큼 떠나 있었으면 오늘로 (실측용으로 DEBUG 에서 DEMO_STALE_SECONDS 로 줄일 수 있다)
+    private static var staleInterval: TimeInterval {
+        #if DEBUG
+        if let raw = ProcessInfo.processInfo.environment["DEMO_STALE_SECONDS"], let v = TimeInterval(raw) { return v }
+        #endif
+        return 3600
     }
 
     /// 앱이 뒤로 갈 때 — 떠난 시각을 남긴다

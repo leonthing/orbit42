@@ -10,6 +10,7 @@
 - 초대받은 일정은 이제 주최자만 수정할 수 있다고 알려 줘요. 전에는 수정해도 내 캘린더만 바뀌었어요.
 - 초대받은 일정의 삭제는 '내 캘린더에서 빼기'로 바뀌었어요. 빼면 주최자에게 불참 알림 메일이 가요.
 - '다른 날로'는 수정 화면의 날짜 변경으로 합쳤어요.
+- 앱을 한동안 두었다가 열면 지난 날짜에서 시작하던 문제를 고쳤어요.
 
 ## en-US
 - In Day view, press and hold an event, then drag to move it; drag its bottom edge to change its length.
@@ -21,3 +22,4 @@
 - Events you were invited to can now only be edited by the organizer. Previously, edits changed only your own calendar.
 - For events you were invited to, deleting now removes the event from your calendar only, and the organizer is emailed that you declined.
 - Moving an event to another day is now done by changing the date in Edit.
+- Fixed an issue where the app could open on a past date after being in the background for a while.
