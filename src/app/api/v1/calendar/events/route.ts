@@ -27,6 +27,12 @@ function toApiEvent(e: CalendarEvent) {
     travelMin: e.travel_min ?? null,
     // 구글 일정에서 내가 주최자인지 — 아니면 앱이 참석자 추가를 숨긴다
     isOrganizer: e.source === "google" ? e.organizer_self === true : undefined,
+    // 남이 주최해도 '참석자 수정 허용'이면 앱이 수정·끌어 옮기기를 연다
+    guestsCanModify: e.source === "google" ? e.guests_can_modify === true : undefined,
+    // 예약에서 생긴 일정 — 앱은 끌어 옮기지 못하게 하고, 상세에서 그 예약으로 보낸다
+    isBooking: Boolean(e.booking_id),
+    bookingId: e.booking_id ?? null,
+    bookingRole: e.booking_role ?? null,
   };
 }
 

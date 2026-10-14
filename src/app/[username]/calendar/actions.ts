@@ -222,6 +222,8 @@ export async function updateGoogleEvent(
   gcalId: string,
   eventId: string,
   input: Partial<EventInput>,
+  /** true 면 구글이 참석자에게 변경 메일을 보낸다 (앱 하루 보기 드래그 — 확인받은 뒤에만) */
+  notifyAttendees = false,
 ): Promise<{ ok: true } | { error: string }> {
   const userId = await requireUserId();
   const calendar = await getAuthenticatedCalendar(userId);
@@ -265,6 +267,7 @@ export async function updateGoogleEvent(
       calendarId: gcalId,
       eventId,
       requestBody: body,
+      ...(notifyAttendees && { sendUpdates: "all" }),
     });
     // 참석자 행은 클라이언트 원형 id(`gcal_*`)로 붙어 있다.
     await syncParticipantSnapshots(

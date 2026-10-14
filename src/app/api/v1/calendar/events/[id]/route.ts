@@ -185,6 +185,7 @@ export async function PATCH(
         gcalId,
         params.id.slice("gcal_".length),
         patch,
+        body.notifyAttendees === true,
       );
       if ("error" in result) {
         return Response.json({ error: result.error }, { status: 400 });

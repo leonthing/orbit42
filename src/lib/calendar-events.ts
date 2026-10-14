@@ -40,6 +40,12 @@ export type CalendarEvent = {
   attendees?: GoogleAttendee[];
   /** 구글 일정에서 내가 주최자인지 — 주최자만 참석자를 추가할 수 있다 */
   organizer_self?: boolean;
+  /** 주최자가 '참석자의 일정 수정 허용'을 켰는지 — 켜져 있으면 참석자도 시간·제목을 바꿀 수 있다 */
+  guests_can_modify?: boolean;
+  /** 예약에서 생긴 일정 (로컬은 events.booking_id, 구글은 bookings.google_event_id) — 시간은 예약 변경 절차로만 바꾼다 */
+  booking_id?: string | null;
+  /** 앱 상세의 "예약에서 관리"가 열 예약과 내 입장 (호스트=받은 예약 / 게스트=내가 한 예약) */
+  booking_role?: "host" | "guest";
 };
 
 export type GoogleAttendee = {
@@ -357,10 +363,50 @@ export async function listEventsForUser(
         updated_at: item.updated || "",
         attendees: googleAttendees(item),
         organizer_self: item.organizer?.self === true,
+        guests_can_modify: item.guestsCanModify === true,
       }));
     }
   } catch (err) {
     console.error("Google Calendar fetch error:", err);
+  }
+
+  // 예약에서 생긴 구글 일정 — 호스트 예약의 google_event_id 와 맞춰 예약 id 를 붙인다.
+  if (googleEvents.length > 0) {
+    const rawIds = googleEvents.map((e) => e.id.slice("gcal_".length));
+    const { data: bookingRows } = await db
+      .from("bookings")
+      .select("id, google_event_id")
+      .eq("host_id", userId)
+      .in("google_event_id", rawIds);
+    const bookingByGid = new Map(
+      (bookingRows ?? []).map((b) => [b.google_event_id as string, b.id as string]),
+    );
+    for (const e of googleEvents) {
+      const bookingId = bookingByGid.get(e.id.slice("gcal_".length));
+      if (bookingId) {
+        e.booking_id = bookingId;
+        e.booking_role = "host";
+      }
+    }
+  }
+  // 로컬 예약 일정은 events.booking_id 가 있다 — 내가 호스트인지 게스트인지만 붙인다.
+  const localBookingIds = Array.from(
+    new Set(localEvents.map((e) => e.booking_id).filter((id): id is string => !!id)),
+  );
+  if (localBookingIds.length > 0) {
+    const { data: hostRows } = await db
+      .from("bookings")
+      .select("id")
+      .eq("host_id", userId)
+      .in("id", localBookingIds);
+    const hosted = new Set((hostRows ?? []).map((b) => b.id as string));
+    for (const e of localEvents) {
+      // 공유 캘린더에서 남의 예약 일정은 내 예약 목록에 없으니 역할을 붙이지 않는다
+      const authorId = (e as unknown as { user_id?: string }).user_id;
+      if (e.booking_id && authorId === userId) {
+        e.booking_role = hosted.has(e.booking_id) ? "host" : "guest";
+      }
+    }
   }
 
   // Merge and sort, deduplicate by id
