@@ -185,3 +185,28 @@ test("9. 예약 가능 시간: 앱으로 만든 반복 회차가 막음", async 
   assert.equal(has("2026-12-01T14:00:00"), false, "2회차 막힘");
   assert.equal(has("2026-12-01T15:00:00"), true, "바로 뒤는 열림");
 });
+
+test("10. 이 일정만: 장소·좌표·이동시간 저장 / 이동시간 없음(0) / 장소 지우기 — 시리즈 값은 그대로", async () => {
+  const ev = await create("장소", iso(kst("2026-12-01T10:00:00")), iso(kst("2026-12-01T11:00:00")), "FREQ=DAILY;COUNT=3", {
+    location: "시리즈 장소", locationLat: 37.5, locationLng: 127.0, travelMin: 20,
+  });
+  type L = ApiEvent & { location: string | null; locationLat: number | null; locationLng: number | null; travelMin: number | null };
+  const day = async (d: string) => ((await list("2026-12-01", "2026-12-04")) as L[]).find((e) => e.title.endsWith("장소") && e.startAt === iso(kst(`2026-12-0${d}T10:00:00`)))!;
+  const o2 = await day("2");
+  const r1 = await api("PATCH", `/api/v1/calendar/events/${o2.id}`, { scope: "this", location: "회차 장소", locationLat: 35.1, locationLng: 129.0, travelMin: 45 });
+  assert.equal(r1.status, 200, JSON.stringify(r1.json));
+  let a = await day("2");
+  assert.deepEqual([a.location, a.locationLat, a.locationLng, a.travelMin], ["회차 장소", 35.1, 129.0, 45]);
+  const r2 = await api("PATCH", `/api/v1/calendar/events/${o2.id}`, { scope: "this", travelMin: 0 });
+  assert.equal(r2.status, 200);
+  a = await day("2");
+  assert.equal(a.travelMin, null, "이 회차만 이동시간 없음");
+  const o3 = await day("3");
+  const r3 = await api("PATCH", `/api/v1/calendar/events/${o3.id}`, { scope: "this", location: "" });
+  assert.equal(r3.status, 200);
+  const b = await day("3");
+  assert.deepEqual([b.location || null, b.locationLat, b.locationLng], [null, null, null], "이 회차만 장소 지움");
+  const c = await day("1");
+  assert.deepEqual([c.location, c.locationLat, c.travelMin], ["시리즈 장소", 37.5, 20], "다른 회차는 시리즈 값");
+  void ev;
+});
