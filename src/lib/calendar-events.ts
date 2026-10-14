@@ -14,6 +14,26 @@ import {
   getCalendarForExtraAccount,
 } from "@/lib/google";
 
+/**
+ * 종일 일정의 끝 날짜 — Orbit42 는 "그날 포함"(하루짜리는 시작 = 끝), 구글은 "다음 날(포함 안 함)".
+ * 구글에서 읽을 때는 하루 빼고, 구글에 쓸 때는 하루 더한다. 날짜 문자열(YYYY-MM-DD)만 다룬다.
+ */
+export function googleAllDayEndToInclusive(endDate: string, startDate?: string): string {
+  const d = new Date(`${endDate.slice(0, 10)}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return endDate;
+  d.setUTCDate(d.getUTCDate() - 1);
+  const out = d.toISOString().slice(0, 10);
+  // 예전에 끝 = 시작으로 잘못 써 둔 일정은 시작보다 앞으로 가지 않게
+  return startDate && out < startDate.slice(0, 10) ? startDate.slice(0, 10) : out;
+}
+
+export function inclusiveAllDayEndToGoogle(endDate: string): string {
+  const d = new Date(`${endDate.slice(0, 10)}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return endDate;
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
 export type CalendarEvent = {
   id: string;
   title: string;
@@ -349,7 +369,8 @@ export async function listEventsForUser(
         title: item.summary || "(제목 없음)",
         description: item.description || null,
         start_at: item.start?.dateTime || item.start?.date || "",
-        end_at: item.end?.dateTime || item.end?.date || "",
+        // 구글 종일 끝은 다음 날(포함 안 함) — Orbit42 규칙(그날 포함)으로 바꿔 내려준다
+        end_at: item.end?.dateTime || (item.end?.date ? googleAllDayEndToInclusive(item.end.date, item.start?.date ?? undefined) : ""),
         all_day: !!item.start?.date,
         calendar_id: gcalToNative.get(calId) ?? null,
         business_id: null,
@@ -489,7 +510,7 @@ export async function createEventForUser(
     }
     if (input.all_day) {
       event.start = { date: input.start_at.split("T")[0] };
-      event.end = { date: input.end_at.split("T")[0] };
+      event.end = { date: inclusiveAllDayEndToGoogle(input.end_at.split("T")[0]) };
     } else {
       event.start = { dateTime: input.start_at, timeZone: "Asia/Seoul" };
       event.end = { dateTime: input.end_at, timeZone: "Asia/Seoul" };
@@ -664,7 +685,7 @@ function googleEventBody(input: {
   }
   if (input.all_day) {
     body.start = { date: input.start_at.split("T")[0] };
-    body.end = { date: input.end_at.split("T")[0] };
+    body.end = { date: inclusiveAllDayEndToGoogle(input.end_at.split("T")[0]) };
   } else {
     body.start = { dateTime: input.start_at, timeZone: "Asia/Seoul" };
     body.end = { dateTime: input.end_at, timeZone: "Asia/Seoul" };
@@ -805,7 +826,7 @@ export async function moveEventToCalendar(
       if (patch.start_at !== undefined && patch.end_at !== undefined) {
         if (patch.all_day) {
           patchBody.start = { date: patch.start_at.split("T")[0] };
-          patchBody.end = { date: patch.end_at.split("T")[0] };
+          patchBody.end = { date: inclusiveAllDayEndToGoogle(patch.end_at.split("T")[0]) };
         } else {
           patchBody.start = { dateTime: patch.start_at, timeZone: "Asia/Seoul" };
           patchBody.end = { dateTime: patch.end_at, timeZone: "Asia/Seoul" };
@@ -839,7 +860,8 @@ export async function moveEventToCalendar(
   }
   const allDay = !!g.start?.date;
   const startIso = g.start?.dateTime || g.start?.date;
-  const endIso = g.end?.dateTime || g.end?.date || startIso;
+  // 구글 종일 끝(다음 날)을 Orbit42 규칙(그날 포함)으로
+  const endIso = g.end?.dateTime || (g.end?.date ? googleAllDayEndToInclusive(g.end.date, g.start?.date ?? undefined) : startIso);
   if (!startIso) return { error: "일정 시간 정보를 읽지 못했어요." };
 
   const merged = {

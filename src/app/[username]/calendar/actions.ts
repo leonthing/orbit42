@@ -1,5 +1,7 @@
 "use server";
 
+import { inclusiveAllDayEndToGoogle } from "@/lib/calendar-events";
+
 import { getAdminClient } from "@/lib/supabase";
 import { requireUserId } from "@/lib/db";
 import {
@@ -256,7 +258,8 @@ export async function updateGoogleEvent(
   if (input.start_at !== undefined && input.end_at !== undefined) {
     if (input.all_day) {
       body.start = { date: input.start_at.split("T")[0] };
-      body.end = { date: input.end_at.split("T")[0] };
+      // Orbit42 종일 끝은 그날 포함, 구글은 다음 날 — 하루 더해서 쓴다
+      body.end = { date: inclusiveAllDayEndToGoogle(input.end_at.split("T")[0]) };
     } else {
       body.start = { dateTime: input.start_at, timeZone: "Asia/Seoul" };
       body.end = { dateTime: input.end_at, timeZone: "Asia/Seoul" };
