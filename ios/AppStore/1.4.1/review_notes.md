@@ -9,11 +9,11 @@
 10) 빈 곳 꾹 눌러 새 일정: 하루 보기의 빈 시간을 꾹 누르면 그 시각(15분 단위)으로, 월 보기의 날짜를 꾹 누르면 그 날짜로 '새 일정' 화면이 열립니다.
 11) 캘린더 선택: '새 일정'·'일정 수정' 화면의 제목 바로 아래 '캘린더'에 사용자의 캘린더가 버튼으로 모두 보이고, 하나를 눌러 고릅니다(고른 것은 색으로 채워지고 체크 표시).
 
-참고: 데모 계정은 Google 캘린더가 연결돼 있지 않아, 참석자가 있는 Google 일정의 시간 변경 확인창("참석자에게 구글 캘린더 변경 알림이 갑니다")과 초대받은 Google 일정 화면("주최자만 수정할 수 있어요", "내 캘린더에서 빼기")은 데모 계정으로는 보이지 않습니다. 확인하려면 6)처럼 심사자 본인 Google 계정을 연결해 주세요.
+참고: 데모 계정은 Google 캘린더가 연결돼 있지 않아, 참석자가 있는 Google 일정의 시간 변경 확인창("참석자에게 구글 캘린더 변경 알림이 갑니다")과 초대받은 Google 일정 화면("주최자만 수정할 수 있어요", "내 캘린더에서 빼기")은 데모 계정으로는 보이지 않습니다. 확인하려면 6)처럼 심사자 본인 Google 계정을 연결해 주세요. 참석자가 있는 일정에서 '바꾸기'를 누르면 그 참석자에게 Google이 실제로 변경 메일을 보냅니다. 참석자가 없는 일정이나 '취소'로 확인해 주세요.
 
 ---
 ## 영문 요약(필요 시 함께)
-9) Day view: press and hold an event (~0.4s) to lift it, drag up/down to move it in 15-minute steps; drag its bottom edge to change the end time. 10) Press and hold an empty time slot (Day view) or a date (Month view) to open New Event at that time/date. 11) In New/Edit Event, all calendars are shown as buttons right below the title. The demo account has no Google Calendar connected, so the guest-notification confirm and invited-event screens appear only after connecting your own Google account (see 6).
+9) Day view: press and hold an event (~0.4s) to lift it, drag up/down to move it in 15-minute steps; drag its bottom edge to change the end time. 10) Press and hold an empty time slot (Day view) or a date (Month view) to open New Event at that time/date. 11) In New/Edit Event, all calendars are shown as buttons right below the title. The demo account has no Google Calendar connected, so the guest-notification confirm and invited-event screens appear only after connecting your own Google account (see 6). Note: tapping the confirm button on an event with guests makes Google actually email those guests — please test with an event without guests, or tap Cancel.
 
 ## 데모 데이터 판단
 - appreview 입금 대기 예약(최하린 10/28, 입금 기한 10/27): 제출을 10/15~16에 하면 심사(보통 1~2일)가 10/24 전에 끝날 가능성이 커 지금은 그대로 둔다.
