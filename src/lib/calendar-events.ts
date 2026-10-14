@@ -266,28 +266,28 @@ export async function listEventsForUser(
   const sharedMap = await sharedCalendarsFor(userId);
   const sharedIds = Array.from(sharedMap.keys());
 
-  // Local events (optionally filtered by calendar_id).
-  let localQuery = db
-    .from("events")
-    .select("*")
-    .gte("start_at", startOfMonth)
-    .lte("start_at", endOfMonth)
-    .order("start_at", { ascending: true });
-  localQuery =
-    sharedIds.length > 0
-      ? localQuery.or(`user_id.eq.${userId},calendar_id.in.(${sharedIds.join(",")})`)
-      : localQuery.eq("user_id", userId);
-  if (hasExplicitFilter) {
-    const nativeIds = selectedCals
-      .filter((c) => c.source === "native")
-      .map((c) => c.id);
-    if (nativeIds.length === 0) {
-      localQuery = localQuery.eq("id", "__none__"); // force empty
-    } else {
-      localQuery = localQuery.in("calendar_id", nativeIds);
-    }
-  }
-  const { data: localData } = await localQuery;
+  // Local events (optionally filtered by calendar_id). 반복 일정은 기간 안 회차로 펼쳐 온다(1.5.1).
+  const nativeIds = hasExplicitFilter
+    ? selectedCals.filter((c) => c.source === "native").map((c) => c.id)
+    : null;
+  const { selectEventsInRange } = await import("@/lib/recurrence-db");
+  const localData =
+    nativeIds && nativeIds.length === 0
+      ? []
+      : await selectEventsInRange<Record<string, unknown> & { id: string; start_at: string }>({
+          columns: "*",
+          from: new Date(startOfMonth),
+          to: new Date(endOfMonth),
+          orderByStart: true,
+          scope: (q) => {
+            let scoped =
+              sharedIds.length > 0
+                ? q.or(`user_id.eq.${userId},calendar_id.in.(${sharedIds.join(",")})`)
+                : q.eq("user_id", userId);
+            if (nativeIds) scoped = scoped.in("calendar_id", nativeIds);
+            return scoped;
+          },
+        });
   const localEvents: CalendarEvent[] = (localData ?? []).map(
     (e: Record<string, unknown>) => ({
       ...e,
@@ -349,15 +349,24 @@ export async function listEventsForUser(
       const allItems = await Promise.all(
         ids.map(async (calId) => {
           try {
-            const res = await calendar.events.list({
-              calendarId: calId,
-              timeMin: startOfMonth,
-              timeMax: endOfMonth,
-              singleEvents: true,
-              orderBy: "startTime",
-              maxResults: 200,
-            });
-            return (res.data.items || []).map((item) => ({ item, calId }));
+            // 한 달에 일정이 많으면(매일 반복 등) 다음 쪽까지 읽는다 — 전에는 200개에서 끊겼다
+            const items: calendar_v3.Schema$Event[] = [];
+            let pageToken: string | undefined;
+            for (let page = 0; page < 10; page++) {
+              const res = await calendar.events.list({
+                calendarId: calId,
+                timeMin: startOfMonth,
+                timeMax: endOfMonth,
+                singleEvents: true,
+                orderBy: "startTime",
+                maxResults: 250,
+                pageToken,
+              });
+              items.push(...(res.data.items || []));
+              pageToken = res.data.nextPageToken ?? undefined;
+              if (!pageToken) break;
+            }
+            return items.map((item) => ({ item, calId }));
           } catch {
             return [];
           }

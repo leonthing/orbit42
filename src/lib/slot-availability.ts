@@ -2,6 +2,7 @@ import { getAuthenticatedCalendar } from "@/lib/google";
 import { getAdminClient } from "@/lib/supabase";
 import { listLocationBuffers } from "@/lib/location-buffers";
 import { resolveBufferForEvent } from "@/lib/location-buffers-types";
+import { selectEventsInRange } from "@/lib/recurrence-db";
 
 const TZ_OFFSET_MIN = 9 * 60; // Asia/Seoul
 const DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
@@ -169,12 +170,13 @@ export async function computeAutoAvailability(
 
   // 3. Pull host's native (in-app) calendar events — if the host creates
   // an event during a would-be-bookable window, the slot should close.
-  const { data: nativeEvents } = await db
-    .from("events")
-    .select("title, start_at, end_at, all_day, travel_min")
-    .eq("user_id", hostId)
-    .gte("start_at", now.toISOString())
-    .lte("start_at", horizon.toISOString());
+  // 반복 일정은 회차로 펼쳐 막는다(1.5.1)
+  const nativeEvents = await selectEventsInRange<Record<string, any> & { id: string; start_at: string }>({
+    columns: "title, start_at, end_at, all_day, travel_min",
+    scope: (q) => q.eq("user_id", hostId),
+    from: now,
+    to: horizon,
+  });
   const nativeBlocks: Block[] = (nativeEvents ?? [])
     .filter((e) => !e.all_day)
     .map((e) => {

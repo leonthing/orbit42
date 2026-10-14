@@ -7,6 +7,7 @@ import {
   completedPairsFor,
   completionKeyForBlock,
 } from "@/lib/event-completions-query";
+import { selectEventsInRange } from "@/lib/recurrence-db";
 
 export const dynamic = "force-dynamic";
 
@@ -147,14 +148,14 @@ export async function GET(request: Request) {
     if (visibleCals.length === 0) return Response.json({ items: [], calendars: [] });
 
     const calMetaById = new Map(visibleCals.map((c) => [c.id as string, c]));
-    const { data: rows } = await db
-      .from("events")
-      .select("id, title, start_at, end_at, all_day, calendar_id, user_id")
-      .in("calendar_id", Array.from(calMetaById.keys()))
-      .gte("start_at", rangeStart.toISOString())
-      .lte("start_at", now.toISOString())
-      .order("start_at", { ascending: false })
-      .limit(200);
+    const rows = (await selectEventsInRange<Record<string, any> & { id: string; start_at: string }>({
+      columns: "id, title, start_at, end_at, all_day, calendar_id, user_id",
+      scope: (q) => q.in("calendar_id", Array.from(calMetaById.keys())),
+      from: rangeStart,
+      to: now,
+    }))
+      .sort((a, b) => Date.parse(b.start_at) - Date.parse(a.start_at))
+      .slice(0, 200);
 
     const keys = (rows ?? []).map((r) => r.id as string);
     const photoByEvent = new Map<string, { image_urls: string[]; note: string | null }>();
