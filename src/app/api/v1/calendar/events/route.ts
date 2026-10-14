@@ -207,6 +207,7 @@ export async function GET(request: Request) {
         importance: IMPORTANCE_NAMES[annotations.get(toEventKey(e.id))?.importance ?? 0],
         rating: annotations.get(toEventKey(e.id))?.rating ?? null,
         ratingNote: annotations.get(toEventKey(e.id))?.ratingNote ?? null,
+        reminderMinutes: annotations.get(toEventKey(e.id))?.reminderMinutes ?? null,
       })),
       ...invites.map((inv) => ({
         id: `invite_${inv.id}`,

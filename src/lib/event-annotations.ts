@@ -12,6 +12,8 @@ export type EventAnnotation = {
   importance: Importance;
   rating: number | null;
   ratingNote: string | null;
+  /** 일정별 알림 시점 — null = 기본값, -1 = 없음, 0 = 정각, 분 = 그만큼 전 */
+  reminderMinutes: number | null;
 };
 
 /** API 표기 — "low" | "normal" | "high" */
@@ -36,7 +38,7 @@ export async function getAnnotations(
   for (let i = 0; i < keys.length; i += 300) {
     const { data } = await db
       .from("event_annotations")
-      .select("event_key, importance, rating, rating_note")
+      .select("event_key, importance, rating, rating_note, reminder_minutes")
       .eq("user_id", userId)
       .in("event_key", keys.slice(i, i + 300));
     for (const r of data ?? []) {
@@ -44,6 +46,7 @@ export async function getAnnotations(
         importance: r.importance as Importance,
         rating: (r.rating as number | null) ?? null,
         ratingNote: (r.rating_note as string | null) ?? null,
+        reminderMinutes: (r.reminder_minutes as number | null) ?? null,
       });
     }
   }
@@ -55,6 +58,8 @@ export type AnnotationPatch = {
   /** null 이면 별점 지움 */
   rating?: number | null;
   ratingNote?: string | null;
+  /** null = 기본값으로 되돌림 */
+  reminderMinutes?: number | null;
 };
 
 export async function upsertAnnotation(
@@ -75,16 +80,18 @@ export async function upsertAnnotation(
     row.rated_at = patch.rating == null ? null : new Date().toISOString();
   }
   if (patch.ratingNote !== undefined) row.rating_note = patch.ratingNote || null;
+  if (patch.reminderMinutes !== undefined) row.reminder_minutes = patch.reminderMinutes;
   const { data, error } = await db
     .from("event_annotations")
     .upsert(row, { onConflict: "user_id,event_key" })
-    .select("importance, rating, rating_note")
+    .select("importance, rating, rating_note, reminder_minutes")
     .single();
   if (error || !data) throw new Error("annotation upsert failed");
   return {
     importance: data.importance as Importance,
     rating: (data.rating as number | null) ?? null,
     ratingNote: (data.rating_note as string | null) ?? null,
+    reminderMinutes: (data.reminder_minutes as number | null) ?? null,
   };
 }
 

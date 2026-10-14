@@ -3,7 +3,7 @@ import { parseImportance, upsertAnnotation, IMPORTANCE_NAMES } from "@/lib/event
 
 export const dynamic = "force-dynamic";
 
-// PUT { importance?: "low"|"normal"|"high", rating?: 1..5|null, ratingNote?: string|null,
+// PUT { importance?: "low"|"normal"|"high", rating?: 1..5|null, ratingNote?: string|null, reminderMinutes?: null|-1|0|5|10|30|60,
 //     — 내 일정의 중요도·별점 (본인만, 구글에는 쓰지 않음, 일정 제목·시각은 저장하지 않음)
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   const userId = await apiUserId(request);
@@ -33,7 +33,15 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     }
     patch.ratingNote = (body.ratingNote as string | null)?.trim().slice(0, 500) ?? null;
   }
-  if (patch.importance === undefined && patch.rating === undefined && patch.ratingNote === undefined) {
+  if (body.reminderMinutes !== undefined) {
+    // 화면 선택지와 같은 값만 받는다: null(기본값) · -1(없음) · 0(정각) · 5 · 10 · 30 · 60
+    const allowed = [-1, 0, 5, 10, 30, 60];
+    if (body.reminderMinutes !== null && !allowed.includes(body.reminderMinutes as number)) {
+      return Response.json({ error: "reminderMinutes 는 null·-1·0·5·10·30·60 중 하나예요." }, { status: 400 });
+    }
+    patch.reminderMinutes = body.reminderMinutes as number | null;
+  }
+  if (patch.importance === undefined && patch.rating === undefined && patch.ratingNote === undefined && patch.reminderMinutes === undefined) {
     return Response.json({ error: "바꿀 내용이 없어요." }, { status: 400 });
   }
   try {
@@ -43,6 +51,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       importance: IMPORTANCE_NAMES[a.importance],
       rating: a.rating,
       ratingNote: a.ratingNote,
+      reminderMinutes: a.reminderMinutes,
     });
   } catch {
     return Response.json({ error: "저장하지 못했어요. 잠시 후 다시 시도해 주세요." }, { status: 500 });
