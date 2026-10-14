@@ -128,6 +128,11 @@ struct WidgetEvent: Codable, Hashable, Identifiable, Sendable {
     var completed: Bool
     let tentative: Bool
     let calendarId: String?
+    /// 중요도 "low" | "normal" | "high" (1.5.0 A) — 옛 캐시엔 없어 옵셔널(= 보통)
+    var importance: String? = nil
+
+    var isImportant: Bool { importance == "high" }
+    var isLight: Bool { importance == "low" }
 
     func occurs(on day: Date, calendar: Calendar) -> Bool {
         let dayStart = calendar.startOfDay(for: day)
@@ -178,6 +183,7 @@ enum WidgetFeedDecoder {
         let tentative: Bool?
         /// "done" | "archived" | nil — 보관한 일정은 위젯에 넣지 않는다
         let status: String?
+        let importance: String?
     }
 
     static func decodeMonth(_ data: Data, calendar: Calendar) throws -> WidgetMonth {
@@ -197,7 +203,8 @@ enum WidgetFeedDecoder {
                 allDay: event.allDay ?? false,
                 completed: event.completed ?? false,
                 tentative: event.tentative ?? false,
-                calendarId: event.calendarId
+                calendarId: event.calendarId,
+                importance: event.importance
             )
         }
         var colors: [String: String] = [:]

@@ -191,9 +191,9 @@ struct CalendarProvider: TimelineProvider {
         }
         let events = [
             WidgetEvent(id: "s1", title: "포트폴리오 코칭", start: at(0, 14), end: at(0, 15), allDay: false,
-                        completed: false, tentative: false, calendarId: "work"),
+                        completed: false, tentative: false, calendarId: "work", importance: "high"),
             WidgetEvent(id: "s2", title: "커피챗", start: at(0, 17), end: at(0, 18), allDay: false,
-                        completed: false, tentative: false, calendarId: "meet"),
+                        completed: false, tentative: false, calendarId: "meet", importance: "low"),
             WidgetEvent(id: "s3", title: "F 저녁 약속", start: at(0, 19), end: at(0, 21), allDay: false,
                         completed: false, tentative: false, calendarId: "life"),
             WidgetEvent(id: "s4", title: "면접 준비 상담", start: at(1, 11), end: at(1, 12), allDay: false,

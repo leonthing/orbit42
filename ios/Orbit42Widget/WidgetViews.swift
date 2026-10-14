@@ -4,6 +4,13 @@ import WidgetKit
 enum WidgetPalette {
     static let accent = Color(red: 0x63 / 255, green: 0x66 / 255, blue: 0xF1 / 255)
     static let completedOpacity = 0.55
+
+    /// 완료·미정·가벼움(1.5.0 A)은 옅게 — 중요함은 대신 왼쪽 띠와 "!"로 구분(색만으로 구분하지 않음)
+    static func opacity(_ event: WidgetEvent) -> Double {
+        if event.completed { return completedOpacity }
+        if event.tentative { return 0.7 }
+        return event.isLight ? 0.7 : 1
+    }
 }
 
 extension Color {
@@ -26,6 +33,11 @@ extension Color {
 // MARK: - 공통 표시
 
 enum WidgetText {
+    /// 중요한 일정은 제목 앞에 "!" (1.5.0 A)
+    static func title(_ event: WidgetEvent) -> String {
+        event.isImportant ? "! " + event.title : event.title
+    }
+
     static func time(_ date: Date) -> String {
         date.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute(.twoDigits).locale(Locale(identifier: "en_GB")))
     }
@@ -107,6 +119,17 @@ struct RequestBadge: View {
     }
 }
 
+/// 중요한 일정의 왼쪽 굵은 띠 (1.5.0 A)
+struct ImportantBar: View {
+    let event: WidgetEvent
+    let color: Color
+    var body: some View {
+        if event.isImportant {
+            RoundedRectangle(cornerRadius: 2).fill(color).frame(width: 4).padding(.vertical, 4)
+        }
+    }
+}
+
 /// 꽉 찬 색 카드 (구글 캘린더 위젯식) — 다가오는 일정
 struct SolidEventCard: View {
     let event: WidgetEvent
@@ -118,7 +141,7 @@ struct SolidEventCard: View {
             CompletionCheckbox(event: event, tint: .white, size: 14)
             Link(destination: destination) {
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(event.title)
+                    Text(WidgetText.title(event))
                         .font(.caption.weight(.semibold))
                         .strikethrough(event.completed)
                         .lineLimit(1)
@@ -135,7 +158,9 @@ struct SolidEventCard: View {
         .padding(.leading, 3)
         .padding(.trailing, 8)
         .background(entry.color(of: event), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .opacity(event.completed ? WidgetPalette.completedOpacity : (event.tentative ? 0.7 : 1))
+        // 꽉 찬 카드에선 가장자리에 붙이면 둥근 모서리에 묻혀 안쪽으로 띄운다
+        .overlay(alignment: .leading) { ImportantBar(event: event, color: .white).padding(.leading, 3) }
+        .opacity(WidgetPalette.opacity(event))
     }
 }
 
@@ -152,7 +177,7 @@ struct TintedEventRow: View {
             Link(destination: destination) {
                 if event.allDay {
                     HStack {
-                        Text(event.title)
+                        Text(WidgetText.title(event))
                             .font(.caption.weight(.semibold))
                             .strikethrough(event.completed)
                             .lineLimit(1)
@@ -161,7 +186,7 @@ struct TintedEventRow: View {
                 } else {
                     HStack {
                         VStack(alignment: .leading, spacing: 0) {
-                            Text(event.title)
+                            Text(WidgetText.title(event))
                                 .font(.caption.weight(.semibold))
                                 .strikethrough(event.completed)
                                 .lineLimit(1)
@@ -183,7 +208,8 @@ struct TintedEventRow: View {
         // Link 안이라 기본 tint(액센트)가 글자에 묻지 않도록 명시
         .foregroundStyle(Color.primary)
         .background(color.opacity(0.14), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
-        .opacity(event.completed ? WidgetPalette.completedOpacity : (event.tentative ? 0.7 : 1))
+        .overlay(alignment: .leading) { ImportantBar(event: event, color: color) }
+        .opacity(WidgetPalette.opacity(event))
     }
 
     /// 배치 계산용 대략 높이 (pt)
@@ -408,7 +434,7 @@ struct NextEventView: View {
                     HStack(alignment: .top, spacing: 3) {
                         CompletionCheckbox(event: event, tint: entry.color(of: event), size: 16)
                         VStack(alignment: .leading, spacing: 1) {
-                            Text(event.title)
+                            Text(WidgetText.title(event))
                                 .font(.subheadline.weight(.semibold))
                                 .strikethrough(event.completed)
                                 .lineLimit(2)
@@ -420,7 +446,7 @@ struct NextEventView: View {
                         }
                     }
                     .fixedSize(horizontal: false, vertical: true)
-                    .opacity(event.completed ? WidgetPalette.completedOpacity : 1)
+                    .opacity(WidgetPalette.opacity(event))
                 } else {
                     Text("다가오는 일정이 없어요")
                         .font(.caption)

@@ -21,6 +21,12 @@ struct DayTimelineView: View {
     let onRetime: (CalendarEvent, Date, Date) -> Void
     /// 끄는 동안 바깥 페이저의 가로 넘김을 막는다
     @Binding var isDragging: Bool
+    /// 완료 직후 뜨는 별점 — 누르면 저장 (1.5.0 A, 나만 본다)
+    var onRate: (CalendarEvent, Int) -> Void = { _, _ in }
+
+    /// 체크박스로 막 완료한 일정 — 블록 위에 별 5개가 잠깐 떠 있다
+    @State private var ratingPromptId: String?
+    @State private var ratingPromptTask: Task<Void, Never>?
 
     /// 끄는 중인 블록과 방식 (옮기기 / 아래 끝 끌어 길이 바꾸기)
     @State private var dragId: String?
@@ -162,6 +168,9 @@ struct DayTimelineView: View {
                         .overlay(alignment: .topTrailing) {
                             if isLifted { dragTimeBadge(block) }
                         }
+                        .overlay(alignment: .bottomTrailing) {
+                            if ratingPromptId == block.id { ratingPrompt(block.event) }
+                        }
                         .frame(
                             width: max(columnsWidth * block.width - 2, 10),
                             height: block.height + (isResizing ? shift : 0)
@@ -179,7 +188,7 @@ struct DayTimelineView: View {
                             x: labelWidth + columnsWidth * block.x,
                             y: topInset + block.y + (isLifted && !isResizing ? shift : 0)
                         )
-                        .zIndex(isLifted ? 1 : 0)
+                        .zIndex(isLifted || ratingPromptId == block.id ? 1 : 0)
                         .simultaneousGesture(
                             dragGesture(block, mode: .move, proxy: proxy),
                             including: movable ? .all : .subviews
@@ -262,6 +271,13 @@ struct DayTimelineView: View {
         .padding(.trailing, 6)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(blockColor(event), in: RoundedRectangle(cornerRadius: 6))
+        // 중요함 — 왼쪽 굵은 띠 (제목 앞 "!" 와 함께, 색만으로 구분하지 않음)
+        .overlay(alignment: .leading) {
+            if event.importance == .high && !event.archived {
+                // 가장자리에 붙이면 둥근 모서리에 묻혀 틈처럼 보여 안쪽으로 2pt 띄운다
+                RoundedRectangle(cornerRadius: 1.5).fill(.white).frame(width: 3).padding(.vertical, 4).padding(.leading, 2)
+            }
+        }
         .opacity(blockOpacity(event))
         .clipped()
     }
@@ -394,6 +410,11 @@ struct DayTimelineView: View {
     // 보관한 일정은 회색 블록 + 제목 앞 "보관" — 완료(취소선)와 구분된다.
     private func titleText(_ event: CalendarEvent) -> AttributedString {
         var title = AttributedString(event.title)
+        if event.importance == .high && !event.archived {
+            var mark = AttributedString("! ")
+            mark.font = .caption.weight(.heavy)
+            title = mark + title
+        }
         guard event.archived else { return title }
         var tag = AttributedString("보관 ")
         tag.font = .caption2.weight(.bold)
@@ -408,12 +429,18 @@ struct DayTimelineView: View {
     private func blockOpacity(_ event: CalendarEvent) -> Double {
         if event.archived { return 0.75 }
         if event.completed { return 0.55 }
-        return event.tentative ? 0.7 : 1
+        if event.tentative { return 0.7 }
+        // 가벼움 — 조금 옅게
+        return event.importance == .low ? 0.7 : 1
     }
 
     /// 위젯과 같은 모양의 완료 체크 — 누르면 바로 토글 (`CalendarViewModel.setCompletion`, 낙관적 반영)
     private func checkbox(_ event: CalendarEvent, size: CGFloat) -> some View {
-        Button { onToggleCompletion(event) } label: {
+        Button {
+            let completing = !event.completed
+            onToggleCompletion(event)
+            if completing { showRatingPrompt(for: event) } else if ratingPromptId == event.id { ratingPromptId = nil }
+        } label: {
             Image(systemName: event.completed ? "checkmark.circle.fill" : "circle")
                 .font(.system(size: size, weight: .medium))
                 .frame(width: size + 10, height: size + 8)
@@ -421,6 +448,45 @@ struct DayTimelineView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(event.completed ? "완료 해제" : "완료로 표시")
+    }
+
+    // MARK: - 완료 후 별점
+
+    /// 완료를 막지 않도록 블록 위에 2.5초만 떠 있다가 사라진다. 누르면 저장하고 바로 닫힌다.
+    private func showRatingPrompt(for event: CalendarEvent) {
+        ratingPromptTask?.cancel()
+        withAnimation(.easeOut(duration: 0.15)) { ratingPromptId = event.id }
+        ratingPromptTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 2_500_000_000)
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeIn(duration: 0.2)) { if ratingPromptId == event.id { ratingPromptId = nil } }
+        }
+    }
+
+    private func ratingPrompt(_ event: CalendarEvent) -> some View {
+        HStack(spacing: 2) {
+            ForEach(1...5, id: \.self) { n in
+                Button {
+                    UISelectionFeedbackGenerator().selectionChanged()
+                    onRate(event, n)
+                    ratingPromptTask?.cancel()
+                    withAnimation(.easeIn(duration: 0.2)) { ratingPromptId = nil }
+                } label: {
+                    Image(systemName: n <= (event.rating ?? 0) ? "star.fill" : "star")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(Color.orange)
+                        .frame(width: 30, height: 30)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("별 \(n)개")
+            }
+        }
+        .padding(.horizontal, 4)
+        .background(.regularMaterial, in: Capsule())
+        .shadow(color: .black.opacity(0.15), radius: 6, y: 2)
+        .offset(y: 34)
+        .transition(.opacity.combined(with: .scale(scale: 0.9)))
     }
 
     private static let timeFormatter: DateFormatter = {

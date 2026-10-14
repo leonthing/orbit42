@@ -25,6 +25,8 @@ struct EditEventSheet: View {
     @State private var travelMin: Int?
     @State private var isSaving = false
     @State private var errorMessage: String?
+    /// 중요도 (1.5.0 A) — 일정 수정과 따로 저장한다
+    @State private var importance: EventImportance
     /// 참석자가 있는 구글 일정의 시간을 바꿀 때 — 확인을 누르면 구글이 참석자에게 변경 메일을 보낸다
     @State private var pendingNotifyBody: UpdateEventRequest?
 
@@ -73,6 +75,7 @@ struct EditEventSheet: View {
         _start = State(initialValue: event.startAt)
         _end = State(initialValue: initialEnd)
         _selectedCalendarId = State(initialValue: event.calendarId)
+        _importance = State(initialValue: viewModel.current(event).importance)
         _locationText = State(initialValue: event.location ?? "")
         _locationLat = State(initialValue: event.locationLat)
         _locationLng = State(initialValue: event.locationLng)
@@ -114,6 +117,13 @@ struct EditEventSheet: View {
                     }
                     .listRowBackground(Theme.surface)
                 }
+
+                Section {
+                    ImportancePicker(selection: $importance)
+                } header: {
+                    Text("중요도")
+                }
+                .listRowBackground(Theme.surface)
 
                 Section {
                     Toggle("종일", isOn: $allDay)
@@ -268,7 +278,11 @@ struct EditEventSheet: View {
         if body.title == nil, body.description == nil, body.startAt == nil,
            body.allDay == nil, body.calendarId == nil, body.location == nil,
            body.travelMin == nil {
-            dismiss()
+            if importanceChanged {
+                saveImportanceOnly()
+            } else {
+                dismiss()
+            }
             return
         }
 
@@ -287,12 +301,35 @@ struct EditEventSheet: View {
         submit(body)
     }
 
+    private var importanceChanged: Bool {
+        importance != viewModel.current(event).importance
+    }
+
+    /// 중요도만 바뀐 수정 — 일정은 그대로 두고 주석만 저장한다
+    private func saveImportanceOnly() {
+        isSaving = true
+        Task {
+            defer { isSaving = false }
+            do {
+                try await viewModel.setImportance(event, importance)
+                dismiss()
+                onSaved()
+            } catch {
+                errorMessage = "중요도를 저장하지 못했어요. 잠시 후 다시 시도해 주세요."
+            }
+        }
+    }
+
     private func submit(_ body: UpdateEventRequest) {
         let clampedEnd = max(end, start)
         isSaving = true
         Task {
             defer { isSaving = false }
             do {
+                // 중요도를 먼저 — 캘린더를 옮기면 일정 키가 바뀌는데 서버가 주석도 함께 옮긴다
+                if importanceChanged {
+                    try await viewModel.setImportance(event, importance)
+                }
                 try await viewModel.updateEvent(event, body: body, newStart: start, newEnd: clampedEnd)
                 dismiss()
                 onSaved()

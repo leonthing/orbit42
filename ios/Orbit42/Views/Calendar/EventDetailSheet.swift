@@ -79,6 +79,8 @@ struct EventDetailSheet: View {
     @State private var isArchived: Bool
     @State private var isSavingArchive = false
     @State private var isSavingCompletion = false
+    /// 완료 후 별점 (1.5.0 A, 나만 본다)
+    @State private var rating: Int?
     @State private var completionErrorMessage: String?
 
     /// 완료 체크 초록 — 웹과 동일한 #22c55e
@@ -91,6 +93,7 @@ struct EventDetailSheet: View {
         _earningKrw = State(initialValue: event.earningKrw)
         _isCompleted = State(initialValue: event.completed)
         _isArchived = State(initialValue: viewModel.isArchived(event))
+        _rating = State(initialValue: viewModel.current(event).rating)
         _googleAttendees = State(initialValue: event.attendees)
     }
 
@@ -219,6 +222,9 @@ struct EventDetailSheet: View {
                 }
                 .listRowBackground(Theme.surface)
 
+                // 완료 체크는 스크롤 없이 보이게 위로 (1.5.0 A) + 완료한 일정은 별점
+                completionSection
+
                 editNoticeSection
 
                 locationMapSection
@@ -291,32 +297,6 @@ struct EventDetailSheet: View {
 
                 timelogSection
 
-                Section {
-                    Button {
-                        toggleCompletion()
-                    } label: {
-                        HStack {
-                            Label {
-                                Text(isCompleted ? "완료 해제" : "완료로 표시")
-                            } icon: {
-                                Image(systemName: isCompleted ? "checkmark.circle.fill" : "checkmark.circle")
-                                    .foregroundStyle(isCompleted ? Self.completedGreen : Theme.accent)
-                            }
-                            Spacer()
-                            if isSavingCompletion {
-                                ProgressView()
-                                    .tint(Theme.secondaryText)
-                            }
-                        }
-                    }
-                    .disabled(isSavingCompletion || isDeleting)
-                    .alert("상태를 저장하지 못했어요", isPresented: showCompletionErrorAlert) {
-                        Button("확인", role: .cancel) { completionErrorMessage = nil }
-                    } message: {
-                        Text(completionErrorMessage ?? "")
-                    }
-                }
-                .listRowBackground(Theme.surface)
                 }
             }
             .scrollContentBackground(.hidden)
@@ -421,6 +401,74 @@ struct EventDetailSheet: View {
                 }
             }
             .interactiveDismissDisabled(isDeleting)
+        }
+    }
+
+    @ViewBuilder
+    private var completionSection: some View {
+                Section {
+                    Button {
+                        toggleCompletion()
+                    } label: {
+                        HStack {
+                            Label {
+                                Text(isCompleted ? "완료 해제" : "완료로 표시")
+                            } icon: {
+                                Image(systemName: isCompleted ? "checkmark.circle.fill" : "checkmark.circle")
+                                    .foregroundStyle(isCompleted ? Self.completedGreen : Theme.accent)
+                            }
+                            Spacer()
+                            if isSavingCompletion {
+                                ProgressView()
+                                    .tint(Theme.secondaryText)
+                            }
+                        }
+                    }
+                    .disabled(isSavingCompletion || isDeleting)
+                    .alert("상태를 저장하지 못했어요", isPresented: showCompletionErrorAlert) {
+                        Button("확인", role: .cancel) { completionErrorMessage = nil }
+                    } message: {
+                        Text(completionErrorMessage ?? "")
+                    }
+                    if isCompleted {
+                        ratingRow
+                    }
+                }
+                .listRowBackground(Theme.surface)
+    }
+
+    /// 별점 1~5 — 같은 별을 다시 누르면 지운다. 나만 본다.
+    private var ratingRow: some View {
+        HStack(spacing: 4) {
+            Text("별점")
+                .foregroundStyle(Theme.primaryText)
+            Spacer()
+            ForEach(1...5, id: \.self) { n in
+                Button {
+                    setRating(rating == n ? nil : n)
+                } label: {
+                    Image(systemName: n <= (rating ?? 0) ? "star.fill" : "star")
+                        .font(.system(size: 20))
+                        .foregroundStyle(Color.orange)
+                        .frame(width: 32, height: 32)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("별 \(n)개")
+            }
+        }
+    }
+
+    private func setRating(_ value: Int?) {
+        let previous = rating
+        rating = value
+        Task {
+            do {
+                try await viewModel.setRating(event, value)
+            } catch {
+                rating = previous
+                completionErrorMessage = "별점을 저장하지 못했어요. 잠시 후 다시 시도해 주세요."
+            }
         }
     }
 

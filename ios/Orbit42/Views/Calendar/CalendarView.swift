@@ -476,7 +476,10 @@ struct CalendarView: View {
                     onRetime: { event, newStart, newEnd in
                         requestMove(PendingMove(event: event, newStart: newStart, newEnd: newEnd))
                     },
-                    isDragging: $isDraggingEvent
+                    isDragging: $isDraggingEvent,
+                    onRate: { event, rating in
+                        Task { try? await viewModel.setRating(event, rating) }
+                    }
                 )
                 // 달 경계 너머 날짜는 미리 받아 둔다
                 .task(id: day) {
@@ -956,9 +959,10 @@ private struct EventRow: View {
 
     var body: some View {
         HStack(spacing: 8) {
+            // 중요함은 띠를 굵게 + 제목 앞 "!" (색만으로 구분하지 않음)
             RoundedRectangle(cornerRadius: 2)
                 .fill(event.displayColor(in: calendars))
-                .frame(width: 4)
+                .frame(width: event.importance == .high ? 7 : 4)
                 .frame(maxHeight: .infinity)
 
             Button(action: onToggleCompletion) {
@@ -975,11 +979,18 @@ private struct EventRow: View {
                 HStack(spacing: 8) {
                     VStack(alignment: .leading, spacing: 3) {
                         HStack(spacing: 6) {
-                            Text(event.title)
-                                .font(.subheadline.weight(.medium))
+                            Text(event.importance == .high ? "! \(event.title)" : event.title)
+                                .font(.subheadline.weight(event.importance == .high ? .semibold : .medium))
                                 .foregroundStyle(Theme.primaryText)
                                 .strikethrough(event.completed)
                                 .lineLimit(2)
+                            if let rating = event.rating, event.completed {
+                                Label("\(rating)", systemImage: "star.fill")
+                                    .labelStyle(.titleAndIcon)
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(Color.orange)
+                                    .accessibilityLabel("별점 \(rating)")
+                            }
                             if event.archived {
                                 ArchivedTag()
                             }
@@ -1033,6 +1044,8 @@ private struct EventRow: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
+        // 가벼움 — 조금 옅게
+        .opacity(event.importance == .low && !event.completed ? 0.7 : 1)
         .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
         .opacity(rowOpacity)
         .fixedSize(horizontal: false, vertical: true)

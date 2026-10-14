@@ -320,6 +320,63 @@ final class CalendarViewModel {
         }
     }
 
+    // MARK: - 중요도·별점 (1.5.0 A, 나만 본다)
+
+    /// 중요도 — 화면에 먼저 반영하고 실패하면 되돌린다.
+    func setImportance(_ event: CalendarEvent, _ importance: EventImportance) async throws {
+        let previous = current(event).importance
+        guard previous != importance else { return }
+        mutate(event.id) { $0.importance = importance }
+        do {
+            let _: AnnotationResponse = try await api.put(
+                "/api/v1/calendar/events/\(event.id)/annotation",
+                body: UpdateAnnotationRequest(importance: importance.rawValue)
+            )
+            WidgetBridge.reload()
+        } catch {
+            mutate(event.id) { $0.importance = previous }
+            throw error
+        }
+    }
+
+    /// 별점 (nil = 지우기) — 완료 흐름을 막지 않도록 화면 먼저, 실패하면 되돌린다.
+    func setRating(_ event: CalendarEvent, _ rating: Int?) async throws {
+        let previous = current(event).rating
+        guard previous != rating else { return }
+        mutate(event.id) { $0.rating = rating }
+        do {
+            var body = UpdateAnnotationRequest()
+            if let rating { body.rating = rating } else { body.clearRating = true }
+            let _: AnnotationResponse = try await api.put(
+                "/api/v1/calendar/events/\(event.id)/annotation",
+                body: body
+            )
+        } catch {
+            mutate(event.id) { $0.rating = previous }
+            throw error
+        }
+    }
+
+    /// 캐시에 반영된 최신 상태 (상세 시트가 든 스냅샷이 낡았을 수 있어 캐시 우선)
+    func current(_ event: CalendarEvent) -> CalendarEvent {
+        for data in cache.values {
+            if let cached = data.events.first(where: { $0.id == event.id }) { return cached }
+        }
+        return event
+    }
+
+    private func mutate(_ eventId: String, _ change: (inout CalendarEvent) -> Void) {
+        for key in cache.keys {
+            guard var data = cache[key] else { continue }
+            var changed = false
+            for index in data.events.indices where data.events[index].id == eventId {
+                change(&data.events[index])
+                changed = true
+            }
+            if changed { cache[key] = data }
+        }
+    }
+
     private func applyTimes(eventId: String, start: Date, end: Date) {
         for key in cache.keys {
             guard var data = cache[key] else { continue }

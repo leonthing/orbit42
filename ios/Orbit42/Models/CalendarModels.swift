@@ -35,6 +35,19 @@ struct CalendarInfo: Decodable, Identifiable, Hashable, Sendable {
 
 // MARK: - 이벤트
 
+/// 일정 중요도 (1.5.0 A) — 가벼움 / 보통(기본) / 중요함
+enum EventImportance: String, CaseIterable, Identifiable, Sendable {
+    case low, normal, high
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .low: return "가벼움"
+        case .normal: return "보통"
+        case .high: return "중요함"
+        }
+    }
+}
+
 /// API v1 계약의 event 객체. `startAt`/`endAt` 은 유연하게 디코딩한다.
 struct CalendarEvent: Decodable, Identifiable, Sendable {
     let id: String
@@ -80,6 +93,11 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
     /// 예약 일정이면 그 예약 id 와 내 입장("host" 받은 예약 | "guest" 내가 한 예약) — 상세의 "예약에서 관리"
     let bookingId: String?
     let bookingRole: String?
+    /// 중요도(1.5.0 A) — 나만 본다. 구글 일정도 Orbit42 에만 저장된다.
+    var importance: EventImportance
+    /// 완료 후 별점 1~5 (나만 본다)
+    var rating: Int?
+    var ratingNote: String?
 
     var isGoogle: Bool { source == "google" }
     /// 구글 일정의 시간·내용을 바꿀 수 있는지 — 주최자일 때만.
@@ -94,6 +112,7 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
         case inviteId, inviteStatus, inviterName
         case location, locationLat, locationLng, travelMin
         case attendees, isOrganizer, isBooking, bookingId, bookingRole, guestsCanModify
+        case importance, rating, ratingNote
     }
 
     init(from decoder: Decoder) throws {
@@ -123,6 +142,9 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
         guestsCanModify = try container.decodeIfPresent(Bool.self, forKey: .guestsCanModify) ?? false
         bookingId = try container.decodeIfPresent(String.self, forKey: .bookingId)
         bookingRole = try container.decodeIfPresent(String.self, forKey: .bookingRole)
+        importance = EventImportance(rawValue: (try? container.decodeIfPresent(String.self, forKey: .importance)) ?? "normal") ?? .normal
+        rating = try? container.decodeIfPresent(Int.self, forKey: .rating)
+        ratingNote = try? container.decodeIfPresent(String.self, forKey: .ratingNote)
 
         let startRaw = try container.decode(String.self, forKey: .startAt)
         let endRaw = try container.decode(String.self, forKey: .endAt)
@@ -250,6 +272,31 @@ struct UpdateEventRequest: Encodable {
     var sourceCalendarId: String?
     /// 구글 일정 시간 변경을 참석자에게 메일로 알린다 (하루 보기 드래그에서 확인받은 뒤에만 true)
     var notifyAttendees: Bool?
+}
+
+/// PUT /api/v1/calendar/events/{id}/annotation — 바뀐 것만 보낸다
+struct UpdateAnnotationRequest: Encodable {
+    var importance: String?
+    /// 별점 지우기는 clearRating 으로 null 을 보낸다
+    var rating: Int?
+    var clearRating = false
+    var ratingNote: String?
+
+    private enum CodingKeys: String, CodingKey { case importance, rating, ratingNote }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encodeIfPresent(importance, forKey: .importance)
+        if clearRating { try c.encodeNil(forKey: .rating) } else { try c.encodeIfPresent(rating, forKey: .rating) }
+        try c.encodeIfPresent(ratingNote, forKey: .ratingNote)
+    }
+}
+
+struct AnnotationResponse: Decodable {
+    let ok: Bool
+    let importance: String
+    let rating: Int?
+    let ratingNote: String?
 }
 
 /// PATCH/DELETE 공통 성공 응답 — `{"ok": true}`

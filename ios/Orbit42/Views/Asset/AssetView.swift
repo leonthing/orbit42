@@ -148,6 +148,8 @@ struct AssetView: View {
                     reportCard(report)
                 }
                 goalsCard(summary.goals)
+                // 완료 후 별점 모아 보기 (1.5.0 A, 나만 봄)
+                RatingsCard()
                 weekUsageCard(summary)
                 if let actions = summary.actions, !actions.isEmpty {
                     actionsCard(actions)
