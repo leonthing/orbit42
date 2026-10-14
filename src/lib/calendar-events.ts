@@ -567,6 +567,9 @@ async function clientForCalendar(userId: string, cal: CalendarRow) {
  * (local:/google:)로 저장돼 있어 각각 형식에 맞춰 옮긴다. */
 async function migrateEventKeys(userId: string, oldId: string, newId: string) {
   const db = getAdminClient();
+  // 중요도·별점(1.5.0 A)도 같은 키라 따라 옮긴다
+  const { migrateAnnotationKey } = await import("@/lib/event-annotations");
+  await migrateAnnotationKey(userId, oldId, newId);
   await db
     .from("event_bucket_overrides")
     .update({ event_key: newId })

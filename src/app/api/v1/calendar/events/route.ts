@@ -156,6 +156,10 @@ export async function GET(request: Request) {
   // 완료 체크(투두) — 웹과 같은 event_completions 를 공유한다.
   // 상태는 완료(done)·보관(archived) — completed 는 옛 앱 호환용으로 done 일 때만 true.
   const statuses = await getEventStatuses(events.map((e) => normalizeEventKey(e.id)));
+  // 중요도·별점(1.5.0 A) — 본인 것만. 없는 일정은 보통·별점 없음.
+  const { getAnnotations, IMPORTANCE_NAMES } = await import("@/lib/event-annotations");
+  const { toEventKey } = await import("@/lib/event-key");
+  const annotations = await getAnnotations(userId, events.map((e) => e.id));
 
   // "모든 일정 = 시간 = 금액" — 수동 기록이 없어도 캘린더 단가 → 기준 시급으로
   // 환산한 시간 가치를 함께 내려준다 (종일 일정 제외).
@@ -200,6 +204,9 @@ export async function GET(request: Request) {
         status: statuses[normalizeEventKey(e.id)] ?? null,
         // 구글 일정의 참석자 (Orbit42 사용자면 username 포함)
         attendees: toApiAttendees(e.attendees, attendeeUsers),
+        importance: IMPORTANCE_NAMES[annotations.get(toEventKey(e.id))?.importance ?? 0],
+        rating: annotations.get(toEventKey(e.id))?.rating ?? null,
+        ratingNote: annotations.get(toEventKey(e.id))?.ratingNote ?? null,
       })),
       ...invites.map((inv) => ({
         id: `invite_${inv.id}`,
