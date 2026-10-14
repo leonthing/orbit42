@@ -359,6 +359,25 @@ final class CalendarViewModel {
         }
     }
 
+    /// 다시 알림 (nil = 취소) — 저장되면 기기 알림을 다시 맞춘다.
+    func setRemindAt(_ event: CalendarEvent, _ date: Date?) async throws {
+        let previous = current(event).remindAt
+        mutate(event.id) { $0.remindAt = date }
+        do {
+            var body = UpdateAnnotationRequest()
+            body.remindAt = date
+            body.setRemindAt = true
+            let _: AnnotationResponse = try await api.put(
+                "/api/v1/calendar/events/\(event.id)/annotation",
+                body: body
+            )
+            EventReminders.shared.refreshSoon()
+        } catch {
+            mutate(event.id) { $0.remindAt = previous }
+            throw error
+        }
+    }
+
     /// 별점 (nil = 지우기) — 완료 흐름을 막지 않도록 화면 먼저, 실패하면 되돌린다.
     func setRating(_ event: CalendarEvent, _ rating: Int?) async throws {
         let previous = current(event).rating

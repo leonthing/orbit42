@@ -10,8 +10,10 @@ final class EventReminders {
     static let shared = EventReminders()
 
     static let identifierPrefix = "orbit42.event."
+    /// 다시 알림 (1.5.0 B) — 일정 알림과 따로 지우고 넣는다
+    static let remindPrefix = "orbit42.remind."
     static let horizonDays = 14
-    static let maxPending = 64
+    nonisolated static let maxPending = 64
 
     private var pending: Task<Void, Never>?
     private let center = UNUserNotificationCenter.current()
@@ -52,15 +54,31 @@ final class EventReminders {
         let settings = AppSettings.shared
         let status = await authorizationStatus()
         let allowed = status == .authorized || status == .provisional || status == .ephemeral
-        guard allowed, settings.notifyOrbitEvents || settings.notifyGoogleEvents,
-              KeychainStore.loadToken() != nil
+        guard allowed, KeychainStore.loadToken() != nil
         else {
             await removeOurs()
             return
         }
         guard let events = await fetchUpcoming() else { return }  // 못 받으면 기존 예약을 그대로 둔다
-        let plans = Self.plan(events: events, settings: settings, now: Date())
+        // 다시 알림을 먼저 넣고, 남은 자리를 일정 알림에 (64개 한도에서 다시 알림이 밀리지 않게).
+        // 다시 알림은 사용자가 직접 건 것이라 '일정 알림' 설정과 관계없이 울린다.
+        let reminders = (await fetchReminders() ?? []).filter { !$0.missing && $0.remindDate > Date() }
+        let remindPlans = Array(reminders.prefix(Self.maxPending))
+        let plans = Self.plan(events: events, settings: settings, now: Date(), limit: Self.maxPending - remindPlans.count)
         await removeOurs()
+        for reminder in remindPlans {
+            let content = UNMutableNotificationContent()
+            content.title = "다시 알림 · \(reminder.title ?? "일정")"
+            content.body = reminder.body
+            content.sound = .default
+            content.userInfo = ["eventId": reminder.eventId, "start": (reminder.startDate ?? reminder.remindDate).timeIntervalSince1970]
+            let parts = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute, .second], from: reminder.remindDate)
+            try? await center.add(UNNotificationRequest(
+                identifier: Self.remindPrefix + reminder.eventId,
+                content: content,
+                trigger: UNCalendarNotificationTrigger(dateMatching: parts, repeats: false)
+            ))
+        }
         for plan in plans {
             let content = UNMutableNotificationContent()
             content.title = plan.event.title
@@ -84,7 +102,7 @@ final class EventReminders {
     }
 
     /// 무엇을 언제 울릴지 — 순수 계산(테스트·확인용으로 따로 둔다).
-    static func plan(events: [CalendarEvent], settings: AppSettings, now: Date) -> [Plan] {
+    static func plan(events: [CalendarEvent], settings: AppSettings, now: Date, limit: Int = maxPending) -> [Plan] {
         var seen = Set<String>()
         let plans: [Plan] = events.compactMap { event in
             guard !event.allDay, !event.completed, !event.archived, !event.isInvite else { return nil }
@@ -96,7 +114,7 @@ final class EventReminders {
             guard fire > now else { return nil }
             return Plan(event: event, fireDate: fire, body: body(for: event, minutes: minutes))
         }
-        return Array(plans.sorted { $0.fireDate < $1.fireDate }.prefix(maxPending))
+        return Array(plans.sorted { $0.fireDate < $1.fireDate }.prefix(max(0, limit)))
     }
 
     private static let timeFormatter: DateFormatter = {
@@ -132,17 +150,36 @@ final class EventReminders {
         return response?.events
     }
 
+    /// 걸려 있는 다시 알림 (본인만, 지금 이후) — 설정의 목록에도 쓴다
+    func fetchReminders() async -> [ActiveReminder]? {
+        let response: RemindersResponse? = try? await APIClient.shared.get("/api/v1/reminders")
+        return response?.reminders
+    }
+
+    /// 다시 알림 시각 — 그날 오전 9시(기기 시간대)
+    nonisolated static func nineAM(on day: Date) -> Date {
+        let cal = Calendar.current
+        return cal.date(bySettingHour: 9, minute: 0, second: 0, of: cal.startOfDay(for: day)) ?? day
+    }
+
+    /// 고를 수 있는 첫날 — 오늘 오전 9시가 지났으면 내일부터
+    nonisolated static func firstSelectableDay(now: Date = Date()) -> Date {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: now)
+        return nineAM(on: today) > now ? today : (cal.date(byAdding: .day, value: 1, to: today) ?? today)
+    }
+
     private func removeOurs() async {
         let ids = await center.pendingNotificationRequests()
             .map(\.identifier)
-            .filter { $0.hasPrefix(Self.identifierPrefix) }
+            .filter { $0.hasPrefix(Self.identifierPrefix) || $0.hasPrefix(Self.remindPrefix) }
         center.removePendingNotificationRequests(withIdentifiers: ids)
     }
 
     /// 확인용 — 지금 예약된 우리 알림 (식별자, 울릴 시각)
     func pendingSummary() async -> [(String, Date?)] {
         await center.pendingNotificationRequests()
-            .filter { $0.identifier.hasPrefix(Self.identifierPrefix) }
+            .filter { $0.identifier.hasPrefix(Self.identifierPrefix) || $0.identifier.hasPrefix(Self.remindPrefix) }
             .map { ($0.identifier, ($0.trigger as? UNCalendarNotificationTrigger)?.nextTriggerDate()) }
     }
 }
@@ -197,5 +234,47 @@ final class NotificationTapHandler: NSObject, UNUserNotificationCenterDelegate {
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
         DispatchQueue.main.async { completionHandler([.banner, .sound, .list]) }
+    }
+}
+
+
+// MARK: - 다시 알림 (GET /api/v1/reminders)
+
+struct RemindersResponse: Decodable {
+    let reminders: [ActiveReminder]
+}
+
+struct ActiveReminder: Decodable, Identifiable {
+    let eventId: String
+    let remindAt: String
+    let title: String?
+    let startAt: String?
+    let allDay: Bool
+    let calendarId: String?
+    /// 지워졌거나 구글 연결이 끊겨 일정을 못 찾음 — 알림은 예약하지 않고 목록에서 취소만 할 수 있다
+    let missing: Bool
+    var id: String { eventId }
+
+    var remindDate: Date { APIDateParser.parse(remindAt) ?? .distantPast }
+    var startDate: Date? { startAt.flatMap(APIDateParser.parse) }
+
+    private static let dayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "ko_KR")
+        f.dateFormat = "M월 d일 (E)"
+        return f
+    }()
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "ko_KR")
+        f.dateFormat = "a h:mm"
+        return f
+    }()
+
+    /// 알림 본문 — 일정 날짜(와 시각)
+    var body: String {
+        guard let start = startDate else { return "다시 볼 일정이에요" }
+        let day = Self.dayFormatter.string(from: start)
+        return allDay ? "\(day) 종일 일정" : "\(day) \(Self.timeFormatter.string(from: start)) 일정"
     }
 }

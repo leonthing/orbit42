@@ -81,6 +81,10 @@ struct EventDetailSheet: View {
     @State private var isSavingCompletion = false
     /// 완료 후 별점 (1.5.0 A, 나만 본다)
     @State private var rating: Int?
+    /// 다시 알림 (1.5.0 B)
+    @State private var remindAt: Date?
+    @State private var showingRemindPicker = false
+    @State private var remindErrorMessage: String?
     @State private var completionErrorMessage: String?
 
     /// 완료 체크 초록 — 웹과 동일한 #22c55e
@@ -94,6 +98,7 @@ struct EventDetailSheet: View {
         _isCompleted = State(initialValue: event.completed)
         _isArchived = State(initialValue: viewModel.isArchived(event))
         _rating = State(initialValue: viewModel.current(event).rating)
+        _remindAt = State(initialValue: viewModel.current(event).remindAt)
         _googleAttendees = State(initialValue: event.attendees)
     }
 
@@ -222,6 +227,23 @@ struct EventDetailSheet: View {
                 }
                 .listRowBackground(Theme.surface)
 
+                // 다시 알림을 걸어 둔 일정 — 위쪽에 한 줄 + 취소
+                if let remindAt, remindAt > Date() {
+                    Section {
+                        HStack {
+                            Label("\(RemindLater.label(remindAt)) 다시 알림", systemImage: "bell.badge")
+                                .font(.subheadline)
+                                .foregroundStyle(Theme.primaryText)
+                            Spacer()
+                            Button("취소") { setRemind(nil) }
+                                .font(.subheadline)
+                                .foregroundStyle(Theme.accent)
+                                .buttonStyle(.plain)
+                        }
+                    }
+                    .listRowBackground(Theme.surface)
+                }
+
                 // 완료 체크는 스크롤 없이 보이게 위로 (1.5.0 A) + 완료한 일정은 별점
                 completionSection
 
@@ -324,6 +346,13 @@ struct EventDetailSheet: View {
                             .disabled(isDeleting)
                         }
                         Menu {
+                            Menu {
+                                Button("1주 뒤 · \(RemindLater.label(RemindLater.oneWeek()))") { setRemind(RemindLater.oneWeek()) }
+                                Button("한 달 뒤 · \(RemindLater.label(RemindLater.oneMonth()))") { setRemind(RemindLater.oneMonth()) }
+                                Button("날짜 고르기…") { showingRemindPicker = true }
+                            } label: {
+                                Label("다시 알림", systemImage: "bell.badge")
+                            }
                             Button {
                                 toggleArchive()
                             } label: {
@@ -370,6 +399,17 @@ struct EventDetailSheet: View {
                 Button("확인", role: .cancel) { errorMessage = nil }
             } message: {
                 Text(errorMessage ?? "")
+            }
+            .sheet(isPresented: $showingRemindPicker) {
+                RemindDatePickerSheet { date in setRemind(date) }
+            }
+            .alert("다시 알림을 저장하지 못했어요", isPresented: Binding(
+                get: { remindErrorMessage != nil },
+                set: { if !$0 { remindErrorMessage = nil } }
+            )) {
+                Button("확인", role: .cancel) { remindErrorMessage = nil }
+            } message: {
+                Text(remindErrorMessage ?? "")
             }
             .sheet(isPresented: $showingEdit) {
                 EditEventSheet(viewModel: viewModel, event: event) {
@@ -455,6 +495,21 @@ struct EventDetailSheet: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("별 \(n)개")
+            }
+        }
+    }
+
+    /// 다시 알림 걸기·취소 — 권한이 아직 없으면 이때 묻는다
+    private func setRemind(_ date: Date?) {
+        let previous = remindAt
+        remindAt = date
+        Task {
+            do {
+                try await viewModel.setRemindAt(event, date)
+                if date != nil { await EventReminders.shared.requestAuthorizationIfNeeded() }
+            } catch {
+                remindAt = previous
+                remindErrorMessage = "잠시 후 다시 시도해 주세요."
             }
         }
     }

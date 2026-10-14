@@ -208,6 +208,11 @@ export async function GET(request: Request) {
         rating: annotations.get(toEventKey(e.id))?.rating ?? null,
         ratingNote: annotations.get(toEventKey(e.id))?.ratingNote ?? null,
         reminderMinutes: annotations.get(toEventKey(e.id))?.reminderMinutes ?? null,
+        // 다시 알림 — 지난 것은 끝난 것으로 보고 내려주지 않는다
+        remindAt: (() => {
+          const at = annotations.get(toEventKey(e.id))?.remindAt;
+          return at && Date.parse(at) > Date.now() ? at : null;
+        })(),
       })),
       ...invites.map((inv) => ({
         id: `invite_${inv.id}`,

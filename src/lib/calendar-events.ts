@@ -553,6 +553,46 @@ type CalendarRow = {
   google_account_id: string | null;
 };
 
+/**
+ * 구글 일정 몇 개를 id 로 읽는다 (다시 알림 목록처럼 날짜를 모르는 일정용).
+ * 사용자의 구글 캘린더를 차례로 보며 아직 못 찾은 id 만 events.get — 저장하지 않고 돌려주기만 한다.
+ */
+export async function getGoogleEventsByIds(
+  userId: string,
+  eventIds: string[],
+): Promise<Map<string, { title: string; start_at: string; all_day: boolean; calendar_id: string }>> {
+  const out = new Map<string, { title: string; start_at: string; all_day: boolean; calendar_id: string }>();
+  const wanted = new Set(eventIds.filter((id) => id.startsWith("gcal_")).map((id) => id.slice("gcal_".length)));
+  if (wanted.size === 0) return out;
+  const db = getAdminClient();
+  const { data: cals } = await db
+    .from("calendars")
+    .select("id, source, google_calendar_id, google_account_id")
+    .eq("user_id", userId)
+    .eq("source", "google");
+  for (const cal of (cals ?? []) as CalendarRow[]) {
+    if (wanted.size === 0 || !cal.google_calendar_id) break;
+    const client = await clientForCalendar(userId, cal);
+    if (!client) continue;
+    for (const gid of Array.from(wanted)) {
+      try {
+        const { data } = await client.events.get({ calendarId: cal.google_calendar_id, eventId: gid });
+        if (data.status === "cancelled") continue;
+        out.set(`gcal_${gid}`, {
+          title: data.summary || "(제목 없음)",
+          start_at: data.start?.dateTime || data.start?.date || "",
+          all_day: !!data.start?.date,
+          calendar_id: cal.id,
+        });
+        wanted.delete(gid);
+      } catch {
+        // 이 캘린더에 없음 — 다음 캘린더에서 찾는다
+      }
+    }
+  }
+  return out;
+}
+
 /** 캘린더가 속한 Google 계정의 API 클라이언트 (기본 계정 또는 추가 계정). */
 async function clientForCalendar(userId: string, cal: CalendarRow) {
   if (!cal.google_account_id) return getAuthenticatedCalendar(userId);

@@ -100,6 +100,8 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
     var ratingNote: String?
     /// 일정별 알림 시점(분) — nil = 설정의 기본값, -1 = 없음, 0 = 정각
     var reminderMinutes: Int?
+    /// 다시 알림 시각 (1.5.0 B) — 서버가 지난 것은 내려주지 않는다
+    var remindAt: Date?
 
     var isGoogle: Bool { source == "google" }
     /// 구글 일정의 시간·내용을 바꿀 수 있는지 — 주최자일 때만.
@@ -114,7 +116,7 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
         case inviteId, inviteStatus, inviterName
         case location, locationLat, locationLng, travelMin
         case attendees, isOrganizer, isBooking, bookingId, bookingRole, guestsCanModify
-        case importance, rating, ratingNote, reminderMinutes
+        case importance, rating, ratingNote, reminderMinutes, remindAt
     }
 
     init(from decoder: Decoder) throws {
@@ -148,6 +150,7 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
         rating = try? container.decodeIfPresent(Int.self, forKey: .rating)
         ratingNote = try? container.decodeIfPresent(String.self, forKey: .ratingNote)
         reminderMinutes = try? container.decodeIfPresent(Int.self, forKey: .reminderMinutes)
+        remindAt = ((try? container.decodeIfPresent(String.self, forKey: .remindAt)) ?? nil).flatMap(APIDateParser.parse)
 
         let startRaw = try container.decode(String.self, forKey: .startAt)
         let endRaw = try container.decode(String.self, forKey: .endAt)
@@ -287,8 +290,11 @@ struct UpdateAnnotationRequest: Encodable {
     /// 알림 시점 — setReminder 가 true 일 때만 보낸다 (nil 이면 기본값으로 되돌림)
     var reminderMinutes: Int?
     var setReminder = false
+    /// 다시 알림 — setRemindAt 이 true 일 때만 보낸다 (nil = 취소)
+    var remindAt: Date?
+    var setRemindAt = false
 
-    private enum CodingKeys: String, CodingKey { case importance, rating, ratingNote, reminderMinutes }
+    private enum CodingKeys: String, CodingKey { case importance, rating, ratingNote, reminderMinutes, remindAt }
 
     func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
@@ -297,6 +303,9 @@ struct UpdateAnnotationRequest: Encodable {
         try c.encodeIfPresent(ratingNote, forKey: .ratingNote)
         if setReminder {
             if let reminderMinutes { try c.encode(reminderMinutes, forKey: .reminderMinutes) } else { try c.encodeNil(forKey: .reminderMinutes) }
+        }
+        if setRemindAt {
+            if let remindAt { try c.encode(APIDateParser.encodeDateTime(remindAt), forKey: .remindAt) } else { try c.encodeNil(forKey: .remindAt) }
         }
     }
 }

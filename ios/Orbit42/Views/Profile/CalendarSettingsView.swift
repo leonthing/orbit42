@@ -247,6 +247,7 @@ private struct SettingBadge: View {
 /// 일정 알림 설정 (1.5.0 A 2차) — 기기 로컬 알림. 권한은 여기서 처음 켤 때 묻는다.
 struct ReminderSettingsSection: View {
     @State private var status: UNAuthorizationStatus = .notDetermined
+    @State private var reminderCount: Int?
     private var settings: AppSettings { AppSettings.shared }
 
     var body: some View {
@@ -273,6 +274,16 @@ struct ReminderSettingsSection: View {
                 set: { on in settings.setNotifyGoogleEvents(on); changed(turnedOn: on) }
             ))
             .tint(Theme.accent)
+            NavigationLink {
+                RemindersListView()
+            } label: {
+                HStack {
+                    Text("다시 알림").foregroundStyle(Theme.primaryText)
+                    Spacer()
+                    Text(reminderCount.map { "\($0)개" } ?? "")
+                        .foregroundStyle(Theme.secondaryText)
+                }
+            }
             Picker("기본 알림 시점", selection: Binding(
                 get: { settings.defaultReminder },
                 set: { settings.setDefaultReminder($0); EventReminders.shared.refreshSoon() }
@@ -286,7 +297,10 @@ struct ReminderSettingsSection: View {
                 .foregroundStyle(Theme.secondaryText)
         }
         .listRowBackground(Theme.surface)
-        .task { status = await EventReminders.shared.authorizationStatus() }
+        .task {
+            status = await EventReminders.shared.authorizationStatus()
+            reminderCount = await EventReminders.shared.fetchReminders()?.count
+        }
     }
 
     private func changed(turnedOn: Bool) {

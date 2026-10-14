@@ -41,7 +41,18 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     }
     patch.reminderMinutes = body.reminderMinutes as number | null;
   }
-  if (patch.importance === undefined && patch.rating === undefined && patch.ratingNote === undefined && patch.reminderMinutes === undefined) {
+  if (body.remindAt !== undefined) {
+    // 다시 알림 — 지금 이후만, 1년 안쪽. null 은 취소.
+    if (body.remindAt === null) patch.remindAt = null;
+    else {
+      const t = typeof body.remindAt === "string" ? Date.parse(body.remindAt) : NaN;
+      if (Number.isNaN(t) || t <= Date.now() || t > Date.now() + 366 * 86_400_000) {
+        return Response.json({ error: "remindAt 은 지금 이후 1년 안의 시각이에요." }, { status: 400 });
+      }
+      patch.remindAt = new Date(t).toISOString();
+    }
+  }
+  if (patch.importance === undefined && patch.rating === undefined && patch.ratingNote === undefined && patch.reminderMinutes === undefined && patch.remindAt === undefined) {
     return Response.json({ error: "바꿀 내용이 없어요." }, { status: 400 });
   }
   try {
@@ -52,6 +63,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       rating: a.rating,
       ratingNote: a.ratingNote,
       reminderMinutes: a.reminderMinutes,
+      remindAt: a.remindAt,
     });
   } catch {
     return Response.json({ error: "저장하지 못했어요. 잠시 후 다시 시도해 주세요." }, { status: 500 });
