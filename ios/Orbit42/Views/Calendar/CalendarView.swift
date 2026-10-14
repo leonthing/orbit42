@@ -24,6 +24,9 @@ struct CalendarView: View {
     @State private var stripFrames: [Date: CGRect] = [:]
     /// 날짜별 하루 보기 스크롤 위치 — 화면을 다시 그리지 않도록 참조로 둔다
     @State private var dayScrollRegistry = DayScrollRegistry()
+    /// 다른 날로 옮긴 뒤 아래에 잠깐 뜨는 안내 ("10월 23일 (금)로 옮겼어요 · 보기")
+    @State private var movedToast: Date?
+    @State private var movedToastTask: Task<Void, Never>?
 
     final class DayScrollRegistry {
         var y: [Date: CGFloat] = [:]
@@ -51,6 +54,7 @@ struct CalendarView: View {
                 // 캘린더 탭은 일정만 — 예약 링크는 예약 탭으로 옮겼다.
                 scheduleContent
                 crossDragGhost
+                movedToastView
             }
             .navigationTitle("캘린더")
             .navigationBarTitleDisplayMode(.inline)
@@ -69,7 +73,7 @@ struct CalendarView: View {
                 Text(completionErrorMessage ?? "")
             }
             .alert(
-                "시간을 바꿀까요?",
+                pendingMove.map { calendar.isDate($0.newStart, inSameDayAs: $0.event.startAt) } == false ? "일정을 옮길까요?" : "시간을 바꿀까요?",
                 isPresented: Binding(
                     get: { pendingMove != nil },
                     set: { if !$0 { pendingMove = nil } }
@@ -365,6 +369,49 @@ struct CalendarView: View {
         .padding(.horizontal, 8)
         .padding(.top, 6)
         .onPreferenceChange(StripFramesKey.self) { stripFrames = $0 }
+    }
+
+    private static let toastDayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "ko_KR")
+        f.dateFormat = "M월 d일 (E)"
+        return f
+    }()
+
+    private func showMovedToast(to date: Date) {
+        movedToastTask?.cancel()
+        withAnimation(.easeOut(duration: 0.2)) { movedToast = date }
+        movedToastTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeIn(duration: 0.2)) { movedToast = nil }
+        }
+    }
+
+    @ViewBuilder
+    private var movedToastView: some View {
+        if let date = movedToast {
+            VStack {
+                Spacer()
+                HStack(spacing: 12) {
+                    Text("\(Self.toastDayFormatter.string(from: date))로 옮겼어요")
+                        .font(.subheadline)
+                        .foregroundStyle(.white)
+                    Button("보기") {
+                        movedToastTask?.cancel()
+                        withAnimation { movedToast = nil }
+                        viewModel.select(date: date)
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color(hexString: "#a5b4fc") ?? .white)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 11)
+                .background(Color.black.opacity(0.82), in: Capsule())
+                .padding(.bottom, 96)
+            }
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+        }
     }
 
     /// 다른 날로 끄는 동안 손가락을 따라가는 블록 + 날짜·시각. 주간 날짜 칸 위면 그 칸을 강조한다.
@@ -901,6 +948,10 @@ struct CalendarView: View {
                 try await viewModel.retimeEvent(
                     move.event, start: move.newStart, end: move.newEnd, notifyAttendees: notifyAttendees
                 )
+                // 지금 보는 날과 다른 날로 옮겼으면(주간 날짜 칸에 놓기) 아래에 잠깐 알리고 '보기'로 그 날로
+                if !calendar.isDate(move.newStart, inSameDayAs: viewModel.selectedDate) {
+                    showMovedToast(to: move.newStart)
+                }
             } catch let apiError as APIError {
                 moveErrorMessage = apiError.errorDescription
             } catch {
