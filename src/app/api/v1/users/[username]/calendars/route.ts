@@ -1,6 +1,7 @@
 import { apiSession, apiUserId } from "@/lib/api-auth";
 import { getAdminClient } from "@/lib/supabase";
 import { isBlockedEitherWay } from "@/lib/blocks";
+import { selectEventsInRange } from "@/lib/recurrence-db";
 
 export const dynamic = "force-dynamic";
 
@@ -73,12 +74,12 @@ export async function GET(
   const monthStart = new Date(year, month - 1, 1);
   const monthEnd = new Date(year, month, 0, 23, 59, 59, 999);
 
-  const { data: events } = await db
-    .from("events")
-    .select("calendar_id, start_at")
-    .in("calendar_id", calendars.map((c) => c.id as string))
-    .gte("start_at", monthStart.toISOString())
-    .lte("start_at", monthEnd.toISOString());
+  const events = await selectEventsInRange<Record<string, any> & { id: string; start_at: string }>({
+    columns: "calendar_id, start_at",
+    scope: (q) => q.in("calendar_id", calendars.map((c) => c.id as string)),
+    from: monthStart,
+    to: monthEnd,
+  });
 
   // 캘린더별 "일정 있는 날(1~31)" 집합 — KST 기준.
   const daysByCalendar = new Map<string, Set<number>>();

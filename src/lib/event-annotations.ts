@@ -5,6 +5,7 @@
  */
 import { getAdminClient } from "@/lib/supabase";
 import { toEventKey } from "@/lib/event-key";
+import { seriesIdOf, parseOccurrenceId } from "@/lib/recurrence";
 
 export type Importance = -1 | 0 | 1;
 
@@ -151,9 +152,14 @@ export async function ratingSummary(userId: string, now = new Date()) {
     const { data: evs } = await db
       .from("events")
       .select("id, title, start_at, calendar_id")
-      .in("id", localIds.slice(i, i + 300));
-    for (const e of evs ?? []) {
-      info.set(e.id as string, { title: e.title as string, startAt: e.start_at as string, calendarId: (e.calendar_id as string | null) ?? null });
+      .in("id", Array.from(new Set(localIds.slice(i, i + 300).map(seriesIdOf))));
+    const byId = new Map((evs ?? []).map((e) => [e.id as string, e]));
+    // 반복 회차 키는 시리즈의 제목·캘린더 + 회차의 원래 시작(1.5.1)
+    for (const key of localIds.slice(i, i + 300)) {
+      const e = byId.get(seriesIdOf(key));
+      if (!e) continue;
+      const occ = parseOccurrenceId(key);
+      info.set(key, { title: e.title as string, startAt: occ ? occ.originalStart.toISOString() : (e.start_at as string), calendarId: (e.calendar_id as string | null) ?? null });
     }
   }
   if (rated.some((r) => (r.event_key as string).startsWith("gcal_"))) {
@@ -244,9 +250,13 @@ export async function listActiveReminders(userId: string, now = new Date()): Pro
   const info = new Map<string, { title: string; startAt: string; allDay: boolean; calendarId: string | null }>();
   const localIds = rows.map((r) => r.event_key as string).filter((k) => !k.startsWith("gcal_"));
   if (localIds.length > 0) {
-    const { data: evs } = await db.from("events").select("id, title, start_at, all_day, calendar_id").in("id", localIds);
-    for (const e of evs ?? []) {
-      info.set(e.id as string, { title: e.title as string, startAt: e.start_at as string, allDay: !!e.all_day, calendarId: (e.calendar_id as string | null) ?? null });
+    const { data: evs } = await db.from("events").select("id, title, start_at, all_day, calendar_id").in("id", Array.from(new Set(localIds.map(seriesIdOf))));
+    const byId = new Map((evs ?? []).map((e) => [e.id as string, e]));
+    for (const key of localIds) {
+      const e = byId.get(seriesIdOf(key));
+      if (!e) continue;
+      const occ = parseOccurrenceId(key);
+      info.set(key, { title: e.title as string, startAt: occ ? occ.originalStart.toISOString() : (e.start_at as string), allDay: !!e.all_day, calendarId: (e.calendar_id as string | null) ?? null });
     }
   }
   const googleIds = rows.map((r) => r.event_key as string).filter((k) => k.startsWith("gcal_"));

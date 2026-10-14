@@ -16,6 +16,7 @@ import {
   type WorkDay,
   type WorkHours,
 } from "@/lib/insights-types";
+import { selectEventsInRange } from "@/lib/recurrence-db";
 
 export { DEFAULT_WORK_HOURS, WORK_DAY_LABEL };
 export type { WorkDay, WorkHours };
@@ -185,12 +186,12 @@ export async function fetchTimeBlocks(
   const calById = new Map(cals.map((c) => [c.id, c]));
 
   // ── Native events ────────────────────────────────────────────
-  const { data: native } = await db
-    .from("events")
-    .select("id, calendar_id, title, start_at, end_at, all_day")
-    .eq("user_id", userId)
-    .gte("start_at", rangeStart.toISOString())
-    .lte("start_at", rangeEnd.toISOString());
+  const native = await selectEventsInRange<Record<string, any> & { id: string; start_at: string }>({
+    columns: "id, calendar_id, title, start_at, end_at, all_day",
+    scope: (q) => q.eq("user_id", userId),
+    from: rangeStart,
+    to: rangeEnd,
+  });
 
   const blocks: TimeBlock[] = [];
   for (const e of (native ?? []) as Array<{

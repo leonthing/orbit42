@@ -827,12 +827,17 @@ export async function getTimeAssetSummary(
     .filter((k) => !k.startsWith("gcal_"));
   const localStartById = new Map<string, Date>();
   if (localEarningKeys.length > 0) {
+    // 반복 회차 키(<id>_<시작>)는 시리즈 id 로 찾고, 회차의 원래 시작을 쓴다(1.5.1)
+    const { seriesIdOf, parseOccurrenceId } = await import("@/lib/recurrence");
     const { data: localEventRows } = await db
       .from("events")
       .select("id, start_at")
-      .in("id", localEarningKeys);
-    for (const e of localEventRows ?? []) {
-      localStartById.set(e.id as string, new Date(e.start_at as string));
+      .in("id", Array.from(new Set(localEarningKeys.map(seriesIdOf))));
+    const seriesStart = new Map((localEventRows ?? []).map((e) => [e.id as string, new Date(e.start_at as string)]));
+    for (const key of localEarningKeys) {
+      const occ = parseOccurrenceId(key);
+      const start = occ ? occ.originalStart : seriesStart.get(key);
+      if (start && seriesStart.has(seriesIdOf(key))) localStartById.set(key, start);
     }
   }
   for (const r of earningRowsRes.data ?? []) {

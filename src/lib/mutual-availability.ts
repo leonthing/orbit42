@@ -3,6 +3,7 @@
 import { getAdminClient } from "@/lib/supabase";
 import { getUserId } from "@/lib/db";
 import { getAuthenticatedCalendar } from "@/lib/google";
+import { selectEventsInRange } from "@/lib/recurrence-db";
 
 type Span = { start: number; end: number };
 
@@ -17,6 +18,14 @@ export async function findMyConflicts(
 ): Promise<string[] | null> {
   const userId = await getUserId().catch(() => null);
   if (!userId) return null;
+  return findConflictsForUser(userId, options);
+}
+
+/** findMyConflicts 의 본문 — 사용자를 받아서 (테스트·서버 코드에서 직접 부를 수 있게) */
+export async function findConflictsForUser(
+  userId: string,
+  options: { start_at: string; end_at: string }[],
+): Promise<string[]> {
   if (options.length === 0) return [];
 
   const capped = options.slice(0, 1000);
@@ -78,12 +87,12 @@ export async function findMyConflicts(
   }
 
   // Native calendar events.
-  const { data: events } = await db
-    .from("events")
-    .select("start_at, end_at, all_day")
-    .eq("user_id", userId)
-    .gte("start_at", rangeStart.toISOString())
-    .lte("start_at", rangeEnd.toISOString());
+  const events = await selectEventsInRange<Record<string, any> & { id: string; start_at: string }>({
+    columns: "start_at, end_at, all_day",
+    scope: (q) => q.eq("user_id", userId),
+    from: rangeStart,
+    to: rangeEnd,
+  });
   for (const e of events ?? []) {
     if (e.all_day) continue;
     const s = new Date(e.start_at as string).getTime();

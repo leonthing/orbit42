@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getAdminClient } from "@/lib/supabase";
 import { getUserId } from "@/lib/db";
+import { selectEventsInRange } from "@/lib/recurrence-db";
 
 /**
  * 프로필의 캘린더 카드 — 미니 월 그리드로 "이 캘린더를 얼마나 쓰는지"를 보여준다
@@ -54,12 +55,12 @@ export async function ProfileCalendarCards({
   const month = now.getMonth() + 1;
   const monthStart = new Date(year, month - 1, 1);
   const monthEnd = new Date(year, month, 0, 23, 59, 59, 999);
-  const { data: events } = await db
-    .from("events")
-    .select("calendar_id, start_at")
-    .in("calendar_id", calendars.map((c) => c.id as string))
-    .gte("start_at", monthStart.toISOString())
-    .lte("start_at", monthEnd.toISOString());
+  const events = await selectEventsInRange<Record<string, any> & { id: string; start_at: string }>({
+    columns: "calendar_id, start_at",
+    scope: (q) => q.in("calendar_id", calendars.map((c) => c.id as string)),
+    from: monthStart,
+    to: monthEnd,
+  });
 
   const daysByCalendar = new Map<string, Set<number>>();
   for (const e of events ?? []) {

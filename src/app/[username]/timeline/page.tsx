@@ -12,6 +12,7 @@ import {
 } from "@/lib/event-completions-query";
 import { listFollowing } from "@/lib/follows";
 import { TimelineFeed, type TimelineEntry } from "./TimelineFeed";
+import { selectEventsInRange } from "@/lib/recurrence-db";
 
 export const metadata: Metadata = { title: "타임라인" };
 export const dynamic = "force-dynamic";
@@ -131,14 +132,14 @@ export default async function TimelinePage({
       );
       if (visible.length > 0) {
         const metaById = new Map(visible.map((c) => [c.id as string, c]));
-        const { data: rows } = await db
-          .from("events")
-          .select("id, title, start_at, end_at, all_day, calendar_id, user_id")
-          .in("calendar_id", Array.from(metaById.keys()))
-          .gte("start_at", rangeStart.toISOString())
-          .lte("start_at", now.toISOString())
-          .order("start_at", { ascending: false })
-          .limit(150);
+        const rows = (await selectEventsInRange<Record<string, any> & { id: string; start_at: string }>({
+          columns: "id, title, start_at, end_at, all_day, calendar_id, user_id",
+          scope: (q) => q.in("calendar_id", Array.from(metaById.keys())),
+          from: rangeStart,
+          to: now,
+        }))
+          .sort((a, b) => Date.parse(b.start_at) - Date.parse(a.start_at))
+          .slice(0, 150);
 
         const keys = (rows ?? []).map((r) => r.id as string);
         const photoByEvent = new Map<string, { urls: string[]; note: string | null }>();
