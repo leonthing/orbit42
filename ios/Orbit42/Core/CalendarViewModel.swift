@@ -141,6 +141,19 @@ final class CalendarViewModel {
         return 3600
     }
 
+    /// 앱이 앞으로 올 때 — 1분 넘게 떠나 있었으면 일정을 다시 받는다.
+    /// 월별 캐시는 프로세스가 사는 동안 남아 있어서, 다른 기기·구글·서버에서 바뀐 것이
+    /// 앱을 완전히 껐다 켜기 전까지 안 보였다(10/15 종일 일정 수정 뒤 실측).
+    func didBecomeActive(now: Date = Date()) {
+        let away = now.timeIntervalSince(lastActiveAt)
+        returnToTodayIfStale(now: now)
+        guard away > 60 else { return }
+        // 지금 보는 달은 화면에 둔 채로 새로 받아 바꾸고, 나머지 달은 다음에 볼 때 받는다
+        let current = currentMonthKey
+        cache = cache.filter { $0.key == current }
+        Task { await loadDisplayedMonth(force: true) }
+    }
+
     /// 앱이 뒤로 갈 때 — 떠난 시각을 남긴다
     func markInactive(now: Date = Date()) {
         lastActiveAt = now

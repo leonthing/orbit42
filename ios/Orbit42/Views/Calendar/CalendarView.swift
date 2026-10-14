@@ -91,7 +91,7 @@ struct CalendarView: View {
             // 날이 바뀌었거나 오래 떠나 있다 돌아오면 오늘로 (위젯·알림 링크는 아래에서 그 날짜로 다시 맞춘다)
             .onChange(of: scenePhase) { _, phase in
                 switch phase {
-                case .active: viewModel.returnToTodayIfStale()
+                case .active: viewModel.didBecomeActive()
                 case .background: viewModel.markInactive()
                 default: break
                 }
