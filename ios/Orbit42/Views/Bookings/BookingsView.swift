@@ -10,6 +10,7 @@ struct BookingsView: View {
     @State private var deleteTargetId: String?
     /// 카드 탭 → 상세로 push 할 대상
     @State private var detailTarget: BookingDetailTarget?
+    @Environment(TabRouter.self) private var router
 
     /// 프로필에서 push 할 때는 자체 NavigationStack 없이 쓴다 (중첩 방지).
     var embedded = false
@@ -22,6 +23,15 @@ struct BookingsView: View {
         } else {
             NavigationStack { inner }
         }
+    }
+
+    private func applyBookingRequest(_ request: BookingDetailTarget?) {
+        guard let request else { return }
+        let mine: BookingsViewModel.Segment = request.role == .host ? .host : .guest
+        // 예약 탭에 붙은 목록만 연다 (알림 화면에서 push 한 목록은 건드리지 않는다)
+        guard let forcedSegment, forcedSegment == mine else { return }
+        detailTarget = request
+        router.bookingDetailRequest = nil
     }
 
     private var inner: some View {
@@ -39,7 +49,13 @@ struct BookingsView: View {
         }
         .onChange(of: forcedSegment) { _, new in
             if let new { viewModel.segment = new }
+            applyBookingRequest(router.bookingDetailRequest)
         }
+        // 일정 상세의 "예약에서 관리" — 내 구역(받은/내가 한) 인스턴스만 연다
+        .onChange(of: router.bookingDetailRequest) { _, request in
+            applyBookingRequest(request)
+        }
+        .onAppear { applyBookingRequest(router.bookingDetailRequest) }
         .navigationTitle("예약")
         .navigationBarTitleDisplayMode(.inline)
             .alert(

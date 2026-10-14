@@ -40,8 +40,9 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
     let id: String
     let title: String
     let description: String?
-    let startAt: Date
-    let endAt: Date
+    /// 하루 보기 드래그 이동을 화면에 먼저 반영하려고 var
+    var startAt: Date
+    var endAt: Date
     let allDay: Bool
     let calendarId: String?
     let source: String        // "local" | "google"
@@ -72,8 +73,17 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
     let attendees: [GoogleAttendee]
     /// 구글 일정에서 내가 주최자인지 — 주최자만 참석자를 추가할 수 있다 (구글이 아니면 false)
     let isOrganizer: Bool
+    /// 예약에서 생긴 일정 — 시간은 예약 변경 절차로만 바꾼다 (하루 보기 드래그 제외)
+    let isBooking: Bool
+    /// 남이 주최한 구글 일정이라도 주최자가 '참석자 수정 허용'을 켰으면 true
+    let guestsCanModify: Bool
+    /// 예약 일정이면 그 예약 id 와 내 입장("host" 받은 예약 | "guest" 내가 한 예약) — 상세의 "예약에서 관리"
+    let bookingId: String?
+    let bookingRole: String?
 
     var isGoogle: Bool { source == "google" }
+    /// 구글 일정의 시간·내용을 바꿀 수 있는지 — 주최자거나, 주최자가 참석자 수정을 허용했을 때
+    var canModifyGoogle: Bool { !isGoogle || isOrganizer || guestsCanModify }
     /// 초대받은 일정 (읽기 전용 — 수락/거절만 가능)
     var isInvite: Bool { source == "invite" }
 
@@ -82,7 +92,7 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
         case bucketOverride, earningKrw, autoValueKrw, completed, status
         case inviteId, inviteStatus, inviterName
         case location, locationLat, locationLng, travelMin
-        case attendees, isOrganizer
+        case attendees, isOrganizer, isBooking, bookingId, bookingRole, guestsCanModify
     }
 
     init(from decoder: Decoder) throws {
@@ -108,6 +118,10 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
         travelMin = try container.decodeIfPresent(Int.self, forKey: .travelMin)
         attendees = (try? container.decodeIfPresent([GoogleAttendee].self, forKey: .attendees)) ?? []
         isOrganizer = try container.decodeIfPresent(Bool.self, forKey: .isOrganizer) ?? false
+        isBooking = try container.decodeIfPresent(Bool.self, forKey: .isBooking) ?? false
+        guestsCanModify = try container.decodeIfPresent(Bool.self, forKey: .guestsCanModify) ?? false
+        bookingId = try container.decodeIfPresent(String.self, forKey: .bookingId)
+        bookingRole = try container.decodeIfPresent(String.self, forKey: .bookingRole)
 
         let startRaw = try container.decode(String.self, forKey: .startAt)
         let endRaw = try container.decode(String.self, forKey: .endAt)
@@ -233,6 +247,8 @@ struct UpdateEventRequest: Encodable {
     var calendarId: String?
     /// gcal_* 이벤트의 현재 소속 native 캘린더 uuid (서버가 소속 계정 해석에 사용)
     var sourceCalendarId: String?
+    /// 구글 일정 시간 변경을 참석자에게 메일로 알린다 (하루 보기 드래그에서 확인받은 뒤에만 true)
+    var notifyAttendees: Bool?
 }
 
 /// PATCH/DELETE 공통 성공 응답 — `{"ok": true}`

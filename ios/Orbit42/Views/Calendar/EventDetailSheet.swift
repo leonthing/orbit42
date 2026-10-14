@@ -29,10 +29,12 @@ private enum AssetBucketChoice: String, CaseIterable, Identifiable {
 }
 
 /// 이벤트 상세 시트 — 수정/삭제 진입점 + 이벤트 단위 자산 분류.
+/// 상단 왼쪽 X = 닫기, 오른쪽 펜 = 수정, '…' = 보관·삭제.
 /// 수정: EditEventSheet(PATCH), 삭제: confirmationDialog → DELETE,
 /// 자산 분류: PUT /api/v1/time-asset/event-bucket (선택 즉시 저장).
 struct EventDetailSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(TabRouter.self) private var router
 
     let viewModel: CalendarViewModel
     let event: CalendarEvent
@@ -76,7 +78,6 @@ struct EventDetailSheet: View {
     /// 보관 — 원본은 그대로 두고 표시만 바꾼다 (완료와 함께 켜지지 않는다)
     @State private var isArchived: Bool
     @State private var isSavingArchive = false
-    @State private var showingMove = false
     @State private var isSavingCompletion = false
     @State private var completionErrorMessage: String?
 
@@ -91,6 +92,37 @@ struct EventDetailSheet: View {
         _isCompleted = State(initialValue: event.completed)
         _isArchived = State(initialValue: viewModel.isArchived(event))
         _googleAttendees = State(initialValue: event.attendees)
+    }
+
+    /// 보기 전용으로 공유받은 캘린더의 일정은 수정·삭제를 숨긴다 (보관은 내 표시라 남긴다)
+    private var calendarWritable: Bool {
+        calendarInfo?.canEdit ?? true
+    }
+
+    /// 펜(수정) — 예약 일정은 예약에서 바꾸고, 남이 주최한 구글 일정은 구글이 수정을 막는다.
+    private var canEdit: Bool {
+        calendarWritable && !event.isBooking && !isGuestOfGoogleEvent
+    }
+
+    /// 삭제 — 예약 일정은 예약 취소로. 남이 주최한 구글 일정은 내 캘린더에서 빼는 동작이라 그대로 둔다.
+    private var canDelete: Bool {
+        calendarWritable && !event.isBooking
+    }
+
+    private var isGuestOfGoogleEvent: Bool {
+        !event.canModifyGoogle
+    }
+
+    /// 예약 일정이면 그 예약 상세로 가는 길 — 내 예약 목록에 있는 것만
+    private var bookingLink: (id: String, role: BookingRole)? {
+        guard let id = event.bookingId, let raw = event.bookingRole else { return nil }
+        return (id, raw == "host" ? .host : .guest)
+    }
+
+    private func openBooking() {
+        guard let link = bookingLink else { return }
+        dismiss()
+        router.openBooking(id: link.id, role: link.role)
     }
 
     /// 구글 일정은 주최자만 참석자를 추가할 수 있다 (구글 이벤트에 attendee 로 들어가 초대 메일이 간다).
@@ -187,6 +219,8 @@ struct EventDetailSheet: View {
                 }
                 .listRowBackground(Theme.surface)
 
+                editNoticeSection
+
                 locationMapSection
 
                 // 참석자는 구글·애플 캘린더처럼 시간·장소 바로 아래
@@ -281,50 +315,6 @@ struct EventDetailSheet: View {
                     } message: {
                         Text(completionErrorMessage ?? "")
                     }
-
-                    Button {
-                        toggleArchive()
-                    } label: {
-                        HStack {
-                            Label(isArchived ? "보관 해제" : "보관",
-                                  systemImage: isArchived ? "archivebox.fill" : "archivebox")
-                            Spacer()
-                            if isSavingArchive {
-                                ProgressView().tint(Theme.secondaryText)
-                            }
-                        }
-                    }
-                    .disabled(isSavingArchive || isDeleting)
-
-                    Button {
-                        showingMove = true
-                    } label: {
-                        Label("다른 날로", systemImage: "calendar.badge.clock")
-                    }
-                    .disabled(isDeleting)
-
-                    Button {
-                        showingEdit = true
-                    } label: {
-                        Label("수정", systemImage: "pencil")
-                    }
-                    .disabled(isDeleting)
-
-                    Button(role: .destructive) {
-                        showingDeleteConfirm = true
-                    } label: {
-                        if isDeleting {
-                            HStack {
-                                Label("삭제", systemImage: "trash")
-                                Spacer()
-                                ProgressView()
-                                    .tint(Theme.secondaryText)
-                            }
-                        } else {
-                            Label("삭제", systemImage: "trash")
-                        }
-                    }
-                    .disabled(isDeleting)
                 }
                 .listRowBackground(Theme.surface)
                 }
@@ -335,8 +325,50 @@ struct EventDetailSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("닫기") { dismiss() }
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark")
+                    }
+                    .accessibilityLabel("닫기")
+                    .disabled(isDeleting)
+                }
+                if !event.isInvite {
+                    ToolbarItemGroup(placement: .primaryAction) {
+                        if isDeleting || isSavingArchive {
+                            ProgressView().tint(Theme.secondaryText)
+                        }
+                        if canEdit {
+                            Button { showingEdit = true } label: {
+                                Image(systemName: "pencil")
+                            }
+                            .accessibilityLabel("수정")
+                            .disabled(isDeleting)
+                        }
+                        Menu {
+                            Button {
+                                toggleArchive()
+                            } label: {
+                                Label(isArchived ? "보관 해제" : "보관",
+                                      systemImage: isArchived ? "archivebox.fill" : "archivebox")
+                            }
+                            .disabled(isSavingArchive)
+                            if bookingLink != nil {
+                                Button { openBooking() } label: {
+                                    Label("예약에서 관리", systemImage: "calendar.badge.clock")
+                                }
+                            }
+                            if canDelete {
+                                Button(role: .destructive) {
+                                    showingDeleteConfirm = true
+                                } label: {
+                                    Label("삭제", systemImage: "trash")
+                                }
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis")
+                        }
+                        .accessibilityLabel("더 보기")
                         .disabled(isDeleting)
+                    }
                 }
             }
             .confirmationDialog(
@@ -351,12 +383,6 @@ struct EventDetailSheet: View {
                 Button("확인", role: .cancel) { errorMessage = nil }
             } message: {
                 Text(errorMessage ?? "")
-            }
-            .sheet(isPresented: $showingMove) {
-                MoveEventSheet(viewModel: viewModel, event: event) {
-                    // 새 일정이 생기고 원본은 보관됐다 — 상세도 닫는다.
-                    dismiss()
-                }
             }
             .sheet(isPresented: $showingEdit) {
                 EditEventSheet(viewModel: viewModel, event: event) {
@@ -388,6 +414,37 @@ struct EventDetailSheet: View {
                 }
             }
             .interactiveDismissDisabled(isDeleting)
+        }
+    }
+
+    /// 수정할 수 없는 일정에서 왜 펜이 없는지 + 예약 일정은 예약으로 가는 한 줄
+    @ViewBuilder
+    private var editNoticeSection: some View {
+        if event.isBooking {
+            Section {
+                if bookingLink != nil {
+                    Button { openBooking() } label: {
+                        HStack {
+                            Label("예약에서 관리", systemImage: "calendar.badge.clock")
+                                .foregroundStyle(Theme.accent)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(Theme.secondaryText)
+                        }
+                    }
+                }
+            } footer: {
+                Text("예약에서 생긴 일정이라 시간 변경과 취소는 예약에서 해요.")
+            }
+            .listRowBackground(Theme.surface)
+        } else if isGuestOfGoogleEvent {
+            Section {
+                Label("주최자만 수정할 수 있어요", systemImage: "lock")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.secondaryText)
+            }
+            .listRowBackground(Theme.surface)
         }
     }
 

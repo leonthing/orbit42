@@ -19,6 +19,15 @@ final class TabRouter {
     var calendarEventRequest: CalendarEventRequest?
     /// 캘린더 탭이 선택해야 할 날짜 — 홈 화면 위젯 딥링크용, 소비 후 nil
     var calendarDateRequest: Date?
+    /// 예약 탭이 열어야 할 예약 상세 — 일정 상세의 "예약에서 관리", 소비 후 nil
+    var bookingDetailRequest: BookingDetailTarget?
+
+    /// 일정 상세 → 그 예약 상세로 (받은 예약 / 내가 한 예약 구역을 먼저 맞춘다)
+    func openBooking(id: String, role: BookingRole) {
+        selection = .bookings
+        bookingsSectionRequest = role == .host ? "received" : "sent"
+        bookingDetailRequest = BookingDetailTarget(id: id, role: role)
+    }
 
     /// 위젯 딥링크 — orbit42://calendar?date=2026-10-13 (그 날짜의 캘린더),
     /// orbit42://bookings (받은 예약 목록).

@@ -3,6 +3,8 @@ import SwiftUI
 /// 하루 보기 — 맨 위 종일 줄 + 0~24시 시간축에 일정 블록 (구글 캘린더 하루 보기식).
 /// 겹치는 일정은 옆으로 나눠 그리고, 오늘이면 현재 시각에 빨간 선을 긋는다.
 /// 블록 탭 = 상세, 블록 앞 체크박스 = 완료 토글, 빈 시간 탭 = 그 시각으로 새 일정.
+/// 블록을 꾹 누르면 떠오르고, 위아래로 끌면 15분 단위로 시간이 옮겨진다 (아이폰 캘린더식, 같은 날 안에서만).
+/// 블록 아래 끝을 잡고 끌면 끝 시각만 바뀐다(길이 바꾸기, 최소 15분).
 /// 전날/다음날 넘기기는 바깥의 `DayPager`(가로 페이징 스크롤)가 맡는다.
 struct DayTimelineView: View {
     let date: Date
@@ -13,6 +15,33 @@ struct DayTimelineView: View {
     let onOpen: (CalendarEvent) -> Void
     let onToggleCompletion: (CalendarEvent) -> Void
     let onAddAt: (Date) -> Void
+    /// 끌어 옮길 수 있는 일정인지 (종일·초대·예약·편집 권한 없는 일정은 부모가 false)
+    let canMove: (CalendarEvent) -> Bool
+    /// 놓은 자리의 새 시작·끝 시각 — 저장·확인은 부모가 맡는다
+    let onRetime: (CalendarEvent, Date, Date) -> Void
+    /// 끄는 동안 바깥 페이저의 가로 넘김을 막는다
+    @Binding var isDragging: Bool
+
+    /// 끄는 중인 블록과 방식 (옮기기 / 아래 끝 끌어 길이 바꾸기)
+    @State private var dragId: String?
+    @State private var dragMode: DragMode = .move
+    /// 손가락이 움직인 거리(화면 기준)
+    @State private var dragTranslation: CGFloat = 0
+    /// 콘텐츠가 위로 스크롤된 양 — 끄는 동안 자동 스크롤된 만큼 블록도 따라간다
+    @State private var scrollY: CGFloat = 0
+    @State private var dragStartScrollY: CGFloat = 0
+    @State private var viewportHeight: CGFloat = 0
+    /// 화면 위/아래 가장자리에 닿으면 -1/+1 — 그 방향으로 자동 스크롤
+    @State private var autoScrollDirection = 0
+    @State private var autoScrollTask: Task<Void, Never>?
+    @State private var lastSnap = 0
+    /// 끌기를 막 끝낸 손가락이 블록 탭으로 상세를 열지 않게
+    @State private var lastDragEnd = Date.distantPast
+
+    private enum DragMode { case move, resize }
+
+    private static let viewportSpace = "dayTimelineViewport"
+    private let snapMinutes = 15
 
     private let hourHeight: CGFloat = 56
     private let labelWidth: CGFloat = 52
@@ -31,9 +60,27 @@ struct DayTimelineView: View {
             }
             ScrollViewReader { proxy in
                 ScrollView {
-                    grid
+                    grid(proxy)
                         .frame(height: hourHeight * 24 + topInset * 2)
+                        .background(
+                            GeometryReader { geo in
+                                Color.clear.preference(
+                                    key: ScrollYKey.self,
+                                    value: -geo.frame(in: .named(Self.viewportSpace)).minY
+                                )
+                            }
+                        )
                 }
+                .coordinateSpace(name: Self.viewportSpace)
+                .scrollDisabled(dragId != nil)
+                .onPreferenceChange(ScrollYKey.self) { scrollY = $0 }
+                .background(
+                    GeometryReader { geo in
+                        Color.clear
+                            .onAppear { viewportHeight = geo.size.height }
+                            .onChange(of: geo.size.height) { _, height in viewportHeight = height }
+                    }
+                )
                 .onAppear { scrollToAnchor(proxy, animated: false) }
                 .onChange(of: dayStart) { _, _ in scrollToAnchor(proxy, animated: true) }
             }
@@ -54,7 +101,7 @@ struct DayTimelineView: View {
                 ForEach(allDayEvents) { event in
                     HStack(spacing: 0) {
                         checkbox(event, size: 14)
-                        Button { onOpen(event) } label: {
+                        Button { open(event) } label: {
                             Text(titleText(event))
                                 .font(.caption.weight(.semibold))
                                 .strikethrough(event.completed)
@@ -79,7 +126,7 @@ struct DayTimelineView: View {
 
     // MARK: - 시간축
 
-    private var grid: some View {
+    private func grid(_ proxy: ScrollViewProxy) -> some View {
         GeometryReader { geo in
             let columnsWidth = geo.size.width - labelWidth - 12
             ZStack(alignment: .topLeading) {
@@ -96,9 +143,37 @@ struct DayTimelineView: View {
                         }
                     }
                 ForEach(layoutBlocks()) { block in
+                    let isLifted = dragId == block.id
+                    let movable = isMovable(block.event)
+                    let shift = isLifted ? CGFloat(snappedDelta(block)) / 60 * hourHeight : 0
+                    let isResizing = isLifted && dragMode == .resize
                     eventBlock(block)
-                        .frame(width: max(columnsWidth * block.width - 2, 10), height: block.height)
-                        .offset(x: labelWidth + columnsWidth * block.x, y: topInset + block.y)
+                        .overlay(alignment: .topTrailing) {
+                            if isLifted { dragTimeBadge(block) }
+                        }
+                        .frame(
+                            width: max(columnsWidth * block.width - 2, 10),
+                            height: block.height + (isResizing ? shift : 0)
+                        )
+                        // 아래 끝 손잡이 — 꾹 눌러 끌면 길이 바꾸기 (옮기기보다 먼저 잡힌다)
+                        .overlay(alignment: .bottom) {
+                            if movable && block.height >= 28 {
+                                resizeHandle(visible: isResizing)
+                                    .highPriorityGesture(dragGesture(block, mode: .resize, proxy: proxy))
+                            }
+                        }
+                        .scaleEffect(isLifted && !isResizing ? 1.03 : 1)
+                        .shadow(color: .black.opacity(isLifted ? 0.25 : 0), radius: 8, y: 3)
+                        .offset(
+                            x: labelWidth + columnsWidth * block.x,
+                            y: topInset + block.y + (isLifted && !isResizing ? shift : 0)
+                        )
+                        .zIndex(isLifted ? 1 : 0)
+                        .simultaneousGesture(
+                            dragGesture(block, mode: .move, proxy: proxy),
+                            including: movable ? .all : .subviews
+                        )
+                        .animation(.easeOut(duration: 0.12), value: shift)
                 }
                 if calendar.isDateInToday(date) {
                     nowLine(width: columnsWidth)
@@ -145,7 +220,7 @@ struct DayTimelineView: View {
         // 짧은 블록(30분 이하)은 체크박스와 제목을 한 줄에, 긴 블록은 체크박스 옆에 제목·장소·시간.
         return HStack(alignment: .top, spacing: 0) {
             checkbox(event, size: block.height > 22 ? 15 : 12)
-            Button { onOpen(event) } label: {
+            Button { open(event) } label: {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(titleText(event))
                         .font(.caption.weight(.semibold))
@@ -178,6 +253,131 @@ struct DayTimelineView: View {
         .background(blockColor(event), in: RoundedRectangle(cornerRadius: 6))
         .opacity(blockOpacity(event))
         .clipped()
+    }
+
+    // MARK: - 끌어 옮기기
+
+    private func isMovable(_ event: CalendarEvent) -> Bool {
+        // 날을 넘는 일정은 같은 날 안에서 옮긴다는 전제가 안 맞아 뺀다
+        !event.allDay && event.startAt >= dayStart && event.endAt <= dayEnd && canMove(event)
+    }
+
+    private func open(_ event: CalendarEvent) {
+        guard dragId == nil, Date().timeIntervalSince(lastDragEnd) > 0.5 else { return }
+        onOpen(event)
+    }
+
+    /// 지금 끈 거리를 15분 단위 분으로 — 그 날 0시~24시 밖으로는 못 나가고, 길이는 15분보다 짧아지지 않는다.
+    private func snappedDelta(_ block: Block) -> Int {
+        let points = dragTranslation + (scrollY - dragStartScrollY)
+        let raw = Double(points / hourHeight * 60)
+        var minutes = Int((raw / Double(snapMinutes)).rounded()) * snapMinutes
+        let startMinutes = Int(block.event.startAt.timeIntervalSince(dayStart) / 60)
+        let endMinutes = Int(block.event.endAt.timeIntervalSince(dayStart) / 60)
+        if dragMode == .resize {
+            minutes = max(minutes, startMinutes + snapMinutes - endMinutes)
+        } else {
+            minutes = max(minutes, -startMinutes)
+        }
+        minutes = min(minutes, 24 * 60 - endMinutes)
+        return minutes
+    }
+
+    /// 끌기가 끝난 뒤의 시작·끝 — 옮기기는 둘 다, 길이 바꾸기는 끝만 바뀐다.
+    private func retimed(_ block: Block) -> (start: Date, end: Date) {
+        let delta = TimeInterval(snappedDelta(block) * 60)
+        let start = dragMode == .move ? block.event.startAt.addingTimeInterval(delta) : block.event.startAt
+        return (start, block.event.endAt.addingTimeInterval(delta))
+    }
+
+    private func resizeHandle(visible: Bool) -> some View {
+        Capsule()
+            .fill(Color.white.opacity(visible ? 0.9 : 0))
+            .frame(width: 18, height: 3)
+            .frame(maxWidth: .infinity)
+            .frame(height: 12)
+            .contentShape(Rectangle())
+    }
+
+    private func dragGesture(_ block: Block, mode: DragMode, proxy: ScrollViewProxy) -> some Gesture {
+        LongPressGesture(minimumDuration: mode == .resize ? 0.25 : 0.4)
+            .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named(Self.viewportSpace)))
+            .onChanged { value in
+                guard case .second(true, let drag) = value else { return }
+                if dragId != block.id { beginDrag(block, mode: mode) }
+                guard dragMode == mode else { return }
+                guard let drag else { return }
+                dragTranslation = drag.translation.height
+                let snap = snappedDelta(block)
+                if snap != lastSnap {
+                    lastSnap = snap
+                    UISelectionFeedbackGenerator().selectionChanged()
+                }
+                updateAutoScroll(fingerY: drag.location.y, proxy: proxy)
+            }
+            .onEnded { value in
+                guard case .second(true, _) = value, dragId == block.id, dragMode == mode else {
+                    if dragMode == mode { endDrag() }
+                    return
+                }
+                let delta = snappedDelta(block)
+                let times = retimed(block)
+                endDrag()
+                if delta != 0 {
+                    onRetime(block.event, times.start, times.end)
+                }
+            }
+    }
+
+    private func beginDrag(_ block: Block, mode: DragMode) {
+        dragId = block.id
+        dragMode = mode
+        dragTranslation = 0
+        dragStartScrollY = scrollY
+        lastSnap = 0
+        isDragging = true
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+    }
+
+    private func endDrag() {
+        autoScrollTask?.cancel()
+        autoScrollTask = nil
+        autoScrollDirection = 0
+        if dragId != nil { lastDragEnd = Date() }
+        dragId = nil
+        dragTranslation = 0
+        isDragging = false
+    }
+
+    /// 손가락이 화면 위/아래 60pt 안에 들어오면 그 방향으로 한 시간씩 스크롤한다.
+    private func updateAutoScroll(fingerY: CGFloat, proxy: ScrollViewProxy) {
+        let edge: CGFloat = 60
+        let direction = fingerY < edge ? -1 : (fingerY > viewportHeight - edge ? 1 : 0)
+        autoScrollDirection = direction
+        guard direction != 0, autoScrollTask == nil else { return }
+        autoScrollTask = Task { @MainActor in
+            while !Task.isCancelled, autoScrollDirection != 0 {
+                let maxTop = max(0, 24 - Int(viewportHeight / hourHeight))
+                let current = Int((scrollY / hourHeight).rounded())
+                let target = max(0, min(maxTop, current + autoScrollDirection))
+                if target != current {
+                    withAnimation(.linear(duration: 0.3)) { proxy.scrollTo(target, anchor: .top) }
+                }
+                try? await Task.sleep(nanoseconds: 350_000_000)
+            }
+            autoScrollTask = nil
+        }
+    }
+
+    private func dragTimeBadge(_ block: Block) -> some View {
+        let (start, end) = retimed(block)
+        return Text("\(Self.timeFormatter.string(from: start))–\(Self.timeFormatter.string(from: end))")
+            .font(.caption2.weight(.semibold).monospacedDigit())
+            .foregroundStyle(.white)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(.black.opacity(0.55), in: Capsule())
+            .padding(4)
     }
 
     // 보관한 일정은 회색 블록 + 제목 앞 "보관" — 완료(취소선)와 구분된다.
@@ -305,6 +505,11 @@ struct DayTimelineView: View {
         flush()
         return blocks
     }
+}
+
+private struct ScrollYKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
 }
 
 /// 하루 보기 페이저 — 날짜마다 한 페이지인 가로 페이징 스크롤(iOS 기본 페이징 애니메이션).

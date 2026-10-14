@@ -11,6 +11,18 @@ struct CalendarView: View {
     @AppStorage("calendarScheduleMode") private var storedScheduleMode = "month"
     @State private var selectedEvent: CalendarEvent?
     @State private var completionErrorMessage: String?
+    /// 하루 보기에서 블록을 끄는 중 — 가로 페이저 넘김을 막는다
+    @State private var isDraggingEvent = false
+    /// 참석자가 있는 구글 일정을 옮기기 전 확인 (구글이 참석자에게 변경 메일을 보낸다)
+    @State private var pendingMove: PendingMove?
+    @State private var moveErrorMessage: String?
+
+    private struct PendingMove: Identifiable {
+        let event: CalendarEvent
+        let newStart: Date
+        let newEnd: Date
+        var id: String { event.id }
+    }
 
     @Environment(TabRouter.self) private var router
 
@@ -38,6 +50,27 @@ struct CalendarView: View {
                 Button("확인", role: .cancel) { completionErrorMessage = nil }
             } message: {
                 Text(completionErrorMessage ?? "")
+            }
+            .alert(
+                "시간을 바꿀까요?",
+                isPresented: Binding(
+                    get: { pendingMove != nil },
+                    set: { if !$0 { pendingMove = nil } }
+                ),
+                presenting: pendingMove
+            ) { move in
+                Button("취소", role: .cancel) {}
+                Button("바꾸기") { performMove(move, notifyAttendees: true) }
+            } message: { move in
+                Text("\(Self.moveTimeFormatter.string(from: move.newStart))–\(Self.moveTimeFormatter.string(from: move.newEnd))로 바꿔요. 참석자에게 구글 캘린더 변경 알림이 갑니다.")
+            }
+            .alert("시간을 바꾸지 못했어요", isPresented: Binding(
+                get: { moveErrorMessage != nil },
+                set: { if !$0 { moveErrorMessage = nil } }
+            )) {
+                Button("확인", role: .cancel) { moveErrorMessage = nil }
+            } message: {
+                Text(moveErrorMessage ?? "")
             }
             // 알림에서 넘어온 일정 딥링크.
             .onChange(of: router.calendarEventRequest) { _, request in
@@ -426,13 +459,19 @@ struct CalendarView: View {
                     onAddAt: { start in
                         addStart = start
                         showingAddSheet = true
-                    }
+                    },
+                    canMove: canMove,
+                    onRetime: { event, newStart, newEnd in
+                        requestMove(PendingMove(event: event, newStart: newStart, newEnd: newEnd))
+                    },
+                    isDragging: $isDraggingEvent
                 )
                 // 달 경계 너머 날짜는 미리 받아 둔다
                 .task(id: day) {
                     if !viewModel.hasMonthData(for: day) { await viewModel.prefetchMonth(containing: day) }
                 }
             }
+            .scrollDisabled(isDraggingEvent)
         }
     }
 
@@ -755,6 +794,50 @@ struct CalendarView: View {
             }
         }
     }
+
+    // MARK: - 하루 보기 끌어 옮기기
+
+    /// 종일 일정은 DayTimelineView 가 따로 뺀다. 초대·예약·보기 전용 공유 캘린더·남이 주최한 구글 일정은 못 옮긴다.
+    private func canMove(_ event: CalendarEvent) -> Bool {
+        if event.isInvite || event.isBooking { return false }
+        if !event.canModifyGoogle { return false }
+        if let calendarId = event.calendarId,
+           let info = viewModel.calendars.first(where: { $0.id == calendarId }),
+           !info.canEdit {
+            return false
+        }
+        return true
+    }
+
+    private func requestMove(_ move: PendingMove) {
+        if move.event.isGoogle && move.event.attendees.contains(where: { !$0.isSelf }) {
+            pendingMove = move
+        } else {
+            performMove(move, notifyAttendees: false)
+        }
+    }
+
+    /// 뷰모델이 먼저 화면에 옮겨 두고, 실패하면 되돌린다 — 여기선 실패 alert 만.
+    private func performMove(_ move: PendingMove, notifyAttendees: Bool) {
+        Task {
+            do {
+                try await viewModel.retimeEvent(
+                    move.event, start: move.newStart, end: move.newEnd, notifyAttendees: notifyAttendees
+                )
+            } catch let apiError as APIError {
+                moveErrorMessage = apiError.errorDescription
+            } catch {
+                moveErrorMessage = "잠시 후 다시 시도해 주세요."
+            }
+        }
+    }
+
+    private static let moveTimeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ko_KR")
+        formatter.dateFormat = "a h:mm"
+        return formatter
+    }()
 
     // MARK: - 포매터
 

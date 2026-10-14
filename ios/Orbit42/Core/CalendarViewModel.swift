@@ -254,6 +254,48 @@ final class CalendarViewModel {
         await loadDisplayedMonth(force: true)
     }
 
+    /// 하루 보기 드래그 — 옮기기(시작·끝 함께)와 길이 바꾸기(끝만)가 모두 여기로 온다.
+    /// 캐시에 먼저 반영해 블록이 놓은 자리에 바로 머물고, 저장에 실패하면 원래 자리로 되돌린 뒤 에러를 다시 던진다.
+    func retimeEvent(
+        _ event: CalendarEvent,
+        start newStart: Date,
+        end newEnd: Date,
+        notifyAttendees: Bool = false
+    ) async throws {
+        guard newStart != event.startAt || newEnd != event.endAt, newEnd > newStart else { return }
+        applyTimes(eventId: event.id, start: newStart, end: newEnd)
+        var body = UpdateEventRequest()
+        body.startAt = APIDateParser.encodeDateTime(newStart)
+        body.endAt = APIDateParser.encodeDateTime(newEnd)
+        if event.isGoogle {
+            body.sourceCalendarId = event.calendarId
+            if notifyAttendees { body.notifyAttendees = true }
+        }
+        do {
+            let _: EventMutationResponse = try await api.patch(
+                "/api/v1/calendar/events/\(event.id)",
+                body: body
+            )
+            WidgetBridge.reload()
+        } catch {
+            applyTimes(eventId: event.id, start: event.startAt, end: event.endAt)
+            throw error
+        }
+    }
+
+    private func applyTimes(eventId: String, start: Date, end: Date) {
+        for key in cache.keys {
+            guard var data = cache[key] else { continue }
+            var changed = false
+            for index in data.events.indices where data.events[index].id == eventId {
+                data.events[index].startAt = start
+                data.events[index].endAt = end
+                changed = true
+            }
+            if changed { cache[key] = data }
+        }
+    }
+
     /// 이벤트를 삭제하고, 성공하면 기간이 걸친 달의 캐시를 비운 뒤 표시 중인 달을 새로고침한다.
     /// Google 이벤트(`gcal_` id)는 소속 native 캘린더 uuid 를 쿼리로 함께 보낸다.
     func deleteEvent(_ event: CalendarEvent) async throws {

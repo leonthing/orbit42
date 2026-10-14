@@ -25,6 +25,8 @@ struct EditEventSheet: View {
     @State private var travelMin: Int?
     @State private var isSaving = false
     @State private var errorMessage: String?
+    /// 참석자가 있는 구글 일정의 시간을 바꿀 때 — 확인을 누르면 구글이 참석자에게 변경 메일을 보낸다
+    @State private var pendingNotifyBody: UpdateEventRequest?
 
     /// 시트를 연 시점의 최신 캘린더 목록 — 월 캐시는 설정에서 새로 만든
     /// 캘린더를 모를 수 있어, 열릴 때 서버에서 다시 받아 덮어쓴다.
@@ -161,6 +163,23 @@ struct EditEventSheet: View {
                     }
                 }
             }
+            .alert(
+                "시간을 바꿀까요?",
+                isPresented: Binding(
+                    get: { pendingNotifyBody != nil },
+                    set: { if !$0 { pendingNotifyBody = nil } }
+                ),
+                presenting: pendingNotifyBody
+            ) { body in
+                Button("취소", role: .cancel) {}
+                Button("바꾸기") {
+                    var confirmed = body
+                    confirmed.notifyAttendees = true
+                    submit(confirmed)
+                }
+            } message: { _ in
+                Text("참석자에게 구글 캘린더 변경 알림이 갑니다.")
+            }
             .onChange(of: start) { oldStart, newStart in
                 // 시작을 옮기면 종료도 같은 간격을 유지한 채 따라간다.
                 // (예전엔 뒤집힐 때만 보정해서, 09→14 로 옮기면 종료가 10:00 에
@@ -245,6 +264,18 @@ struct EditEventSheet: View {
             body.sourceCalendarId = event.calendarId
         }
 
+        // 참석자가 있는 구글 일정의 시간·날짜가 바뀌면 먼저 확인받는다 (확인해야만 참석자에게 메일).
+        // 캘린더를 함께 옮기는 수정은 새 일정으로 옮겨 만드는 길이라 알림을 보내지 않는다 — 확인도 띄우지 않는다.
+        if event.isGoogle, timeChanged, body.calendarId == nil,
+           event.attendees.contains(where: { !$0.isSelf }) {
+            pendingNotifyBody = body
+            return
+        }
+        submit(body)
+    }
+
+    private func submit(_ body: UpdateEventRequest) {
+        let clampedEnd = max(end, start)
         isSaving = true
         Task {
             defer { isSaving = false }
