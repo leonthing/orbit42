@@ -109,6 +109,25 @@ final class CalendarViewModel {
 
     func showNextMonth() { shiftMonth(by: 1) }
 
+    /// 마지막으로 앱을 본 시각 — 날이 바뀌었거나 오래 떠나 있다 돌아오면 오늘로 돌아간다.
+    @ObservationIgnored private var lastActiveAt = Date()
+
+    /// 앱이 다시 앞으로 올 때 — iOS 는 앱을 며칠씩 메모리에 두므로 그대로 두면
+    /// 전에 보던 날(또는 앱을 처음 켠 날)에서 시작해 '엉뚱한 날짜'로 보인다.
+    /// 날이 바뀌었거나 1시간 넘게 떠나 있었으면 오늘로 맞춘다(아이폰 캘린더와 같은 손).
+    func returnToTodayIfStale(now: Date = Date()) {
+        defer { lastActiveAt = now }
+        let dayChanged = !Self.calendar.isDate(lastActiveAt, inSameDayAs: now)
+        guard dayChanged || now.timeIntervalSince(lastActiveAt) > 3600 else { return }
+        guard !Self.calendar.isDate(selectedDate, inSameDayAs: now) else { return }
+        showToday()
+    }
+
+    /// 앱이 뒤로 갈 때 — 떠난 시각을 남긴다
+    func markInactive(now: Date = Date()) {
+        lastActiveAt = now
+    }
+
     func showToday() {
         let today = Date()
         selectedDate = Self.calendar.startOfDay(for: today)

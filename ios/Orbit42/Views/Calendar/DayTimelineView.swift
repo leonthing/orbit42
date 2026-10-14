@@ -571,8 +571,12 @@ struct DayPager<Page: View>: View {
     let onSettle: (Date) -> Void
     @ViewBuilder let page: (Date) -> Page
 
-    @State private var base = Date()
+    /// 페이지 번호의 기준일 — 한 번 정하면 바꾸지 않는다. 다시 나타날 때마다 오늘로 바꾸면
+    /// 스크롤 뷰가 들고 있던 옛 번호가 새 기준으로 읽혀 날짜가 며칠씩 튄다.
+    @State private var base: Date?
     @State private var position: Int?
+    /// 처음 자리 잡기 전에 스크롤 뷰가 알려 오는 위치(맨 앞 페이지 등)는 무시한다
+    @State private var ready = false
 
     private static var span: Int { 400 }
 
@@ -591,8 +595,14 @@ struct DayPager<Page: View>: View {
         .scrollIndicators(.hidden)
         .scrollPosition(id: $position)
         .onAppear {
-            base = calendar.startOfDay(for: Date())
-            position = offset(of: selectedDate)
+            let selectedDay = calendar.startOfDay(for: selectedDate)
+            // 기준일이 없거나 고른 날이 페이지 범위를 벗어났을 때만 다시 잡는다
+            if base == nil || abs(offset(of: selectedDay, unclamped: true)) > Self.span - 7 {
+                base = calendar.startOfDay(for: Date())
+            }
+            ready = false
+            position = offset(of: selectedDay)
+            DispatchQueue.main.async { ready = true }
         }
         // 날짜 띠·화살표·위젯 링크로 날짜가 바뀌면 그 페이지로
         .onChange(of: calendar.startOfDay(for: selectedDate)) { _, day in
@@ -600,18 +610,20 @@ struct DayPager<Page: View>: View {
             if position != target { position = target }
         }
         .onChange(of: position) { _, new in
-            guard let new else { return }
+            guard ready, let new else { return }
             let day = day(at: new)
             if !calendar.isDate(day, inSameDayAs: selectedDate) { onSettle(day) }
         }
     }
 
+    private var anchor: Date { base ?? calendar.startOfDay(for: Date()) }
+
     private func day(at offset: Int) -> Date {
-        calendar.date(byAdding: .day, value: offset, to: base) ?? base
+        calendar.date(byAdding: .day, value: offset, to: anchor) ?? anchor
     }
 
-    private func offset(of date: Date) -> Int {
-        let days = calendar.dateComponents([.day], from: base, to: calendar.startOfDay(for: date)).day ?? 0
-        return max(-Self.span, min(Self.span, days))
+    private func offset(of date: Date, unclamped: Bool = false) -> Int {
+        let days = calendar.dateComponents([.day], from: anchor, to: calendar.startOfDay(for: date)).day ?? 0
+        return unclamped ? days : max(-Self.span, min(Self.span, days))
     }
 }

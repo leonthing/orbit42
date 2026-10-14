@@ -30,6 +30,7 @@ struct CalendarView: View {
     }
 
     @Environment(TabRouter.self) private var router
+    @Environment(\.scenePhase) private var scenePhase
 
     private var calendar: Calendar { CalendarViewModel.calendar }
 
@@ -87,6 +88,14 @@ struct CalendarView: View {
                 applyDateRequest(router.calendarDateRequest)
             }
             // 홈 화면 위젯에서 누른 날짜.
+            // 날이 바뀌었거나 오래 떠나 있다 돌아오면 오늘로 (위젯·알림 링크는 아래에서 그 날짜로 다시 맞춘다)
+            .onChange(of: scenePhase) { _, phase in
+                switch phase {
+                case .active: viewModel.returnToTodayIfStale()
+                case .background: viewModel.markInactive()
+                default: break
+                }
+            }
             .onChange(of: router.calendarDateRequest) { _, date in
                 applyDateRequest(date)
             }
