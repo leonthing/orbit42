@@ -8,6 +8,7 @@
 
 import type { calendar_v3 } from "googleapis";
 import { getAdminClient } from "@/lib/supabase";
+import { computeRecurrenceUntil } from "@/lib/recurrence";
 import {
   getAuthenticatedCalendar,
   listExtraGoogleAccounts,
@@ -66,6 +67,13 @@ export type CalendarEvent = {
   booking_id?: string | null;
   /** 앱 상세의 "예약에서 관리"가 열 예약과 내 입장 (호스트=받은 예약 / 게스트=내가 한 예약) */
   booking_role?: "host" | "guest";
+  /** 반복 회차 — 시리즈 id(로컬 events.id / 구글 gcal_<recurringEventId>)와 회차의 원래 시작 */
+  series_id?: string | null;
+  original_start?: string | null;
+  /** 반복 규칙(로컬만 — 구글은 회차에 규칙이 없어 시리즈 정보로 따로 읽는다) */
+  rrule?: string | null;
+  is_anniversary?: boolean;
+  series_start?: string | null;
 };
 
 export type GoogleAttendee = {
@@ -89,6 +97,9 @@ export type CalendarEventInput = {
   location_lat?: number | null;
   location_lng?: number | null;
   travel_min?: number | null;
+  /** 반복 규칙(RRULE 본문) — 로컬은 events.rrule, 구글은 recurrence 로 넣는다 */
+  rrule?: string | null;
+  is_anniversary?: boolean;
 };
 
 /**
@@ -394,6 +405,10 @@ export async function listEventsForUser(
         attendees: googleAttendees(item),
         organizer_self: item.organizer?.self === true,
         guests_can_modify: item.guestsCanModify === true,
+        series_id: item.recurringEventId ? `gcal_${item.recurringEventId}` : null,
+        original_start: item.originalStartTime?.dateTime || item.originalStartTime?.date || null,
+        is_anniversary: !!item.extendedProperties?.private?.orbit42Anniversary,
+        series_start: item.extendedProperties?.private?.orbit42Anniversary || null,
       }));
     }
   } catch (err) {
@@ -514,6 +529,9 @@ export async function createEventForUser(
     if (input.travel_min != null && input.travel_min > 0) {
       privateProps.orbit42TravelMin = String(input.travel_min);
     }
+    if (input.rrule && input.is_anniversary) {
+      privateProps.orbit42Anniversary = input.start_at.slice(0, 10);
+    }
     if (Object.keys(privateProps).length > 0) {
       event.extendedProperties = { private: privateProps };
     }
@@ -523,6 +541,10 @@ export async function createEventForUser(
     } else {
       event.start = { dateTime: input.start_at, timeZone: "Asia/Seoul" };
       event.end = { dateTime: input.end_at, timeZone: "Asia/Seoul" };
+    }
+    if (input.rrule) {
+      const { googleRRuleFor } = await import("@/lib/recurrence-write");
+      event.recurrence = [`RRULE:${googleRRuleFor(input.rrule, input.start_at.slice(0, 10), input.is_anniversary === true)}`];
     }
     const res = await calendar.events.insert({
       calendarId: targetCal.google_calendar_id,
@@ -547,6 +569,8 @@ export async function createEventForUser(
       created_at: now,
       updated_at: now,
       organizer_self: true,
+      series_id: input.rrule ? `gcal_${res.data.id}` : null,
+      rrule: input.rrule ?? null,
     };
   }
 
@@ -565,6 +589,14 @@ export async function createEventForUser(
       location_lat: input.location_lat ?? null,
       location_lng: input.location_lng ?? null,
       travel_min: input.travel_min ?? null,
+      ...(input.rrule
+        ? {
+            rrule: input.rrule,
+            recurrence_until:
+              computeRecurrenceUntil(new Date(input.start_at), input.rrule, input.all_day)?.toISOString() ?? null,
+            is_anniversary: input.is_anniversary === true,
+          }
+        : {}),
     })
     .select()
     .single();
@@ -635,7 +667,7 @@ async function clientForCalendar(userId: string, cal: CalendarRow) {
 /** 이동으로 이벤트 id 가 바뀔 때 자산 분류·수익 기록·완료 체크 키를 새 id 로 이관.
  * 분류·수익은 클라이언트 원형 id(uuid/gcal_*)로, 완료 체크는 정규화 키
  * (local:/google:)로 저장돼 있어 각각 형식에 맞춰 옮긴다. */
-async function migrateEventKeys(userId: string, oldId: string, newId: string) {
+export async function migrateEventKeys(userId: string, oldId: string, newId: string) {
   const db = getAdminClient();
   // 중요도·별점(1.5.0 A)도 같은 키라 따라 옮긴다
   const { migrateAnnotationKey } = await import("@/lib/event-annotations");
@@ -729,6 +761,14 @@ export async function moveEventToCalendar(
   if (!target) return { error: "옮길 캘린더를 찾을 수 없어요." };
 
   const isGoogleEvent = eventId.startsWith("gcal_");
+
+  // 반복 일정은 캘린더를 옮기지 않는다 — 회차만 옮기면 시리즈가 갈라지고, 시리즈째 옮기면 구글은 새로 만들어 회차 키가 바뀐다
+  const recurringMsg = "반복 일정은 다른 캘린더로 옮길 수 없어요.";
+  if (/_\d{8}(T\d{6}Z)?$/.test(eventId)) return { error: recurringMsg };
+  if (!isGoogleEvent) {
+    const { data: r } = await db.from("events").select("rrule").eq("id", eventId).maybeSingle();
+    if (r?.rrule) return { error: recurringMsg };
+  }
 
   // ── 로컬 이벤트 ──
   if (!isGoogleEvent) {
