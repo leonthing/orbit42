@@ -27,7 +27,7 @@ export type SeriesPatch = {
   title?: string;
   description?: string | null;
   location?: string | null;
-  /** 좌표·이동시간 — 시리즈 행에만(회차 예외에는 칸이 없다) */
+  /** 좌표·이동시간 */
   location_lat?: number | null;
   location_lng?: number | null;
   travel_min?: number | null;
@@ -126,7 +126,13 @@ export async function patchNativeOccurrence(userId: string, occId: string, patch
   if (patch.end_at !== undefined) row.end_at = patch.end_at;
   if (patch.title !== undefined) row.title = patch.title;
   if (patch.description !== undefined) row.description = patch.description ?? "";
-  if (patch.location !== undefined) row.location = patch.location ?? "";
+  if (patch.location !== undefined) {
+    row.location = patch.location ?? "";
+    row.location_lat = patch.location_lat ?? null;
+    row.location_lng = patch.location_lng ?? null;
+  }
+  // 이동시간 0 = 이 회차만 '없음'(null 은 시리즈 값 그대로라 구분)
+  if (patch.travel_min !== undefined) row.travel_min = patch.travel_min ?? 0;
   const { error } = await db.from("event_recurrence_exceptions").upsert(row, { onConflict: "event_id,original_start" });
   if (error) throw new Error("이 회차를 고치지 못했어요.");
 }
@@ -427,7 +433,28 @@ export async function googleSeriesInfo(cal: GCal, gcalId: string, instanceOrMast
   const { data: master } = await cal.events.get({ calendarId: gcalId, eventId: masterId });
   const rr = (master.recurrence ?? []).find((r) => r.toUpperCase().startsWith("RRULE:")) ?? null;
   const start = master.start?.dateTime ?? master.start?.date ?? null;
+  // '모두'로 시간을 바꾸면 구글이 따로 고친·지운 회차를 원래대로 돌린다 — 앱 경고에 쓸 개수
+  let modifiedCount = 0;
+  let cancelledCount = 0;
+  let pageToken: string | undefined;
+  for (let page = 0; page < 4; page++) {
+    const { data: inst } = await cal.events.instances({ calendarId: gcalId, eventId: masterId, showDeleted: true, maxResults: 250, pageToken });
+    for (const it of inst.items ?? []) {
+      if (it.status === "cancelled") { cancelledCount++; continue; }
+      const orig = it.originalStartTime?.dateTime ?? it.originalStartTime?.date;
+      const now = it.start?.dateTime ?? it.start?.date;
+      const moved = !!orig && !!now && Date.parse(orig) !== Date.parse(now);
+      const edited = (it.summary ?? "") !== (master.summary ?? "") || (it.description ?? "") !== (master.description ?? "") || (it.location ?? "") !== (master.location ?? "");
+      if (moved || edited) modifiedCount++;
+    }
+    pageToken = inst.nextPageToken ?? undefined;
+    if (!pageToken) break;
+  }
+  const attendeeCount = (master.attendees ?? []).filter((a) => !a.organizer && !a.self && !a.resource).length;
   return {
+    modifiedCount,
+    cancelledCount,
+    attendeeCount,
     rrule: rr ? fromGoogleRRule(rr.replace(/^RRULE:/i, "")) : null,
     isAnniversary: !!master.extendedProperties?.private?.orbit42Anniversary,
     seriesStart: start,

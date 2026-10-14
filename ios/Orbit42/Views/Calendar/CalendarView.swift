@@ -25,7 +25,8 @@ struct CalendarView: View {
     /// 날짜별 하루 보기 스크롤 위치 — 화면을 다시 그리지 않도록 참조로 둔다
     @State private var dayScrollRegistry = DayScrollRegistry()
     /// 다른 날로 옮긴 뒤 아래에 잠깐 뜨는 안내 ("10월 23일 (금)로 옮겼어요 · 보기")
-    @State private var movedToast: Date?
+    /// 끌어 옮긴 뒤 아래 안내 — 다른 날로 옮겼으면 그 날(보기), 반복 회차면 '이 회차만'
+    @State private var movedToast: MovedToast?
     @State private var movedToastTask: Task<Void, Never>?
 
     final class DayScrollRegistry {
@@ -378,9 +379,20 @@ struct CalendarView: View {
         return f
     }()
 
-    private func showMovedToast(to date: Date) {
+    private struct MovedToast: Equatable {
+        let text: String
+        /// 있으면 '보기'로 그 날로
+        let date: Date?
+    }
+
+    private func showMovedToast(to date: Date?, occurrenceOnly: Bool = false) {
+        var text = occurrenceOnly ? "이 회차만 옮겼어요" : ""
+        if let date {
+            let day = "\(Self.toastDayFormatter.string(from: date))로 옮겼어요"
+            text = occurrenceOnly ? "이 회차만 \(day)" : day
+        }
         movedToastTask?.cancel()
-        withAnimation(.easeOut(duration: 0.2)) { movedToast = date }
+        withAnimation(.easeOut(duration: 0.2)) { movedToast = MovedToast(text: text, date: date) }
         movedToastTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 3_000_000_000)
             guard !Task.isCancelled else { return }
@@ -390,20 +402,22 @@ struct CalendarView: View {
 
     @ViewBuilder
     private var movedToastView: some View {
-        if let date = movedToast {
+        if let toast = movedToast {
             VStack {
                 Spacer()
                 HStack(spacing: 12) {
-                    Text("\(Self.toastDayFormatter.string(from: date))로 옮겼어요")
+                    Text(toast.text)
                         .font(.subheadline)
                         .foregroundStyle(.white)
-                    Button("보기") {
-                        movedToastTask?.cancel()
-                        withAnimation { movedToast = nil }
-                        viewModel.select(date: date)
+                    if let date = toast.date {
+                        Button("보기") {
+                            movedToastTask?.cancel()
+                            withAnimation { movedToast = nil }
+                            viewModel.select(date: date)
+                        }
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color(hexString: "#a5b4fc") ?? .white)
                     }
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color(hexString: "#a5b4fc") ?? .white)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 11)
@@ -949,8 +963,9 @@ struct CalendarView: View {
                     move.event, start: move.newStart, end: move.newEnd, notifyAttendees: notifyAttendees
                 )
                 // 지금 보는 날과 다른 날로 옮겼으면(주간 날짜 칸에 놓기) 아래에 잠깐 알리고 '보기'로 그 날로
-                if !calendar.isDate(move.newStart, inSameDayAs: viewModel.selectedDate) {
-                    showMovedToast(to: move.newStart)
+                let otherDay = !calendar.isDate(move.newStart, inSameDayAs: viewModel.selectedDate)
+                if otherDay || move.event.isRecurring {
+                    showMovedToast(to: otherDay ? move.newStart : nil, occurrenceOnly: move.event.isRecurring)
                 }
             } catch let apiError as APIError {
                 moveErrorMessage = apiError.errorDescription
@@ -1093,6 +1108,9 @@ private struct EventRow: View {
                                 .foregroundStyle(Theme.primaryText)
                                 .strikethrough(event.completed)
                                 .lineLimit(2)
+                            if let years = event.anniversaryYears {
+                                AnniversaryBadge(years: years, compact: true)
+                            }
                             if let rating = event.rating, event.completed {
                                 Label("\(rating)", systemImage: "star.fill")
                                     .labelStyle(.titleAndIcon)

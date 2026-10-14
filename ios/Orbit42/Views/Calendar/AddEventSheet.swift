@@ -72,6 +72,8 @@ struct AddEventSheet: View {
     @State private var createdEvent: CalendarEvent?
     /// 중요도 (1.5.0 A) — 일정이 만들어진 뒤 주석으로 저장한다
     @State private var importance: EventImportance = .normal
+    /// 반복(1.5.1) — 안 함이면 한 번짜리
+    @State private var repeatRule = RepeatRule()
     /// 구글 캘린더에 저장하면서 참석자를 넣을 때 — 구글 초대 메일 확인
     @State private var confirmingGoogleInvite = false
 
@@ -150,6 +152,8 @@ struct AddEventSheet: View {
                     )
                 }
                 .listRowBackground(Theme.surface)
+
+                RepeatSection(rule: $repeatRule, start: start)
 
                 if showMore {
                     EventLocationSection(
@@ -351,7 +355,8 @@ struct AddEventSheet: View {
                             ? nil : locationText.trimmingCharacters(in: .whitespaces),
                         locationLat: locationLat,
                         locationLng: locationLng,
-                        travelMin: travelMin
+                        travelMin: travelMin,
+                        repeatRule: repeatRule
                     )
                     createdEvent = event
                     // 중요도는 일정과 따로 저장 — 실패해도 일정은 살아 있으니 저장 흐름을 막지 않는다

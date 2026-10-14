@@ -31,6 +31,16 @@ struct EditEventSheet: View {
     @State private var reminderMinutes: Int?
     /// 참석자가 있는 구글 일정의 시간을 바꿀 때 — 확인을 누르면 구글이 참석자에게 변경 메일을 보낸다
     @State private var pendingNotifyBody: UpdateEventRequest?
+    /// 반복(1.5.1) — 시리즈 정보를 읽어 채운다. 원래 규칙과 비교해 바뀌었을 때만 보낸다.
+    @State private var repeatRule = RepeatRule()
+    @State private var originalRepeat = RepeatRule()
+    /// 앱이 못 만드는 규칙(격주 등) — 반복 칸을 잠근다
+    @State private var repeatUnsupported = false
+    @State private var series: SeriesInfo?
+    /// 반복 회차 저장 — 범위 묻기 / 고른 범위로 보낼 본문 / 구글 '모두' 확인
+    @State private var scopeBody: UpdateEventRequest?
+    @State private var showScopeDialog = false
+    @State private var pendingAllBody: UpdateEventRequest?
 
     /// 시트를 연 시점의 최신 캘린더 목록 — 월 캐시는 설정에서 새로 만든
     /// 캘린더를 모를 수 있어, 열릴 때 서버에서 다시 받아 덮어쓴다.
@@ -52,6 +62,10 @@ struct EditEventSheet: View {
     /// 참석자가 있는 구글 일정은 Orbit42 캘린더로 옮기지 못한다 — 옮기면 구글 원본이 지워져
     /// 참석자 쪽 일정이 알림 없이 사라지고 참석자 정보도 따라오지 않는다.
     private var blockedCalendarIds: Set<String> {
+        // 반복 일정은 다른 캘린더로 옮기지 않는다(서버도 거절)
+        if event.isRecurring || repeatRule.isRepeating {
+            return Set(movableCalendars.map(\.id)).subtracting([event.calendarId].compactMap { $0 })
+        }
         guard hasGoogleAttendees else { return [] }
         return Set(movableCalendars.filter(\.isNative).map(\.id))
     }
@@ -110,7 +124,10 @@ struct EditEventSheet: View {
                     } header: {
                         Text("캘린더")
                     } footer: {
-                        if !blockedCalendarIds.isEmpty {
+                        if event.isRecurring || repeatRule.isRepeating {
+                            Text("반복 일정은 다른 캘린더로 옮길 수 없어요.")
+                                .foregroundStyle(Theme.secondaryText)
+                        } else if !blockedCalendarIds.isEmpty {
                             Text("참석자가 있는 구글 일정은 구글 캘린더 안에서만 옮길 수 있어요.")
                                 .foregroundStyle(Theme.secondaryText)
                         } else if selectedCalendarId != event.calendarId {
@@ -157,6 +174,13 @@ struct EditEventSheet: View {
                 }
                 .listRowBackground(Theme.surface)
 
+                if canEditRepeat {
+                    RepeatSection(
+                        rule: $repeatRule,
+                        start: start,
+                        lockedReason: repeatUnsupported ? "이 반복은 앱에서 바꿀 수 없어요. 구글 캘린더 앱에서 바꿔 주세요." : nil
+                    )
+                }
 
                 EventLocationSection(
                     locationText: $locationText,
@@ -219,6 +243,33 @@ struct EditEventSheet: View {
             } message: { _ in
                 Text("참석자에게 구글 캘린더 변경 알림이 갑니다.")
             }
+            .recurrenceScopeDialog(
+                "반복 일정 고치기",
+                isPresented: $showScopeDialog,
+                isGoogle: event.isGoogle,
+                allowThis: !repeatChanged
+            ) { scope in
+                guard var body = scopeBody else { return }
+                body.scope = scope.rawValue
+                confirmAndSubmit(body, scope: scope)
+            }
+            .alert(
+                "모든 회차를 바꿀까요?",
+                isPresented: Binding(
+                    get: { pendingAllBody != nil },
+                    set: { if !$0 { pendingAllBody = nil } }
+                ),
+                presenting: pendingAllBody
+            ) { body in
+                Button("취소", role: .cancel) {}
+                Button("바꾸기") {
+                    var confirmed = body
+                    if hasGoogleAttendees { confirmed.notifyAttendees = true }
+                    submit(confirmed)
+                }
+            } message: { _ in
+                Text(allWarning)
+            }
             .onChange(of: start) { oldStart, newStart in
                 // 시작을 옮기면 종료도 같은 간격을 유지한 채 따라간다.
                 // (예전엔 뒤집힐 때만 보정해서, 09→14 로 옮기면 종료가 10:00 에
@@ -235,6 +286,15 @@ struct EditEventSheet: View {
             }
             .interactiveDismissDisabled(isSaving)
             .task {
+                if event.isRecurring, let info = await viewModel.seriesInfo(event) {
+                    series = info
+                    if let rule = RepeatRule(rrule: info.rrule, isAnniversary: info.isAnniversary) {
+                        repeatRule = rule
+                        originalRepeat = rule
+                    } else {
+                        repeatUnsupported = true
+                    }
+                }
                 if let response: CalendarsResponse = try? await APIClient.shared.get("/api/v1/calendars") {
                     freshCalendars = response.calendars
                 }
@@ -289,10 +349,16 @@ struct EditEventSheet: View {
             body.travelMin = travelMin ?? 0
         }
 
+        // 반복 규칙 — 바뀌었을 때만("" = 반복 끄기)
+        if repeatChanged {
+            body.rrule = repeatRule.rrule(start: start, allDay: allDay) ?? ""
+            body.isAnniversary = repeatRule.anniversary
+        }
+
         // 바뀐 것이 없으면 네트워크 없이 닫는다
         if body.title == nil, body.description == nil, body.startAt == nil,
            body.allDay == nil, body.calendarId == nil, body.location == nil,
-           body.travelMin == nil {
+           body.travelMin == nil, body.rrule == nil {
             if importanceChanged {
                 saveImportanceOnly()
             } else {
@@ -307,13 +373,67 @@ struct EditEventSheet: View {
             body.sourceCalendarId = event.calendarId
         }
 
+        // 반복 회차 — 범위를 먼저 묻는다
+        if event.isRecurring {
+            scopeBody = body
+            showScopeDialog = true
+            return
+        }
+
         // 참석자가 있는 구글 일정의 시간·날짜가 바뀌면 먼저 확인받는다 (확인해야만 참석자에게 메일).
         // 구글 캘린더끼리 옮기며 시간을 바꿀 때도 같다 (Orbit42 캘린더로는 위에서 막는다).
-        if hasGoogleAttendees, timeChanged {
+        if hasGoogleAttendees, timeChanged || body.rrule != nil {
             pendingNotifyBody = body
             return
         }
         submit(body)
+    }
+
+    /// 반복 칸을 보일지 — 구글은 주최자만, 예약 일정은 안 됨
+    private var canEditRepeat: Bool {
+        !event.isBooking && event.canModifyGoogle && !event.isInvite
+    }
+
+    private var repeatChanged: Bool {
+        !repeatUnsupported && repeatRule != originalRepeat
+    }
+
+    /// 범위를 고른 뒤 — 구글 '모두'는 시간이 바뀌면 따로 고친·지운 회차가 원래대로 돌아가고,
+    /// 참석자가 있으면 모든 회차의 참석자에게 알림이 간다. 해당할 때만 한 창으로 묻는다.
+    private func confirmAndSubmit(_ body: UpdateEventRequest, scope: RecurrenceScope) {
+        // 실측: 구글은 시간을 바꿀 때만 예외를 되돌린다(규칙 횟수·제목 변경은 지운 회차가 그대로)
+        let timeChanged = body.startAt != nil
+        if event.isGoogle, scope == .all, (timeChanged && resetCount > 0) || (hasGoogleAttendees && (timeChanged || body.rrule != nil)) {
+            pendingAllBody = body
+            return
+        }
+        if event.isGoogle, scope == .this, body.startAt != nil, hasGoogleAttendees {
+            pendingNotifyBody = body
+            return
+        }
+        submit(body)
+    }
+
+    private var resetCount: Int {
+        guard event.isGoogle else { return 0 }
+        return (series?.modifiedCount ?? 0) + (series?.cancelledCount ?? 0)
+    }
+
+    private var allWarning: String {
+        var lines: [String] = []
+        let modified = series?.modifiedCount ?? 0
+        let cancelled = series?.cancelledCount ?? 0
+        if pendingAllBody?.startAt != nil, modified > 0 || cancelled > 0 {
+            if modified > 0, cancelled > 0 {
+                lines.append("따로 고친 회차 \(modified)개와 지운 회차 \(cancelled)개가 원래대로 돌아가요. 지운 회차는 다시 생겨요.")
+            } else if modified > 0 {
+                lines.append("따로 고친 회차 \(modified)개가 원래대로 돌아가요.")
+            } else {
+                lines.append("지운 회차 \(cancelled)개가 다시 생겨요.")
+            }
+        }
+        if hasGoogleAttendees { lines.append("모든 회차의 참석자에게 변경 알림이 갑니다.") }
+        return lines.joined(separator: "\n")
     }
 
     private var importanceChanged: Bool {

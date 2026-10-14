@@ -195,6 +195,9 @@ export type RecurrenceException = {
   title?: string | null;
   description?: string | null;
   location?: string | null;
+  location_lat?: number | null;
+  location_lng?: number | null;
+  travel_min?: number | null;
 };
 
 type SeriesRow = {
@@ -247,6 +250,12 @@ export function expandSeries<T extends SeriesRow>(
     if (ex?.title) (occ as SeriesRow).title = ex.title;
     if (ex?.description !== undefined && ex?.description !== null) (occ as SeriesRow).description = ex.description;
     if (ex?.location !== undefined && ex?.location !== null) (occ as SeriesRow).location = ex.location;
+    // 좌표는 장소와 한 묶음 — 장소를 이 회차만 바꿨으면 좌표도 예외 값(없으면 null)
+    if (ex?.location !== undefined && ex?.location !== null) {
+      (occ as SeriesRow).location_lat = ex.location_lat ?? null;
+      (occ as SeriesRow).location_lng = ex.location_lng ?? null;
+    }
+    if (ex?.travel_min !== undefined && ex?.travel_min !== null) (occ as SeriesRow).travel_min = ex.travel_min > 0 ? ex.travel_min : null;
     out.push(occ);
   }
   return out;

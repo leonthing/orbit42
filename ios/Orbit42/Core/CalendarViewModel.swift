@@ -256,9 +256,10 @@ final class CalendarViewModel {
         location: String? = nil,
         locationLat: Double? = nil,
         locationLng: Double? = nil,
-        travelMin: Int? = nil
+        travelMin: Int? = nil,
+        repeatRule: RepeatRule = RepeatRule()
     ) async throws -> CalendarEvent {
-        let body = CreateEventRequest(
+        var body = CreateEventRequest(
             title: title,
             description: memo,
             startAt: allDay ? APIDateParser.encodeDateOnly(start) : APIDateParser.encodeDateTime(start),
@@ -270,6 +271,10 @@ final class CalendarViewModel {
             locationLng: locationLng,
             travelMin: travelMin
         )
+        if let rrule = repeatRule.rrule(start: start, allDay: allDay) {
+            body.rrule = rrule
+            if repeatRule.anniversary { body.isAnniversary = true }
+        }
         let response: CreateEventResponse = try await api.post(
             "/api/v1/calendar/events",
             body: body
@@ -300,8 +305,21 @@ final class CalendarViewModel {
             "/api/v1/calendar/events/\(event.id)",
             body: body
         )
-        invalidateCache(around: [event.startAt, event.endAt, newStart, newEnd])
+        // 반복을 '이후 모두'·'모두'로 고치거나 규칙을 바꾸면 여러 달이 바뀐다
+        if (event.isRecurring && body.scope != RecurrenceScope.this.rawValue) || body.rrule != nil {
+            cache.removeAll()
+        } else {
+            invalidateCache(around: [event.startAt, event.endAt, newStart, newEnd])
+        }
         await loadDisplayedMonth(force: true)
+        WidgetBridge.reload(); EventReminders.shared.refreshSoon()
+    }
+
+    /// 반복 회차의 시리즈 정보 — 수정 화면의 반복 칸, 구글 '모두' 경고의 회차 수
+    func seriesInfo(_ event: CalendarEvent) async -> SeriesInfo? {
+        var path = "/api/v1/calendar/events/\(event.id)/series"
+        if event.isGoogle, let calendarId = event.calendarId { path += "?calendarId=\(calendarId)" }
+        return try? await api.get(path)
     }
 
     /// 하루 보기 드래그 — 옮기기(시작·끝 함께)와 길이 바꾸기(끝만)가 모두 여기로 온다.
@@ -317,6 +335,8 @@ final class CalendarViewModel {
         var body = UpdateEventRequest()
         body.startAt = APIDateParser.encodeDateTime(newStart)
         body.endAt = APIDateParser.encodeDateTime(newEnd)
+        // 반복 회차를 끌면 그 회차만 옮긴다(묻지 않음)
+        if event.isRecurring { body.scope = RecurrenceScope.this.rawValue }
         if event.isGoogle {
             body.sourceCalendarId = event.calendarId
             if notifyAttendees { body.notifyAttendees = true }
@@ -444,13 +464,18 @@ final class CalendarViewModel {
 
     /// 이벤트를 삭제하고, 성공하면 기간이 걸친 달의 캐시를 비운 뒤 표시 중인 달을 새로고침한다.
     /// Google 이벤트(`gcal_` id)는 소속 native 캘린더 uuid 를 쿼리로 함께 보낸다.
-    func deleteEvent(_ event: CalendarEvent) async throws {
-        var path = "/api/v1/calendar/events/\(event.id)"
-        if event.isGoogle, let calendarId = event.calendarId {
-            path += "?calendarId=\(calendarId)"
-        }
+    func deleteEvent(_ event: CalendarEvent, scope: RecurrenceScope? = nil) async throws {
+        var query: [String] = []
+        if event.isGoogle, let calendarId = event.calendarId { query.append("calendarId=\(calendarId)") }
+        if event.isRecurring, let scope { query.append("scope=\(scope.rawValue)") }
+        let path = "/api/v1/calendar/events/\(event.id)" + (query.isEmpty ? "" : "?" + query.joined(separator: "&"))
         let _: EventMutationResponse = try await api.delete(path)
-        invalidateCache(around: [event.startAt, event.endAt])
+        if event.isRecurring, scope != nil, scope != .this {
+            cache.removeAll()
+        } else {
+            invalidateCache(around: [event.startAt, event.endAt])
+        }
+        WidgetBridge.reload(); EventReminders.shared.refreshSoon()
         await loadDisplayedMonth(force: true)
     }
 
