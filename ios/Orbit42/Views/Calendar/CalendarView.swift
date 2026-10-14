@@ -18,6 +18,16 @@ struct CalendarView: View {
     @State private var completionErrorMessage: String?
     /// 하루 보기에서 블록을 끄는 중 — 가로 페이저 넘김을 막는다
     @State private var isDraggingEvent = false
+    /// 다른 날로 끄는 중 손가락 자리에 그릴 유령 블록 (1.5.1)
+    @State private var crossDrag: DayTimelineView.CrossDayDrag?
+    /// 위쪽 주간 날짜 칸의 전역 좌표 — 여기에 놓으면 그날 같은 시각
+    @State private var stripFrames: [Date: CGRect] = [:]
+    /// 날짜별 하루 보기 스크롤 위치 — 화면을 다시 그리지 않도록 참조로 둔다
+    @State private var dayScrollRegistry = DayScrollRegistry()
+
+    final class DayScrollRegistry {
+        var y: [Date: CGFloat] = [:]
+    }
     /// 참석자가 있는 구글 일정을 옮기기 전 확인 (구글이 참석자에게 변경 메일을 보낸다)
     @State private var pendingMove: PendingMove?
     @State private var moveErrorMessage: String?
@@ -40,6 +50,7 @@ struct CalendarView: View {
                 Theme.background.ignoresSafeArea()
                 // 캘린더 탭은 일정만 — 예약 링크는 예약 탭으로 옮겼다.
                 scheduleContent
+                crossDragGhost
             }
             .navigationTitle("캘린더")
             .navigationBarTitleDisplayMode(.inline)
@@ -68,7 +79,7 @@ struct CalendarView: View {
                 Button("취소", role: .cancel) {}
                 Button("바꾸기") { performMove(move, notifyAttendees: true) }
             } message: { move in
-                Text("\(Self.moveTimeFormatter.string(from: move.newStart))–\(Self.moveTimeFormatter.string(from: move.newEnd))로 바꿔요. 참석자에게 구글 캘린더 변경 알림이 갑니다.")
+                Text("\(DayTimelineView.dateTimeLabel(move.newStart, move.newEnd))로 바꿔요. 참석자에게 구글 캘린더 변경 알림이 갑니다.")
             }
             .alert("시간을 바꾸지 못했어요", isPresented: Binding(
                 get: { moveErrorMessage != nil },
@@ -344,10 +355,45 @@ struct CalendarView: View {
             ForEach(0..<7, id: \.self) { offset in
                 let date = calendar.date(byAdding: .day, value: offset, to: weekStart) ?? weekStart
                 weekDayCell(date)
+                    .background(
+                        GeometryReader { g in
+                            Color.clear.preference(key: StripFramesKey.self, value: [calendar.startOfDay(for: date): g.frame(in: .global)])
+                        }
+                    )
             }
         }
         .padding(.horizontal, 8)
         .padding(.top, 6)
+        .onPreferenceChange(StripFramesKey.self) { stripFrames = $0 }
+    }
+
+    /// 다른 날로 끄는 동안 손가락을 따라가는 블록 + 날짜·시각. 주간 날짜 칸 위면 그 칸을 강조한다.
+    @ViewBuilder
+    private var crossDragGhost: some View {
+        GeometryReader { geo in
+            if let drag = crossDrag {
+                let origin = geo.frame(in: .global).origin
+                if let strip = drag.stripDay, let frame = stripFrames[strip] {
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(drag.color, lineWidth: 2.5)
+                        .frame(width: frame.width - 4, height: frame.height)
+                        .position(x: frame.midX - origin.x, y: frame.midY - origin.y)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(drag.title).font(.caption.weight(.semibold)).lineLimit(1)
+                    Text(drag.label).font(.caption2.weight(.semibold).monospacedDigit()).lineLimit(1)
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .frame(width: drag.size.width, height: max(drag.size.height, 40), alignment: .topLeading)
+                .background(drag.color, in: RoundedRectangle(cornerRadius: 6))
+                .shadow(color: .black.opacity(0.25), radius: 8, y: 3)
+                .position(x: drag.globalCenter.x - origin.x, y: drag.globalCenter.y - origin.y)
+            }
+        }
+        .allowsHitTesting(false)
+        .ignoresSafeArea()
     }
 
     private func weekDayCell(_ date: Date) -> some View {
@@ -479,7 +525,19 @@ struct CalendarView: View {
                     isDragging: $isDraggingEvent,
                     onRate: { event, rating in
                         Task { try? await viewModel.setRating(event, rating) }
-                    }
+                    },
+                    onDayOffset: { offset in
+                        if let target = calendar.date(byAdding: .day, value: offset, to: day) {
+                            withAnimation(.easeInOut(duration: 0.25)) { viewModel.select(date: target) }
+                        }
+                    },
+                    onCrossDayDrag: { crossDrag = $0 },
+                    scrollYForOffset: { offset in
+                        calendar.date(byAdding: .day, value: offset, to: day)
+                            .flatMap { dayScrollRegistry.y[calendar.startOfDay(for: $0)] }
+                    },
+                    onScrollY: { date, y in dayScrollRegistry.y[date] = y },
+                    stripFrames: stripFrames
                 )
                 // 달 경계 너머 날짜는 미리 받아 둔다
                 .task(id: day) {
@@ -1099,4 +1157,12 @@ private struct EventRow: View {
 #Preview {
     CalendarView()
         .tint(Theme.accent)
+}
+
+/// 하루 보기 위쪽 주간 날짜 칸들의 전역 좌표 (다른 날로 끌어 놓기용)
+private struct StripFramesKey: PreferenceKey {
+    static var defaultValue: [Date: CGRect] = [:]
+    static func reduce(value: inout [Date: CGRect], nextValue: () -> [Date: CGRect]) {
+        value.merge(nextValue()) { $1 }
+    }
 }
