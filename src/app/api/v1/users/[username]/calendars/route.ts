@@ -74,7 +74,7 @@ export async function GET(
   const monthStart = new Date(year, month - 1, 1);
   const monthEnd = new Date(year, month, 0, 23, 59, 59, 999);
 
-  const events = await selectEventsInRange<Record<string, any> & { id: string; start_at: string }>({
+  const events = await selectEventsInRange<Record<string, unknown> & { id: string; start_at: string }>({
     columns: "calendar_id, start_at",
     scope: (q) => q.in("calendar_id", calendars.map((c) => c.id as string)),
     from: monthStart,

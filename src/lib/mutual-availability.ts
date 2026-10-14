@@ -87,7 +87,7 @@ export async function findConflictsForUser(
   }
 
   // Native calendar events.
-  const events = await selectEventsInRange<Record<string, any> & { id: string; start_at: string }>({
+  const events = await selectEventsInRange<Record<string, unknown> & { id: string; start_at: string }>({
     columns: "start_at, end_at, all_day",
     scope: (q) => q.eq("user_id", userId),
     from: rangeStart,

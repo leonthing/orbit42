@@ -132,7 +132,7 @@ export default async function TimelinePage({
       );
       if (visible.length > 0) {
         const metaById = new Map(visible.map((c) => [c.id as string, c]));
-        const rows = (await selectEventsInRange<Record<string, any> & { id: string; start_at: string }>({
+        const rows = (await selectEventsInRange<Record<string, unknown> & { id: string; start_at: string }>({
           columns: "id, title, start_at, end_at, all_day, calendar_id, user_id",
           scope: (q) => q.in("calendar_id", Array.from(metaById.keys())),
           from: rangeStart,

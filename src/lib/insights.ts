@@ -181,12 +181,11 @@ export async function fetchTimeBlocks(
   rangeStart: Date,
   rangeEnd: Date,
 ): Promise<TimeBlock[]> {
-  const db = getAdminClient();
   const cals = await loadCalendarIndex(userId);
   const calById = new Map(cals.map((c) => [c.id, c]));
 
   // ── Native events ────────────────────────────────────────────
-  const native = await selectEventsInRange<Record<string, any> & { id: string; start_at: string }>({
+  const native = await selectEventsInRange<Record<string, unknown> & { id: string; start_at: string }>({
     columns: "id, calendar_id, title, start_at, end_at, all_day",
     scope: (q) => q.eq("user_id", userId),
     from: rangeStart,

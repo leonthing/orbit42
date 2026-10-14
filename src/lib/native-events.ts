@@ -79,7 +79,7 @@ export async function listNativeEventsInCalendars(
 ): Promise<NativeEventWithCalendar[]> {
   if (calendarIds.length === 0) return [];
   // 공유·공개 캘린더(calendar_id 로 읽는 길)도 반복 회차로 펼친다(1.5.1)
-  const data = await selectEventsInRange<Record<string, any> & { id: string; start_at: string }>({
+  const data = await selectEventsInRange<Record<string, unknown> & { id: string; start_at: string }>({
     columns:
       "id, calendar_id, title, description, start_at, end_at, all_day, tentative, calendar:calendars!events_calendar_id_fkey(name, color)",
     scope: (q) => q.in("calendar_id", calendarIds),

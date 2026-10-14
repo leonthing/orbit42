@@ -171,7 +171,7 @@ export async function computeAutoAvailability(
   // 3. Pull host's native (in-app) calendar events — if the host creates
   // an event during a would-be-bookable window, the slot should close.
   // 반복 일정은 회차로 펼쳐 막는다(1.5.1)
-  const nativeEvents = await selectEventsInRange<Record<string, any> & { id: string; start_at: string }>({
+  const nativeEvents = await selectEventsInRange<Record<string, unknown> & { id: string; start_at: string }>({
     columns: "title, start_at, end_at, all_day, travel_min",
     scope: (q) => q.eq("user_id", hostId),
     from: now,
