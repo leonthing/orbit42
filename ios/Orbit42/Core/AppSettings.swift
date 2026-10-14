@@ -60,6 +60,25 @@ enum EventDuration: Int, CaseIterable, Identifiable {
     var label: String { self == .hour1 ? "1시간" : "\(rawValue)분" }
 }
 
+/// 일정 알림 시점 — 화면 선택지와 같은 값만 쓴다(서버 reminder_minutes 와 같은 뜻).
+enum ReminderOption: Int, CaseIterable, Identifiable {
+    case none = -1
+    case atStart = 0
+    case min5 = 5
+    case min10 = 10
+    case min30 = 30
+    case hour1 = 60
+    var id: Int { rawValue }
+    var label: String {
+        switch self {
+        case .none: return "없음"
+        case .atStart: return "정각"
+        case .hour1: return "1시간 전"
+        default: return "\(rawValue)분 전"
+        }
+    }
+}
+
 /// 기기별 앱 설정. 서버와 동기화하지 않고 `UserDefaults` 에만 저장한다.
 @MainActor
 @Observable
@@ -69,6 +88,9 @@ final class AppSettings {
     private static let weekStartKey = "weekStart"
     private static let eventDurationKey = "eventDuration"
     private static let showArchivedKey = "showArchivedEvents"
+    private static let notifyOrbitKey = "notifyOrbitEvents"
+    private static let notifyGoogleKey = "notifyGoogleEvents"
+    private static let defaultReminderKey = "defaultReminderMinutes"
 
     /// 캘린더 주 시작 요일 — 기본값은 기기 설정 따름.
     /// 쓰기는 `setWeekStart(_:)` 로만 한다(파생 `calendar` 를 함께 갱신해야 해서).
@@ -84,6 +106,12 @@ final class AppSettings {
     /// 보관한 일정 보기 — 켜면 흐리게 표시, 끄면 숨김. 기본 켬.
     private(set) var showArchived: Bool
 
+    /// 일정 알림 (1.5.0 A) — Orbit42 일정은 기본 켬, 구글 일정은 구글 앱과 두 번 울리지 않게 기본 끔
+    private(set) var notifyOrbitEvents: Bool
+    private(set) var notifyGoogleEvents: Bool
+    /// 일정마다 따로 고르지 않았을 때의 알림 시점 — 기본 10분 전
+    private(set) var defaultReminder: ReminderOption
+
     @ObservationIgnored private var foregroundObserver: NSObjectProtocol?
 
     private init() {
@@ -96,6 +124,10 @@ final class AppSettings {
                 rawValue: UserDefaults.standard.integer(forKey: Self.eventDurationKey)
             ) ?? .hour1
         showArchived = UserDefaults.standard.object(forKey: Self.showArchivedKey) as? Bool ?? true
+        notifyOrbitEvents = UserDefaults.standard.object(forKey: Self.notifyOrbitKey) as? Bool ?? true
+        notifyGoogleEvents = UserDefaults.standard.object(forKey: Self.notifyGoogleKey) as? Bool ?? false
+        defaultReminder = (UserDefaults.standard.object(forKey: Self.defaultReminderKey) as? Int)
+            .flatMap(ReminderOption.init(rawValue:)) ?? .min10
 
         // `.system` 인 동안 사용자가 기기 설정을 바꾸고 돌아올 수 있다.
         foregroundObserver = NotificationCenter.default.addObserver(
@@ -144,6 +176,21 @@ final class AppSettings {
     func setShowArchived(_ value: Bool) {
         showArchived = value
         UserDefaults.standard.set(value, forKey: Self.showArchivedKey)
+    }
+
+    func setNotifyOrbitEvents(_ value: Bool) {
+        notifyOrbitEvents = value
+        UserDefaults.standard.set(value, forKey: Self.notifyOrbitKey)
+    }
+
+    func setNotifyGoogleEvents(_ value: Bool) {
+        notifyGoogleEvents = value
+        UserDefaults.standard.set(value, forKey: Self.notifyGoogleKey)
+    }
+
+    func setDefaultReminder(_ value: ReminderOption) {
+        defaultReminder = value
+        UserDefaults.standard.set(value.rawValue, forKey: Self.defaultReminderKey)
     }
 
     func setEventDuration(_ value: EventDuration) {

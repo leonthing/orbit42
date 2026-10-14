@@ -71,7 +71,7 @@ final class CalendarViewModel {
         }
         UserDefaults.standard.set(Array(hiddenCalendarIds), forKey: "hiddenCalendarIds")
         SharedDisplaySettings.update { $0.hiddenCalendarIds = hiddenCalendarIds.sorted() }
-        WidgetBridge.reload()
+        WidgetBridge.reload(); EventReminders.shared.refreshSoon()
     }
 
     /// 선택된 날짜의 이벤트 — 종일 먼저, 그다음 시작 시각 순.
@@ -197,7 +197,7 @@ final class CalendarViewModel {
             )
             cache[key] = MonthData(events: response.events, calendars: response.calendars)
             // 일정 추가·수정·삭제 뒤의 강제 새로고침 — 홈 화면 위젯도 다시 받게 한다.
-            if force { WidgetBridge.reload() }
+            if force { WidgetBridge.reload(); EventReminders.shared.refreshSoon() }
         } catch is CancellationError {
             return
         } catch let urlError as URLError where urlError.code == .cancelled {
@@ -313,7 +313,7 @@ final class CalendarViewModel {
                 "/api/v1/calendar/events/\(event.id)",
                 body: body
             )
-            WidgetBridge.reload()
+            WidgetBridge.reload(); EventReminders.shared.refreshSoon()
         } catch {
             applyTimes(eventId: event.id, start: event.startAt, end: event.endAt)
             throw error
@@ -332,9 +332,29 @@ final class CalendarViewModel {
                 "/api/v1/calendar/events/\(event.id)/annotation",
                 body: UpdateAnnotationRequest(importance: importance.rawValue)
             )
-            WidgetBridge.reload()
+            WidgetBridge.reload(); EventReminders.shared.refreshSoon()
         } catch {
             mutate(event.id) { $0.importance = previous }
+            throw error
+        }
+    }
+
+    /// 일정별 알림 시점 (nil = 설정의 기본값) — 저장되면 대기 알림을 다시 맞춘다.
+    func setReminder(_ event: CalendarEvent, minutes: Int?) async throws {
+        let previous = current(event).reminderMinutes
+        guard previous != minutes else { return }
+        mutate(event.id) { $0.reminderMinutes = minutes }
+        do {
+            var body = UpdateAnnotationRequest()
+            body.reminderMinutes = minutes
+            body.setReminder = true
+            let _: AnnotationResponse = try await api.put(
+                "/api/v1/calendar/events/\(event.id)/annotation",
+                body: body
+            )
+            EventReminders.shared.refreshSoon()
+        } catch {
+            mutate(event.id) { $0.reminderMinutes = previous }
             throw error
         }
     }
@@ -456,7 +476,7 @@ final class CalendarViewModel {
                 "/api/v1/calendar/events/\(event.id)/completion",
                 body: UpdateEventCompletionRequest(completed: completed)
             )
-            WidgetBridge.reload()
+            WidgetBridge.reload(); EventReminders.shared.refreshSoon()
         } catch {
             applyCompletion(eventId: event.id, completed: previous)
             throw error
@@ -476,7 +496,7 @@ final class CalendarViewModel {
                 "/api/v1/calendar/events/\(event.id)/completion",
                 body: UpdateEventStatusRequest(status: archived ? "archived" : "none")
             )
-            WidgetBridge.reload()
+            WidgetBridge.reload(); EventReminders.shared.refreshSoon()
         } catch {
             applyState(eventId: event.id, completed: previous.completed, archived: previous.archived)
             throw error

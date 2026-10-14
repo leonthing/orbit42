@@ -98,6 +98,8 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
     /// 완료 후 별점 1~5 (나만 본다)
     var rating: Int?
     var ratingNote: String?
+    /// 일정별 알림 시점(분) — nil = 설정의 기본값, -1 = 없음, 0 = 정각
+    var reminderMinutes: Int?
 
     var isGoogle: Bool { source == "google" }
     /// 구글 일정의 시간·내용을 바꿀 수 있는지 — 주최자일 때만.
@@ -112,7 +114,7 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
         case inviteId, inviteStatus, inviterName
         case location, locationLat, locationLng, travelMin
         case attendees, isOrganizer, isBooking, bookingId, bookingRole, guestsCanModify
-        case importance, rating, ratingNote
+        case importance, rating, ratingNote, reminderMinutes
     }
 
     init(from decoder: Decoder) throws {
@@ -145,6 +147,7 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
         importance = EventImportance(rawValue: (try? container.decodeIfPresent(String.self, forKey: .importance)) ?? "normal") ?? .normal
         rating = try? container.decodeIfPresent(Int.self, forKey: .rating)
         ratingNote = try? container.decodeIfPresent(String.self, forKey: .ratingNote)
+        reminderMinutes = try? container.decodeIfPresent(Int.self, forKey: .reminderMinutes)
 
         let startRaw = try container.decode(String.self, forKey: .startAt)
         let endRaw = try container.decode(String.self, forKey: .endAt)
@@ -281,14 +284,20 @@ struct UpdateAnnotationRequest: Encodable {
     var rating: Int?
     var clearRating = false
     var ratingNote: String?
+    /// 알림 시점 — setReminder 가 true 일 때만 보낸다 (nil 이면 기본값으로 되돌림)
+    var reminderMinutes: Int?
+    var setReminder = false
 
-    private enum CodingKeys: String, CodingKey { case importance, rating, ratingNote }
+    private enum CodingKeys: String, CodingKey { case importance, rating, ratingNote, reminderMinutes }
 
     func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encodeIfPresent(importance, forKey: .importance)
         if clearRating { try c.encodeNil(forKey: .rating) } else { try c.encodeIfPresent(rating, forKey: .rating) }
         try c.encodeIfPresent(ratingNote, forKey: .ratingNote)
+        if setReminder {
+            if let reminderMinutes { try c.encode(reminderMinutes, forKey: .reminderMinutes) } else { try c.encodeNil(forKey: .reminderMinutes) }
+        }
     }
 }
 

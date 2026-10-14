@@ -358,6 +358,10 @@ struct AddEventSheet: View {
                     if importance != .normal {
                         try? await viewModel.setImportance(event, importance)
                     }
+                    // 일정 알림 권한은 첫 실행이 아니라 처음 일정을 만들 때 묻는다(이미 정했으면 묻지 않음)
+                    if AppSettings.shared.notifyOrbitEvents || AppSettings.shared.notifyGoogleEvents {
+                        await EventReminders.shared.requestAuthorizationIfNeeded()
+                    }
                 }
 
                 let failed = await invitePending(to: event)

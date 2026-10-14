@@ -1,4 +1,5 @@
 import SwiftUI
+import UserNotifications
 
 /// 프로필 탭 > 내 캘린더 — 캘린더 목록/편집/생성/삭제.
 struct CalendarSettingsView: View {
@@ -165,6 +166,8 @@ struct CalendarSettingsView: View {
             .listRowBackground(Theme.surface)
 
             displaySection
+
+            ReminderSettingsSection()
         }
         .scrollContentBackground(.hidden)
         .refreshable {
@@ -238,4 +241,59 @@ private struct SettingBadge: View {
         CalendarSettingsView()
     }
     .tint(Theme.accent)
+}
+
+
+/// 일정 알림 설정 (1.5.0 A 2차) — 기기 로컬 알림. 권한은 여기서 처음 켤 때 묻는다.
+struct ReminderSettingsSection: View {
+    @State private var status: UNAuthorizationStatus = .notDetermined
+    private var settings: AppSettings { AppSettings.shared }
+
+    var body: some View {
+        Section {
+            if status == .denied {
+                Button {
+                    if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+                } label: {
+                    HStack {
+                        Label("알림이 꺼져 있어요", systemImage: "bell.slash")
+                            .foregroundStyle(Theme.primaryText)
+                        Spacer()
+                        Text("설정 열기").foregroundStyle(Theme.accent)
+                    }
+                }
+            }
+            Toggle("Orbit42 일정 알림", isOn: Binding(
+                get: { settings.notifyOrbitEvents },
+                set: { on in settings.setNotifyOrbitEvents(on); changed(turnedOn: on) }
+            ))
+            .tint(Theme.accent)
+            Toggle("구글 일정도 알림", isOn: Binding(
+                get: { settings.notifyGoogleEvents },
+                set: { on in settings.setNotifyGoogleEvents(on); changed(turnedOn: on) }
+            ))
+            .tint(Theme.accent)
+            Picker("기본 알림 시점", selection: Binding(
+                get: { settings.defaultReminder },
+                set: { settings.setDefaultReminder($0); EventReminders.shared.refreshSoon() }
+            )) {
+                ForEach(ReminderOption.allCases) { Text($0.label).tag($0) }
+            }
+        } header: {
+            Text("알림").foregroundStyle(Theme.secondaryText)
+        } footer: {
+            Text("종일·완료·보관한 일정은 알리지 않아요. 구글 일정은 구글 캘린더 앱에서도 울릴 수 있어 기본으로 꺼 두었어요. 일정마다 수정 화면에서 따로 정할 수 있어요. 앱을 14일 넘게 열지 않으면 알림이 끊길 수 있어요.")
+                .foregroundStyle(Theme.secondaryText)
+        }
+        .listRowBackground(Theme.surface)
+        .task { status = await EventReminders.shared.authorizationStatus() }
+    }
+
+    private func changed(turnedOn: Bool) {
+        Task {
+            if turnedOn { await EventReminders.shared.requestAuthorizationIfNeeded() }
+            status = await EventReminders.shared.authorizationStatus()
+            await EventReminders.shared.refresh()
+        }
+    }
 }

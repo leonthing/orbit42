@@ -27,6 +27,8 @@ struct EditEventSheet: View {
     @State private var errorMessage: String?
     /// 중요도 (1.5.0 A) — 일정 수정과 따로 저장한다
     @State private var importance: EventImportance
+    /// 일정별 알림 시점 — nil 은 설정의 기본값
+    @State private var reminderMinutes: Int?
     /// 참석자가 있는 구글 일정의 시간을 바꿀 때 — 확인을 누르면 구글이 참석자에게 변경 메일을 보낸다
     @State private var pendingNotifyBody: UpdateEventRequest?
 
@@ -76,6 +78,7 @@ struct EditEventSheet: View {
         _end = State(initialValue: initialEnd)
         _selectedCalendarId = State(initialValue: event.calendarId)
         _importance = State(initialValue: viewModel.current(event).importance)
+        _reminderMinutes = State(initialValue: viewModel.current(event).reminderMinutes)
         _locationText = State(initialValue: event.location ?? "")
         _locationLat = State(initialValue: event.locationLat)
         _locationLng = State(initialValue: event.locationLng)
@@ -124,6 +127,18 @@ struct EditEventSheet: View {
                     Text("중요도")
                 }
                 .listRowBackground(Theme.surface)
+
+                if !allDay {
+                    Section {
+                        Picker("알림", selection: $reminderMinutes) {
+                            Text("기본값 (\(AppSettings.shared.defaultReminder.label))").tag(Int?.none)
+                            ForEach(ReminderOption.allCases) { Text($0.label).tag(Int?.some($0.rawValue)) }
+                        }
+                    } footer: {
+                        Text("이 기기에서 알려 드려요. 기본값은 설정 › 캘린더에서 바꿀 수 있어요.")
+                    }
+                    .listRowBackground(Theme.surface)
+                }
 
                 Section {
                     Toggle("종일", isOn: $allDay)
@@ -302,7 +317,21 @@ struct EditEventSheet: View {
     }
 
     private var importanceChanged: Bool {
-        importance != viewModel.current(event).importance
+        importance != viewModel.current(event).importance || reminderChanged
+    }
+
+    private var reminderChanged: Bool {
+        reminderMinutes != viewModel.current(event).reminderMinutes
+    }
+
+    /// 중요도·알림 시점 (일정 수정과 따로 저장하는 주석)
+    private func saveAnnotations() async throws {
+        if importance != viewModel.current(event).importance {
+            try await viewModel.setImportance(event, importance)
+        }
+        if reminderChanged {
+            try await viewModel.setReminder(event, minutes: reminderMinutes)
+        }
     }
 
     /// 중요도만 바뀐 수정 — 일정은 그대로 두고 주석만 저장한다
@@ -311,11 +340,11 @@ struct EditEventSheet: View {
         Task {
             defer { isSaving = false }
             do {
-                try await viewModel.setImportance(event, importance)
+                try await saveAnnotations()
                 dismiss()
                 onSaved()
             } catch {
-                errorMessage = "중요도를 저장하지 못했어요. 잠시 후 다시 시도해 주세요."
+                errorMessage = "중요도·알림을 저장하지 못했어요. 잠시 후 다시 시도해 주세요."
             }
         }
     }
@@ -328,7 +357,7 @@ struct EditEventSheet: View {
             do {
                 // 중요도를 먼저 — 캘린더를 옮기면 일정 키가 바뀌는데 서버가 주석도 함께 옮긴다
                 if importanceChanged {
-                    try await viewModel.setImportance(event, importance)
+                    try await saveAnnotations()
                 }
                 try await viewModel.updateEvent(event, body: body, newStart: start, newEnd: clampedEnd)
                 dismiss()

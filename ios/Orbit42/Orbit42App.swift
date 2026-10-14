@@ -7,6 +7,11 @@ struct Orbit42App: App {
     /// 화면 모드 — "system"(기본) | "light" | "dark"
     @AppStorage("appearanceMode") private var appearanceMode = "system"
 
+    init() {
+        // 일정 알림을 눌러 앱이 켜질 때도 받도록 시작 즉시 둔다
+        NotificationTapHandler.shared.install()
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()

@@ -110,9 +110,17 @@ struct MainTabView: View {
         }
         .environment(people)
         .environment(pendingBookings)
-        .task { await pendingBookings.refresh() }
+        .task {
+            NotificationTapHandler.shared.router = router
+            await pendingBookings.refresh()
+            await EventReminders.shared.refresh()
+        }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { Task { await pendingBookings.refresh() } }
+            if phase == .active {
+                Task { await pendingBookings.refresh() }
+                // 다른 기기·웹에서 바뀐 일정도 앱을 열 때 알림에 반영
+                EventReminders.shared.refreshSoon()
+            }
         }
     }
 }
