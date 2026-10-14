@@ -82,8 +82,9 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
     let bookingRole: String?
 
     var isGoogle: Bool { source == "google" }
-    /// 구글 일정의 시간·내용을 바꿀 수 있는지 — 주최자거나, 주최자가 참석자 수정을 허용했을 때
-    var canModifyGoogle: Bool { !isGoogle || isOrganizer || guestsCanModify }
+    /// 구글 일정의 시간·내용을 바꿀 수 있는지 — 주최자일 때만.
+    /// 주최자가 '참석자 수정 허용'을 켜도 우리가 보내는 수정은 내 사본만 바꾼다(실측) — guestsCanModify 로 열지 않는다.
+    var canModifyGoogle: Bool { !isGoogle || isOrganizer }
     /// 초대받은 일정 (읽기 전용 — 수락/거절만 가능)
     var isInvite: Bool { source == "invite" }
 

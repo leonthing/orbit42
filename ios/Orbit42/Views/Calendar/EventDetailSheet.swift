@@ -360,7 +360,8 @@ struct EventDetailSheet: View {
                                 Button(role: .destructive) {
                                     showingDeleteConfirm = true
                                 } label: {
-                                    Label("삭제", systemImage: "trash")
+                                    Label(isGuestOfGoogleEvent ? "내 캘린더에서 빼기" : "삭제",
+                                          systemImage: isGuestOfGoogleEvent ? "calendar.badge.minus" : "trash")
                                 }
                             }
                         } label: {
@@ -372,12 +373,18 @@ struct EventDetailSheet: View {
                 }
             }
             .confirmationDialog(
-                "이 일정을 삭제할까요?",
+                isGuestOfGoogleEvent ? "내 캘린더에서 뺄까요?" : "이 일정을 삭제할까요?",
                 isPresented: $showingDeleteConfirm,
                 titleVisibility: .visible
             ) {
-                Button("삭제", role: .destructive) { deleteEvent() }
+                // 초대받은 구글 일정은 지워도 내 캘린더에서만 빠지고 주최자 쪽엔 불참으로 남는다 (실측)
+                Button(isGuestOfGoogleEvent ? "빼기" : "삭제", role: .destructive) { deleteEvent() }
                 Button("취소", role: .cancel) {}
+            } message: {
+                // 실측: sendUpdates 없이 지워도 구글이 주최자에게 '거절함' 메일을 보낸다
+                if isGuestOfGoogleEvent {
+                    Text("주최자에게 불참 알림 메일이 가요.")
+                }
             }
             .alert("삭제하지 못했어요", isPresented: showErrorAlert) {
                 Button("확인", role: .cancel) { errorMessage = nil }

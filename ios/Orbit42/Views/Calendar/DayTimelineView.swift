@@ -131,17 +131,28 @@ struct DayTimelineView: View {
             let columnsWidth = geo.size.width - labelWidth - 12
             ZStack(alignment: .topLeading) {
                 hourLines
-                // 빈 시간 탭 → 그 시각(30분 단위)으로 새 일정
-                Color.clear
-                    .contentShape(Rectangle())
-                    .frame(width: columnsWidth, height: hourHeight * 24)
-                    .offset(x: labelWidth, y: topInset)
-                    .onTapGesture { location in
+                // 빈 시간 탭 → 그 시각(30분 단위), 꾹 누르기 → 누른 자리 시각(15분 단위)으로 새 일정.
+                // 손가락이 움직이지 않는 꾹 누르기에서도 위치를 얻으려고 UIKit 인식기를 쓴다(스크롤과도 함께 동작).
+                EmptySlotTouchCatcher(
+                    onTap: { location in
                         let minutes = max(0, min(23 * 60 + 30, Int(location.y / hourHeight * 60) / 30 * 30))
                         if let start = calendar.date(byAdding: .minute, value: minutes, to: dayStart) {
                             onAddAt(start)
                         }
+                    },
+                    onLongPress: { location in
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        let step = snapMinutes
+                        let minutes = max(0, min(24 * 60 - step, Int(location.y / hourHeight * 60) / step * step))
+                        if let start = calendar.date(byAdding: .minute, value: minutes, to: dayStart) {
+                            onAddAt(start)
+                        }
                     }
+                )
+                .frame(width: columnsWidth, height: hourHeight * 24)
+                // offset 은 UIKit 뷰의 터치 영역을 옮기지 않아 padding 으로 자리를 잡는다
+                .padding(.leading, labelWidth)
+                .padding(.top, topInset)
                 ForEach(layoutBlocks()) { block in
                     let isLifted = dragId == block.id
                     let movable = isMovable(block.event)
@@ -504,6 +515,45 @@ struct DayTimelineView: View {
         }
         flush()
         return blocks
+    }
+}
+
+/// 하루 보기 빈 시간의 탭·꾹 누르기 — 둘 다 누른 자리 좌표를 준다.
+/// 꾹 누르기가 잡히면 탭은 실패하도록 묶어, 손을 뗄 때 새 일정이 두 번 열리지 않는다.
+private struct EmptySlotTouchCatcher: UIViewRepresentable {
+    let onTap: (CGPoint) -> Void
+    let onLongPress: (CGPoint) -> Void
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
+        view.backgroundColor = .clear
+        let longPress = UILongPressGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.longPressed(_:)))
+        longPress.minimumPressDuration = 0.4
+        let tap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.tapped(_:)))
+        tap.require(toFail: longPress)
+        view.addGestureRecognizer(longPress)
+        view.addGestureRecognizer(tap)
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        context.coordinator.parent = self
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
+
+    final class Coordinator: NSObject {
+        var parent: EmptySlotTouchCatcher
+        init(parent: EmptySlotTouchCatcher) { self.parent = parent }
+
+        @objc func tapped(_ recognizer: UITapGestureRecognizer) {
+            parent.onTap(recognizer.location(in: recognizer.view))
+        }
+
+        @objc func longPressed(_ recognizer: UILongPressGestureRecognizer) {
+            guard recognizer.state == .began else { return }
+            parent.onLongPress(recognizer.location(in: recognizer.view))
+        }
     }
 }
 

@@ -4,9 +4,14 @@ import SwiftUI
 /// 예약 링크(슬롯 관리)는 예약 탭의 "예약 링크" 구역에 있다.
 struct CalendarView: View {
     @State private var viewModel = CalendarViewModel()
-    @State private var showingAddSheet = false
-    /// 하루 보기에서 빈 시간을 눌렀을 때의 시작 시각 (+ 버튼은 nil)
-    @State private var addStart: Date?
+    /// 새 일정 화면 — 시작 시각을 요청에 실어 보내야 꾹 누르기 경로에서도 누른 자리 시각이 들어간다
+    @State private var addRequest: AddRequest?
+
+    private struct AddRequest: Identifiable {
+        let id = UUID()
+        /// nil 이면 새 일정 화면 기본 시작(다음 정시)
+        let start: Date?
+    }
     /// 마지막으로 고른 보기 — "day" 면 하루 보기로 연다.
     @AppStorage("calendarScheduleMode") private var storedScheduleMode = "month"
     @State private var selectedEvent: CalendarEvent?
@@ -37,8 +42,8 @@ struct CalendarView: View {
             }
             .navigationTitle("캘린더")
             .navigationBarTitleDisplayMode(.inline)
-            .sheet(isPresented: $showingAddSheet) {
-                AddEventSheet(viewModel: viewModel, defaultDate: viewModel.selectedDate, defaultStart: addStart)
+            .sheet(item: $addRequest) { request in
+                AddEventSheet(viewModel: viewModel, defaultDate: viewModel.selectedDate, defaultStart: request.start)
             }
             .sheet(item: $selectedEvent) { event in
                 EventDetailSheet(viewModel: viewModel, event: event)
@@ -185,8 +190,7 @@ struct CalendarView: View {
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
-                    addStart = nil
-                    showingAddSheet = true
+                    addRequest = AddRequest(start: nil)
                 } label: {
                     Image(systemName: "plus")
                 }
@@ -457,8 +461,7 @@ struct CalendarView: View {
                     onOpen: { selectedEvent = $0 },
                     onToggleCompletion: { toggleCompletion($0) },
                     onAddAt: { start in
-                        addStart = start
-                        showingAddSheet = true
+                        addRequest = AddRequest(start: start)
                     },
                     canMove: canMove,
                     onRetime: { event, newStart, newEnd in
@@ -621,6 +624,10 @@ struct CalendarView: View {
                         } else {
                             viewModel.selectedDate = day
                         }
+                    } onLongPress: {
+                        // 꾹 누르기 → 그 날짜로 새 일정 (시작 시각은 새 일정 화면 기본값)
+                        viewModel.selectedDate = day
+                        addRequest = AddRequest(start: nil)
                     }
                 } else {
                     Color.clear.frame(height: 46)
@@ -867,9 +874,20 @@ private struct DayCell: View {
     let isToday: Bool
     let dotColors: [Color]
     let onTap: () -> Void
+    /// 꾹 누르기 — 그 날짜로 새 일정
+    var onLongPress: () -> Void = {}
+
+    /// 꾹 누른 손을 뗄 때 버튼 탭(선택·주 보기 드릴다운)이 같이 눌리지 않게
+    @State private var suppressTap = false
 
     var body: some View {
-        Button(action: onTap) {
+        Button {
+            if suppressTap {
+                suppressTap = false
+                return
+            }
+            onTap()
+        } label: {
             VStack(spacing: 3) {
                 Text("\(CalendarViewModel.calendar.component(.day, from: date))")
                     .font(.callout.weight(isToday || isSelected ? .semibold : .regular))
@@ -896,6 +914,15 @@ private struct DayCell: View {
             .frame(height: 46)
         }
         .buttonStyle(.plain)
+        .simultaneousGesture(
+            LongPressGesture(minimumDuration: 0.4).onEnded { _ in
+                suppressTap = true
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                onLongPress()
+                // 손을 떼지 않고 끝나는 경우(시트가 바로 덮음)에도 다음 탭은 정상으로
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1) { suppressTap = false }
+            }
+        )
     }
 
     private var numberColor: Color {

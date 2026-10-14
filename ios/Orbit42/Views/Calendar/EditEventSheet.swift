@@ -33,8 +33,23 @@ struct EditEventSheet: View {
     @State private var freshCalendars: [CalendarInfo]?
 
     /// 이동 가능한 대상 — 전체 캘린더 (다른 Google 계정 간 이동만 서버가 거부).
+    /// 옮길 수 있는 캘린더 — 보기 전용·보관한 캘린더는 빼되, 지금 소속 캘린더는 늘 보인다
     private var movableCalendars: [CalendarInfo] {
-        freshCalendars ?? viewModel.calendars
+        (freshCalendars ?? viewModel.calendars).filter {
+            ($0.canEdit && !$0.isArchived) || $0.id == event.calendarId
+        }
+    }
+
+    /// 참석자(나 말고)가 있는 구글 일정
+    private var hasGoogleAttendees: Bool {
+        event.isGoogle && event.attendees.contains(where: { !$0.isSelf })
+    }
+
+    /// 참석자가 있는 구글 일정은 Orbit42 캘린더로 옮기지 못한다 — 옮기면 구글 원본이 지워져
+    /// 참석자 쪽 일정이 알림 없이 사라지고 참석자 정보도 따라오지 않는다.
+    private var blockedCalendarIds: Set<String> {
+        guard hasGoogleAttendees else { return [] }
+        return Set(movableCalendars.filter(\.isNative).map(\.id))
     }
 
     /// 변경 감지용 원본 값
@@ -79,6 +94,27 @@ struct EditEventSheet: View {
                 }
                 .listRowBackground(Theme.surface)
 
+                if movableCalendars.count > 1 {
+                    Section {
+                        CalendarChips(
+                            calendars: movableCalendars,
+                            selection: $selectedCalendarId,
+                            disabledIds: blockedCalendarIds
+                        )
+                    } header: {
+                        Text("캘린더")
+                    } footer: {
+                        if !blockedCalendarIds.isEmpty {
+                            Text("참석자가 있는 구글 일정은 구글 캘린더 안에서만 옮길 수 있어요.")
+                                .foregroundStyle(Theme.secondaryText)
+                        } else if selectedCalendarId != event.calendarId {
+                            Text("저장하면 일정이 선택한 캘린더로 이동해요.")
+                                .foregroundStyle(Theme.secondaryText)
+                        }
+                    }
+                    .listRowBackground(Theme.surface)
+                }
+
                 Section {
                     Toggle("종일", isOn: $allDay)
                         .tint(Theme.accent)
@@ -96,28 +132,6 @@ struct EditEventSheet: View {
                 }
                 .listRowBackground(Theme.surface)
 
-                if movableCalendars.count > 1 {
-                    Section {
-                        Picker("캘린더", selection: $selectedCalendarId) {
-                            ForEach(movableCalendars) { calendar in
-                                HStack(spacing: 8) {
-                                    Circle()
-                                        .fill(calendar.displayColor)
-                                        .frame(width: 10, height: 10)
-                                    Text(calendar.name)
-                                }
-                                .tag(Optional(calendar.id))
-                            }
-                        }
-                        .tint(Theme.secondaryText)
-                    } footer: {
-                        if selectedCalendarId != event.calendarId {
-                            Text("저장하면 일정이 선택한 캘린더로 이동해요.")
-                                .foregroundStyle(Theme.secondaryText)
-                        }
-                    }
-                    .listRowBackground(Theme.surface)
-                }
 
                 EventLocationSection(
                     locationText: $locationText,
@@ -265,9 +279,8 @@ struct EditEventSheet: View {
         }
 
         // 참석자가 있는 구글 일정의 시간·날짜가 바뀌면 먼저 확인받는다 (확인해야만 참석자에게 메일).
-        // 캘린더를 함께 옮기는 수정은 새 일정으로 옮겨 만드는 길이라 알림을 보내지 않는다 — 확인도 띄우지 않는다.
-        if event.isGoogle, timeChanged, body.calendarId == nil,
-           event.attendees.contains(where: { !$0.isSelf }) {
+        // 구글 캘린더끼리 옮기며 시간을 바꿀 때도 같다 (Orbit42 캘린더로는 위에서 막는다).
+        if hasGoogleAttendees, timeChanged {
             pendingNotifyBody = body
             return
         }

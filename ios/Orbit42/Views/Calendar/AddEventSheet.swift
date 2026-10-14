@@ -79,8 +79,9 @@ struct AddEventSheet: View {
         return writableCalendars.first(where: { $0.id == id }).map { !$0.isNative } ?? false
     }
 
+    /// 일정을 넣을 수 있는 캘린더 — 보기 전용으로 공유받은 것과 보관한 것은 뺀다
     private var writableCalendars: [CalendarInfo] {
-        freshCalendars ?? viewModel.calendars
+        (freshCalendars ?? viewModel.calendars).filter { $0.canEdit && !$0.isArchived }
     }
 
     private func refreshCalendars() async {
@@ -111,6 +112,16 @@ struct AddEventSheet: View {
                 }
                 .listRowBackground(Theme.surface)
 
+                // 캘린더 — 버튼으로 모두 펼쳐 둔다. 제목 바로 아래라 키보드가 올라와도 보인다.
+                if !writableCalendars.isEmpty {
+                    Section {
+                        CalendarChips(calendars: writableCalendars, selection: $selectedCalendarId)
+                    } header: {
+                        Text("캘린더")
+                    }
+                    .listRowBackground(Theme.surface)
+                }
+
                 Section {
                     Toggle("종일", isOn: $allDay)
                         .tint(Theme.accent)
@@ -130,24 +141,6 @@ struct AddEventSheet: View {
                     )
                 }
                 .listRowBackground(Theme.surface)
-
-                // 캘린더가 하나뿐이면 고를 게 없으니 숨긴다(기본 캘린더로 저장).
-                if writableCalendars.count > 1 {
-                    Section {
-                        Picker("캘린더", selection: $selectedCalendarId) {
-                            ForEach(writableCalendars) { calendarInfo in
-                                HStack(spacing: 8) {
-                                    Circle()
-                                        .fill(calendarInfo.displayColor)
-                                        .frame(width: 10, height: 10)
-                                    Text(calendarInfo.name)
-                                }
-                                .tag(Optional(calendarInfo.id))
-                            }
-                        }
-                    }
-                    .listRowBackground(Theme.surface)
-                }
 
                 if showMore {
                     EventLocationSection(
