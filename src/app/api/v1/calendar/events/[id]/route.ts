@@ -145,6 +145,7 @@ export async function PATCH(
         targetId as string,
         sourceId ?? null,
         patch,
+        body.notifyAttendees === true,
       );
       if ("error" in result) {
         return Response.json({ error: result.error }, { status: 400 });

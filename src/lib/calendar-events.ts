@@ -643,6 +643,8 @@ export async function moveEventToCalendar(
   targetCalendarId: string,
   sourceCalendarId: string | null,
   patch: Partial<CalendarEventInput>,
+  /** 구글 캘린더끼리 옮기며 시간을 바꿀 때, 확인받은 앱이 true — 시간 patch 에 참석자 알림을 싣는다 */
+  notifyAttendees = false,
 ): Promise<{ ok: true; newId: string } | { error: string }> {
   const db = getAdminClient();
   const { data: target } = await db
@@ -771,6 +773,7 @@ export async function moveEventToCalendar(
           calendarId: target.google_calendar_id,
           eventId: googleId,
           requestBody: patchBody,
+          ...(notifyAttendees && patchBody.start ? { sendUpdates: "all" } : {}),
         });
       } catch {
         return { error: "캘린더는 옮겼지만 내용 수정에 실패했어요. 다시 시도해 주세요." };
