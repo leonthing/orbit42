@@ -181,6 +181,12 @@ export async function deleteMyAccount() {
     console.error("delete account", error);
     return { error: "탈퇴 처리에 실패했어요." };
   }
+  // 올린 사진 파일 — 계정 행을 지운 뒤에(행 삭제가 실패하면 파일도 그대로 둔다).
+  // 실패해도 탈퇴는 끝난 것으로 두고 실패한 폴더만 로그에 남긴다.
+  {
+    const { deleteUserStorage } = await import("@/lib/user-storage");
+    await deleteUserStorage(user.id as string);
+  }
   cookies().delete(COOKIE_NAME);
   return { success: true };
 }
