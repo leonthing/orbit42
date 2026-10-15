@@ -1,6 +1,6 @@
 import { apiSession, apiUserId } from "@/lib/api-auth";
 import { getAdminClient } from "@/lib/supabase";
-import { listEventPosts } from "@/lib/event-posts";
+import { listEventPosts, withGoogleEventInfo } from "@/lib/event-posts";
 import { isBlockedEitherWay } from "@/lib/blocks";
 
 export const dynamic = "force-dynamic";
@@ -49,7 +49,9 @@ export async function GET(
     viewer = follow ? "follower" : "public";
   }
 
-  const posts = await listEventPosts(target.id as string, viewer);
+  // 구글 일정 기록은 제목·시각이 비어 있다 — 본인이 볼 때만 구글에서 읽어 붙이고, 남에게는 날짜만.
+  const listed = await listEventPosts(target.id as string, viewer);
+  const posts = isMe ? await withGoogleEventInfo(target.id as string, listed) : listed;
   return Response.json({
     posts: posts.map((p) => ({
       id: p.id,
