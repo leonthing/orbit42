@@ -55,6 +55,11 @@ export async function adminDeleteUser(userId: string) {
     console.error("adminDeleteUser", error);
     return { error: "삭제에 실패했어요." };
   }
+  // 올린 사진 파일 — 계정 행을 지운 뒤에. 실패해도 삭제는 끝난 것으로 두고 로그만 남긴다.
+  {
+    const { deleteUserStorage } = await import("@/lib/user-storage");
+    await deleteUserStorage(userId);
+  }
   revalidatePath("/admin");
   return { ok: true as const };
 }
