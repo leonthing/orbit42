@@ -8,6 +8,9 @@ import {
   type CalendarEvent,
 } from "@/lib/calendar-events";
 
+import { anniversaryNumber } from "@/lib/recurrence";
+import { normalizeRRule } from "@/lib/recurrence-write";
+
 export const dynamic = "force-dynamic";
 
 function toApiEvent(e: CalendarEvent) {
@@ -33,7 +36,22 @@ function toApiEvent(e: CalendarEvent) {
     isBooking: Boolean(e.booking_id),
     bookingId: e.booking_id ?? null,
     bookingRole: e.booking_role ?? null,
+    // 반복 회차 — 앱은 수정·삭제 때 범위(이 일정만/이후 모두/모두)를 묻고, 캘린더 이동을 막는다
+    isRecurring: Boolean(e.series_id),
+    seriesId: e.series_id ?? null,
+    originalStart: e.original_start ?? null,
+    isAnniversary: e.is_anniversary === true,
+    anniversaryYears:
+      e.is_anniversary && e.series_start
+        ? anniversaryNumber(kstDate(e.series_start), kstDate(e.start_at))
+        : null,
   };
+}
+
+/** ISO 시각 → 그날(KST) "YYYY-MM-DD" */
+function kstDate(iso: string): string {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
+  return new Date(Date.parse(iso) + 9 * 3_600_000).toISOString().slice(0, 10);
 }
 
 async function listApiCalendars(userId: string) {
@@ -257,6 +275,10 @@ export async function POST(request: Request) {
     locationLat?: number | null;
     locationLng?: number | null;
     travelMin?: number | null;
+    /** 반복 규칙 (RFC 5545 RRULE, "RRULE:" 없어도 됨) — 없으면 한 번짜리 */
+    rrule?: string | null;
+    /** 매년 반복일 때만 — 기념일(n주년 표시, 2월 29일은 평년 2월 28일) */
+    isAnniversary?: boolean;
   };
   try {
     body = await request.json();
@@ -286,8 +308,19 @@ export async function POST(request: Request) {
     );
   }
 
+  let rrule: string | null = null;
+  if (body.rrule) {
+    rrule = normalizeRRule(body.rrule);
+    if (!rrule) {
+      return Response.json({ error: "반복 규칙이 올바르지 않아요." }, { status: 400 });
+    }
+  }
+  const isAnniversary = Boolean(body.isAnniversary) && !!rrule && /FREQ=YEARLY/.test(rrule);
+
   try {
     const event = await createEventForUser(userId, {
+      rrule,
+      is_anniversary: isAnniversary,
       title,
       description: body.description?.slice(0, 2000) ?? null,
       start_at: body.startAt as string,

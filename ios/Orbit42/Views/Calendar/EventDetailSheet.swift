@@ -187,6 +187,10 @@ struct EventDetailSheet: View {
                                 .foregroundStyle(Theme.secondaryText)
                         }
 
+                        if event.isRecurring {
+                            RepeatSummaryLabel(event: event, viewModel: viewModel)
+                        }
+
                         if let calendarInfo {
                             Label {
                                 Text(calendarInfo.name)
@@ -382,17 +386,28 @@ struct EventDetailSheet: View {
                 }
             }
             .confirmationDialog(
-                isGuestOfGoogleEvent ? "내 캘린더에서 뺄까요?" : "이 일정을 삭제할까요?",
+                isGuestOfGoogleEvent ? "내 캘린더에서 뺄까요?" : (isRecurringOwn ? "반복 일정 삭제" : "이 일정을 삭제할까요?"),
                 isPresented: $showingDeleteConfirm,
                 titleVisibility: .visible
             ) {
-                // 초대받은 구글 일정은 지워도 내 캘린더에서만 빠지고 주최자 쪽엔 불참으로 남는다 (실측)
-                Button(isGuestOfGoogleEvent ? "빼기" : "삭제", role: .destructive) { deleteEvent() }
+                if isRecurringOwn {
+                    // 반복 회차 — 범위를 고른다 (구글은 이후 모두 없음)
+                    Button("이 일정만", role: .destructive) { deleteEvent(scope: .this) }
+                    if !event.isGoogle {
+                        Button("이후 모두", role: .destructive) { deleteEvent(scope: .following) }
+                    }
+                    Button("모두", role: .destructive) { deleteEvent(scope: .all) }
+                } else {
+                    // 초대받은 구글 일정은 지워도 내 캘린더에서만 빠지고 주최자 쪽엔 불참으로 남는다 (실측)
+                    Button(isGuestOfGoogleEvent ? "빼기" : "삭제", role: .destructive) { deleteEvent() }
+                }
                 Button("취소", role: .cancel) {}
             } message: {
                 // 실측: sendUpdates 없이 지워도 구글이 주최자에게 '거절함' 메일을 보낸다
                 if isGuestOfGoogleEvent {
                     Text("주최자에게 불참 알림 메일이 가요.")
+                } else if let note = deleteNote {
+                    Text(note)
                 }
             }
             .alert("삭제하지 못했어요", isPresented: showErrorAlert) {
@@ -1288,12 +1303,25 @@ struct EventDetailSheet: View {
 
     // MARK: - 삭제
 
-    private func deleteEvent() {
+    /// 내가 지울 수 있는 반복 회차 (초대받은 구글 일정은 '빼기'라 범위를 묻지 않는다)
+    private var isRecurringOwn: Bool { event.isRecurring && !isGuestOfGoogleEvent }
+
+    /// 지우기 창의 안내 — 구글 '이후 모두' 없음, 참석자에게 따로 메일을 보내지 않음
+    private var deleteNote: String? {
+        var lines: [String] = []
+        if isRecurringOwn, event.isGoogle { lines.append("이후 모두는 구글 캘린더 앱에서 해 주세요.") }
+        if event.isGoogle, event.attendees.contains(where: { !$0.isSelf }) {
+            lines.append("참석자에게 따로 알림 메일은 보내지 않아요.")
+        }
+        return lines.isEmpty ? nil : lines.joined(separator: "\n")
+    }
+
+    private func deleteEvent(scope: RecurrenceScope? = nil) {
         isDeleting = true
         Task {
             defer { isDeleting = false }
             do {
-                try await viewModel.deleteEvent(event)
+                try await viewModel.deleteEvent(event, scope: scope)
                 dismiss()
             } catch let apiError as APIError {
                 errorMessage = apiError.errorDescription
@@ -1345,4 +1373,33 @@ struct EventDetailSheet: View {
         formatter.dateFormat = "M월 d일 (E) a h:mm"
         return formatter
     }()
+}
+
+
+/// 상세의 반복 한 줄 — "매주 월·수 · 6회", 기념일이면 "3주년"
+private struct RepeatSummaryLabel: View {
+    let event: CalendarEvent
+    let viewModel: CalendarViewModel
+    @State private var summary: String?
+
+    var body: some View {
+        Label {
+            HStack(spacing: 6) {
+                Text(summary ?? "반복")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.secondaryText)
+                if let years = event.anniversaryYears {
+                    AnniversaryBadge(years: years)
+                }
+            }
+        } icon: {
+            Image(systemName: "repeat")
+                .font(.subheadline)
+                .foregroundStyle(Theme.secondaryText)
+        }
+        .task {
+            guard summary == nil, let info = await viewModel.seriesInfo(event) else { return }
+            summary = RepeatRule(rrule: info.rrule, isAnniversary: info.isAnniversary)?.summary(start: event.startAt) ?? "반복"
+        }
+    }
 }

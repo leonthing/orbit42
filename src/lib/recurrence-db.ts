@@ -46,7 +46,7 @@ export async function selectEventsInRange<T extends { id: string; start_at: stri
 
   const { data: exRows } = await db
     .from("event_recurrence_exceptions")
-    .select("event_id, original_start, cancelled, start_at, end_at, title, description, location")
+    .select("event_id, original_start, cancelled, start_at, end_at, title, description, location, location_lat, location_lng, travel_min")
     .in("event_id", seriesRows.map((r) => r.id));
   const exceptions = (exRows ?? []) as RecurrenceException[];
 

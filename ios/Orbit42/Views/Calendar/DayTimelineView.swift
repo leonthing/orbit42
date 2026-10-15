@@ -562,6 +562,12 @@ struct DayTimelineView: View {
             mark.font = .caption.weight(.heavy)
             title = mark + title
         }
+        // 기념일 — "결혼기념일 · 3주년"
+        if let years = event.anniversaryYears {
+            var suffix = AttributedString(" · \(years)주년")
+            suffix.font = .caption2.weight(.bold)
+            title += suffix
+        }
         guard event.archived else { return title }
         var tag = AttributedString("보관 ")
         tag.font = .caption2.weight(.bold)

@@ -102,6 +102,12 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
     var reminderMinutes: Int?
     /// 다시 알림 시각 (1.5.0 B) — 서버가 지난 것은 내려주지 않는다
     var remindAt: Date?
+    /// 반복 회차(1.5.1) — 수정·지우기 때 범위를 묻고, 캘린더 칩을 막는다
+    let isRecurring: Bool
+    let seriesId: String?
+    /// 기념일(매년 반복 + 기념일 켬) — 그해가 몇 주년인지(서버 계산, 첫해는 nil)
+    let isAnniversary: Bool
+    let anniversaryYears: Int?
 
     var isGoogle: Bool { source == "google" }
     /// 구글 일정의 시간·내용을 바꿀 수 있는지 — 주최자일 때만.
@@ -117,6 +123,7 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
         case location, locationLat, locationLng, travelMin
         case attendees, isOrganizer, isBooking, bookingId, bookingRole, guestsCanModify
         case importance, rating, ratingNote, reminderMinutes, remindAt
+        case isRecurring, seriesId, isAnniversary, anniversaryYears
     }
 
     init(from decoder: Decoder) throws {
@@ -151,6 +158,10 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
         ratingNote = try? container.decodeIfPresent(String.self, forKey: .ratingNote)
         reminderMinutes = try? container.decodeIfPresent(Int.self, forKey: .reminderMinutes)
         remindAt = ((try? container.decodeIfPresent(String.self, forKey: .remindAt)) ?? nil).flatMap(APIDateParser.parse)
+        isRecurring = (try? container.decodeIfPresent(Bool.self, forKey: .isRecurring)) ?? false
+        seriesId = try? container.decodeIfPresent(String.self, forKey: .seriesId)
+        isAnniversary = (try? container.decodeIfPresent(Bool.self, forKey: .isAnniversary)) ?? false
+        anniversaryYears = try? container.decodeIfPresent(Int.self, forKey: .anniversaryYears)
 
         let startRaw = try container.decode(String.self, forKey: .startAt)
         let endRaw = try container.decode(String.self, forKey: .endAt)
@@ -251,6 +262,9 @@ struct CreateEventRequest: Encodable {
     var locationLat: Double?
     var locationLng: Double?
     var travelMin: Int?
+    /// 반복 규칙(RRULE 본문) — 없으면 한 번짜리
+    var rrule: String?
+    var isAnniversary: Bool?
 }
 
 struct CreateEventResponse: Decodable {
@@ -278,6 +292,11 @@ struct UpdateEventRequest: Encodable {
     var sourceCalendarId: String?
     /// 구글 일정 시간 변경을 참석자에게 메일로 알린다 (하루 보기 드래그에서 확인받은 뒤에만 true)
     var notifyAttendees: Bool?
+    /// 반복 회차 범위 — "this" | "following" | "all"
+    var scope: String?
+    /// 반복 규칙 바꾸기 — "" 를 보내면 반복 끄기
+    var rrule: String?
+    var isAnniversary: Bool?
 }
 
 /// PUT /api/v1/calendar/events/{id}/annotation — 바뀐 것만 보낸다

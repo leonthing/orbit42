@@ -195,6 +195,9 @@ export type RecurrenceException = {
   title?: string | null;
   description?: string | null;
   location?: string | null;
+  location_lat?: number | null;
+  location_lng?: number | null;
+  travel_min?: number | null;
 };
 
 type SeriesRow = {
@@ -210,14 +213,14 @@ type SeriesRow = {
 /**
  * 반복 일정 행을 [rangeStart, rangeEnd] 안에 시작하는 회차들로 펼친다(기존 조회와 같은 '시작이 기간 안' 기준).
  * 예외로 옮긴 회차는 옮긴 시각 기준으로 기간을 본다. 취소한 회차는 뺀다.
- * 결과 행: 원래 칸 그대로 + id(회차 id)·start_at·end_at(회차)·series_id·original_start.
+ * 결과 행: 원래 칸 그대로 + id(회차 id)·start_at·end_at(회차)·series_id·original_start·series_start(기념일 n주년 계산용).
  */
 export function expandSeries<T extends SeriesRow>(
   row: T,
   exceptions: RecurrenceException[],
   rangeStart: Date,
   rangeEnd: Date,
-): Array<T & { series_id: string; original_start: string }> {
+): Array<T & { series_id: string; original_start: string; series_start: string }> {
   const rule = parseRRule(row.rrule ?? null);
   const allDay = !!row.all_day;
   const dtstart = new Date(row.start_at);
@@ -228,7 +231,7 @@ export function expandSeries<T extends SeriesRow>(
   );
   // 예외로 기간 밖에서 안으로 옮겨 온 회차도 잡도록 앞뒤 넉넉히(최대 1년) 펼친 뒤 거른다
   const starts = occurrenceStarts(dtstart, rule, allDay, new Date(rangeEnd.getTime() + 366 * DAY_MS), !!row.is_anniversary);
-  const out: Array<T & { series_id: string; original_start: string }> = [];
+  const out: Array<T & { series_id: string; original_start: string; series_start: string }> = [];
   for (const original of starts) {
     const ex = byStart.get(original.getTime());
     if (ex?.cancelled) continue;
@@ -242,10 +245,17 @@ export function expandSeries<T extends SeriesRow>(
       end_at: row.end_at || ex?.end_at ? end.toISOString() : row.end_at,
       series_id: row.id,
       original_start: original.toISOString(),
-    } as T & { series_id: string; original_start: string };
+      series_start: dtstart.toISOString(),
+    } as T & { series_id: string; original_start: string; series_start: string };
     if (ex?.title) (occ as SeriesRow).title = ex.title;
     if (ex?.description !== undefined && ex?.description !== null) (occ as SeriesRow).description = ex.description;
     if (ex?.location !== undefined && ex?.location !== null) (occ as SeriesRow).location = ex.location;
+    // 좌표는 장소와 한 묶음 — 장소를 이 회차만 바꿨으면 좌표도 예외 값(없으면 null)
+    if (ex?.location !== undefined && ex?.location !== null) {
+      (occ as SeriesRow).location_lat = ex.location_lat ?? null;
+      (occ as SeriesRow).location_lng = ex.location_lng ?? null;
+    }
+    if (ex?.travel_min !== undefined && ex?.travel_min !== null) (occ as SeriesRow).travel_min = ex.travel_min > 0 ? ex.travel_min : null;
     out.push(occ);
   }
   return out;
