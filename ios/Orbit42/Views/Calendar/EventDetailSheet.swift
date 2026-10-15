@@ -565,7 +565,7 @@ struct EventDetailSheet: View {
             .listRowBackground(Theme.surface)
         } else if isGuestOfGoogleEvent {
             Section {
-                Label("주최자만 수정할 수 있어요", systemImage: "lock")
+                Label("초대받은 일정이라 시간·내용·참석자는 주최자만 바꿀 수 있어요", systemImage: "lock")
                     .font(.subheadline)
                     .foregroundStyle(Theme.secondaryText)
             }
@@ -1210,7 +1210,8 @@ struct EventDetailSheet: View {
                     Label("참석자 추가", systemImage: "person.badge.plus")
                         .foregroundStyle(Theme.accent)
                 }
-            } else {
+            } else if !isGuestOfGoogleEvent {
+                // 초대받은 구글 일정은 위의 한 줄 안내(editNoticeSection)가 대신한다
                 Label("주최자만 참석자를 추가할 수 있어요", systemImage: "lock")
                     .font(.subheadline)
                     .foregroundStyle(Theme.secondaryText)
@@ -1224,11 +1225,13 @@ struct EventDetailSheet: View {
         } header: {
             Text("참석자")
         } footer: {
-            Text(event.isGoogle
-                 ? (event.isOrganizer
-                    ? "구글 캘린더 일정이라 추가한 사람은 구글 일정 참석자로 들어가고, 구글이 초대 메일을 보내요."
-                    : "구글 캘린더에서 초대받은 일정이라 여기서는 참석자를 보기만 해요.")
-                 : "orbit42 사용자를 태그하거나 이메일로 초대할 수 있어요. 태그하면 상대 캘린더에도 이 일정이 보여요.")
+            if !isGuestOfGoogleEvent {
+                Text(event.isGoogle
+                     ? (event.isOrganizer
+                        ? "구글 캘린더 일정이라 추가한 사람은 구글 일정 참석자로 들어가고, 구글이 초대 메일을 보내요."
+                        : "구글 캘린더에서 초대받은 일정이라 여기서는 참석자를 보기만 해요.")
+                     : "orbit42 사용자를 태그하거나 이메일로 초대할 수 있어요. 태그하면 상대 캘린더에도 이 일정이 보여요.")
+            }
         }
         .listRowBackground(Theme.surface)
         // 주의: sheet/task 를 이 Section 에 붙이면 목록 리빌드 때 시트가 바로

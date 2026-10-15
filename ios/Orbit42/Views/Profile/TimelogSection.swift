@@ -119,13 +119,16 @@ struct TimelogViewerSheet: View {
                     .frame(maxHeight: 420)
 
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(post.title)
-                            .font(.title3.weight(.semibold))
-                            .foregroundStyle(Theme.primaryText)
+                        // 남이 보는 구글 일정 기록은 제목이 비어 온다(제목·시각을 저장하지 않음) — 제목 줄 없이 날짜를 제목 자리에
+                        if !post.title.isEmpty {
+                            Text(post.title)
+                                .font(.title3.weight(.semibold))
+                                .foregroundStyle(Theme.primaryText)
+                        }
                         if let date = post.startDate {
                             Text(Self.dayFormatter.string(from: date))
-                                .font(.subheadline)
-                                .foregroundStyle(Theme.secondaryText)
+                                .font(post.title.isEmpty ? .title3.weight(.semibold) : .subheadline)
+                                .foregroundStyle(post.title.isEmpty ? Theme.primaryText : Theme.secondaryText)
                         }
                         if let note = post.note, !note.isEmpty {
                             Text(note)
