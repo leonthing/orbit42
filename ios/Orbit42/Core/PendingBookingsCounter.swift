@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// 받은 예약 중 승인 대기 건수 — 프로필 탭 배지와 프로필의 예약 행에 쓴다.
+/// 받은 예약 중 승인 대기 + 받은 시간 요청 건수 — 예약 탭 배지와 프로필의 예약 행에 쓴다.
 /// 예약 화면이 목록을 새로 받을 때마다 알림으로 함께 갱신된다(같은 요청을 두 번 하지 않게).
 @MainActor
 @Observable
@@ -27,7 +27,8 @@ final class PendingBookingsCounter {
         count = Self.pending(in: response)
     }
 
+    /// 승인 대기 예약 + 답하지 않은 시간 요청 (위젯 '요청 n건'과 같은 셈)
     static func pending(in response: BookingsResponse) -> Int {
-        response.host.filter { $0.status == .pending }.count
+        response.host.filter { $0.status == .pending }.count + response.receivedTimeRequests.count
     }
 }

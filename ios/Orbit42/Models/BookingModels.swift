@@ -278,7 +278,40 @@ struct GuestBooking: Decodable, Identifiable, Sendable, BookingDisplayable {
 struct BookingsResponse: Decodable {
     let host: [HostBooking]
     let guest: [GuestBooking]
+    /// 프로필로 받은 시간 요청 중 아직 답하지 않은 것 (옛 서버는 안 줌 → nil)
+    let timeRequests: [ReceivedTimeRequest]?
+
+    var receivedTimeRequests: [ReceivedTimeRequest] { timeRequests ?? [] }
 }
+
+/// 받은 시간 요청 — `GET /api/v1/bookings` 의 timeRequests (웹 받은 예약 화면과 같은 칸)
+struct ReceivedTimeRequest: Decodable, Identifiable, Sendable {
+    struct Requester: Decodable, Sendable {
+        let username: String
+        let displayName: String?
+        let avatarUrl: String?
+    }
+
+    let id: String
+    let message: String
+    let durationMin: Int
+    let budgetCents: Int?
+    let preferredTimes: String?
+    let createdAt: String
+    let requester: Requester?
+
+    var requesterName: String {
+        requester.map { ($0.displayName?.isEmpty == false ? $0.displayName : nil) ?? $0.username } ?? "익명"
+    }
+    var createdDate: Date? { APIDateParser.parse(createdAt) }
+}
+
+/// `POST /api/v1/time-requests/{id}/accept`
+struct AcceptTimeRequestBody: Encodable {
+    let startAt: String
+}
+
+struct EmptyBody: Encodable {}
 
 struct BookingActionRequest: Encodable {
     let action: String

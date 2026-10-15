@@ -10,6 +10,9 @@ struct BookingsView: View {
     @State private var deleteTargetId: String?
     /// 카드 탭 → 상세로 push 할 대상
     @State private var detailTarget: BookingDetailTarget?
+    /// 받은 시간 요청 — 수락할 시간 고르기 시트 / 거절 확인 대상
+    @State private var acceptRequestTarget: ReceivedTimeRequest?
+    @State private var declineRequestTarget: ReceivedTimeRequest?
     @Environment(TabRouter.self) private var router
 
     /// 프로필에서 push 할 때는 자체 NavigationStack 없이 쓴다 (중첩 방지).
@@ -101,6 +104,27 @@ struct BookingsView: View {
             } message: { _ in
                 Text("내 목록에서만 사라지고 상대방의 기록은 유지돼요.")
             }
+            .confirmationDialog(
+                "이 시간 요청을 거절할까요?",
+                isPresented: Binding(
+                    get: { declineRequestTarget != nil },
+                    set: { if !$0 { declineRequestTarget = nil } }
+                ),
+                titleVisibility: .visible,
+                presenting: declineRequestTarget
+            ) { request in
+                Button("거절", role: .destructive) {
+                    Task { await viewModel.declineTimeRequest(request.id) }
+                }
+                Button("돌아가기", role: .cancel) {}
+            } message: { request in
+                Text("\(request.requesterName)님에게 지금은 시간을 내기 어렵다는 알림이 가요.")
+            }
+            .sheet(item: $acceptRequestTarget) { request in
+                AcceptTimeRequestSheet(request: request) { start in
+                    await viewModel.acceptTimeRequest(request.id, startAt: start)
+                }
+            }
             .navigationDestination(item: $detailTarget) { target in
                 BookingDetailView(
                     viewModel: viewModel,
@@ -141,14 +165,14 @@ struct BookingsView: View {
         if let data = viewModel.data {
             switch viewModel.segment {
             case .host:
-                if data.host.isEmpty {
+                if data.host.isEmpty, data.receivedTimeRequests.isEmpty {
                     emptyState(
                         icon: "tray",
                         title: "받은 예약이 없어요",
                         message: "예약 링크를 공유하면 받은 예약이 이곳에 모여요"
                     )
                 } else {
-                    hostList(data.host)
+                    hostList(data.host, timeRequests: data.receivedTimeRequests)
                 }
             case .guest:
                 if data.guest.isEmpty {
@@ -229,7 +253,7 @@ struct BookingsView: View {
 
     // MARK: - 받은 예약 (host)
 
-    private func hostList(_ bookings: [HostBooking]) -> some View {
+    private func hostList(_ bookings: [HostBooking], timeRequests: [ReceivedTimeRequest]) -> some View {
         let now = Date()
         let upcoming = bookings
             .filter { $0.scheduledAt >= now }
@@ -248,6 +272,23 @@ struct BookingsView: View {
         return List {
             hostStats(pendingCount: pendingCount, upcomingCount: upcomingCount)
                 .bookingRowChrome()
+
+            // 프로필로 받은 시간 요청 — 웹 받은 예약 화면처럼 맨 위에 (없으면 구역 자체가 없다)
+            if !timeRequests.isEmpty {
+                Section {
+                    ForEach(timeRequests) { request in
+                        TimeRequestRow(
+                            request: request,
+                            isActing: viewModel.actingIds.contains(request.id),
+                            onAccept: { acceptRequestTarget = request },
+                            onDecline: { declineRequestTarget = request }
+                        )
+                        .bookingRowChrome()
+                    }
+                } header: {
+                    sectionHeader("시간 요청")
+                }
+            }
 
             if !needsAction.isEmpty {
                 Section {
@@ -497,6 +538,126 @@ private struct HostBookingRow: View {
         .opacity(booking.status == .canceled ? 0.55 : 1)
         .contentShape(Rectangle())
         .onTapGesture(perform: onOpen)
+    }
+}
+
+// MARK: - 받은 시간 요청 행
+
+private struct TimeRequestRow: View {
+    let request: ReceivedTimeRequest
+    let isActing: Bool
+    let onAccept: () -> Void
+    let onDecline: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 10) {
+                DiscoverAvatar(
+                    url: request.requester?.avatarUrl.flatMap(URL.init(string:)),
+                    name: request.requesterName,
+                    size: 32
+                )
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(request.requesterName)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Theme.primaryText)
+                    Text(detailLine)
+                        .font(.footnote)
+                        .foregroundStyle(Theme.secondaryText)
+                }
+                Spacer(minLength: 0)
+                StatusBadge(text: "요청", color: Theme.accent)
+            }
+
+            Text(request.message)
+                .font(.footnote)
+                .foregroundStyle(Theme.primaryText)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let preferred = request.preferredTimes, !preferred.isEmpty {
+                Label("희망 시간: \(preferred)", systemImage: "clock")
+                    .font(.caption)
+                    .foregroundStyle(Theme.secondaryText)
+            }
+
+            HStack(spacing: 8) {
+                BookingActionButton(title: "시간 정해 수락", prominent: true, disabled: isActing, action: onAccept)
+                BookingActionButton(title: "거절", prominent: false, disabled: isActing, action: onDecline)
+            }
+            .padding(.top, 2)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    /// "60분 · ₩30,000 제안 · 3시간 전"
+    private var detailLine: String {
+        var parts = ["\(request.durationMin)분"]
+        if let cents = request.budgetCents, cents > 0 {
+            parts.append("₩\((cents / 100).formatted()) 제안")
+        }
+        if let created = request.createdDate {
+            parts.append(Self.relative.localizedString(for: created, relativeTo: Date()))
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    private static let relative: RelativeDateTimeFormatter = {
+        let f = RelativeDateTimeFormatter()
+        f.locale = Locale(identifier: "ko_KR")
+        f.unitsStyle = .full
+        return f
+    }()
+}
+
+/// 시간 요청 수락 — 시작 시각을 골라 확정 예약을 만든다(길이는 요청한 길이).
+private struct AcceptTimeRequestSheet: View {
+    let request: ReceivedTimeRequest
+    let onAccept: (Date) async -> Bool
+    @Environment(\.dismiss) private var dismiss
+    @State private var start = AcceptTimeRequestSheet.defaultStart()
+    @State private var isSaving = false
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    DatePicker("시작", selection: $start, in: Date()..., displayedComponents: [.date, .hourAndMinute])
+                    LabeledContent("길이", value: "\(request.durationMin)분")
+                } footer: {
+                    Text("수락하면 이 시간으로 확정 예약이 생기고 \(request.requesterName)님에게 알림이 가요.")
+                }
+                .listRowBackground(Theme.surface)
+            }
+            .scrollContentBackground(.hidden)
+            .background(Theme.background)
+            .navigationTitle("시간 정해 수락")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("취소") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("수락") {
+                        isSaving = true
+                        Task {
+                            if await onAccept(start) { dismiss() }
+                            isSaving = false
+                        }
+                    }
+                    .disabled(isSaving)
+                }
+            }
+        }
+        .presentationDetents([.medium])
+    }
+
+    /// 다음 정시
+    private static func defaultStart() -> Date {
+        let cal = Calendar.current
+        let next = Date().addingTimeInterval(3600)
+        return cal.date(from: cal.dateComponents([.year, .month, .day, .hour], from: next)) ?? next
     }
 }
 
