@@ -269,10 +269,12 @@ export default function PrivacyPage() {
                 요청대로 이용자의 Google 캘린더에 반영합니다. 참석자가 있는 일정의
                 시간을 바꿀 때 이용자가 알림을 고르면 Google이 참석자에게 변경 메일을
                 보내고, 초대받은 일정을 지우면 Google이 주최자에게 불참 응답을 보낼 수
-                있습니다. 이용자가 일정에 남긴 알림·중요도·별점·다시 알림은 Google 일정
-                식별자와 함께 서비스에 저장되며, Google 일정의 제목·시각은 저장하지
-                않습니다. 이 값은 회원 탈퇴 시 즉시 삭제되며, Google 연결을 해제해도
-                이용자가 다시 연결할 때를 위해 남아 있습니다.
+                있습니다. 이용자가 일정에 남긴 알림·중요도·별점·다시 알림·완료
+                표시·분류·수익 기록·사진 기록 등은 Google 일정 식별자와 함께 서비스에 저장됩니다.
+                Google 일정의 제목·시각은 저장하지 않으며, 사진 기록을 남긴 일정은
+                정렬·표시를 위해 그 날짜만 저장합니다. 이 값들은 회원 탈퇴 시 올린 파일을
+                포함해 즉시 삭제되며, Google 연결을 해제해도 이용자가 다시 연결할 때를
+                위해 남아 있습니다.
               </li>
               <li>
                 <b>공유</b>: Google 사용자 데이터를 제3자에게 판매하거나 제공하지
@@ -331,9 +333,12 @@ export default function PrivacyPage() {
                 user chooses to notify attendees when changing an event&apos;s time,
                 Google emails the attendees; deleting an event the user was invited
                 to may make Google send a decline to the organizer. Reminders,
-                importance, ratings and follow-up reminders the user sets on an
-                event are stored with the Google event ID; the event&apos;s title and
-                time are not stored. These values are deleted immediately when the
+                importance, ratings, follow-up reminders, completion marks,
+                categories, earnings records, photo records and other values the
+                user adds to an event are stored with the Google event ID. The
+                event&apos;s title and time are not stored; for an event with a photo
+                record, only its date is stored for sorting and display. These
+                values, including uploaded files, are deleted immediately when the
                 account is deleted; they remain after disconnecting Google so they
                 reappear if the user reconnects.
               </p>
@@ -389,7 +394,8 @@ export default function PrivacyPage() {
               <li>
                 2026-10-15: Google 캘린더 일정 직접 만들기·고치기·지우기·다른 캘린더로
                 옮기기(반복 일정 포함), 참석자 변경 알림·불참 응답, 일정에 남긴
-                알림·중요도·별점·다시 알림의 저장과 삭제 시점을 사용 목적에 추가
+                알림·중요도·별점·다시 알림·완료 표시·분류·수익 기록·사진 기록의 저장
+                범위(Google 일정 제목·시각은 저장하지 않음)와 삭제 시점을 사용 목적에 추가
               </li>
             </List>
           </Section>
