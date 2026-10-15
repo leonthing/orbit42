@@ -4,7 +4,9 @@ import UserNotifications
 /// 일정 알림 (1.5.0 A 2차) — 서버 푸시 없이 기기 로컬 알림으로.
 /// 앞 14일치 일정을 받아 '시작 - 알림 시점'에 울리도록 예약하고, 일정이 바뀔 때마다 통째로 다시 계산한다.
 /// iOS 대기 알림 한도(64개) 안에서 가까운 것부터. 종일·완료·보관 일정은 알리지 않는다.
-/// 구글 일정은 설정 "구글 일정도 알림"을 켰을 때만 (구글 쪽 알림 설정은 건드리지 않음).
+/// 사용자가 고른 알림(일정별 알림 시점, '중요함')은 늘 울린다 — 구글 일정이어도.
+/// 설정의 두 스위치는 그 밖의 일정을 기본 알림 시점으로 울릴지만 정한다(구글 일정 스위치는 기본 꺼짐).
+/// '중요함'은 30분 전 + 10분 전 두 번(일정별로 시점을 골랐으면 그 값 한 번).
 @MainActor
 final class EventReminders {
     static let shared = EventReminders()
@@ -16,6 +18,9 @@ final class EventReminders {
     nonisolated static let maxPending = 64
 
     private var pending: Task<Void, Never>?
+    /// 방금 '중요함'으로 바꾸거나 알림을 고른 일정 — 알림 시각이 이미 지났어도 시작 전이면 바로 한 번 알린다.
+    /// 다음 계산 한 번에만 쓰고 비운다(새로 고칠 때마다 다시 울리지 않게).
+    private var justChosen: [String: Date] = [:]
     private let center = UNUserNotificationCenter.current()
 
     /// 일정을 바꾼 직후 여러 번 불려도 한 번만 돌도록 잠깐 모아서 다시 계산한다.
@@ -25,6 +30,15 @@ final class EventReminders {
             try? await Task.sleep(nanoseconds: 800_000_000)
             guard !Task.isCancelled else { return }
             await refresh()
+        }
+    }
+
+    /// 사용자가 이 일정에 알림을 원한다고 고른 순간('중요함'·알림 시점) — 권한을 그때 묻고, 늦게 고른 경우 바로 한 번 알린다.
+    func userChose(eventId: String) {
+        justChosen[eventId] = Date()
+        Task { @MainActor in
+            await requestAuthorizationIfNeeded()
+            refreshSoon()
         }
     }
 
@@ -64,7 +78,10 @@ final class EventReminders {
         // 다시 알림은 사용자가 직접 건 것이라 '일정 알림' 설정과 관계없이 울린다.
         let reminders = (await fetchReminders() ?? []).filter { !$0.missing && $0.remindDate > Date() }
         let remindPlans = Array(reminders.prefix(Self.maxPending))
-        let plans = Self.plan(events: events, settings: settings, now: Date(), limit: Self.maxPending - remindPlans.count)
+        let now = Date()
+        let chosen = Set(justChosen.filter { now.timeIntervalSince($0.value) < 600 }.keys)
+        justChosen.removeAll()
+        let plans = Self.plan(events: events, rules: Rules(settings), now: now, limit: Self.maxPending - remindPlans.count, justChosen: chosen)
         await removeOurs()
         for reminder in remindPlans {
             let content = UNMutableNotificationContent()
@@ -85,11 +102,17 @@ final class EventReminders {
             content.body = plan.body
             content.sound = .default
             content.userInfo = ["eventId": plan.event.id, "start": plan.event.startAt.timeIntervalSince1970]
-            let parts = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute, .second], from: plan.fireDate)
+            let trigger: UNNotificationTrigger
+            if plan.immediate {
+                trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+            } else {
+                let parts = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute, .second], from: plan.fireDate)
+                trigger = UNCalendarNotificationTrigger(dateMatching: parts, repeats: false)
+            }
             let request = UNNotificationRequest(
-                identifier: Self.identifierPrefix + plan.event.id,
+                identifier: Self.identifierPrefix + plan.event.id + "#\(plan.minutes)",
                 content: content,
-                trigger: UNCalendarNotificationTrigger(dateMatching: parts, repeats: false)
+                trigger: trigger
             )
             try? await center.add(request)
         }
@@ -98,26 +121,79 @@ final class EventReminders {
     struct Plan {
         let event: CalendarEvent
         let fireDate: Date
+        /// 시작 몇 분 전 알림인지 (즉시 알림은 남은 분)
+        let minutes: Int
+        /// 알림 시각이 지났지만 방금 고른 경우 — 바로 한 번
+        let immediate: Bool
         let body: String
     }
 
+    /// 계산에 쓰는 설정 값 — 테스트에서 AppSettings 없이 넣을 수 있게 따로 둔다.
+    struct Rules {
+        var notifyOrbitEvents: Bool
+        var notifyGoogleEvents: Bool
+        var defaultMinutes: Int
+
+        init(notifyOrbitEvents: Bool, notifyGoogleEvents: Bool, defaultMinutes: Int) {
+            self.notifyOrbitEvents = notifyOrbitEvents
+            self.notifyGoogleEvents = notifyGoogleEvents
+            self.defaultMinutes = defaultMinutes
+        }
+
+        @MainActor init(_ settings: AppSettings) {
+            self.init(
+                notifyOrbitEvents: settings.notifyOrbitEvents,
+                notifyGoogleEvents: settings.notifyGoogleEvents,
+                defaultMinutes: settings.defaultReminder.rawValue
+            )
+        }
+    }
+
+    /// '중요함' 일정의 알림 시점 (일정별로 고른 값이 없을 때)
+    nonisolated static let importantMinutes = [30, 10]
+
+    /// 이 일정을 시작 몇 분 전에 울릴지 — 빈 배열이면 울리지 않는다.
+    nonisolated static func offsets(for event: CalendarEvent, rules: Rules) -> [Int] {
+        if let chosen = event.reminderMinutes {                  // 일정별로 고른 값이 우선 (스위치와 무관)
+            return chosen >= 0 ? [chosen] : []
+        }
+        if event.importance == .high { return importantMinutes } // 중요함 (스위치와 무관)
+        let on = event.isGoogle ? rules.notifyGoogleEvents : rules.notifyOrbitEvents
+        return on && rules.defaultMinutes >= 0 ? [rules.defaultMinutes] : []
+    }
+
     /// 무엇을 언제 울릴지 — 순수 계산(테스트·확인용으로 따로 둔다).
-    static func plan(events: [CalendarEvent], settings: AppSettings, now: Date, limit: Int = maxPending) -> [Plan] {
+    nonisolated static func plan(
+        events: [CalendarEvent],
+        rules: Rules,
+        now: Date,
+        limit: Int = maxPending,
+        justChosen: Set<String> = []
+    ) -> [Plan] {
         var seen = Set<String>()
-        let plans: [Plan] = events.compactMap { event in
-            guard !event.allDay, !event.completed, !event.archived, !event.isInvite else { return nil }
-            guard seen.insert(event.id).inserted else { return nil }
-            if event.isGoogle ? !settings.notifyGoogleEvents : !settings.notifyOrbitEvents { return nil }
-            let minutes = event.reminderMinutes ?? settings.defaultReminder.rawValue
-            guard minutes >= 0 else { return nil }
-            let fire = event.startAt.addingTimeInterval(-Double(minutes) * 60)
-            guard fire > now else { return nil }
-            return Plan(event: event, fireDate: fire, body: body(for: event, minutes: minutes))
+        var plans: [Plan] = []
+        for event in events {
+            guard !event.allDay, !event.completed, !event.archived, !event.isInvite else { continue }
+            guard seen.insert(event.id).inserted else { continue }
+            let offsets = offsets(for: event, rules: rules)
+            guard !offsets.isEmpty, event.startAt > now else { continue }
+            let future = offsets.compactMap { minutes -> Plan? in
+                let fire = event.startAt.addingTimeInterval(-Double(minutes) * 60)
+                guard fire > now else { return nil }
+                return Plan(event: event, fireDate: fire, minutes: minutes, immediate: false, body: body(for: event, minutes: minutes))
+            }
+            if future.isEmpty, justChosen.contains(event.id) {
+                // 늦게 고름 — 알림 시각은 지났지만 아직 시작 전: 바로 한 번 ("5분 뒤 · 오후 8:25")
+                let left = max(0, Int((event.startAt.timeIntervalSince(now) / 60).rounded(.up)))
+                plans.append(Plan(event: event, fireDate: now, minutes: left, immediate: true, body: body(for: event, minutes: left)))
+            } else {
+                plans.append(contentsOf: future)
+            }
         }
         return Array(plans.sorted { $0.fireDate < $1.fireDate }.prefix(max(0, limit)))
     }
 
-    private static let timeFormatter: DateFormatter = {
+    nonisolated private static let timeFormatter: DateFormatter = {
         let f = DateFormatter()
         f.locale = Locale(identifier: "ko_KR")
         f.dateFormat = "a h:mm"
@@ -125,7 +201,7 @@ final class EventReminders {
     }()
 
     /// "10분 뒤 · 오전 10:00" (+ 장소 한 줄)
-    static func body(for event: CalendarEvent, minutes: Int) -> String {
+    nonisolated static func body(for event: CalendarEvent, minutes: Int) -> String {
         let lead: String
         switch minutes {
         case 0: lead = "지금"

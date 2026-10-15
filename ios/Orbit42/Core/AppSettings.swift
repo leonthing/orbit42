@@ -188,6 +188,11 @@ final class AppSettings {
         UserDefaults.standard.set(value, forKey: Self.notifyGoogleKey)
     }
 
+    /// "구글 일정도 이 앱에서 알릴까요?"를 한 번 물었는지 (답과 상관없이 다시 묻지 않는다)
+    private static let askedGoogleNotifyKey = "askedGoogleNotify"
+    var askedGoogleNotify: Bool { UserDefaults.standard.bool(forKey: Self.askedGoogleNotifyKey) }
+    func markAskedGoogleNotify() { UserDefaults.standard.set(true, forKey: Self.askedGoogleNotifyKey) }
+
     func setDefaultReminder(_ value: ReminderOption) {
         defaultReminder = value
         UserDefaults.standard.set(value.rawValue, forKey: Self.defaultReminderKey)

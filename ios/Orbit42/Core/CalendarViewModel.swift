@@ -366,6 +366,8 @@ final class CalendarViewModel {
                 body: UpdateAnnotationRequest(importance: importance.rawValue)
             )
             WidgetBridge.reload(); EventReminders.shared.refreshSoon()
+            // '중요함'은 구글 일정이어도 30분·10분 전에 울린다 — 권한을 그때 묻고, 늦게 표시했으면 바로 한 번
+            if importance == .high { EventReminders.shared.userChose(eventId: event.id) }
         } catch {
             mutate(event.id) { $0.importance = previous }
             throw error
@@ -386,6 +388,8 @@ final class CalendarViewModel {
                 body: body
             )
             EventReminders.shared.refreshSoon()
+            // 일정별로 고른 알림은 스위치와 상관없이 울린다
+            if let minutes, minutes >= 0 { EventReminders.shared.userChose(eventId: event.id) }
         } catch {
             mutate(event.id) { $0.reminderMinutes = previous }
             throw error
