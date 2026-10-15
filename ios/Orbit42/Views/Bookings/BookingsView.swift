@@ -270,7 +270,7 @@ struct BookingsView: View {
             .count
 
         return List {
-            hostStats(pendingCount: pendingCount, upcomingCount: upcomingCount)
+            hostStats(requestCount: timeRequests.count, pendingCount: pendingCount, upcomingCount: upcomingCount)
                 .bookingRowChrome()
 
             // 프로필로 받은 시간 요청 — 웹 받은 예약 화면처럼 맨 위에 (없으면 구역 자체가 없다)
@@ -364,8 +364,15 @@ struct BookingsView: View {
         }
     }
 
-    private func hostStats(pendingCount: Int, upcomingCount: Int) -> some View {
+    /// 탭 배지(시간 요청 + 승인 대기)와 같은 셈이 보이게 — 시간 요청은 있을 때만
+    private func hostStats(requestCount: Int, pendingCount: Int, upcomingCount: Int) -> some View {
         HStack(spacing: 6) {
+            if requestCount > 0 {
+                Text("시간 요청 \(requestCount)")
+                    .foregroundStyle(.orange)
+                Text("·")
+                    .foregroundStyle(Theme.secondaryText)
+            }
             Text("승인 대기 \(pendingCount)")
                 .foregroundStyle(pendingCount > 0 ? .orange : Theme.secondaryText)
             Text("·")
