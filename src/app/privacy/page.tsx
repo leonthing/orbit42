@@ -24,7 +24,7 @@ export default function PrivacyPage() {
       <main className="mx-auto max-w-3xl px-4 pb-24 pt-6 sm:px-6">
         <h1 className="text-3xl font-bold text-charcoal-100">개인정보처리방침</h1>
         <p className="mt-2 text-sm text-charcoal-500">
-          최종 업데이트: 2026년 10월 13일
+          최종 업데이트: 2026년 10월 15일
         </p>
 
         <div className="mt-10 space-y-8">
@@ -264,6 +264,15 @@ export default function PrivacyPage() {
                 않습니다. 이용자가 Orbit42에서 Google 캘린더 일정에 참석자를 추가하면,
                 확인을 받은 뒤 그 일정에 참석자 이메일을 추가하고 Google이 참석자에게
                 초대 메일을 보냅니다. 참석자 정보는 서비스에 따로 저장하지 않습니다.
+                이용자가 Orbit42에서 직접 Google 캘린더 일정을 만들거나 고치거나
+                지우거나 다른 캘린더로 옮기면(반복 일정의 한 회차 또는 전체 포함), 그
+                요청대로 이용자의 Google 캘린더에 반영합니다. 참석자가 있는 일정의
+                시간을 바꿀 때 이용자가 알림을 고르면 Google이 참석자에게 변경 메일을
+                보내고, 초대받은 일정을 지우면 Google이 주최자에게 불참 응답을 보낼 수
+                있습니다. 이용자가 일정에 남긴 알림·중요도·별점·다시 알림은 Google 일정
+                식별자와 함께 서비스에 저장되며, Google 일정의 제목·시각은 저장하지
+                않습니다. 이 값은 회원 탈퇴 시 즉시 삭제되며, Google 연결을 해제해도
+                이용자가 다시 연결할 때를 위해 남아 있습니다.
               </li>
               <li>
                 <b>공유</b>: Google 사용자 데이터를 제3자에게 판매하거나 제공하지
@@ -315,7 +324,18 @@ export default function PrivacyPage() {
                 training AI/ML models. When the user adds an attendee to a Google
                 Calendar event in Orbit42 (after a confirmation step), the
                 attendee&apos;s email is added to that event and Google sends them an
-                invitation. Attendee data is not stored by Orbit42.
+                invitation. Attendee data is not stored by Orbit42. When the user
+                creates, edits, deletes or moves a Google Calendar event in Orbit42
+                (including one occurrence or all occurrences of a recurring event),
+                Orbit42 applies that change to the user&apos;s Google Calendar. If the
+                user chooses to notify attendees when changing an event&apos;s time,
+                Google emails the attendees; deleting an event the user was invited
+                to may make Google send a decline to the organizer. Reminders,
+                importance, ratings and follow-up reminders the user sets on an
+                event are stored with the Google event ID; the event&apos;s title and
+                time are not stored. These values are deleted immediately when the
+                account is deleted; they remain after disconnecting Google so they
+                reappear if the user reconnects.
               </p>
               <p>
                 <b>Data sharing.</b> We do not sell or transfer Google user data to
@@ -365,6 +385,11 @@ export default function PrivacyPage() {
               <li>
                 2026-10-13: Google 캘린더 일정 참석자 추가(초대 메일 발송) 사용 목적
                 추가
+              </li>
+              <li>
+                2026-10-15: Google 캘린더 일정 직접 만들기·고치기·지우기·다른 캘린더로
+                옮기기(반복 일정 포함), 참석자 변경 알림·불참 응답, 일정에 남긴
+                알림·중요도·별점·다시 알림의 저장과 삭제 시점을 사용 목적에 추가
               </li>
             </List>
           </Section>
