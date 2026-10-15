@@ -106,5 +106,21 @@ export async function GET(request: Request) {
     guest: guest.map(toApiGuestBooking),
     // 프로필로 받은 시간 요청 중 아직 답하지 않은 것 (홈 화면 위젯 "요청 n건")
     pendingTimeRequests: timeRequests.length,
+    // 그 시간 요청 목록 — 웹 받은 예약 화면에 보이는 칸만 (요청자 이메일 등은 내리지 않음)
+    timeRequests: timeRequests.map((r) => ({
+      id: r.id,
+      message: r.message,
+      durationMin: r.duration_min,
+      budgetCents: r.budget_cents,
+      preferredTimes: r.preferred_times,
+      createdAt: r.created_at,
+      requester: r.requester
+        ? {
+            username: r.requester.username,
+            displayName: r.requester.display_name,
+            avatarUrl: r.requester.avatar_url,
+          }
+        : null,
+    })),
   });
 }
