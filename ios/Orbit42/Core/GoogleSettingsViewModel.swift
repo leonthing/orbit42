@@ -76,6 +76,8 @@ final class GoogleSettingsViewModel {
             let callback = try await authenticate(with: url)
             if callback.host == "google-connected" {
                 await load(force: true)
+                // 처음 구글을 연결했으면 "구글 일정도 알릴까요?"를 한 번 묻는다 (GoogleNotifyPrompt)
+                NotificationCenter.default.post(name: GoogleNotifyPrompt.googleConnected, object: nil)
             } else {
                 // orbit42://google-error?reason=... 포함 그 외 콜백은 실패로 처리
                 let reason = URLComponents(url: callback, resolvingAgainstBaseURL: false)?

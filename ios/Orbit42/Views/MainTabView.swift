@@ -110,6 +110,7 @@ struct MainTabView: View {
         }
         .environment(people)
         .environment(pendingBookings)
+        .modifier(GoogleNotifyPrompt())
         .task {
             NotificationTapHandler.shared.router = router
             await pendingBookings.refresh()

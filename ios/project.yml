@@ -36,7 +36,7 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
         CODE_SIGN_STYLE: Automatic
         MARKETING_VERSION: "1.5.1"
-        CURRENT_PROJECT_VERSION: 26
+        CURRENT_PROJECT_VERSION: 27
         ENABLE_PREVIEWS: YES
     info:
       path: Orbit42/Info.plist
@@ -93,7 +93,7 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
         CODE_SIGN_STYLE: Automatic
         MARKETING_VERSION: "1.5.1"
-        CURRENT_PROJECT_VERSION: 26
+        CURRENT_PROJECT_VERSION: 27
         SKIP_INSTALL: YES
     info:
       path: Orbit42Widget/Info.plist
@@ -109,11 +109,29 @@ targets:
         keychain-access-groups:
           - $(AppIdentifierPrefix)org.orbit42.shared
 
+  # 순수 계산 단위 테스트 (일정 알림 계획 등) — 앱에 올리지 않는다
+  Orbit42Tests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Orbit42Tests
+    dependencies:
+      - target: Orbit42
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.orbit42.app.tests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Orbit42.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Orbit42"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+
 schemes:
   Orbit42:
     build:
       targets:
         Orbit42: all
+    test:
+      targets:
+        - Orbit42Tests
     run:
       config: Debug
     archive:
