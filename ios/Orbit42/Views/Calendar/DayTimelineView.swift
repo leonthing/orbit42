@@ -46,8 +46,12 @@ struct DayTimelineView: View {
 
     /// 지금 끌고 있는 블록이 넘어간 날 수 (0 = 같은 날)
     @State private var dayOffset = 0
-    @State private var edgeDirection = 0
+    /// 가장자리에 머물면 하루씩 넘기는 상태 — 끌기가 끝·취소되면 더는 넘기지 않는다 (버그-4)
+    @State private var edgeStepper = EdgeDayStepper()
     @State private var edgeTask: Task<Void, Never>?
+    /// 끌기 제스처가 살아 있는 동안 true — 취소(뷰 교체·전화 등)로 onEnded 없이 끝나도 false 로 돌아온다
+    @GestureState private var dragGestureActive = false
+    @Environment(\.scenePhase) private var scenePhase
     /// 끌기 시작할 때 손가락이 블록 위쪽에서 얼마나 아래였는지 — 넘어간 날에서 블록 위치를 맞춘다
     @State private var grabOffsetY: CGFloat?
     @State private var lastFinger: CGPoint = .zero
@@ -91,6 +95,21 @@ struct DayTimelineView: View {
     private var timedEvents: [CalendarEvent] { events.filter { !$0.allDay } }
 
     var body: some View {
+        content
+            // 끌기가 onEnded 없이 끝나면(제스처 취소·이 날 페이지가 화면에서 빠짐·앱이 뒤로 감) 원래 자리로 되돌리고 모두 푼다.
+            // 이게 없어서 다른 날로 넘어간 뒤 원래 페이지가 사라지면 넘기기 타이머가 끝없이 돌았다 (버그-4).
+            .onChange(of: dragGestureActive) { _, active in
+                guard !active else { return }
+                // 정상 종료면 onEnded 가 먼저 정리한다 — 그다음에도 남아 있으면 취소된 것
+                DispatchQueue.main.async { if dragId != nil { cancelDrag() } }
+            }
+            .onDisappear { if dragId != nil { cancelDrag() } }
+            .onChange(of: scenePhase) { _, phase in
+                if phase != .active, dragId != nil { cancelDrag() }
+            }
+    }
+
+    private var content: some View {
         VStack(spacing: 0) {
             if !allDayEvents.isEmpty {
                 allDayRow
@@ -361,6 +380,9 @@ struct DayTimelineView: View {
     private func dragGesture(_ block: Block, mode: DragMode, proxy: ScrollViewProxy) -> some Gesture {
         LongPressGesture(minimumDuration: mode == .resize ? 0.25 : 0.4)
             .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named(Self.viewportSpace)))
+            .updating($dragGestureActive) { value, active, _ in
+                if case .second(true, _) = value { active = true }
+            }
             .onChanged { value in
                 guard case .second(true, let drag) = value else { return }
                 if dragId != block.id { beginDrag(block, mode: mode) }
@@ -407,6 +429,7 @@ struct DayTimelineView: View {
         dragTranslation = 0
         dragStartScrollY = scrollY
         lastSnap = 0
+        edgeStepper.begin()
         isDragging = true
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
     }
@@ -417,7 +440,7 @@ struct DayTimelineView: View {
         autoScrollDirection = 0
         edgeTask?.cancel()
         edgeTask = nil
-        edgeDirection = 0
+        edgeStepper.end()
         dayOffset = 0
         grabOffsetY = nil
         onCrossDayDrag(nil)
@@ -427,28 +450,35 @@ struct DayTimelineView: View {
         isDragging = false
     }
 
+    /// 놓지 않고 끝난 끌기 — 아무것도 옮기지 않고, 다른 날로 넘어가 있었으면 원래 날로 되돌린다
+    private func cancelDrag() {
+        let wasAway = dayOffset != 0
+        endDrag()
+        if wasAway { onDayOffset(0) }
+    }
+
     // MARK: - 다른 날로 끌기 (1.5.1)
 
-    /// 화면 왼쪽·오른쪽 28pt 안에 0.7초 머물 때마다 하루씩 넘긴다(계속 머물면 이틀·사흘). 세로 끌기·가로 넘기기와
-    /// 헷갈리지 않게, 블록을 들어 올린 뒤에만, 그것도 가장자리에 멈춰 있을 때만 넘어간다.
+    /// 화면 왼쪽·오른쪽 28pt 안에 0.7초 머물 때마다 하루씩 넘긴다(계속 머물면 이틀·사흘, 최대 14일). 세로 끌기·가로 넘기기와
+    /// 헷갈리지 않게, 블록을 들어 올린 뒤에만, 그것도 가장자리에 멈춰 있을 때만 넘어간다. 넘길지는 `EdgeDayStepper` 가 정한다.
     private func updateEdgeHover(fingerX: CGFloat, block: Block) {
         let width = dragViewport.width > 0 ? dragViewport.width : 390
-        let edge: CGFloat = 28
-        let direction = fingerX < edge ? -1 : (fingerX > width - edge ? 1 : 0)
-        guard direction != edgeDirection else { return }
-        edgeDirection = direction
+        guard edgeStepper.fingerMoved(x: fingerX, width: width) else { return }
         edgeTask?.cancel()
         edgeTask = nil
+        let direction = edgeStepper.direction
         guard direction != 0 else { return }
         edgeTask = Task { @MainActor in
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 700_000_000)
-                guard !Task.isCancelled, edgeDirection == direction, dragId != nil else { return }
-                dayOffset += direction
+                // 끌기가 끝났거나 가장자리를 벗어났거나 최대 일수에 닿으면 멈춘다
+                guard !Task.isCancelled, dragId != nil, let next = edgeStepper.tick(direction: direction) else { return }
+                dayOffset = next
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                onDayOffset(dayOffset)
+                onDayOffset(next)
                 // 손가락이 가장자리에 멈춰 있어 움직임 이벤트가 없으니, 넘어간 날의 유령 블록을 여기서 바로 그린다
                 try? await Task.sleep(nanoseconds: 150_000_000)
+                guard !Task.isCancelled, dragId != nil else { return }
                 publishCrossDay(block)
             }
         }
