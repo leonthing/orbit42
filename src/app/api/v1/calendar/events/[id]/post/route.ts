@@ -4,6 +4,7 @@ import {
   upsertEventPost,
   deleteEventPost,
   addEventPostImages,
+  withGoogleEventInfo,
   type EventPostVisibility,
 } from "@/lib/event-posts";
 
@@ -46,7 +47,9 @@ export async function GET(
   if (!userId) {
     return Response.json({ error: "사용자를 찾을 수 없어요." }, { status: 404 });
   }
-  const post = await getEventPost(userId, params.id);
+  const stored = await getEventPost(userId, params.id);
+  // 구글 일정 기록은 제목·시각을 저장하지 않으므로 주인에게는 구글에서 읽어 붙인다.
+  const post = stored ? (await withGoogleEventInfo(userId, [stored]))[0] : null;
   return Response.json({ post: post ? toApiPost(post) : null });
 }
 
@@ -98,7 +101,7 @@ export async function PUT(
   if ("error" in result) {
     return Response.json({ error: result.error }, { status: 400 });
   }
-  return Response.json({ post: toApiPost(result) });
+  return Response.json({ post: toApiPost((await withGoogleEventInfo(userId, [result]))[0]) });
 }
 
 // POST — 사진 업로드 (multipart: files[] + title/startAt/endAt/allDay)
@@ -145,7 +148,7 @@ export async function POST(
   if ("error" in result) {
     return Response.json({ error: result.error }, { status: 400 });
   }
-  return Response.json({ post: toApiPost(result) });
+  return Response.json({ post: toApiPost((await withGoogleEventInfo(userId, [result]))[0]) });
 }
 
 // DELETE ?imageUrl=... — 사진 한 장 제거 / 없으면 기록 전체 삭제
@@ -169,7 +172,7 @@ export async function DELETE(
     if ("error" in result) {
       return Response.json({ error: result.error }, { status: 400 });
     }
-    return Response.json({ post: toApiPost(result) });
+    return Response.json({ post: toApiPost((await withGoogleEventInfo(userId, [result]))[0]) });
   }
 
   const result = await deleteEventPost(userId, params.id);

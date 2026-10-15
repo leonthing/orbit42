@@ -40,6 +40,27 @@ export type EventSnapshot = {
   all_day: boolean;
 };
 
+// 구글 일정(gcal_ 키)의 시간 로그는 제목·시각을 복사해 두지 않는다 (처리방침·Google 검증 설명).
+// 정렬·공개 표시를 위해 그날(KST 0시)만 남기고, 주인이 볼 때만 구글에서 읽어 붙인다.
+export function isGoogleEventKey(eventKey: string): boolean {
+  return eventKey.startsWith("gcal_");
+}
+
+const KST_MS = 9 * 3_600_000;
+
+function kstDayStartIso(iso: string): string {
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return iso;
+  const k = new Date(t + KST_MS);
+  return new Date(Date.UTC(k.getUTCFullYear(), k.getUTCMonth(), k.getUTCDate()) - KST_MS).toISOString();
+}
+
+/** 구글 일정이면 제목 "" · 그날 0시(KST) · 종일 · 끝 없음으로. Orbit42 일정은 그대로. */
+export function storableSnapshot(eventKey: string, snapshot: EventSnapshot): EventSnapshot {
+  if (!isGoogleEventKey(eventKey)) return snapshot;
+  return { title: "", start_at: kstDayStartIso(snapshot.start_at), end_at: null, all_day: true };
+}
+
 function rowToPost(row: Record<string, unknown>): EventPost {
   return {
     id: row.id as string,
@@ -77,6 +98,7 @@ export async function upsertEventPost(
 ): Promise<EventPost | { error: string }> {
   const db = getAdminClient();
   const existing = await getEventPost(userId, eventKey);
+  snapshot = storableSnapshot(eventKey, snapshot);
   const patch: Record<string, unknown> = {
     title: snapshot.title,
     start_at: snapshot.start_at,
@@ -237,4 +259,49 @@ export async function listEventPosts(
   }
   const { data } = await query;
   return (data ?? []).map(rowToPost);
+}
+
+/**
+ * 주인이 자기 시간 로그를 볼 때만 — 구글 일정 기록에 구글에서 읽은 제목·시각을 붙인다.
+ * 못 읽으면(연결 해제·지운 일정) 저장된 날짜만 남는다. 남이 볼 때는 부르지 않는다.
+ */
+export async function withGoogleEventInfo(ownerUserId: string, posts: EventPost[]): Promise<EventPost[]> {
+  const google = posts.filter((p) => isGoogleEventKey(p.event_key));
+  if (google.length === 0) return posts;
+  const { listEventsForUser } = await import("@/lib/calendar-events");
+  // 저장된 날은 KST 0시 — 서버 시간대와 월 경계가 어긋나도 빠지지 않게 앞뒤 하루의 달을 함께 본다.
+  const months = new Map<string, [number, number]>();
+  for (const p of google) {
+    const t = Date.parse(p.start_at);
+    for (const d of [t - 86_400_000, t + KST_MS, t + 86_400_000 + KST_MS]) {
+      const k = new Date(d);
+      months.set(`${k.getUTCFullYear()}-${k.getUTCMonth()}`, [k.getUTCFullYear(), k.getUTCMonth()]);
+    }
+  }
+  const info = new Map<string, { title: string; start_at: string; end_at: string | null; all_day: boolean }>();
+  try {
+    const lists = await Promise.all(Array.from(months.values()).map(([y, m]) => listEventsForUser(ownerUserId, y, m)));
+    for (const e of lists.flat()) {
+      if (e.source === "google") info.set(e.id, { title: e.title, start_at: e.start_at, end_at: e.end_at, all_day: e.all_day });
+    }
+  } catch (e) {
+    console.error("timelog google info", e);
+  }
+  return posts.map((p) => {
+    const found = isGoogleEventKey(p.event_key) ? info.get(p.event_key) : undefined;
+    return found ? { ...p, ...found } : p;
+  });
+}
+
+/** 일정 키가 바뀐 뒤(캘린더 이동) 그 키의 기록을 새 키 규칙에 맞춘다 — 구글로 가면 제목·시각을 지운다. */
+export async function normalizeEventPostForKey(userId: string, eventKey: string): Promise<void> {
+  const post = await getEventPost(userId, eventKey);
+  if (!post || !isGoogleEventKey(eventKey)) return;
+  const snap = storableSnapshot(eventKey, post);
+  if (post.title === snap.title && post.start_at === snap.start_at && post.end_at === snap.end_at && post.all_day === snap.all_day) return;
+  await getAdminClient()
+    .from("event_posts")
+    .update({ ...snap, updated_at: new Date().toISOString() })
+    .eq("user_id", userId)
+    .eq("event_key", eventKey);
 }

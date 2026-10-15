@@ -687,6 +687,9 @@ export async function migrateEventKeys(userId: string, oldId: string, newId: str
     .update({ event_key: newId })
     .eq("user_id", userId)
     .eq("event_key", oldId);
+  // Orbit42 → 구글로 옮긴 일정의 시간 로그는 제목·시각을 지우고 날짜만 남긴다.
+  const { normalizeEventPostForKey } = await import("@/lib/event-posts");
+  await normalizeEventPostForKey(userId, newId);
   const { normalizeEventKey } = await import("@/lib/event-key");
   await db
     .from("event_completions")
