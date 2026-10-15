@@ -53,7 +53,8 @@ final class EdgeDayStepperTests: XCTestCase {
         XCTAssertEqual(s.tick(direction: -1), -1)
         XCTAssertTrue(s.fingerMoved(x: 380, width: width))
         XCTAssertNil(s.tick(direction: -1), "왼쪽 타이머는 오른쪽으로 옮기면 무효")
-        XCTAssertEqual(s.tick(direction: 1), 0)
+        XCTAssertEqual(s.tick(direction: 1), 0, "반대쪽으로 돌아오기")
+        XCTAssertEqual(s.tick(direction: 1), 1)
     }
 
     func testNotActiveBeforeBegin() {

@@ -2,7 +2,7 @@ import CoreGraphics
 
 /// 하루 보기에서 일정을 끌어 화면 왼쪽·오른쪽 끝에 머물면 하루씩 넘기는 상태 (1.5.1 버그-4).
 /// 타이머(0.7초)는 뷰가 돌리고, 넘길지 말지는 여기서만 정한다 — 끌기가 끝나거나 취소되면 `end()` 뒤로는 절대 넘기지 않는다.
-/// 한 번 끌기에서 최대 `maxDays`일까지만 넘어간다(안전장치).
+/// 한 번 끌기에서 최대 `maxDays`일까지만 넘어간다(안전장치). 넘어가는 동안 페이지는 그대로이고 그 날을 같은 뷰 안에서 그린다.
 struct EdgeDayStepper: Equatable {
     static let edgeWidth: CGFloat = 28
     static let maxDays = 14

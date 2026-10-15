@@ -20,6 +20,10 @@ struct CalendarView: View {
     @State private var isDraggingEvent = false
     /// 다른 날로 끄는 중 손가락 자리에 그릴 유령 블록 (1.5.1)
     @State private var crossDrag: DayTimelineView.CrossDayDrag?
+    /// 일정을 끌어 다른 날로 넘어간 동안 보여 줄 날 — 페이지는 넘기지 않고 날짜 표시만 (버그-4)
+    @State private var dragPreviewDay: Date?
+    /// 하루 보기 머리·주간 띠가 가리키는 날
+    private var shownDay: Date { dragPreviewDay ?? viewModel.selectedDate }
     /// 위쪽 주간 날짜 칸의 전역 좌표 — 여기에 놓으면 그날 같은 시각
     @State private var stripFrames: [Date: CGRect] = [:]
     /// 날짜별 하루 보기 스크롤 위치 — 화면을 다시 그리지 않도록 참조로 둔다
@@ -458,7 +462,7 @@ struct CalendarView: View {
     }
 
     private func weekDayCell(_ date: Date) -> some View {
-        let isSelected = calendar.isDate(date, inSameDayAs: viewModel.selectedDate)
+        let isSelected = calendar.isDate(date, inSameDayAs: shownDay)
         let isToday = calendar.isDateInToday(date)
         let dots = viewModel.dotColors(on: date)
 
@@ -508,7 +512,7 @@ struct CalendarView: View {
                 HStack(spacing: 3) {
                     Image(systemName: "chevron.left")
                         .font(.subheadline.weight(.semibold))
-                    Text("\(calendar.component(.month, from: viewModel.selectedDate))월")
+                    Text("\(calendar.component(.month, from: shownDay))월")
                         .font(.subheadline.weight(.medium))
                 }
                 .foregroundStyle(Theme.accent)
@@ -518,7 +522,7 @@ struct CalendarView: View {
 
             Spacer()
 
-            Text(Self.dayTitleFormatter.string(from: viewModel.selectedDate))
+            Text(Self.dayTitleFormatter.string(from: shownDay))
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(Theme.primaryText)
 
@@ -588,9 +592,16 @@ struct CalendarView: View {
                         Task { try? await viewModel.setRating(event, rating) }
                     },
                     onDayOffset: { offset in
-                        if let target = calendar.date(byAdding: .day, value: offset, to: day) {
-                            withAnimation(.easeInOut(duration: 0.25)) { viewModel.select(date: target) }
+                        // 끄는 동안엔 페이지를 넘기지 않는다 — 넘기면 원래 페이지가 내려가 끄는 제스처가 끊긴다(버그-4)
+                        let target = offset == 0 ? nil : calendar.date(byAdding: .day, value: offset, to: day)
+                        withAnimation(.easeInOut(duration: 0.2)) { dragPreviewDay = target }
+                        if let target, !viewModel.hasMonthData(for: target) {
+                            Task { await viewModel.prefetchMonth(containing: target) }
                         }
+                    },
+                    eventsForDay: { viewModel.events(on: $0) },
+                    onSettleDay: { target in
+                        withAnimation(.easeInOut(duration: 0.25)) { viewModel.select(date: target) }
                     },
                     onCrossDayDrag: { crossDrag = $0 },
                     scrollYForOffset: { offset in
