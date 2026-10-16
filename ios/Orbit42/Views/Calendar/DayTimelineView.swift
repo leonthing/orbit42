@@ -341,13 +341,6 @@ struct DayTimelineView: View {
         .padding(.trailing, 6)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(blockColor(event), in: RoundedRectangle(cornerRadius: 6))
-        // 중요함 — 왼쪽 굵은 띠 (제목 앞 "!" 와 함께, 색만으로 구분하지 않음)
-        .overlay(alignment: .leading) {
-            if event.importance == .high && !event.archived {
-                // 가장자리에 붙이면 둥근 모서리에 묻혀 틈처럼 보여 안쪽으로 2pt 띄운다
-                RoundedRectangle(cornerRadius: 1.5).fill(.white).frame(width: 3).padding(.vertical, 4).padding(.leading, 2)
-            }
-        }
         .opacity(blockOpacity(event))
         .clipped()
     }
@@ -615,11 +608,6 @@ struct DayTimelineView: View {
     // 보관한 일정은 회색 블록 + 제목 앞 "보관" — 완료(취소선)와 구분된다.
     private func titleText(_ event: CalendarEvent) -> AttributedString {
         var title = AttributedString(event.title)
-        if event.importance == .high && !event.archived {
-            var mark = AttributedString("! ")
-            mark.font = .caption.weight(.heavy)
-            title = mark + title
-        }
         // 기념일 — "결혼기념일 · 3주년"
         if let years = event.anniversaryYears {
             var suffix = AttributedString(" · \(years)주년")
@@ -645,20 +633,20 @@ struct DayTimelineView: View {
         return event.importance == .low ? 0.7 : 1
     }
 
-    /// 위젯과 같은 모양의 완료 체크 — 누르면 바로 토글 (`CalendarViewModel.setCompletion`, 낙관적 반영)
+    /// 위젯과 같은 모양의 완료 체크 — 중요함은 동그라미 대신 별 — 누르면 바로 토글 (`CalendarViewModel.setCompletion`, 낙관적 반영)
     private func checkbox(_ event: CalendarEvent, size: CGFloat) -> some View {
         Button {
             let completing = !event.completed
             onToggleCompletion(event)
             if completing { showRatingPrompt(for: event) } else if ratingPromptId == event.id { ratingPromptId = nil }
         } label: {
-            Image(systemName: event.completed ? "checkmark.circle.fill" : "circle")
+            Image(systemName: CompletionMark.symbol(event))
                 .font(.system(size: size, weight: .medium))
                 .frame(width: size + 10, height: size + 8)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(event.completed ? "완료 해제" : "완료로 표시")
+        .accessibilityLabel(CompletionMark.label(event))
     }
 
     // MARK: - 완료 후 별점

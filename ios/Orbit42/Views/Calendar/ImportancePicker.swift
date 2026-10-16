@@ -14,7 +14,7 @@ struct ImportancePicker: View {
                 } label: {
                     HStack(spacing: 4) {
                         switch level {
-                        case .high: Text("!").font(.subheadline.weight(.heavy))
+                        case .high: Image(systemName: "star").font(.caption.weight(.semibold))   // 체크 자리 별과 같은 모양
                         case .low: Image(systemName: "arrow.down").font(.caption.weight(.semibold))
                         case .normal: EmptyView()
                         }

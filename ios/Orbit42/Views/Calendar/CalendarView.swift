@@ -1094,28 +1094,28 @@ private struct EventRow: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            // 중요함은 띠를 굵게 + 제목 앞 "!" (색만으로 구분하지 않음)
             RoundedRectangle(cornerRadius: 2)
                 .fill(event.displayColor(in: calendars))
-                .frame(width: event.importance == .high ? 7 : 4)
+                .frame(width: 4)
                 .frame(maxHeight: .infinity)
 
+            // 중요함은 동그라미 대신 별 (색만으로 구분하지 않음)
             Button(action: onToggleCompletion) {
-                Image(systemName: event.completed ? "checkmark.circle.fill" : "circle")
+                Image(systemName: CompletionMark.symbol(event))
                     .font(.system(size: 22, weight: .regular))
                     .foregroundStyle(event.completed ? Self.completedGreen : Theme.secondaryText)
                     .frame(width: 36, height: 36)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(event.completed ? "완료 해제" : "완료로 표시")
+            .accessibilityLabel(CompletionMark.label(event))
 
             Button(action: onOpen) {
                 HStack(spacing: 8) {
                     VStack(alignment: .leading, spacing: 3) {
                         HStack(spacing: 6) {
-                            Text(event.importance == .high ? "! \(event.title)" : event.title)
-                                .font(.subheadline.weight(event.importance == .high ? .semibold : .medium))
+                            Text(event.title)
+                                .font(.subheadline.weight(.medium))
                                 .foregroundStyle(Theme.primaryText)
                                 .strikethrough(event.completed)
                                 .lineLimit(2)
