@@ -293,7 +293,7 @@ struct ReminderSettingsSection: View {
         } header: {
             Text("알림").foregroundStyle(Theme.secondaryText)
         } footer: {
-            Text("종일·완료·보관한 일정은 알리지 않아요. 구글 일정은 구글 캘린더 앱에서도 울릴 수 있어 기본으로 꺼 두었어요. 일정마다 수정 화면에서 따로 정할 수 있어요. 앱을 14일 넘게 열지 않으면 알림이 끊길 수 있어요.")
+            Text("'중요함' 일정은 30분 전과 10분 전에, 일정마다 고른 알림은 그 시점에 늘 울려요(구글 일정도). 위 두 스위치는 그 밖의 일정을 기본 알림 시점에 울릴지 정해요 — 구글 일정은 구글 캘린더 앱에서도 울릴 수 있어 기본으로 꺼 두었어요. 종일·완료·보관한 일정은 알리지 않고, 앱을 14일 넘게 열지 않으면 알림이 끊길 수 있어요.")
                 .foregroundStyle(Theme.secondaryText)
         }
         .listRowBackground(Theme.surface)

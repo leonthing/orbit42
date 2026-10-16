@@ -148,7 +148,7 @@ struct EditEventSheet: View {
                 if !allDay {
                     Section {
                         Picker("알림", selection: $reminderMinutes) {
-                            Text("기본값 (\(AppSettings.shared.defaultReminder.label))").tag(Int?.none)
+                            Text(defaultReminderLabel).tag(Int?.none)
                             ForEach(ReminderOption.allCases) { Text($0.label).tag(Int?.some($0.rawValue)) }
                         }
                     } footer: {
@@ -437,6 +437,14 @@ struct EditEventSheet: View {
         }
         if hasGoogleAttendees { lines.append("모든 회차의 참석자에게 변경 알림이 갑니다.") }
         return lines.joined(separator: "\n")
+    }
+
+    /// '기본값'이 실제로 무엇인지 — 중요함은 30·10분 전, 스위치가 꺼진 쪽은 알리지 않음
+    private var defaultReminderLabel: String {
+        if importance == .high { return "기본값 (중요함: 30분·10분 전)" }
+        let settings = AppSettings.shared
+        let on = event.isGoogle ? settings.notifyGoogleEvents : settings.notifyOrbitEvents
+        return on ? "기본값 (\(settings.defaultReminder.label))" : "기본값 (알리지 않음)"
     }
 
     private var importanceChanged: Bool {
