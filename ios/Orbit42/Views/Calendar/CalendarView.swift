@@ -1123,11 +1123,11 @@ private struct EventRow: View {
                                 AnniversaryBadge(years: years, compact: true)
                             }
                             if let rating = event.rating, event.completed {
-                                Label("\(rating)", systemImage: "star.fill")
+                                Label("\(rating)", systemImage: "heart.fill")
                                     .labelStyle(.titleAndIcon)
                                     .font(.caption2.weight(.semibold))
-                                    .foregroundStyle(Color.orange)
-                                    .accessibilityLabel("별점 \(rating)")
+                                    .foregroundStyle(Theme.satisfaction)
+                                    .accessibilityLabel("만족도 하트 \(rating)개")
                             }
                             if event.archived {
                                 ArchivedTag()

@@ -21,7 +21,7 @@ struct DayTimelineView: View {
     let onRetime: (CalendarEvent, Date, Date) -> Void
     /// 끄는 동안 바깥 페이저의 가로 넘김을 막는다
     @Binding var isDragging: Bool
-    /// 완료 직후 뜨는 별점 — 누르면 저장 (1.5.0 A, 나만 본다)
+    /// 완료 직후 뜨는 만족도 하트 — 누르면 저장 (1.5.0 A, 나만 본다)
     var onRate: (CalendarEvent, Int) -> Void = { _, _ in }
 
     // ── 다른 날로 끌기 (1.5.1) ──
@@ -66,7 +66,7 @@ struct DayTimelineView: View {
     /// 끌기를 시작할 때의 보이는 영역 — 다른 날로 넘어가며 이 페이지가 화면 밖으로 밀려도 손가락 위치는 이 기준으로 본다
     @State private var dragViewport: CGRect = .zero
 
-    /// 체크박스로 막 완료한 일정 — 블록 위에 별 5개가 잠깐 떠 있다
+    /// 체크박스로 막 완료한 일정 — 블록 위에 만족도 하트 5개가 잠깐 떠 있다
     @State private var ratingPromptId: String?
     @State private var ratingPromptTask: Task<Void, Never>?
 
@@ -649,7 +649,7 @@ struct DayTimelineView: View {
         .accessibilityLabel(CompletionMark.label(event))
     }
 
-    // MARK: - 완료 후 별점
+    // MARK: - 완료 후 만족도(하트)
 
     /// 완료를 막지 않도록 블록 위에 2.5초만 떠 있다가 사라진다. 누르면 저장하고 바로 닫힌다.
     private func showRatingPrompt(for event: CalendarEvent) {
@@ -671,14 +671,14 @@ struct DayTimelineView: View {
                     ratingPromptTask?.cancel()
                     withAnimation(.easeIn(duration: 0.2)) { ratingPromptId = nil }
                 } label: {
-                    Image(systemName: n <= (event.rating ?? 0) ? "star.fill" : "star")
+                    Image(systemName: n <= (event.rating ?? 0) ? "heart.fill" : "heart")
                         .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(Color.orange)
+                        .foregroundStyle(Theme.satisfaction)
                         .frame(width: 30, height: 30)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("별 \(n)개")
+                .accessibilityLabel("하트 \(n)개")
             }
         }
         .padding(.horizontal, 4)

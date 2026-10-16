@@ -492,24 +492,24 @@ struct EventDetailSheet: View {
                 .listRowBackground(Theme.surface)
     }
 
-    /// 별점 1~5 — 같은 별을 다시 누르면 지운다. 나만 본다.
+    /// 만족도(하트) 1~5 — 같은 하트를 다시 누르면 지운다. 나만 본다.
     private var ratingRow: some View {
         HStack(spacing: 4) {
-            Text("별점")
+            Text("만족도")
                 .foregroundStyle(Theme.primaryText)
             Spacer()
             ForEach(1...5, id: \.self) { n in
                 Button {
                     setRating(rating == n ? nil : n)
                 } label: {
-                    Image(systemName: n <= (rating ?? 0) ? "star.fill" : "star")
+                    Image(systemName: n <= (rating ?? 0) ? "heart.fill" : "heart")
                         .font(.system(size: 20))
-                        .foregroundStyle(Color.orange)
+                        .foregroundStyle(Theme.satisfaction)
                         .frame(width: 32, height: 32)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("별 \(n)개")
+                .accessibilityLabel("하트 \(n)개")
             }
         }
     }
@@ -537,7 +537,7 @@ struct EventDetailSheet: View {
                 try await viewModel.setRating(event, value)
             } catch {
                 rating = previous
-                completionErrorMessage = "별점을 저장하지 못했어요. 잠시 후 다시 시도해 주세요."
+                completionErrorMessage = "만족도를 저장하지 못했어요. 잠시 후 다시 시도해 주세요."
             }
         }
     }

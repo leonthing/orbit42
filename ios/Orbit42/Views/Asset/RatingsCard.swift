@@ -33,7 +33,7 @@ struct RatingsSummary: Decodable {
     let total: Int
 }
 
-/// 리포트 탭의 별점 카드 — 이번 주·지난주 평균과 캘린더별 평균. 나만 본다(서버도 본인 것만 준다).
+/// 리포트 탭의 만족도(하트) 카드 — 이번 주·지난주 평균과 캘린더별 평균. 나만 본다(서버도 본인 것만 준다).
 struct RatingsCard: View {
     @State private var summary: RatingsSummary?
     @State private var calendars: [CalendarInfo] = []
@@ -42,7 +42,7 @@ struct RatingsCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("별점")
+                Text("만족도")
                     .font(.headline)
                     .foregroundStyle(Theme.primaryText)
                 Label("나만 봐요", systemImage: "lock")
@@ -61,7 +61,7 @@ struct RatingsCard: View {
             }
             if let summary {
                 if summary.total == 0 {
-                    Text("일정을 완료로 표시하면 별점을 남길 수 있어요. 남긴 별점이 여기 모여요.")
+                    Text("일정을 완료로 표시하면 만족도를 하트로 남길 수 있어요. 남긴 만족도가 여기 모여요.")
                         .font(.footnote)
                         .foregroundStyle(Theme.secondaryText)
                 } else {
@@ -84,7 +84,7 @@ struct RatingsCard: View {
                                         .foregroundStyle(Theme.primaryText)
                                         .lineLimit(1)
                                     Spacer()
-                                    stars(row.average)
+                                    hearts(row.average)
                                     Text("\(row.count)개")
                                         .font(.caption)
                                         .foregroundStyle(Theme.secondaryText)
@@ -95,7 +95,7 @@ struct RatingsCard: View {
                     }
                 }
             } else if failed {
-                Text("별점을 불러오지 못했어요.")
+                Text("만족도를 불러오지 못했어요.")
                     .font(.footnote)
                     .foregroundStyle(Theme.secondaryText)
             } else {
@@ -129,7 +129,7 @@ struct RatingsCard: View {
                 .font(.caption)
                 .foregroundStyle(Theme.secondaryText)
             HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Image(systemName: "star.fill").foregroundStyle(Color.orange).font(.subheadline)
+                Image(systemName: "heart.fill").foregroundStyle(Theme.satisfaction).font(.subheadline)
                 Text(week.average.map { String(format: "%.1f", $0) } ?? "–")
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(Theme.primaryText)
@@ -143,9 +143,9 @@ struct RatingsCard: View {
         .background(Theme.fill(0.05), in: RoundedRectangle(cornerRadius: 10))
     }
 
-    private func stars(_ value: Double?) -> some View {
+    private func hearts(_ value: Double?) -> some View {
         HStack(spacing: 2) {
-            Image(systemName: "star.fill").font(.caption2).foregroundStyle(Color.orange)
+            Image(systemName: "heart.fill").font(.caption2).foregroundStyle(Theme.satisfaction)
             Text(value.map { String(format: "%.1f", $0) } ?? "–")
                 .font(.subheadline.weight(.medium).monospacedDigit())
                 .foregroundStyle(Theme.primaryText)
@@ -153,7 +153,7 @@ struct RatingsCard: View {
     }
 }
 
-/// 별점 높은·낮은 일정 목록 — 지워졌거나 구글 연결이 끊긴 일정은 "지워진 일정"으로 남는다.
+/// 만족도 높은·낮은 일정 목록 — 지워졌거나 구글 연결이 끊긴 일정은 "지워진 일정"으로 남는다.
 struct RatingsListView: View {
     let summary: RatingsSummary
     let calendars: [CalendarInfo]
@@ -167,19 +167,19 @@ struct RatingsListView: View {
 
     var body: some View {
         List {
-            Section("별점 높은 일정") { rows(summary.top, empty: "별 4개 이상 준 일정이 없어요.") }
+            Section("만족도 높은 일정") { rows(summary.top, empty: "하트 4개 이상 준 일정이 없어요.") }
                 .listRowBackground(Theme.surface)
-            Section("별점 낮은 일정") { rows(summary.bottom, empty: "별 2개 이하 준 일정이 없어요.") }
+            Section("만족도 낮은 일정") { rows(summary.bottom, empty: "하트 2개 이하 준 일정이 없어요.") }
                 .listRowBackground(Theme.surface)
             Section {
                 EmptyView()
             } footer: {
-                Text("지난 \(summary.weeks)주 동안 남긴 별점이에요. 나만 볼 수 있어요.")
+                Text("지난 \(summary.weeks)주 동안 남긴 만족도예요. 나만 볼 수 있어요.")
             }
         }
         .scrollContentBackground(.hidden)
         .background(Theme.background)
-        .navigationTitle("별점")
+        .navigationTitle("만족도")
         .navigationBarTitleDisplayMode(.inline)
     }
 
@@ -198,10 +198,10 @@ struct RatingsListView: View {
                         Spacer()
                         HStack(spacing: 1) {
                             ForEach(0..<item.rating, id: \.self) { _ in
-                                Image(systemName: "star.fill").font(.caption2).foregroundStyle(Color.orange)
+                                Image(systemName: "heart.fill").font(.caption2).foregroundStyle(Theme.satisfaction)
                             }
                         }
-                        .accessibilityLabel("별점 \(item.rating)")
+                        .accessibilityLabel("만족도 하트 \(item.rating)개")
                     }
                     HStack(spacing: 6) {
                         if let cal = calendars.first(where: { $0.id == item.calendarId }) {
