@@ -1151,7 +1151,10 @@ export async function bookSlot(args: {
       }
     }
 
-    const guestEmail = args.guest_email ?? (await getEmailForUser(guestId));
+    const { canReceiveEmail } = await import("@/lib/email-deliverable");
+    // 호스트 구글 일정의 참석자 — 메일을 받을 수 없는 주소(데모 계정)는 넣지 않는다(초대 메일 반송)
+    const rawGuestEmail = args.guest_email ?? (await getEmailForUser(guestId));
+    const guestEmail = canReceiveEmail(rawGuestEmail) ? rawGuestEmail : null;
     const hostCalendar = await getAuthenticatedCalendar(slot.host_id as string);
     // No explicit Google target but the host has Google linked → use primary,
     // and skip the native mirror so the booking isn't duplicated in-app.

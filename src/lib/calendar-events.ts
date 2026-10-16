@@ -171,9 +171,11 @@ export async function addGoogleAttendees(
     const existing = event.attendees ?? [];
     const known = new Set(existing.map((a) => (a.email ?? "").toLowerCase()));
     if (event.organizer?.email) known.add(event.organizer.email.toLowerCase());
+    const { canReceiveEmail } = await import("@/lib/email-deliverable");
+    // 메일을 받을 수 없는 주소(데모 계정)는 구글 참석자로 넣지 않는다 — 초대 메일이 반송된다
     const added = Array.from(new Set(emails.map((e) => e.trim().toLowerCase())))
-      .filter((e) => !known.has(e));
-    if (added.length === 0) return { error: "이미 참석자예요." };
+      .filter((e) => !known.has(e) && canReceiveEmail(e));
+    if (added.length === 0) return { error: "이미 참석자이거나 메일을 받을 수 없는 주소예요." };
 
     // 주최자가 목록에 없으면(API 로 만든 일정) 함께 넣는다 — 안 넣으면 구글 화면에서 주최자가 빠져 보인다.
     const organizerRow =

@@ -1,4 +1,5 @@
 import { apiSession, apiUserId } from "@/lib/api-auth";
+import { canReceiveEmail } from "@/lib/email-deliverable";
 import {
   listParticipants,
   addParticipantByUsername,
@@ -59,11 +60,17 @@ async function resolveEmails(
       if (!data.email) {
         return { error: "이메일이 없는 사용자라 구글 초대를 보낼 수 없어요." };
       }
+      if (!canReceiveEmail(data.email as string)) {
+        return { error: "메일을 받을 수 없는 계정이라 구글 초대를 보낼 수 없어요." };
+      }
       emails.push(data.email as string);
     } else if (invitee.email) {
       const email = invitee.email.trim().toLowerCase();
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         return { error: "이메일 형식이 올바르지 않아요." };
+      }
+      if (!canReceiveEmail(email)) {
+        return { error: "메일을 받을 수 없는 주소라 구글 초대를 보낼 수 없어요." };
       }
       emails.push(email);
     }

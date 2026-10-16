@@ -246,16 +246,19 @@ export async function acceptTimeRequest(requestId: string, startAtIso: string) {
   try {
     const calendar = await getAuthenticatedCalendar(userId);
     if (calendar) {
+      // 메일을 받을 수 없는 주소(데모 계정)는 구글 참석자로 넣지 않는다
+      const { canReceiveEmail } = await import("@/lib/email-deliverable");
+      const inviteEmail = canReceiveEmail(requester?.email as string | null) ? (requester!.email as string) : null;
       const ev = await calendar.events.insert({
         calendarId: "primary",
-        sendUpdates: requester?.email ? "all" : "none",
+        sendUpdates: inviteEmail ? "all" : "none",
         requestBody: {
           summary: `[Orbit42] 요청 미팅 — ${requesterLabel}`,
           description: req.message as string,
           start: { dateTime: startAt.toISOString(), timeZone: "Asia/Seoul" },
           end: { dateTime: endAt.toISOString(), timeZone: "Asia/Seoul" },
-          attendees: requester?.email
-            ? [{ email: requester.email as string, displayName: requesterLabel }]
+          attendees: inviteEmail
+            ? [{ email: inviteEmail, displayName: requesterLabel }]
             : undefined,
         },
       });
