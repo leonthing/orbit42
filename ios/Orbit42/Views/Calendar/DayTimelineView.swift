@@ -25,8 +25,12 @@ struct DayTimelineView: View {
     var onRate: (CalendarEvent, Int) -> Void = { _, _ in }
 
     // ── 다른 날로 끌기 (1.5.1) ──
-    /// 끄는 중 화면 왼쪽·오른쪽 끝에 머물면 부모가 이 날 + offset 으로 페이지를 넘긴다
+    /// 끄는 중 화면 왼쪽·오른쪽 끝에 머물면 넘어간 날 수 — 부모는 페이지를 넘기지 않고 날짜 표시만 바꾼다 (0 = 원래 날)
     var onDayOffset: (Int) -> Void = { _ in }
+    /// 다른 날의 일정 — 끄는 동안 이 페이지 안에서 그 날을 그린다(페이지를 넘기면 끄는 제스처가 끊긴다, 버그-4)
+    var eventsForDay: ((Date) -> [CalendarEvent])? = nil
+    /// 다른 날로 놓은 뒤 — 부모가 그 날로 페이지를 넘긴다(끌기가 끝난 다음이라 안전)
+    var onSettleDay: (Date) -> Void = { _ in }
     /// 다른 날로 넘어간 동안 부모가 손가락 위치에 그릴 유령 블록 (nil = 없음)
     var onCrossDayDrag: (CrossDayDrag?) -> Void = { _ in }
     /// offset 날 페이지의 스크롤 위치 — 넘어간 날의 시간축 기준으로 시각을 잡는다
@@ -46,8 +50,14 @@ struct DayTimelineView: View {
 
     /// 지금 끌고 있는 블록이 넘어간 날 수 (0 = 같은 날)
     @State private var dayOffset = 0
-    @State private var edgeDirection = 0
+    /// 가장자리에 머물면 하루씩 넘기는 상태 — 끌기가 끝·취소되면 더는 넘기지 않는다 (버그-4)
+    @State private var edgeStepper = EdgeDayStepper()
     @State private var edgeTask: Task<Void, Never>?
+    /// 끌기 제스처가 살아 있는 동안 true — 취소(뷰 교체·전화 등)로 onEnded 없이 끝나도 false 로 돌아온다
+    @GestureState private var dragGestureActive = false
+    /// 끌기 시작할 때의 블록 — 다른 날을 그리는 동안에도 같은 id 로 남아 있어 제스처가 이어진다
+    @State private var draggedBlock: Block?
+    @Environment(\.scenePhase) private var scenePhase
     /// 끌기 시작할 때 손가락이 블록 위쪽에서 얼마나 아래였는지 — 넘어간 날에서 블록 위치를 맞춘다
     @State private var grabOffsetY: CGFloat?
     @State private var lastFinger: CGPoint = .zero
@@ -87,10 +97,36 @@ struct DayTimelineView: View {
 
     private var dayStart: Date { calendar.startOfDay(for: date) }
     private var dayEnd: Date { calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart }
-    private var allDayEvents: [CalendarEvent] { events.filter(\.allDay) }
+    /// 지금 그리는 날 — 평소엔 이 페이지의 날, 끌어서 다른 날로 넘어간 동안엔 그 날
+    private var viewingDayStart: Date {
+        guard dragId != nil, dayOffset != 0, eventsForDay != nil,
+              let day = calendar.date(byAdding: .day, value: dayOffset, to: dayStart) else { return dayStart }
+        return day
+    }
+    private var isViewingOtherDay: Bool { viewingDayStart != dayStart }
+    private var shownEvents: [CalendarEvent] {
+        guard isViewingOtherDay, let eventsForDay else { return events }
+        return eventsForDay(viewingDayStart)
+    }
+    private var allDayEvents: [CalendarEvent] { shownEvents.filter(\.allDay) }
     private var timedEvents: [CalendarEvent] { events.filter { !$0.allDay } }
 
     var body: some View {
+        content
+            // 끌기가 onEnded 없이 끝나면(제스처 취소·이 날 페이지가 화면에서 빠짐·앱이 뒤로 감) 원래 자리로 되돌리고 모두 푼다.
+            // 이게 없어서 다른 날로 넘어간 뒤 원래 페이지가 사라지면 넘기기 타이머가 끝없이 돌았다 (버그-4).
+            .onChange(of: dragGestureActive) { _, active in
+                guard !active else { return }
+                // 정상 종료면 onEnded 가 먼저 정리한다 — 그다음에도 남아 있으면 취소된 것
+                DispatchQueue.main.async { if dragId != nil { cancelDrag() } }
+            }
+            .onDisappear { if dragId != nil { cancelDrag() } }
+            .onChange(of: scenePhase) { _, phase in
+                if phase != .active, dragId != nil { cancelDrag() }
+            }
+    }
+
+    private var content: some View {
         VStack(spacing: 0) {
             if !allDayEvents.isEmpty {
                 allDayRow
@@ -191,7 +227,7 @@ struct DayTimelineView: View {
                 // offset 은 UIKit 뷰의 터치 영역을 옮기지 않아 padding 으로 자리를 잡는다
                 .padding(.leading, labelWidth)
                 .padding(.top, topInset)
-                ForEach(layoutBlocks()) { block in
+                ForEach(shownBlocks()) { block in
                     let isLifted = dragId == block.id
                     let movable = isMovable(block.event)
                     let shift = isLifted ? CGFloat(snappedDelta(block)) / 60 * hourHeight : 0
@@ -221,13 +257,15 @@ struct DayTimelineView: View {
                             y: topInset + block.y + (isLifted && !isResizing ? shift : 0)
                         )
                         .zIndex(isLifted || ratingPromptId == block.id ? 1 : 0)
+                        // 다른 날로 넘어간 동안엔 부모의 유령 블록(날짜·시각 표시)이 손가락을 따라간다 — 이 블록은 제스처를 붙들고만 있다
+                        .opacity(isLifted && crossDayActive ? 0.01 : 1)
                         .simultaneousGesture(
                             dragGesture(block, mode: .move, proxy: proxy),
                             including: movable ? .all : .subviews
                         )
                         .animation(.easeOut(duration: 0.12), value: shift)
                 }
-                if calendar.isDateInToday(date) {
+                if calendar.isDateInToday(viewingDayStart) {
                     nowLine(width: columnsWidth)
                 }
             }
@@ -361,6 +399,9 @@ struct DayTimelineView: View {
     private func dragGesture(_ block: Block, mode: DragMode, proxy: ScrollViewProxy) -> some Gesture {
         LongPressGesture(minimumDuration: mode == .resize ? 0.25 : 0.4)
             .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named(Self.viewportSpace)))
+            .updating($dragGestureActive) { value, active, _ in
+                if case .second(true, _) = value { active = true }
+            }
             .onChanged { value in
                 guard case .second(true, let drag) = value else { return }
                 if dragId != block.id { beginDrag(block, mode: mode) }
@@ -394,6 +435,8 @@ struct DayTimelineView: View {
                 endDrag()
                 if let cross {
                     if cross.start != block.event.startAt { onRetime(block.event, cross.start, cross.end) }
+                    // 가장자리로 넘어가서 놓았으면 그 날을 보던 그대로 그 날 페이지로 (주간 칸에 놓은 건 기존대로 알림의 '보기')
+                    if cross.stripDay == nil { onSettleDay(calendar.startOfDay(for: cross.start)) }
                 } else if delta != 0 {
                     onRetime(block.event, times.start, times.end)
                 }
@@ -401,12 +444,14 @@ struct DayTimelineView: View {
     }
 
     private func beginDrag(_ block: Block, mode: DragMode) {
+        draggedBlock = block
         dragViewport = viewportGlobal
         dragId = block.id
         dragMode = mode
         dragTranslation = 0
         dragStartScrollY = scrollY
         lastSnap = 0
+        edgeStepper.begin()
         isDragging = true
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
     }
@@ -417,8 +462,10 @@ struct DayTimelineView: View {
         autoScrollDirection = 0
         edgeTask?.cancel()
         edgeTask = nil
-        edgeDirection = 0
+        edgeStepper.end()
+        if dayOffset != 0 { onDayOffset(0) }   // 날짜 표시를 원래 날로 (페이지는 그대로였다)
         dayOffset = 0
+        draggedBlock = nil
         grabOffsetY = nil
         onCrossDayDrag(nil)
         if dragId != nil { lastDragEnd = Date() }
@@ -427,28 +474,38 @@ struct DayTimelineView: View {
         isDragging = false
     }
 
+    /// 놓지 않고 끝난 끌기 — 아무것도 옮기지 않고, 다른 날로 넘어가 있었으면 원래 날로 되돌린다
+    private func cancelDrag() {
+        endDrag()
+    }
+
     // MARK: - 다른 날로 끌기 (1.5.1)
 
-    /// 화면 왼쪽·오른쪽 28pt 안에 0.7초 머물 때마다 하루씩 넘긴다(계속 머물면 이틀·사흘). 세로 끌기·가로 넘기기와
-    /// 헷갈리지 않게, 블록을 들어 올린 뒤에만, 그것도 가장자리에 멈춰 있을 때만 넘어간다.
+    /// 다른 날로 넘어갔거나 주간 날짜 칸 위에 있는지 — 부모의 유령 블록이 보이는 동안
+    private var crossDayActive: Bool {
+        dragId != nil && (dayOffset != 0 || stripDayUnderFinger() != nil)
+    }
+
+    /// 화면 왼쪽·오른쪽 28pt 안에 0.7초 머물 때마다 하루씩 넘긴다(최대 14일, 페이지는 그대로 두고 그 날을 이 뷰 안에서 그린다). 세로 끌기·가로 넘기기와
+    /// 헷갈리지 않게, 블록을 들어 올린 뒤에만, 그것도 가장자리에 멈춰 있을 때만 넘어간다. 넘길지는 `EdgeDayStepper` 가 정한다.
     private func updateEdgeHover(fingerX: CGFloat, block: Block) {
         let width = dragViewport.width > 0 ? dragViewport.width : 390
-        let edge: CGFloat = 28
-        let direction = fingerX < edge ? -1 : (fingerX > width - edge ? 1 : 0)
-        guard direction != edgeDirection else { return }
-        edgeDirection = direction
+        guard edgeStepper.fingerMoved(x: fingerX, width: width) else { return }
         edgeTask?.cancel()
         edgeTask = nil
+        let direction = edgeStepper.direction
         guard direction != 0 else { return }
         edgeTask = Task { @MainActor in
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 700_000_000)
-                guard !Task.isCancelled, edgeDirection == direction, dragId != nil else { return }
-                dayOffset += direction
+                // 끌기가 끝났거나 가장자리를 벗어났거나 최대 일수에 닿으면 멈춘다
+                guard !Task.isCancelled, dragId != nil, let next = edgeStepper.tick(direction: direction) else { return }
+                dayOffset = next
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                onDayOffset(dayOffset)
+                onDayOffset(next)
                 // 손가락이 가장자리에 멈춰 있어 움직임 이벤트가 없으니, 넘어간 날의 유령 블록을 여기서 바로 그린다
                 try? await Task.sleep(nanoseconds: 150_000_000)
+                guard !Task.isCancelled, dragId != nil else { return }
                 publishCrossDay(block)
             }
         }
@@ -473,7 +530,8 @@ struct DayTimelineView: View {
         guard dayOffset != 0,
               let targetDay = calendar.date(byAdding: .day, value: dayOffset, to: dayStart)
         else { return nil }
-        let sy = scrollYForOffset(dayOffset) ?? scrollY
+        // 같은 뷰 안에서 그 날을 그리므로 이 뷰의 스크롤 그대로
+        let sy = scrollY
         let topY = lastFinger.y + sy - topInset - (grabOffsetY ?? 0)
         let raw = Double(topY / hourHeight * 60)
         let durationMin = Int(duration / 60)
@@ -685,7 +743,17 @@ struct DayTimelineView: View {
     }
 
     /// 서로 이어서 겹치는 일정끼리 한 묶음으로 보고, 묶음 안에서 비어 있는 첫 열에 넣는다.
-    private func layoutBlocks() -> [Block] {
+    /// 그릴 블록 — 다른 날을 그리는 동안엔 그 날 일정 + 끄는 블록(원래 자리·같은 id 그대로)
+    private func shownBlocks() -> [Block] {
+        guard isViewingOtherDay else { return layoutBlocks(timedEvents, from: dayStart) }
+        let others = shownEvents.filter { !$0.allDay && $0.id != dragId }
+        var blocks = layoutBlocks(others, from: viewingDayStart)
+        if let draggedBlock { blocks.append(draggedBlock) }
+        return blocks
+    }
+
+    private func layoutBlocks(_ timedEvents: [CalendarEvent], from dayStart: Date) -> [Block] {
+        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart
         struct Item {
             let event: CalendarEvent
             let start: Date
