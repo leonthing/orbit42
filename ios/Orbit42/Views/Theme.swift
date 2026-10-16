@@ -22,6 +22,8 @@ enum Theme {
     )
     /// 액센트 인디고 (#6366f1) — 양쪽 공통
     static let accent = Color(red: 0x63 / 255, green: 0x66 / 255, blue: 0xF1 / 255)
+    /// 완료 후 만족도 하트 (1.5.2) — 중요 일정의 체크 자리 별과 헷갈리지 않게 별 대신 하트, 시스템 분홍
+    static let satisfaction = Color.pink
     /// 본문 텍스트 — 다크 흰색 / 라이트 진회색
     static let primaryText = dynamic(
         light: UIColor(red: 0.09, green: 0.09, blue: 0.11, alpha: 1),

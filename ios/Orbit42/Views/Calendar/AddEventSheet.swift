@@ -142,7 +142,7 @@ struct AddEventSheet: View {
                         displayedComponents: allDay ? [.date] : [.date, .hourAndMinute]
                     )
                     if !allDay {
-                        durationChips
+                        DurationChips(start: start, end: $end)
                     }
                     DatePicker(
                         "종료",
@@ -250,35 +250,6 @@ struct AddEventSheet: View {
                 Button("저장하고 초대") { save() }
             } message: {
                 Text("구글 캘린더 초대 메일이 갑니다.")
-            }
-        }
-    }
-
-    // MARK: - 길이 칩
-
-    private static let durationOptions: [(label: String, minutes: Int)] = [
-        ("30분", 30), ("1시간", 60), ("2시간", 120),
-    ]
-
-    private var durationChips: some View {
-        let current = Int(end.timeIntervalSince(start) / 60)
-        return HStack(spacing: 8) {
-            Text("길이")
-                .foregroundStyle(Theme.primaryText)
-            Spacer()
-            ForEach(Self.durationOptions, id: \.minutes) { option in
-                let selected = current == option.minutes
-                Button {
-                    end = start.addingTimeInterval(TimeInterval(option.minutes * 60))
-                } label: {
-                    Text(option.label)
-                        .font(.subheadline.weight(selected ? .semibold : .regular))
-                        .foregroundStyle(selected ? .white : Theme.primaryText)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(selected ? Theme.accent : Theme.background, in: Capsule())
-                }
-                .buttonStyle(.borderless)
             }
         }
     }

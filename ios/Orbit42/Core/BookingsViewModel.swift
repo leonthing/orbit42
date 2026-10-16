@@ -74,7 +74,7 @@ final class BookingsViewModel {
     private func pickInitialSegmentIfNeeded(_ response: BookingsResponse) {
         guard !didPickInitialSegment else { return }
         didPickInitialSegment = true
-        if response.host.isEmpty, !response.guest.isEmpty {
+        if response.host.isEmpty, response.receivedTimeRequests.isEmpty, !response.guest.isEmpty {
             segment = .guest
         }
     }
@@ -187,6 +187,53 @@ final class BookingsViewModel {
             actionMessage = apiError.errorDescription
         } catch {
             actionMessage = "요청을 처리하지 못했어요. 네트워크를 확인해 주세요."
+        }
+    }
+
+    // MARK: - 받은 시간 요청 (웹 받은 예약 화면과 같은 서버 함수)
+
+    /// 시간을 정해 수락 — 확정 예약이 생기고 요청자에게 알림이 간다.
+    @discardableResult
+    func acceptTimeRequest(_ requestId: String, startAt: Date) async -> Bool {
+        await answerTimeRequest(requestId) {
+            let _: OkResponse = try await self.api.post(
+                "/api/v1/time-requests/\(requestId)/accept",
+                body: AcceptTimeRequestBody(startAt: APIDateParser.encodeDateTime(startAt))
+            )
+        }
+    }
+
+    /// 거절 — 요청자에게 알림이 간다.
+    @discardableResult
+    func declineTimeRequest(_ requestId: String) async -> Bool {
+        await answerTimeRequest(requestId) {
+            let _: OkResponse = try await self.api.post(
+                "/api/v1/time-requests/\(requestId)/decline",
+                body: EmptyBody()
+            )
+        }
+    }
+
+    private func answerTimeRequest(_ requestId: String, _ call: () async throws -> Void) async -> Bool {
+        guard !actingIds.contains(requestId) else { return false }
+        actingIds.insert(requestId)
+        defer { actingIds.remove(requestId) }
+        do {
+            try await call()
+            await load(force: true)
+            WidgetBridge.reload() // 위젯 '요청 n건'도 바로 줄게
+            return true
+        } catch is CancellationError {
+            return false
+        } catch let urlError as URLError where urlError.code == .cancelled {
+            return false
+        } catch let apiError as APIError {
+            actionMessage = apiError.errorDescription
+            await load(force: true)
+            return false
+        } catch {
+            actionMessage = "요청을 처리하지 못했어요. 네트워크를 확인해 주세요."
+            return false
         }
     }
 }

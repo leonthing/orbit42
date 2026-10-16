@@ -165,6 +165,9 @@ struct EditEventSheet: View {
                         selection: $start,
                         displayedComponents: allDay ? [.date] : [.date, .hourAndMinute]
                     )
+                    if !allDay {
+                        DurationChips(start: start, end: $end)
+                    }
                     DatePicker(
                         "종료",
                         selection: $end,

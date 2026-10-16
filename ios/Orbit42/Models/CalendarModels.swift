@@ -48,6 +48,21 @@ enum EventImportance: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
+/// 완료 체크 모양 — 중요함(보관 아님)은 동그라미 대신 별(1.5.2). 하루 보기·목록이 같이 쓴다. 위젯은 `CompletionCheckbox`.
+enum CompletionMark {
+    static func isStar(_ event: CalendarEvent) -> Bool { event.importance == .high && !event.archived }
+
+    static func symbol(_ event: CalendarEvent) -> String {
+        isStar(event)
+            ? (event.completed ? "star.fill" : "star")
+            : (event.completed ? "checkmark.circle.fill" : "circle")
+    }
+
+    static func label(_ event: CalendarEvent) -> String {
+        (isStar(event) ? "중요 일정, " : "") + (event.completed ? "완료 해제" : "완료로 표시")
+    }
+}
+
 /// API v1 계약의 event 객체. `startAt`/`endAt` 은 유연하게 디코딩한다.
 struct CalendarEvent: Decodable, Identifiable, Sendable {
     let id: String
