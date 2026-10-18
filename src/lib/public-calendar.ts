@@ -1,5 +1,5 @@
 import { getAdminClient } from "@/lib/supabase";
-import { getAuthenticatedCalendar } from "@/lib/google";
+import { getAuthenticatedCalendar, GOOGLE_TIMEOUT_MS } from "@/lib/google";
 import { getSession } from "@/lib/auth";
 import { listVisibleCalendars } from "@/lib/calendars";
 import { listNativeEventsInCalendars } from "@/lib/native-events";
@@ -68,7 +68,13 @@ export async function getPublicEvents(
     (c) => c.source === "google" && c.google_calendar_id,
   );
 
-  const calendar = await getAuthenticatedCalendar(host.id as string);
+  // 구글 캘린더를 실제로 읽을 때만 토큰을 꺼낸다(만료면 여기서 갱신) — 공개 캘린더에
+  // 구글 캘린더가 없는데 방문자가 열 때마다 소유자 토큰을 갱신하지 않게 (버그-5)
+  const needsMeta = isOwner && !forPublicFeed && !hasExplicitFilter;
+  const calendar =
+    googleBackedCals.length > 0 || needsMeta
+      ? await getAuthenticatedCalendar(host.id as string)
+      : null;
 
   // Owner fallback: when the user's PRIMARY Google calendar hasn't been
   // saved into `calendars` yet, still show events from it. This is the only
@@ -88,10 +94,9 @@ export async function getPublicEvents(
     name: string;
     color: string;
   }> = [];
-  const needsMeta = !!calendar && isOwner && !forPublicFeed && !hasExplicitFilter;
-  if (needsMeta) {
+  if (calendar && needsMeta) {
     try {
-      const list = await calendar.calendarList.list();
+      const list = await calendar.calendarList.list({}, { timeout: GOOGLE_TIMEOUT_MS });
       const linkedIds = new Set(
         googleBackedCals.map((c) => c.google_calendar_id as string),
       );
@@ -132,7 +137,7 @@ export async function getPublicEvents(
               singleEvents: true,
               orderBy: "startTime",
               maxResults: 250,
-            });
+            }, { timeout: GOOGLE_TIMEOUT_MS });
             return (res.data.items ?? []).map((it) => ({
               id: `${cs.google_calendar_id}::${it.id}`,
               title: it.summary || "(제목 없음)",

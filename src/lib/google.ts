@@ -76,17 +76,47 @@ export async function exchangeCode(code: string) {
   return tokens;
 }
 
+/** 구글 토큰 갱신(refresh)·calendarList 대기 한도 — 넘으면 구글 없이 진행한다 (버그-5). */
+export const GOOGLE_TIMEOUT_MS = 10_000;
+
+function withTimeout<T>(promise: Promise<T>, ms = GOOGLE_TIMEOUT_MS): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`google timeout ${ms}ms`)), ms);
+    promise.then(
+      (v) => { clearTimeout(timer); resolve(v); },
+      (e) => { clearTimeout(timer); reject(e); },
+    );
+  });
+}
+
 export async function getGoogleTokens(userId: string) {
   const db = getAdminClient();
+  // abortSignal 을 붙이면 Next 서버 컴포넌트의 요청 메모이제이션에서 빠진다 —
+  // 같은 렌더 안에서 갱신 후 다시 읽을 때 처음(만료된) 값을 돌려받아 refresh 가
+  // 300초 동안 반복되던 문제(버그-5)
   const { data } = await db
     .from("users")
     .select("google_access_token, google_refresh_token, google_token_expiry")
     .eq("id", userId)
+    .abortSignal(new AbortController().signal)
     .single();
   return data;
 }
 
+/** OAuth 연결 직후 — 토큰 저장 + 캘린더 목록 동기화 (콜백 전용) */
 export async function saveGoogleTokens(
+  userId: string,
+  tokens: { access_token?: string | null; refresh_token?: string | null; expiry_date?: number | null }
+) {
+  await persistGoogleTokens(userId, tokens);
+  await syncGoogleCalendarsToDb(userId).catch((err) =>
+    console.error("syncGoogleCalendarsToDb", err),
+  );
+}
+
+/** 토큰만 저장 — 갱신(refresh) 경로는 이것만 쓴다. 여기서 동기화를 부르면
+ *  동기화가 다시 토큰을 읽고 갱신하는 고리가 생긴다 (버그-5) */
+async function persistGoogleTokens(
   userId: string,
   tokens: { access_token?: string | null; refresh_token?: string | null; expiry_date?: number | null }
 ) {
@@ -102,10 +132,6 @@ export async function saveGoogleTokens(
       updated_at: new Date().toISOString(),
     })
     .eq("id", userId);
-
-  await syncGoogleCalendarsToDb(userId).catch((err) =>
-    console.error("syncGoogleCalendarsToDb", err),
-  );
 }
 
 /**
@@ -124,7 +150,7 @@ export async function syncGoogleCalendarsToDb(userId: string) {
     primary?: boolean | null;
   }> = [];
   try {
-    const res = await calendar.calendarList.list();
+    const res = await calendar.calendarList.list({}, { timeout: GOOGLE_TIMEOUT_MS });
     items = (res.data.items ?? []) as typeof items;
   } catch {
     return;
@@ -173,8 +199,8 @@ async function getAuthenticatedClient(userId: string) {
 
   if (tokenData.google_token_expiry && new Date(tokenData.google_token_expiry) < new Date()) {
     try {
-      const { credentials } = await client.refreshAccessToken();
-      await saveGoogleTokens(userId, credentials);
+      const { credentials } = await withTimeout(client.refreshAccessToken());
+      await persistGoogleTokens(userId, credentials);
       client.setCredentials(credentials);
     } catch {
       // Token revoked or invalid — need re-auth
@@ -286,7 +312,7 @@ async function clientForExtraAccount(account: ExtraGoogleAccount) {
   });
   if (account.token_expiry && new Date(account.token_expiry) < new Date()) {
     try {
-      const { credentials } = await client.refreshAccessToken();
+      const { credentials } = await withTimeout(client.refreshAccessToken());
       const db = getAdminClient();
       await db
         .from("google_accounts")
