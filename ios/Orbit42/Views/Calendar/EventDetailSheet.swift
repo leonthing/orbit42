@@ -49,6 +49,10 @@ struct EventDetailSheet: View {
     @State private var isSavingBucket = false
     @State private var bucketErrorMessage: String?
 
+    /// 중요도 즉시 저장 중 (표시는 viewModel.current 가 낙관적으로 바꾸고 실패하면 되돌린다)
+    @State private var isSavingImportance = false
+    @State private var importanceErrorMessage: String?
+
     /// 일정별 실제 수익 기록 (nil = 자동 계산)
     @State private var earningKrw: Int?
     @State private var isSavingEarning = false
@@ -265,6 +269,11 @@ struct EventDetailSheet: View {
                             .foregroundStyle(Theme.primaryText.opacity(0.85))
                     }
                     .listRowBackground(Theme.surface)
+                }
+
+                // 중요도 — 수정 화면을 열지 않고 바로 (개선-21). 수정 화면을 못 여는 일정은 여기도 없음
+                if canEdit {
+                    importanceSection
                 }
 
                 Section {
@@ -640,6 +649,102 @@ struct EventDetailSheet: View {
                 isCompleted = !newValue
                 isArchived = wasArchived
                 completionErrorMessage = "완료 상태를 저장하지 못했어요. 잠시 후 다시 시도해 주세요."
+            }
+        }
+    }
+
+    // MARK: - 중요도
+
+    private var importanceSection: some View {
+        let importance = viewModel.current(event).importance
+        return Section {
+            Menu {
+                Picker("중요도", selection: importanceSelection) {
+                    ForEach(EventImportance.allCases) { level in
+                        if level == .high {
+                            Label(level.label, systemImage: "star").tag(level)
+                        } else {
+                            Text(level.label).tag(level)
+                        }
+                    }
+                }
+            } label: {
+                HStack {
+                    Text("중요도")
+                        .foregroundStyle(Theme.primaryText)
+                    Spacer()
+                    if isSavingImportance {
+                        ProgressView()
+                            .tint(Theme.secondaryText)
+                    } else {
+                        HStack(spacing: 6) {
+                            if importance == .high {
+                                Image(systemName: "star")
+                                    .font(.caption.weight(.semibold))
+                            }
+                            Text(importance.label)
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.caption2)
+                        }
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.secondaryText)
+                    }
+                }
+            }
+            .accessibilityIdentifier("detail.importance")
+            .disabled(isSavingImportance || isDeleting)
+            .alert("중요도를 저장하지 못했어요", isPresented: showImportanceErrorAlert) {
+                Button("확인", role: .cancel) { importanceErrorMessage = nil }
+            } message: {
+                Text(importanceErrorMessage ?? "")
+            }
+        } footer: {
+            if let reminderText {
+                Text(reminderText)
+            }
+        }
+        .listRowBackground(Theme.surface)
+    }
+
+    /// 이 일정이 실제로 울릴 알림 — 직접 고른 알림이 없으면 중요함은 30·10분 전 (EditEventSheet 기본값 문구와 같은 규칙)
+    private var reminderText: String? {
+        let current = viewModel.current(event)
+        guard !event.allDay else { return nil }
+        if let minutes = current.reminderMinutes {
+            return "알림: \(ReminderOption(rawValue: minutes)?.label ?? "\(minutes)분 전")"
+        }
+        if current.importance == .high { return "알림: 30분·10분 전 (중요함 기본값)" }
+        let settings = AppSettings.shared
+        let on = event.isGoogle ? settings.notifyGoogleEvents : settings.notifyOrbitEvents
+        return on ? "알림: \(settings.defaultReminder.label) 전 (기본값)" : "알림: 없음 (기본값)"
+    }
+
+    private var importanceSelection: Binding<EventImportance> {
+        Binding(
+            get: { viewModel.current(event).importance },
+            set: { setImportance($0) }
+        )
+    }
+
+    private var showImportanceErrorAlert: Binding<Bool> {
+        Binding(
+            get: { importanceErrorMessage != nil },
+            set: { if !$0 { importanceErrorMessage = nil } }
+        )
+    }
+
+    /// 고르면 바로 저장 — 뷰모델이 화면(하루 보기 별 포함)에 먼저 반영하고 실패하면 되돌린다
+    private func setImportance(_ newValue: EventImportance) {
+        guard newValue != viewModel.current(event).importance, !isSavingImportance else { return }
+        isSavingImportance = true
+        Task {
+            defer { isSavingImportance = false }
+            do {
+                try await viewModel.setImportance(event, newValue)
+            } catch let apiError as APIError {
+                importanceErrorMessage = apiError.errorDescription
+            } catch {
+                importanceErrorMessage = "중요도를 저장하지 못했어요. 잠시 후 다시 시도해 주세요."
             }
         }
     }
