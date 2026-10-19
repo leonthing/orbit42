@@ -3,6 +3,7 @@ import { getAuthenticatedCalendar, GOOGLE_TIMEOUT_MS } from "@/lib/google";
 import { getSession } from "@/lib/auth";
 import { listVisibleCalendars } from "@/lib/calendars";
 import { listNativeEventsInCalendars } from "@/lib/native-events";
+import { googleAllDayEndToInclusive } from "@/lib/calendar-events";
 
 export type PublicEvent = {
   id: string;
@@ -142,7 +143,8 @@ export async function getPublicEvents(
               id: `${cs.google_calendar_id}::${it.id}`,
               title: it.summary || "(제목 없음)",
               start_at: it.start?.dateTime || it.start?.date || "",
-              end_at: it.end?.dateTime || it.end?.date || "",
+              // 구글 종일 끝은 다음 날(포함 안 함) — 네이티브와 같은 규칙(그날 포함)으로
+              end_at: it.end?.dateTime || (it.end?.date ? googleAllDayEndToInclusive(it.end.date, it.start?.date ?? undefined) : ""),
               all_day: !!it.start?.date,
               calendar_color: cs.color,
               calendar_label: cs.name,
