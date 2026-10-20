@@ -39,6 +39,37 @@ W, H = 2064, 2752
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 
+def clear_top_strip(im):
+    """07 전용(PO 10/20 B안): iPad 13"은 리포트가 짧아 만족도까지 내리면 탭 바 양옆에 윗 카드
+    (지난주 리포트)의 '수입·투자 시간·잃어버린 시간' 줄이 남는다. 상태 막대 아래~주간 목표 카드 위 띠만
+    앱 배경색으로 칠한다. 시계·배터리 글자와 탭 바 캡슐은 원본 그대로. 좌표는 raw/report.png(2064×2752) 픽셀 기준."""
+    W = im.width
+    BG = (242, 242, 247)           # 앱 배경(systemGroupedBackground) — 왼쪽 여백 (40,700)에서 잰 값
+    TOP = 236                      # 주간 목표 카드 위 경계(241px) 바로 위까지 칠함
+    PILL = (656, 64, 1407, 152)    # 탭 바 캡슐(y=108 줄의 흰 구간), 모서리 반지름 44
+    STATUS_Y, CLOCK_X, ICONS_X = 70, 400, 1860   # 상태 막대 높이, 시계 오른쪽 끝, 배터리·와이파이 왼쪽 끝
+    pill = Image.new('L', im.size, 0); ImageDraw.Draw(pill).rounded_rectangle(PILL, 44, fill=255)
+    out = im.copy(); px = out.load(); src = im.load(); pm = pill.load()
+    for y in range(TOP):
+        for x in range(W):
+            if pm[x, y]:
+                continue
+            r, g, b = src[x, y]
+            if y < STATUS_Y and (x < CLOCK_X or x > ICONS_X):
+                # 상태 막대 글자: 밝은 바탕만 배경색으로 옮기고 글자 진하기(a)는 유지
+                a = max(0.0, min(1.0, (255 - min(r, g, b)) / 200))
+                px[x, y] = tuple(int(c * a + BG[i] * (1 - a)) if a > 0.02 else BG[i] for i, c in enumerate((r, g, b)))
+            else:
+                px[x, y] = BG
+    # 지운 자리에 캡슐 그림자를 옅게 다시 그림
+    sh = Image.new('L', im.size, 0)
+    ImageDraw.Draw(sh).rounded_rectangle([PILL[0], 70, PILL[2], 160], 44, fill=60)
+    sh = sh.filter(ImageFilter.GaussianBlur(14))
+    band = Image.composite(Image.new('RGB', im.size, (200, 200, 212)), out, sh); band.paste(im, (0, 0), pill)
+    out.paste(band.crop((0, 0, W, TOP)), (0, 0))
+    return out
+
+
 def make(key, l1, l2, sub, mode, out):
     im = bg(W, H, mode).convert('RGBA'); d = ImageDraw.Draw(im)
     tc = (255, 255, 255) if mode == 'dark' else DARK
@@ -49,6 +80,8 @@ def make(key, l1, l2, sub, mode, out):
         f = font(120); w = d.textlength(txt, font=f); d.text(((W - w) / 2, y), txt, font=f, fill=col); y += 150
     f = font(54, 'medium'); w = d.textlength(sub, font=f); d.text(((W - w) / 2, y + 30), sub, font=f, fill=sc)
     shot = Image.open(os.path.join(HERE, 'raw', f'{key}.png')).convert('RGB')
+    if key == 'report':
+        shot = clear_top_strip(shot)
     pw = 1640; ph = int(shot.height * pw / shot.width); shot = shot.resize((pw, ph), Image.LANCZOS)
     bez, r = 30, 60
     dev = Image.new('RGBA', (pw + 2 * bez, ph + 2 * bez), (0, 0, 0, 0))
