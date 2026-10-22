@@ -169,7 +169,8 @@ struct BookingsView: View {
                     emptyState(
                         icon: "tray",
                         title: "받은 예약이 없어요",
-                        message: "예약 링크를 공유하면 받은 예약이 이곳에 모여요"
+                        message: "예약 링크를 공유하면 받은 예약이 이곳에 모여요",
+                        action: ("예약 링크 만들기", { router.openNewBookingLink() })
                     )
                 } else {
                     hostList(data.host, timeRequests: data.receivedTimeRequests)
@@ -228,7 +229,12 @@ struct BookingsView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func emptyState(icon: String, title: String, message: String) -> some View {
+    private func emptyState(
+        icon: String,
+        title: String,
+        message: String,
+        action: (title: String, run: () -> Void)? = nil
+    ) -> some View {
         ScrollView {
             VStack(spacing: 12) {
                 Image(systemName: icon)
@@ -241,6 +247,17 @@ struct BookingsView: View {
                     .font(.subheadline)
                     .multilineTextAlignment(.center)
                     .foregroundStyle(Theme.secondaryText)
+                if let action {
+                    Button(action: action.run) {
+                        Text(action.title)
+                            .font(.subheadline.weight(.semibold))
+                            .padding(.horizontal, 22)
+                            .padding(.vertical, 11)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .buttonBorderShape(.capsule)
+                    .padding(.top, 8)
+                }
             }
             .frame(maxWidth: .infinity)
             .padding(.top, 80)

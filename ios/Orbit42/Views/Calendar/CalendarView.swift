@@ -48,7 +48,10 @@ struct CalendarView: View {
     }
 
     @Environment(TabRouter.self) private var router
+    @Environment(AuthViewModel.self) private var auth
     @Environment(\.scenePhase) private var scenePhase
+    /// 가입 직후 빈 캘린더의 "다음에 할 일" 카드 (개선-22)
+    @State private var gettingStarted = GettingStartedState()
 
     private var calendar: Calendar { CalendarViewModel.calendar }
 
@@ -71,6 +74,19 @@ struct CalendarView: View {
             }
             .task(id: viewModel.currentMonthKey) {
                 await viewModel.loadDisplayedMonth()
+                await observeEventsForGettingStarted()
+            }
+            .task(id: auth.user?.username) {
+                gettingStarted.bind(username: auth.user?.username)
+                await observeEventsForGettingStarted()
+                await gettingStarted.refresh()
+            }
+            // 일정을 만들거나 구글을 연결해 일정이 들어오면 '첫 일정' 항목을 지운다
+            .onChange(of: viewModel.monthHasEvents(containing: viewModel.selectedDate)) { _, _ in
+                Task { await observeEventsForGettingStarted() }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: GoogleNotifyPrompt.googleConnected)) { _ in
+                Task { await gettingStarted.refresh() }
             }
             .alert("완료 상태를 저장하지 못했어요", isPresented: showCompletionErrorAlert) {
                 Button("확인", role: .cancel) { completionErrorMessage = nil }
@@ -106,12 +122,16 @@ struct CalendarView: View {
                 if storedScheduleMode == "day" && scheduleViewMode == .month { scheduleViewMode = .day }
                 applyEventRequest(router.calendarEventRequest)
                 applyDateRequest(router.calendarDateRequest)
+                // 예약 탭에서 링크를 만들고 돌아오면 그 항목을 지운다
+                Task { await gettingStarted.refresh() }
             }
             // 홈 화면 위젯에서 누른 날짜.
             // 날이 바뀌었거나 오래 떠나 있다 돌아오면 오늘로 (위젯·알림 링크는 아래에서 그 날짜로 다시 맞춘다)
             .onChange(of: scenePhase) { _, phase in
                 switch phase {
-                case .active: viewModel.didBecomeActive()
+                case .active:
+                    viewModel.didBecomeActive()
+                    Task { await gettingStarted.refresh() }
                 case .background: viewModel.markInactive()
                 default: break
                 }
@@ -120,6 +140,21 @@ struct CalendarView: View {
                 applyDateRequest(date)
             }
         }
+    }
+
+    /// 다음에 할 일 카드 — 표시 달에 일정이 있는지 알린다. 처음 판단할 땐 앞뒤 달까지 본다
+    /// (다음 달에만 일정이 있는 기존 사용자에게 카드가 뜨지 않게).
+    private func observeEventsForGettingStarted() async {
+        guard auth.user != nil, let current = viewModel.monthHasEvents(containing: viewModel.selectedDate) else { return }
+        guard gettingStarted.phase == nil, !current else {
+            gettingStarted.observeEvents(any: current)
+            return
+        }
+        let neighbors = [-1, 1].compactMap { calendar.date(byAdding: .month, value: $0, to: viewModel.selectedDate) }
+        for date in neighbors { await viewModel.prefetchMonth(containing: date) }
+        let any = neighbors.contains { viewModel.monthHasEvents(containing: $0) == true }
+        gettingStarted.observeEvents(any: any)
+        if gettingStarted.phase == "new" { await gettingStarted.refresh() }
     }
 
     /// 위젯 딥링크 — 그 날짜의 하루 보기로 연다.
@@ -875,9 +910,23 @@ struct CalendarView: View {
         }
     }
 
+    /// 월 보기에서만 — 주·하루 보기는 화면이 좁다
+    private var showsGettingStarted: Bool {
+        scheduleViewMode == .month && !gettingStarted.pending.isEmpty
+    }
+
     private var eventList: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 8) {
+                if showsGettingStarted {
+                    GettingStartedCard(
+                        state: gettingStarted,
+                        onAddEvent: { addRequest = AddRequest(start: nil) },
+                        onCreateLink: { router.openNewBookingLink() }
+                    )
+                    .padding(.top, 14)
+                    .transition(.opacity)
+                }
                 HStack {
                     Text(Self.selectedDayFormatter.string(from: viewModel.selectedDate))
                         .font(.subheadline.weight(.semibold))
@@ -892,7 +941,12 @@ struct CalendarView: View {
                 .padding(.top, 14)
 
                 let events = viewModel.events(on: viewModel.selectedDate)
-                if events.isEmpty {
+                if events.isEmpty, showsGettingStarted {
+                    Text("일정이 없어요")
+                        .font(.footnote)
+                        .foregroundStyle(Theme.secondaryText)
+                        .padding(.top, 2)
+                } else if events.isEmpty {
                     VStack(spacing: 10) {
                         Image(systemName: "moon.zzz")
                             .font(.system(size: 28, weight: .light))

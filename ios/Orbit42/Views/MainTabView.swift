@@ -21,6 +21,15 @@ final class TabRouter {
     var calendarDateRequest: Date?
     /// 예약 탭이 열어야 할 예약 상세 — 일정 상세의 "예약에서 관리", 소비 후 nil
     var bookingDetailRequest: BookingDetailTarget?
+    /// 예약 링크 구역에서 '새 예약 링크' 화면을 바로 연다 — 다음에 할 일 카드·받은 예약 빈 화면, 소비 후 false
+    var newBookingLinkRequest = false
+
+    /// 예약 탭 > 예약 링크 > 새 예약 링크
+    func openNewBookingLink() {
+        selection = .bookings
+        bookingsSectionRequest = "links"
+        newBookingLinkRequest = true
+    }
 
     /// 일정 상세 → 그 예약 상세로 (받은 예약 / 내가 한 예약 구역을 먼저 맞춘다)
     func openBooking(id: String, role: BookingRole) {
