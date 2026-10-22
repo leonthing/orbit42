@@ -11,7 +11,10 @@ final class AuthViewModel {
     /// 앱 시작 직후 세션 복원 중 여부 (스플래시 표시용)
     private(set) var isRestoring = true
     /// 방금 가입한 계정인지 — true 면 온보딩 위저드를 먼저 보여준다.
+    /// 끝내기 전에 앱을 끄면 다음 실행 때 멈춘 단계부터 이어진다(계정별로 기기에 저장, 개선-23).
     private(set) var needsOnboarding = false
+    /// 이어서 열 온보딩 단계 (OnboardingFlowView.Step rawValue)
+    private(set) var onboardingStep: String?
 
     var isAuthenticated: Bool { user != nil }
 
@@ -41,6 +44,13 @@ final class AuthViewModel {
         KeychainStore.syncSharedCopy()
         do {
             let response: MeResponse = try await api.get("/api/v1/me")
+            resumeOnboardingIfNeeded(for: response.user)
+            #if DEBUG
+            // UI 테스트용: Apple 가입처럼 '방금 가입한 계정'으로 온보딩을 연다 (이미 진행 중이면 그 단계부터)
+            if ProcessInfo.processInfo.environment["DEMO_ONBOARDING"] == "1", !needsOnboarding {
+                startOnboarding(for: response.user)
+            }
+            #endif
             user = response.user
         } catch APIError.unauthorized {
             logout()
@@ -108,7 +118,9 @@ final class AuthViewModel {
         KeychainStore.saveToken(token)
         let response: MeResponse = try await api.get("/api/v1/me")
         if queryItems?.contains(where: { $0.name == "new" && $0.value == "1" }) == true {
-            needsOnboarding = true
+            startOnboarding(for: response.user)
+        } else {
+            resumeOnboardingIfNeeded(for: response.user)
         }
         user = response.user
     }
@@ -139,11 +151,38 @@ final class AuthViewModel {
         WidgetBridge.reload()
         user = nil
         needsOnboarding = false
+        onboardingStep = nil
     }
 
     /// 온보딩 완료(또는 건너뛰기) — 메인 탭으로 진입한다.
     func finishOnboarding() {
+        if let username = user?.username {
+            UserDefaults.standard.removeObject(forKey: Self.onboardingKey(username))
+        }
         needsOnboarding = false
+        onboardingStep = nil
+    }
+
+    /// 온보딩 단계가 바뀔 때마다 기록 — 앱을 꺼도 여기부터 다시 연다.
+    func saveOnboardingStep(_ step: String) {
+        guard let username = user?.username else { return }
+        onboardingStep = step
+        UserDefaults.standard.set(step, forKey: Self.onboardingKey(username))
+    }
+
+    private static func onboardingKey(_ username: String) -> String { "onboarding.step.\(username)" }
+
+    private func startOnboarding(for user: User) {
+        needsOnboarding = true
+        onboardingStep = UserDefaults.standard.string(forKey: Self.onboardingKey(user.username)) ?? "consent"
+        UserDefaults.standard.set(onboardingStep, forKey: Self.onboardingKey(user.username))
+    }
+
+    /// 기록된 온보딩 단계가 있으면(끝내기 전에 앱을 껐으면) 그 단계부터. 기존 계정은 기록이 없어 그대로 메인.
+    private func resumeOnboardingIfNeeded(for user: User) {
+        guard let step = UserDefaults.standard.string(forKey: Self.onboardingKey(user.username)) else { return }
+        needsOnboarding = true
+        onboardingStep = step
     }
 
     // MARK: - 프로필 갱신
@@ -158,7 +197,9 @@ final class AuthViewModel {
     private func apply(_ response: AuthResponse) {
         KeychainStore.saveToken(response.token)
         if response.isNew == true {
-            needsOnboarding = true
+            startOnboarding(for: response.user)
+        } else {
+            resumeOnboardingIfNeeded(for: response.user)
         }
         user = response.user
     }

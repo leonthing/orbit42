@@ -4,14 +4,18 @@ import UserNotifications
 import UIKit
 
 /// 가입 직후 온보딩 위저드.
-/// 약관 동의 → 프로필(닉네임·사진) → 관심사 → 캘린더 → 이메일 인증(이메일 가입만) → 팔로우 추천.
+/// 약관 동의 → 이름 확인(가입 정보로 미리 채움) → 캘린더 → 알림 → 이메일 인증(이메일 가입만).
+/// 관심사·팔로우 추천은 온보딩에서 뺐다(개선-23) — 프로필 편집·오르빗 탭에서 한다. 화면 코드는 남겨 둠.
+/// 진행 단계는 계정별로 기기에 저장돼, 끝내기 전에 앱을 끄면 다음 실행 때 그 단계부터 이어진다.
 /// 필수는 동의뿐 — 나머지는 건너뛸 수 있고 설정·자산 탭에서 언제든 바꿀 수 있다.
 /// 시급·월급은 가입 직후 묻기엔 부담스러워(개인정보 불안) 자산 탭에서 처음 쓸 때 묻는다.
 struct OnboardingFlowView: View {
     @Environment(AuthViewModel.self) private var auth
 
-    private enum Step: Int, CaseIterable {
+    private enum Step: String, CaseIterable {
         case consent, profile, interests, calendar, notifications, verifyEmail, follow
+        /// 지금 온보딩에 쓰는 단계와 순서
+        static let flow: [Step] = [.consent, .profile, .calendar, .notifications, .verifyEmail]
     }
 
     @State private var steps: [Step] = []
@@ -28,12 +32,21 @@ struct OnboardingFlowView: View {
         }
         .onAppear {
             guard steps.isEmpty else { return }
-            var all = Step.allCases
+            var all = Step.flow
             // OAuth(구글·Apple) 가입은 이메일이 이미 인증돼 있다.
             if auth.user?.emailVerified != false {
                 all.removeAll { $0 == .verifyEmail }
             }
             steps = all
+            // 끝내기 전에 앱을 껐으면 멈춘 단계부터 (예전 판의 빠진 단계면 처음부터)
+            if let saved = auth.onboardingStep.flatMap(Step.init(rawValue:)),
+               let i = all.firstIndex(of: saved) {
+                index = i
+            }
+            auth.saveOnboardingStep(all[index].rawValue)
+        }
+        .onChange(of: index) { _, i in
+            if steps.indices.contains(i) { auth.saveOnboardingStep(steps[i].rawValue) }
         }
         .animation(.default, value: index)
     }
@@ -220,8 +233,8 @@ private struct ProfileStep: View {
         VStack(spacing: 0) {
             stepHeader(
                 icon: "person.crop.circle",
-                title: "프로필을 만들어 주세요",
-                subtitle: "다른 사람에게 보이는 이름이에요.\n사진은 나중에 올려도 돼요."
+                title: "이 이름으로 시작할까요?",
+                subtitle: "다른 사람에게 보이는 이름이에요. 가입 정보로 채워 뒀어요.\n사진과 이름은 나중에 프로필에서 바꿀 수 있어요."
             )
 
             PhotosPicker(selection: $photoItem, matching: .images) {
@@ -261,7 +274,7 @@ private struct ProfileStep: View {
             Spacer()
 
             primaryButton(
-                "다음",
+                "이대로 시작",
                 disabled: displayName.trimmingCharacters(in: .whitespaces).isEmpty,
                 busy: isSaving || isUploading
             ) {
@@ -271,7 +284,9 @@ private struct ProfileStep: View {
         }
         .onAppear {
             guard !didPrefill else { return }
-            displayName = auth.user?.displayName ?? ""
+            // Apple·구글 이름 → 없으면 아이디
+            let name = auth.user?.displayName?.trimmingCharacters(in: .whitespaces) ?? ""
+            displayName = name.isEmpty ? (auth.user?.username ?? "") : name
             didPrefill = true
         }
     }

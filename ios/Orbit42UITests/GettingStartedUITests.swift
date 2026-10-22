@@ -118,6 +118,7 @@ final class GettingStartedUITests: XCTestCase {
         app.launch()
         XCTAssertTrue(app.tabBars.buttons["캘린더"].waitForExistence(timeout: 20))
         XCTAssertFalse(app.staticTexts["다음에 할 일"].waitForExistence(timeout: 10), "기존 계정에 카드가 뜸")
+        XCTAssertFalse(app.staticTexts["시작하기 전에"].exists, "기존 계정에 온보딩이 뜸 (개선-23)")
         shot(app, "10-existing-account")
     }
 
