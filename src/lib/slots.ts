@@ -1475,6 +1475,10 @@ export async function updateBookingStatus(
   if (status === "canceled" && booking && hasEnded(booking)) {
     return { error: PAST_CANCEL_ERROR };
   }
+  // 끝난 대기 예약을 수락(입금 확인 확정 포함)하면 지난 시간이 확정되고 확정 메일·구글 일정이 생긴다 — 1.5.3 앱엔 아직 버튼이 있다
+  if (status === "confirmed" && booking && hasEnded(booking)) {
+    return { error: "이미 지난 예약이라 수락할 수 없어요. 목록에서 보관하거나 삭제해 주세요." };
+  }
 
   const { error } = await db
     .from("bookings")
