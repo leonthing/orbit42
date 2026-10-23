@@ -525,7 +525,6 @@ function HostSection({
                         {b.message}
                       </p>
                     )}
-                    <RescheduleBanner booking={b} />
                     {reschedulingId === b.id && (
                       <HostReschedulePanel
                         bookingId={b.id}
@@ -584,6 +583,8 @@ function HostSection({
                     )}
                   </div>
                 </div>
+                {/* 제안 배너는 행 전체 폭 — 모바일에서 버튼 열 옆 좁은 칸에 갇히지 않게 (개선-29 손질) */}
+                <RescheduleBanner booking={b} />
               </li>
             );
           })}
@@ -908,11 +909,11 @@ function RescheduleBanner({
         {mine ? "변경 제안을 보냈어요" : "시간 변경 제안이 왔어요"}
       </p>
       <p className="mt-1 text-xs text-charcoal-300">
-        <span className="text-charcoal-500 line-through">
+        <span className="whitespace-nowrap text-charcoal-500 line-through">
           {whenLabel(booking.scheduled_at)}
         </span>
         <span className="mx-1.5 text-charcoal-500">→</span>
-        <span className="font-semibold text-charcoal-100">
+        <span className="whitespace-nowrap font-semibold text-charcoal-100">
           {whenLabel(booking.reschedule_start_at)}
         </span>
       </p>

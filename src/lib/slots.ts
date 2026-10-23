@@ -2007,6 +2007,10 @@ export async function proposeRescheduleAsHost(
   return { success: true as const, applied: false };
 }
 
+/** 게스트 제안 제한 — 예약당 하루 5회, 호스트 메일은 10분에 1통 */
+const GUEST_PROPOSALS_PER_DAY = 5;
+const GUEST_PROPOSAL_MAIL_GAP_MS = 10 * 60_000;
+
 /**
  * 회원 게스트가 호스트에게 다른 시간을 제안한다 (개선-29).
  *
@@ -2027,11 +2031,23 @@ export async function proposeRescheduleAsGuest(
 
   const { data: booking } = await db
     .from("bookings")
-    .select("id, guest_id, host_id, slot_id, scheduled_at, status")
+    .select(
+      "id, guest_id, host_id, slot_id, scheduled_at, status, guest_proposal_day, guest_proposal_count, guest_proposal_mailed_at",
+    )
     .eq("id", bookingId)
     .eq("guest_id", userId)
     .maybeSingle();
   if (!booking) return { error: "예약을 찾을 수 없어요." };
+
+  // 하루(한국 시간) 5회까지 — 덮어쓰기를 반복해 호스트를 귀찮게 하지 않게.
+  const todayKst = new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
+  const countToday =
+    booking.guest_proposal_day === todayKst
+      ? ((booking.guest_proposal_count as number | null) ?? 0)
+      : 0;
+  if (countToday >= GUEST_PROPOSALS_PER_DAY) {
+    return { error: "오늘은 더 제안할 수 없어요. 내일 다시 제안해 주세요." };
+  }
   if (booking.status === "canceled" || booking.status === "completed") {
     return { error: "이미 종료된 예약이에요." };
   }
@@ -2067,6 +2083,8 @@ export async function proposeRescheduleAsGuest(
       reschedule_end_at: newEnd.toISOString(),
       reschedule_note: trimmedNote,
       reschedule_created_at: new Date().toISOString(),
+      guest_proposal_day: todayKst,
+      guest_proposal_count: countToday + 1,
       updated_at: new Date().toISOString(),
     })
     .eq("id", bookingId)
@@ -2107,8 +2125,14 @@ export async function proposeRescheduleAsGuest(
       link: `/bookings`,
       actorId: userId,
     });
+    // 메일은 같은 예약에서 10분에 1통까지 — 앱 내 알림은 매번 간다.
+    const lastMailed = booking.guest_proposal_mailed_at
+      ? new Date(booking.guest_proposal_mailed_at as string).getTime()
+      : 0;
+    const mailDue = Date.now() - lastMailed >= GUEST_PROPOSAL_MAIL_GAP_MS;
     const { emailAllowed } = await import("@/lib/notification-prefs");
     if (
+      mailDue &&
       host?.email &&
       (await emailAllowed(booking.host_id as string, "booking_received"))
     ) {
@@ -2121,6 +2145,10 @@ export async function proposeRescheduleAsGuest(
         note: trimmedNote,
         decided: false,
       });
+      await db
+        .from("bookings")
+        .update({ guest_proposal_mailed_at: new Date().toISOString() })
+        .eq("id", bookingId);
     }
   } catch (err) {
     console.error("proposeRescheduleAsGuest notify", err);
@@ -2144,7 +2172,7 @@ export async function respondToReschedule(
   const { data: booking } = await db
     .from("bookings")
     .select(
-      "id, guest_id, host_id, slot_id, availability_id, scheduled_at, status, google_event_id, reschedule_by, reschedule_start_at, reschedule_end_at, reschedule_created_at",
+      "id, guest_id, host_id, slot_id, availability_id, scheduled_at, status, payment_status, google_event_id, reschedule_by, reschedule_start_at, reschedule_end_at, reschedule_created_at",
     )
     .eq("id", bookingId)
     .maybeSingle();
@@ -2226,7 +2254,8 @@ export async function respondToReschedule(
     // (기존 점유는 moveBookingTo 가 비워준다).
     newAvailabilityId: null,
     // 양쪽이 이 시간에 합의했으니 재승인 절차는 필요 없다.
-    newStatus: "confirmed",
+    // 단, 입금 대기 예약은 시간만 옮기고 입금 대기 그대로 둔다 — 수락이 입금 확인은 아니다.
+    newStatus: booking.payment_status === "awaiting" ? (booking.status as string) : "confirmed",
   });
   if (moved.error) return { error: moved.error };
 
