@@ -44,6 +44,12 @@ struct BookingsView: View {
                 if forcedSegment == nil {
                     segmentPicker
                 }
+                // 받은 예약 위 — 미인증이면 예약·초대 메일을 못 받는다는 안내 (개선-24)
+                if viewModel.segment == .host {
+                    EmailVerifyBanner()
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 6)
+                }
                 content
             }
         }
