@@ -134,11 +134,14 @@ function NavLink({
 export function Sidebar({
   username,
   unreadMessages = 0,
+  bookingsBadge = 0,
   weekStart = "mon",
 }: {
   weekStart?: "mon" | "sun";
   username: string;
   unreadMessages?: number;
+  /** 내가 답할 예약 건수 — '예약' 옆 숫자, 0이면 숨김 (개선-30) */
+  bookingsBadge?: number;
 }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
@@ -181,6 +184,7 @@ export function Sidebar({
               active={isActive}
               collapsed={collapsed}
               onClick={close}
+              badge={item.href === "/bookings" ? bookingsBadge : 0}
             />
           );
         })}

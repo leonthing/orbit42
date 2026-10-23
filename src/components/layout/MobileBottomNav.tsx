@@ -8,7 +8,14 @@ import { usePathname } from "next/navigation";
  * 캘린더 / 예약 / 오르빗 / 리포트 / 프로필. 예약 링크(슬롯)는 앱처럼 예약 탭 안의
  * 세그먼트로 들어가고, 나머지 메뉴는 프로필 탭에서 연다.
  */
-export function MobileBottomNav({ username }: { username: string }) {
+export function MobileBottomNav({
+  username,
+  bookingsBadge = 0,
+}: {
+  username: string;
+  /** 내가 답할 예약 건수 — '예약' 아이콘 위 숫자 (개선-30) */
+  bookingsBadge?: number;
+}) {
   const pathname = usePathname();
   const base = `/${username}`;
   const under = (...paths: string[]) => paths.some((p) => pathname === p || pathname.startsWith(p + "/"));
@@ -97,7 +104,17 @@ export function MobileBottomNav({ username }: { username: string }) {
               it.active ? "bg-charcoal-800/60 text-navy-500 dark:text-navy-400" : "text-charcoal-100"
             }`}
           >
-            <span className="h-[22px] w-[22px] [&>svg]:h-full [&>svg]:w-full">{it.icon}</span>
+            <span className="relative h-[22px] w-[22px] [&>svg]:h-full [&>svg]:w-full">
+              {it.icon}
+              {it.label === "예약" && bookingsBadge > 0 && (
+                <span
+                  className="absolute -right-2 -top-1 min-w-[16px] rounded-full bg-red-500 px-1 text-center text-[10px] font-bold leading-4 text-white"
+                  aria-label={`답할 예약 ${bookingsBadge}건`}
+                >
+                  {bookingsBadge > 99 ? "99+" : bookingsBadge}
+                </span>
+              )}
+            </span>
             <span>{it.label}</span>
           </Link>
         ))}

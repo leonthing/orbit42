@@ -27,15 +27,19 @@ export async function AppShell({
   const { getAdminClient } = await import("@/lib/supabase");
   const { data: wsRow } = await getAdminClient()
     .from("users")
-    .select("week_start")
+    .select("id, week_start")
     .eq("username", viewerUsername)
     .maybeSingle();
   const weekStart = (wsRow as { week_start?: string } | null)?.week_start === "sun" ? "sun" : "mon";
+  // 예약 메뉴 옆 숫자 — 앱 예약 탭 배지와 같은 셈 (개선-30)
+  const viewerId = (wsRow as { id?: string } | null)?.id;
+  const { bookingsNeedingReplyCount } = await import("@/lib/booking-badge");
+  const bookingsBadge = viewerId ? await bookingsNeedingReplyCount(viewerId).catch(() => 0) : 0;
 
   return (
     <MobileMenuProvider>
       <div className="flex h-screen overflow-hidden bg-[rgb(var(--bg-base))]">
-        <Sidebar username={viewerUsername} unreadMessages={unreadMessages} weekStart={weekStart} />
+        <Sidebar username={viewerUsername} unreadMessages={unreadMessages} bookingsBadge={bookingsBadge} weekStart={weekStart} />
         <div className="flex flex-1 flex-col overflow-hidden">
           <TopBar
             username={viewerUsername}
@@ -59,7 +63,7 @@ export async function AppShell({
             </div>
           </main>
         </div>
-        <MobileBottomNav username={viewerUsername} />
+        <MobileBottomNav username={viewerUsername} bookingsBadge={bookingsBadge} />
       </div>
     </MobileMenuProvider>
   );
