@@ -13,7 +13,7 @@ export async function bookingsNeedingReplyCount(userId: string): Promise<number>
   const [host, guest, requests] = await Promise.all([
     db
       .from("bookings")
-      .select("id, status, reschedule_by")
+      .select("id, status, reschedule_by, scheduled_end_at")
       .eq("host_id", userId)
       .eq("hidden_by_host", false)
       .eq("archived_by_host", false)
@@ -33,7 +33,10 @@ export async function bookingsNeedingReplyCount(userId: string): Promise<number>
   ]);
   const incoming = (by: unknown) => by != null && by !== userId;
   const hostCount = (host.data ?? []).filter(
-    (b) => b.status === "pending" || incoming(b.reschedule_by),
+    // 응답 없이 시간이 지난 대기 예약은 답할 수 없어 빼고 센다 (개선-31)
+    (b) =>
+      (b.status === "pending" && new Date(b.scheduled_end_at as string).getTime() > Date.now()) ||
+      incoming(b.reschedule_by),
   ).length;
   const guestCount = (guest.data ?? []).filter((b) => incoming(b.reschedule_by)).length;
   return hostCount + guestCount + (requests.count ?? 0);

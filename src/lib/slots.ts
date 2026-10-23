@@ -1448,6 +1448,15 @@ export async function changeMyBookingListState(
   return { ok: true };
 }
 
+/** 끝 시각이 지난 예약은 취소하지 않는다 (개선-31) — 뒤늦은 취소 메일과 구글 일정 삭제로 실제 만난 기록이 사라진다. */
+const PAST_CANCEL_ERROR =
+  "이미 지난 예약은 취소할 수 없어요. 목록에서 보관하거나 삭제해 주세요.";
+
+function hasEnded(booking: { scheduled_at?: unknown; scheduled_end_at?: unknown }) {
+  const end = (booking.scheduled_end_at ?? booking.scheduled_at) as string | null | undefined;
+  return !!end && new Date(end).getTime() <= Date.now();
+}
+
 export async function updateBookingStatus(
   id: string,
   status: "confirmed" | "canceled" | "completed",
@@ -1458,11 +1467,14 @@ export async function updateBookingStatus(
   const { data: booking } = await db
     .from("bookings")
     .select(
-      "guest_id, guest_email, guest_name, scheduled_at, host_id, google_event_id, slot:time_slots!bookings_slot_id_fkey(title, location_detail, calendar_id)",
+      "guest_id, guest_email, guest_name, scheduled_at, scheduled_end_at, host_id, google_event_id, slot:time_slots!bookings_slot_id_fkey(title, location_detail, calendar_id)",
     )
     .eq("id", id)
     .eq("host_id", userId)
     .single();
+  if (status === "canceled" && booking && hasEnded(booking)) {
+    return { error: PAST_CANCEL_ERROR };
+  }
 
   const { error } = await db
     .from("bookings")
@@ -2384,7 +2396,7 @@ export async function cancelMyBooking(bookingId: string) {
   const { data: booking } = await db
     .from("bookings")
     .select(
-      "id, guest_id, host_id, scheduled_at, status, slot:time_slots!bookings_slot_id_fkey(title, location_detail)",
+      "id, guest_id, host_id, scheduled_at, scheduled_end_at, status, slot:time_slots!bookings_slot_id_fkey(title, location_detail)",
     )
     .eq("id", bookingId)
     .eq("guest_id", userId)
@@ -2393,6 +2405,7 @@ export async function cancelMyBooking(bookingId: string) {
   if (booking.status === "canceled" || booking.status === "completed") {
     return { error: "이미 종료된 예약이에요." };
   }
+  if (hasEnded(booking)) return { error: PAST_CANCEL_ERROR };
   const { error } = await db
     .from("bookings")
     .update({ status: "canceled", updated_at: new Date().toISOString() })

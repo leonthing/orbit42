@@ -44,13 +44,18 @@ enum BookingAction: String {
 protocol BookingDisplayable {
     var statusRaw: String { get }
     var scheduledAt: Date { get }
+    var scheduledEndAt: Date { get }
 }
 
 extension BookingDisplayable {
     var status: BookingStatus? { BookingStatus(rawValue: statusRaw) }
+    /// 끝 시각이 지났는지 — 지난 예약은 취소하지 않는다(서버도 막음, 개선-31)
+    var hasEnded: Bool { scheduledEndAt <= Date() }
+    /// 답 없이 시간이 지난 대기 예약 — 화면에서만 '응답 없이 지남'으로 (DB 상태는 그대로)
+    var isLapsedPending: Bool { status == .pending && hasEnded }
     /// 알 수 없는 상태값이 와도 raw 문자열로라도 표시한다.
-    var badgeText: String { status?.badgeText ?? statusRaw }
-    var badgeColor: Color { status?.badgeColor ?? Theme.secondaryText }
+    var badgeText: String { isLapsedPending ? "응답 없이 지남" : (status?.badgeText ?? statusRaw) }
+    var badgeColor: Color { isLapsedPending ? Theme.secondaryText : (status?.badgeColor ?? Theme.secondaryText) }
     /// "7월 30일 (목) 15:00"
     var scheduledText: String { BookingDateFormatter.dateTime.string(from: scheduledAt) }
 }

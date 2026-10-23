@@ -325,7 +325,7 @@ struct BookingsView: View {
         // 손이 필요한 것(승인·입금 확인)을 맨 위에 모은다.
         let needsAction = upcoming.filter { $0.status == .pending }
         let scheduled = upcoming.filter { $0.status != .pending }
-        let pendingCount = bookings.filter { $0.status == .pending }.count
+        let pendingCount = bookings.filter { $0.status == .pending && !$0.hasEnded }.count // 응답 없이 지난 것은 빼고 (개선-31)
         let upcomingCount = upcoming
             .filter { $0.status == .pending || $0.status == .confirmed }
             .count
@@ -612,7 +612,7 @@ struct BookingsView: View {
                         GuestBookingRow(
                             booking: booking,
                             isActing: viewModel.actingIds.contains(booking.id),
-                            canCancel: booking.status == .pending || booking.status == .confirmed,
+                            canCancel: (booking.status == .pending || booking.status == .confirmed) && !booking.hasEnded,
                             onCancel: { cancelTarget = booking },
                             onOpen: {
                                 detailTarget = BookingDetailTarget(id: booking.id, role: .guest)
@@ -753,7 +753,8 @@ private struct HostBookingRow: View {
                 )
             }
 
-            if booking.status == .pending {
+            // 답 없이 시간이 지난 대기 예약은 수락·거절 대신 보관·삭제만 (개선-31)
+            if booking.status == .pending && !booking.hasEnded {
                 HStack(spacing: 8) {
                     BookingActionButton(
                         title: booking.payment?.isAwaiting == true ? "입금 확인하고 확정" : "수락",

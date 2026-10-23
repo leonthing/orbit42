@@ -525,7 +525,8 @@ struct BookingDetailView: View {
                 }
             }
             if role == .host {
-                if detail.status == .pending {
+                // 끝 시각이 지난 예약은 취소·거절하지 않는다 — 보관·삭제는 오른쪽 위 ⋯ (개선-31)
+                if detail.status == .pending, detail.end > Date() {
                     HStack(spacing: 8) {
                         actionButton(detail.payment?.isAwaiting == true ? "입금 확인하고 확정" : "수락", prominent: true) {
                             Task { await viewModel.act(.confirm, on: bookingId) }
@@ -543,7 +544,7 @@ struct BookingDetailView: View {
                         Task { await viewModel.act(.cancel, on: bookingId) }
                     }
                 }
-            } else if detail.status == .pending || detail.status == .confirmed {
+            } else if detail.status == .pending || detail.status == .confirmed, detail.end > Date() {
                 actionButton("예약 취소", prominent: false) {
                     showingCancelConfirm = true
                 }

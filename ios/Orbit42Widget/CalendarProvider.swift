@@ -152,7 +152,17 @@ struct CalendarProvider: TimelineProvider {
             struct Proposal: Decodable { let byMe: Bool? }
             struct Row: Decodable {
                 let status: String?
+                let scheduledEndAt: String?
                 let reschedule: Proposal?
+                /// 응답 없이 시간이 지난 대기 예약은 빼고 센다 (개선-31)
+                var isOpenPending: Bool {
+                    guard status == "pending" else { return false }
+                    guard let raw = scheduledEndAt else { return true }
+                    let f = ISO8601DateFormatter()
+                    f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                    let end = f.date(from: raw) ?? ISO8601DateFormatter().date(from: raw)
+                    return (end ?? .distantFuture) > Date()
+                }
                 var hasIncomingProposal: Bool { reschedule.map { $0.byMe != true } ?? false }
             }
             let host: [Row]
@@ -168,7 +178,7 @@ struct CalendarProvider: TimelineProvider {
               (response as? HTTPURLResponse)?.statusCode == 200,
               let decoded = try? JSONDecoder().decode(Response.self, from: data)
         else { return nil }
-        let host = decoded.host.filter { $0.status == "pending" || $0.hasIncomingProposal }.count
+        let host = decoded.host.filter { $0.isOpenPending || $0.hasIncomingProposal }.count
         let guest = (decoded.guest ?? []).filter(\.hasIncomingProposal).count
         return host + guest + (decoded.pendingTimeRequests ?? 0)
     }

@@ -32,7 +32,8 @@ final class PendingBookingsCounter {
     /// 승인 대기이면서 제안도 와 있는 예약은 한 건으로 센다.
     static func pending(in response: BookingsResponse) -> Int {
         let hostNeedsReply = response.host.filter {
-            $0.status == .pending || ($0.reschedule.map { !$0.byMe } ?? false)
+            // 응답 없이 시간이 지난 대기 예약은 답할 수 없어 빼고 센다 (개선-31)
+            ($0.status == .pending && !$0.hasEnded) || ($0.reschedule.map { !$0.byMe } ?? false)
         }.count
         let guestProposals = response.guest.filter { $0.reschedule.map { !$0.byMe } ?? false }.count
         return hostNeedsReply + guestProposals + response.receivedTimeRequests.count

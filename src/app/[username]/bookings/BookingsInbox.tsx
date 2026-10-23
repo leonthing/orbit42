@@ -90,14 +90,14 @@ export default function BookingsInbox({
   const pendingCount = upcoming.filter((b) => b.status === "pending").length;
   const confirmedCount = upcoming.filter((b) => b.status === "confirmed").length;
 
+  const toast = useToast();
   const update = (id: string, status: "confirmed" | "canceled" | "completed") => {
     startTransition(async () => {
-      await updateBookingStatus(id, status);
+      const res = await updateBookingStatus(id, status);
+      if (res && "error" in res && res.error) toast.error(res.error);
       router.refresh();
     });
   };
-
-  const toast = useToast();
   const confirm = useConfirm();
   const cancelSelf = async (id: string) => {
     const ok = await confirm({
@@ -397,14 +397,19 @@ function DateStamp({ iso }: { iso: string }) {
   );
 }
 
-function StatusPill({ status }: { status: string }) {
+function StatusPill({ status, endedAt }: { status: string; endedAt?: string | null }) {
+  // 답 없이 시간이 지난 대기 예약은 화면에서만 '응답 없이 지남'으로 (DB 상태는 그대로, 개선-31)
+  const lapsed =
+    status === "pending" && !!endedAt && new Date(endedAt).getTime() <= Date.now();
   return (
     <span
       className={`shrink-0 rounded-full px-2 py-0.5 text-2xs font-semibold ${
-        STATUS_STYLES[status] ?? "bg-charcoal-700/40 text-charcoal-500"
+        lapsed
+          ? "bg-charcoal-700/40 text-charcoal-500"
+          : STATUS_STYLES[status] ?? "bg-charcoal-700/40 text-charcoal-500"
       }`}
     >
-      {STATUS_LABELS[status] ?? status}
+      {lapsed ? "응답 없이 지남" : STATUS_LABELS[status] ?? status}
     </span>
   );
 }
@@ -471,7 +476,7 @@ function HostSection({
                       <p className="truncate text-sm font-semibold text-charcoal-100">
                         {b.slot.title}
                       </p>
-                      <StatusPill status={b.status} />
+                      <StatusPill status={b.status} endedAt={b.scheduled_end_at} />
                       {b.payment_status === "awaiting" && b.status === "pending" && (
                         <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-2xs font-semibold text-amber-700 dark:text-amber-300">
                           입금 대기 · ₩{Math.round(b.slot.price_cents / 100).toLocaleString("ko-KR")}
@@ -533,7 +538,7 @@ function HostSection({
                     )}
                   </div>
                   <div className="flex shrink-0 flex-col gap-1">
-                    {b.status === "pending" && (
+                    {b.status === "pending" && end > new Date() && (
                       <button
                         onClick={() => update(b.id, "confirmed")}
                         disabled={pending}
@@ -556,7 +561,8 @@ function HostSection({
                           시간 변경
                         </button>
                       )}
-                    {b.status !== "canceled" && b.status !== "completed" && (
+                    {/* 끝 시각이 지난 예약은 취소하지 않는다 — 보관·삭제만 (개선-31) */}
+                    {b.status !== "canceled" && b.status !== "completed" && end > new Date() && (
                       <button
                         onClick={() => update(b.id, "canceled")}
                         disabled={pending}
@@ -648,7 +654,7 @@ function GuestSection({
                       <p className="truncate text-sm font-semibold text-charcoal-100">
                         {b.slot.title}
                       </p>
-                      <StatusPill status={b.status} />
+                      <StatusPill status={b.status} endedAt={b.scheduled_end_at} />
                     </div>
                     <TimeLine start={start} end={end} />
                     {b.host && (
