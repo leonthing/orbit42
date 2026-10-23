@@ -144,11 +144,19 @@ struct CalendarProvider: TimelineProvider {
         return false
     }
 
-    /// 답해야 할 요청 수 — 받은 예약 중 승인 대기 + 프로필로 받은 시간 요청 중 미답.
+    /// 내가 답할 일 수 — 앱 예약 탭 배지(PendingBookingsCounter)와 같은 셈 (개선-30):
+    /// 받은 예약 중 승인 대기이거나 상대가 보낸 시간 변경 제안이 온 것(한 예약은 한 번)
+    /// + 내가 한 예약 중 상대가 보낸 제안이 온 것 + 프로필로 받은 시간 요청 중 미답. 내가 보낸 제안은 세지 않는다.
     private static func fetchPendingRequests(token: String) async -> Int? {
         struct Response: Decodable {
-            struct Host: Decodable { let status: String }
-            let host: [Host]
+            struct Proposal: Decodable { let byMe: Bool? }
+            struct Row: Decodable {
+                let status: String?
+                let reschedule: Proposal?
+                var hasIncomingProposal: Bool { reschedule.map { $0.byMe != true } ?? false }
+            }
+            let host: [Row]
+            let guest: [Row]?
             let pendingTimeRequests: Int?
         }
         var components = URLComponents(url: SharedConfig.baseURL, resolvingAgainstBaseURL: false)!
@@ -160,7 +168,9 @@ struct CalendarProvider: TimelineProvider {
               (response as? HTTPURLResponse)?.statusCode == 200,
               let decoded = try? JSONDecoder().decode(Response.self, from: data)
         else { return nil }
-        return decoded.host.filter { $0.status == "pending" }.count + (decoded.pendingTimeRequests ?? 0)
+        let host = decoded.host.filter { $0.status == "pending" || $0.hasIncomingProposal }.count
+        let guest = (decoded.guest ?? []).filter(\.hasIncomingProposal).count
+        return host + guest + (decoded.pendingTimeRequests ?? 0)
     }
 
     /// 지금 + 앞으로 12시간 안에 끝나는 일정마다 + 자정 — 다음 갱신 전에도 지난 일정이 빠지도록.

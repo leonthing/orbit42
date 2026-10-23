@@ -102,14 +102,14 @@ struct CompletionCheckbox: View {
     }
 }
 
-/// 답해야 할 요청 수 — 없으면 아무것도 그리지 않는다. 누르면 받은 예약 목록.
+/// 내가 답할 일 수(앱 예약 탭 배지와 같은 셈) — 없으면 아무것도 그리지 않는다. 누르면 예약 목록.
 struct RequestBadge: View {
     let count: Int
 
     var body: some View {
         if count > 0 {
             Link(destination: SharedConfig.bookingsURL) {
-                Text("요청 \(count)건")
+                Text("답할 일 \(count)건")
                     .font(.system(size: 10, weight: .bold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 6)

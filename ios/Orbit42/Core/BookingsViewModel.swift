@@ -197,6 +197,7 @@ final class BookingsViewModel {
                 body: RescheduleResponseRequest(action: action.rawValue)
             )
             await load(force: true)
+            WidgetBridge.reload() // 위젯 '답할 일 n건'도 같은 셈이라 바로 맞춘다 (개선-30)
         } catch is CancellationError {
             return
         } catch let urlError as URLError where urlError.code == .cancelled {
@@ -263,7 +264,7 @@ final class BookingsViewModel {
         do {
             try await call()
             await load(force: true)
-            WidgetBridge.reload() // 위젯 '요청 n건'도 바로 줄게
+            WidgetBridge.reload() // 위젯 '답할 일 n건'도 바로 줄게
             return true
         } catch is CancellationError {
             return false
