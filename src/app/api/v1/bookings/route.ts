@@ -91,10 +91,23 @@ function toApiGuestBooking(b: GuestBookingRow) {
 }
 
 // GET — 받은 예약(host) + 내가 한 예약(guest)을 한 번에.
+// `?archived=1` 이면 보관함(개선-25) — 같은 모양, 시간 요청은 비운다.
 export async function GET(request: Request) {
   const session = await apiSession(request);
   if (!session) {
     return Response.json({ error: "로그인이 필요해요." }, { status: 401 });
+  }
+  if (new URL(request.url).searchParams.get("archived") === "1") {
+    const [host, guest] = await Promise.all([
+      listMyHostBookings({ archived: true }),
+      listMyGuestBookings({ archived: true }),
+    ]);
+    return Response.json({
+      host: host.map(toApiHostBooking),
+      guest: guest.map(toApiGuestBooking),
+      pendingTimeRequests: 0,
+      timeRequests: [],
+    });
   }
   const [host, guest, timeRequests] = await Promise.all([
     listMyHostBookings(),

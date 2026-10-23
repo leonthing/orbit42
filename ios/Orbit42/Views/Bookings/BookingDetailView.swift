@@ -31,11 +31,13 @@ struct BookingDetailView: View {
     private var hostBooking: HostBooking? {
         guard role == .host else { return nil }
         return viewModel.data?.host.first { $0.id == bookingId }
+            ?? viewModel.archived?.host.first { $0.id == bookingId }
     }
 
     private var guestBooking: GuestBooking? {
         guard role == .guest else { return nil }
         return viewModel.data?.guest.first { $0.id == bookingId }
+            ?? viewModel.archived?.guest.first { $0.id == bookingId }
     }
 
     private var isActing: Bool { viewModel.actingIds.contains(bookingId) }

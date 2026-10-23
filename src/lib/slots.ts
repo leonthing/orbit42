@@ -1390,7 +1390,10 @@ async function hydrateSelectedMenus(
   }
 }
 
-export async function listMyGuestBookings(): Promise<GuestBookingRow[]> {
+/** 내가 한 예약. 기본은 보관하지 않은 것, `archived: true` 면 보관함(개선-25). 삭제(숨김)한 것은 둘 다 빠진다. */
+export async function listMyGuestBookings(
+  opts: { archived?: boolean } = {},
+): Promise<GuestBookingRow[]> {
   const userId = await requireUserId();
   const db = getAdminClient();
   const { data } = await db
@@ -1400,6 +1403,7 @@ export async function listMyGuestBookings(): Promise<GuestBookingRow[]> {
     )
     .eq("guest_id", userId)
     .eq("hidden_by_guest", false)
+    .eq("archived_by_guest", opts.archived ?? false)
     .order("scheduled_at", { ascending: true });
   const rows = ((data ?? []) as unknown) as GuestBookingRow[];
   await hydrateSelectedMenus(rows);
@@ -1407,7 +1411,10 @@ export async function listMyGuestBookings(): Promise<GuestBookingRow[]> {
   return rows;
 }
 
-export async function listMyHostBookings(): Promise<BookingRow[]> {
+/** 받은 예약. 기본은 보관하지 않은 것, `archived: true` 면 보관함(개선-25). 삭제(숨김)한 것은 둘 다 빠진다. */
+export async function listMyHostBookings(
+  opts: { archived?: boolean } = {},
+): Promise<BookingRow[]> {
   const userId = await requireUserId();
   const db = getAdminClient();
   const { data } = await db
@@ -1417,6 +1424,7 @@ export async function listMyHostBookings(): Promise<BookingRow[]> {
     )
     .eq("host_id", userId)
     .eq("hidden_by_host", false)
+    .eq("archived_by_host", opts.archived ?? false)
     .order("scheduled_at", { ascending: true });
   const rows = ((data ?? []) as unknown) as BookingRow[];
   await hydrateSelectedMenus(rows);

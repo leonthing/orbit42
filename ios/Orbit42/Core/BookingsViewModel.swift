@@ -23,6 +23,8 @@ final class BookingsViewModel {
     var segment: Segment = .host
     /// nil 이면 아직 최초 로딩 전.
     private(set) var data: BookingsResponse?
+    /// 보관함(개선-25) — `GET /api/v1/bookings?archived=1`. 옛 서버면 nil 로 남는다.
+    private(set) var archived: BookingsResponse?
     private(set) var isLoading = false
     /// 최초 로딩/새로고침 실패 메시지 (전체 화면 에러 상태용)
     private(set) var errorMessage: String?
@@ -52,8 +54,10 @@ final class BookingsViewModel {
         defer { isLoading = false }
 
         do {
+            async let archivedCall: BookingsResponse? = try? await api.get("/api/v1/bookings?archived=1")
             let response: BookingsResponse = try await api.get("/api/v1/bookings")
             data = response
+            archived = await archivedCall
             pickInitialSegmentIfNeeded(response)
             NotificationCenter.default.post(
                 name: PendingBookingsCounter.didLoad,
@@ -79,28 +83,62 @@ final class BookingsViewModel {
         }
     }
 
-    // MARK: - 액션 (수락/거절/완료/취소)
+    // MARK: - 보관 / 여러 개 (개선-25)
 
-    /// 내 목록에서 예약 삭제(숨김). 상대방 기록·거래 통계는 서버에서 유지된다.
-    func deleteBooking(_ bookingId: String) async {
-        guard !actingIds.contains(bookingId) else { return }
-        actingIds.insert(bookingId)
-        defer { actingIds.remove(bookingId) }
+    /// 보관함에 든 예약 수 (지금 세그먼트 기준)
+    func archivedCount(_ segment: Segment) -> Int {
+        guard let archived else { return 0 }
+        return segment == .host ? archived.host.count : archived.guest.count
+    }
 
-        do {
-            let _: BookingActionResponse = try await api.delete(
-                "/api/v1/bookings/\(bookingId)"
+    /// 내 목록에서 보관 — 상대방 목록은 그대로. 여러 개면 한꺼번에 보내고 한 번만 다시 불러온다.
+    func archive(_ ids: [String]) async {
+        await runBulk(ids, failure: "보관하지 못한 예약이 있어요. 잠시 후 다시 시도해 주세요.") { id in
+            let _: BookingActionResponse = try await self.api.patch(
+                "/api/v1/bookings/\(id)",
+                body: BookingActionRequest(action: "archive")
             )
-            await load(force: true)
-        } catch is CancellationError {
-            return
-        } catch let urlError as URLError where urlError.code == .cancelled {
-            return
-        } catch let apiError as APIError {
-            actionMessage = apiError.errorDescription
-        } catch {
-            actionMessage = "삭제하지 못했어요. 네트워크를 확인해 주세요."
         }
+    }
+
+    /// 보관함에서 꺼내 다시 목록으로
+    func unarchive(_ ids: [String]) async {
+        await runBulk(ids, failure: "되돌리지 못한 예약이 있어요. 잠시 후 다시 시도해 주세요.") { id in
+            let _: BookingActionResponse = try await self.api.patch(
+                "/api/v1/bookings/\(id)",
+                body: BookingActionRequest(action: "unarchive")
+            )
+        }
+    }
+
+    /// 내 목록에서 삭제(숨김) — 한 개든 여러 개든. 상대방 기록·거래 통계는 서버에서 유지된다.
+    func deleteBookings(_ ids: [String]) async {
+        await runBulk(ids, failure: "삭제하지 못한 예약이 있어요. 잠시 후 다시 시도해 주세요.") { id in
+            let _: BookingActionResponse = try await self.api.delete("/api/v1/bookings/\(id)")
+        }
+    }
+
+    private func runBulk(
+        _ ids: [String],
+        failure: String,
+        _ call: @escaping @MainActor (String) async throws -> Void
+    ) async {
+        let todo = ids.filter { !actingIds.contains($0) }
+        guard !todo.isEmpty else { return }
+        actingIds.formUnion(todo)
+        defer { actingIds.subtract(todo) }
+        var firstError: String?
+        for id in todo {
+            do {
+                try await call(id)
+            } catch let apiError as APIError {
+                firstError = firstError ?? apiError.errorDescription ?? failure
+            } catch {
+                firstError = firstError ?? failure
+            }
+        }
+        await load(force: true)
+        if let firstError { actionMessage = firstError }
     }
 
     // MARK: - 시간 변경
@@ -167,6 +205,8 @@ final class BookingsViewModel {
             actionMessage = "응답을 처리하지 못했어요. 네트워크를 확인해 주세요."
         }
     }
+
+    // MARK: - 액션 (수락/거절/완료/취소)
 
     func act(_ action: BookingAction, on bookingId: String) async {
         guard !actingIds.contains(bookingId) else { return }
