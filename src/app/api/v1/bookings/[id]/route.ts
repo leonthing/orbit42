@@ -1,5 +1,5 @@
 import { apiSession, apiUserId } from "@/lib/api-auth";
-import { getAdminClient } from "@/lib/supabase";
+import { changeBookingListState, type BookingListResult } from "@/lib/booking-list-state";
 import { updateBookingStatus, cancelMyBooking } from "@/lib/slots";
 
 export const dynamic = "force-dynamic";
@@ -19,41 +19,12 @@ export async function DELETE(
     return Response.json({ error: "사용자를 찾을 수 없어요." }, { status: 404 });
   }
 
-  const db = getAdminClient();
-  const { data: booking } = await db
-    .from("bookings")
-    .select("id, host_id, guest_id, status, scheduled_at")
-    .eq("id", params.id)
-    .maybeSingle();
-  if (!booking) {
-    return Response.json({ error: "예약을 찾을 수 없어요." }, { status: 404 });
-  }
+  return listStateResponse(await changeBookingListState(userId, params.id, "delete"));
+}
 
-  const isHost = booking.host_id === userId;
-  const isGuest = booking.guest_id === userId;
-  if (!isHost && !isGuest) {
-    return Response.json({ error: "권한이 없어요." }, { status: 403 });
-  }
-
-  const active =
-    ["pending", "confirmed"].includes(booking.status as string) &&
-    new Date(booking.scheduled_at as string).getTime() > Date.now();
-  if (active) {
-    return Response.json(
-      { error: "진행 중인 예약은 먼저 취소한 뒤에 삭제할 수 있어요." },
-      { status: 400 },
-    );
-  }
-
-  const { error } = await db
-    .from("bookings")
-    .update(
-      isHost ? { hidden_by_host: true } : { hidden_by_guest: true },
-    )
-    .eq("id", params.id);
-  if (error) {
-    console.error("booking hide", error);
-    return Response.json({ error: "삭제에 실패했어요." }, { status: 400 });
+function listStateResponse(result: BookingListResult) {
+  if ("error" in result) {
+    return Response.json({ error: result.error }, { status: result.status });
   }
   return Response.json({ ok: true });
 }
@@ -73,41 +44,9 @@ async function setArchived(request: Request, id: string, archived: boolean) {
   if (!userId) {
     return Response.json({ error: "사용자를 찾을 수 없어요." }, { status: 404 });
   }
-  const db = getAdminClient();
-  const { data: booking } = await db
-    .from("bookings")
-    .select("id, host_id, guest_id, status, scheduled_at")
-    .eq("id", id)
-    .maybeSingle();
-  if (!booking) {
-    return Response.json({ error: "예약을 찾을 수 없어요." }, { status: 404 });
-  }
-  const isHost = booking.host_id === userId;
-  const isGuest = booking.guest_id === userId;
-  if (!isHost && !isGuest) {
-    return Response.json({ error: "권한이 없어요." }, { status: 403 });
-  }
-  const active =
-    ["pending", "confirmed"].includes(booking.status as string) &&
-    new Date(booking.scheduled_at as string).getTime() > Date.now();
-  if (archived && active) {
-    return Response.json(
-      { error: "진행 중인 예약은 보관할 수 없어요. 끝난 예약만 보관할 수 있어요." },
-      { status: 400 },
-    );
-  }
-  const { error } = await db
-    .from("bookings")
-    .update(isHost ? { archived_by_host: archived } : { archived_by_guest: archived })
-    .eq("id", id);
-  if (error) {
-    console.error("booking archive", error);
-    return Response.json(
-      { error: archived ? "보관하지 못했어요." : "되돌리지 못했어요." },
-      { status: 400 },
-    );
-  }
-  return Response.json({ ok: true });
+  return listStateResponse(
+    await changeBookingListState(userId, id, archived ? "archive" : "unarchive"),
+  );
 }
 
 // PATCH { action: "confirm" | "cancel" | "complete" | "cancelMine" | "archive" | "unarchive" }

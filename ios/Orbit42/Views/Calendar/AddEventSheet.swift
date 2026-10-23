@@ -249,7 +249,7 @@ struct AddEventSheet: View {
                 Button("취소", role: .cancel) {}
                 Button("저장하고 초대") { save() }
             } message: {
-                Text("구글 캘린더 초대 메일이 함께 보내져요.")
+                Text("구글 캘린더 초대 메일도 함께 보내 드려요.")
             }
         }
     }

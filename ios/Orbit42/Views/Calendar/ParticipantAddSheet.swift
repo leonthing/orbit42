@@ -242,7 +242,7 @@ struct ParticipantAddSheet: View {
                 Button("취소", role: .cancel) {}
                 Button("초대 보내기") { submit(pending) }
             } message: { _ in
-                Text("구글 캘린더 초대 메일이 함께 보내져요.")
+                Text("구글 캘린더 초대 메일도 함께 보내 드려요.")
             }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

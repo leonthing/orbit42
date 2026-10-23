@@ -751,10 +751,23 @@ private struct HostBookingRow: View {
                 }
                 .padding(.top, 2)
             } else if showsComplete {
-                BookingActionButton(title: "완료 처리", prominent: true, disabled: isActing) {
-                    onAction(.complete)
+                // 지난 확정 예약이 여럿이어도 목록이 버튼으로 차지 않게 — 작은 테두리 버튼, 오른쪽 정렬
+                HStack {
+                    Spacer(minLength: 0)
+                    Button {
+                        onAction(.complete)
+                    } label: {
+                        Label("완료 처리", systemImage: "checkmark")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Theme.accent)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .overlay(Capsule().stroke(Theme.accent.opacity(0.5), lineWidth: 1))
+                    }
+                    .buttonStyle(.borderless)
+                    .disabled(isActing)
+                    .opacity(isActing ? 0.5 : 1)
                 }
-                .padding(.top, 2)
             }
         }
         .padding(.horizontal, 12)

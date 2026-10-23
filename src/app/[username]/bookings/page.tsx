@@ -13,10 +13,12 @@ export default async function BookingsPage({
 }: {
   params: { username: string };
 }) {
-  const [hostBookings, guestBookings, reviewedIds, timeRequests] =
+  const [hostBookings, guestBookings, hostArchived, guestArchived, reviewedIds, timeRequests] =
     await Promise.all([
       listMyHostBookings(),
       listMyGuestBookings(),
+      listMyHostBookings({ archived: true }),
+      listMyGuestBookings({ archived: true }),
       listMyReviewedBookingIds(),
       listRequestsForHost(),
     ]);
@@ -27,6 +29,8 @@ export default async function BookingsPage({
         username={params.username}
         hostBookings={hostBookings}
         guestBookings={guestBookings}
+        hostArchived={hostArchived}
+        guestArchived={guestArchived}
         reviewedBookingIds={reviewedIds}
       />
     </div>

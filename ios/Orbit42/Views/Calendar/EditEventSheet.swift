@@ -244,7 +244,7 @@ struct EditEventSheet: View {
                     submit(confirmed)
                 }
             } message: { _ in
-                Text("참석자분들께 구글 캘린더 변경 알림이 보내져요.")
+                Text("참석자분들께 구글 캘린더 변경 알림을 보내 드려요.")
             }
             .recurrenceScopeDialog(
                 "반복 일정 고치기",
@@ -435,7 +435,7 @@ struct EditEventSheet: View {
                 lines.append("지운 회차 \(cancelled)개가 다시 생겨요.")
             }
         }
-        if hasGoogleAttendees { lines.append("모든 회차의 참석자분들께 변경 알림이 보내져요.") }
+        if hasGoogleAttendees { lines.append("모든 회차의 참석자분들께 변경 알림을 보내 드려요.") }
         return lines.joined(separator: "\n")
     }
 

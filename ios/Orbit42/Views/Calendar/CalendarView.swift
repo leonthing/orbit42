@@ -104,7 +104,7 @@ struct CalendarView: View {
                 Button("취소", role: .cancel) {}
                 Button("바꾸기") { performMove(move, notifyAttendees: true) }
             } message: { move in
-                Text("\(DayTimelineView.dateTimeLabel(move.newStart, move.newEnd))로 바꿔요. 참석자분들께 구글 캘린더 변경 알림이 보내져요.")
+                Text("\(DayTimelineView.dateTimeLabel(move.newStart, move.newEnd))로 바꿔요. 참석자분들께 구글 캘린더 변경 알림을 보내 드려요.")
             }
             .alert("시간을 바꾸지 못했어요", isPresented: Binding(
                 get: { moveErrorMessage != nil },

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState, useTransition, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   updateBookingStatus,
@@ -11,6 +11,7 @@ import {
   proposeRescheduleAsHost,
   respondToReschedule,
   withdrawReschedule,
+  changeMyBookingListState,
 } from "@/lib/slots";
 import type { BookingRow, GuestBookingRow, BookableOption } from "@/lib/slots";
 import { Segmented } from "@/components/Segmented";
@@ -35,15 +36,32 @@ const STATUS_LABELS: Record<string, string> = {
 
 type Tab = "host" | "guest";
 
+/** 보관·삭제 버튼 묶음이 어느 목록에 붙는지 — 일반 목록은 보관/삭제, 보관함은 되돌리기/삭제 (개선-28) */
+type ListMode = "list" | "archive";
+type ListChange = "archive" | "unarchive" | "delete";
+type OnListChange = (id: string, change: ListChange) => void;
+
+/** 진행 중(대기/확정 + 미래)이 아니면 끝난 예약 — 서버 규칙(booking-list-state)과 같다 */
+function isFinished(status: string, scheduledAt: string) {
+  const active =
+    (status === "pending" || status === "confirmed") &&
+    new Date(scheduledAt).getTime() > Date.now();
+  return !active;
+}
+
 export default function BookingsInbox({
   username,
   hostBookings,
   guestBookings,
+  hostArchived = [],
+  guestArchived = [],
   reviewedBookingIds = [],
 }: {
   username: string;
   hostBookings: BookingRow[];
   guestBookings: GuestBookingRow[];
+  hostArchived?: BookingRow[];
+  guestArchived?: GuestBookingRow[];
   reviewedBookingIds?: string[];
 }) {
   const router = useRouter();
@@ -96,6 +114,39 @@ export default function BookingsInbox({
     });
   };
 
+  // 보관/되돌리기/삭제 — 문구는 앱과 같게 (개선-28)
+  const changeListState: OnListChange = async (id, change) => {
+    if (change === "archive") {
+      const ok = await confirm({
+        title: "이 예약을 보관할까요?",
+        body: "보관함에서 언제든 다시 꺼낼 수 있어요.",
+        confirmLabel: "보관",
+      });
+      if (!ok) return;
+    } else if (change === "delete") {
+      const ok = await confirm({
+        title: "이 예약을 목록에서 삭제할까요?",
+        body: "내 목록에서만 사라지고 상대방의 기록은 유지돼요.",
+        confirmLabel: "삭제",
+        danger: true,
+      });
+      if (!ok) return;
+    }
+    startTransition(async () => {
+      const res = await changeMyBookingListState(id, change);
+      if ("error" in res) toast.error(res.error);
+      else
+        toast.success(
+          change === "archive"
+            ? "보관했어요."
+            : change === "unarchive"
+              ? "목록으로 되돌렸어요."
+              : "삭제했어요.",
+        );
+      router.refresh();
+    });
+  };
+
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
@@ -133,6 +184,8 @@ export default function BookingsInbox({
             update={update}
             pending={pending}
             emptyHint="아직 예정된 예약이 없어요."
+            listMode="list"
+            onListChange={changeListState}
           />
           <HostSection
             title="지난 예약"
@@ -141,7 +194,21 @@ export default function BookingsInbox({
             pending={pending}
             muted
             emptyHint="지난 예약이 없어요."
+            listMode="list"
+            onListChange={changeListState}
           />
+          <ArchiveDrawer count={hostArchived.length}>
+            <HostSection
+              title="보관함"
+              rows={hostArchived}
+              update={update}
+              pending={pending}
+              muted
+              emptyHint="보관한 예약이 없어요."
+              listMode="archive"
+              onListChange={changeListState}
+            />
+          </ArchiveDrawer>
         </>
       ) : (
         <>
@@ -152,7 +219,9 @@ export default function BookingsInbox({
             onCancel={cancelSelf}
             pending={pending}
             reviewedBookingIds={reviewedBookingIds}
-            emptyHint="아직 예정된 예약이 없어요. 오르빗을 둘러보고 시간을 잡아보세요."
+            emptyHint="아직 예정된 예약이 없어요. 오르빗을 둘러보고 시간을 잡아 보세요."
+            listMode="list"
+            onListChange={changeListState}
           />
           <GuestSection
             title="지난 예약"
@@ -163,7 +232,23 @@ export default function BookingsInbox({
             reviewedBookingIds={reviewedBookingIds}
             muted
             emptyHint="지난 예약이 없어요."
+            listMode="list"
+            onListChange={changeListState}
           />
+          <ArchiveDrawer count={guestArchived.length}>
+            <GuestSection
+              title="보관함"
+              rows={guestArchived}
+              username={username}
+              onCancel={cancelSelf}
+              pending={pending}
+              reviewedBookingIds={reviewedBookingIds}
+              muted
+              emptyHint="보관한 예약이 없어요."
+              listMode="archive"
+              onListChange={changeListState}
+            />
+          </ArchiveDrawer>
         </>
       )}
     </div>
@@ -198,6 +283,77 @@ function Stat({
       >
         {value}
       </p>
+    </div>
+  );
+}
+
+/** 끝난 예약의 보관(되돌리기)·삭제 — 작은 보조 버튼 두 개 (개선-28) */
+function ListStateButtons({
+  mode,
+  disabled,
+  onChange,
+}: {
+  mode: ListMode;
+  disabled: boolean;
+  onChange: (change: ListChange) => void;
+}) {
+  return (
+    <div className="flex gap-1">
+      <button
+        type="button"
+        onClick={() => onChange(mode === "archive" ? "unarchive" : "archive")}
+        disabled={disabled}
+        className="flex-1 whitespace-nowrap rounded-lg border border-charcoal-800 px-2.5 py-1 text-xs text-charcoal-400 hover:border-navy-400/60 hover:text-navy-400 disabled:opacity-50"
+      >
+        {mode === "archive" ? "되돌리기" : "보관"}
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange("delete")}
+        disabled={disabled}
+        className="flex-1 whitespace-nowrap rounded-lg border border-charcoal-800 px-2.5 py-1 text-xs text-charcoal-400 hover:border-red-400/60 hover:text-red-500 disabled:opacity-50"
+      >
+        삭제
+      </button>
+    </div>
+  );
+}
+
+/** 목록 맨 아래 '보관함 (n)' — 누르면 펼쳐서 보관한 예약을 보여 준다 (개선-28) */
+function ArchiveDrawer({
+  count,
+  children,
+}: {
+  count: number;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  if (count === 0 && !open) return null;
+  return (
+    <div className="space-y-3">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 px-4 py-3 text-left text-sm text-charcoal-200 hover:border-charcoal-700"
+      >
+        <span className="flex items-center gap-2">
+          <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4 text-navy-400" fill="none" stroke="currentColor" strokeWidth={1.8}>
+            <rect x="3" y="4" width="18" height="5" rx="1" />
+            <path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M10 13h4" />
+          </svg>
+          보관함 ({count})
+        </span>
+        <span className={`text-charcoal-500 transition-transform ${open ? "rotate-90" : ""}`}>›</span>
+      </button>
+      {open && (
+        <div className="space-y-2">
+          <p className="text-xs text-charcoal-500">
+            보관한 예약은 여기서 되돌리거나 삭제할 수 있어요.
+          </p>
+          {children}
+        </div>
+      )}
     </div>
   );
 }
@@ -269,6 +425,8 @@ function HostSection({
   pending,
   muted,
   emptyHint,
+  listMode,
+  onListChange,
 }: {
   title: string;
   rows: BookingRow[];
@@ -276,11 +434,14 @@ function HostSection({
   pending: boolean;
   muted?: boolean;
   emptyHint: string;
+  listMode?: ListMode;
+  onListChange?: OnListChange;
 }) {
   const [reschedulingId, setReschedulingId] = useState<string | null>(null);
   return (
     <section className="space-y-3">
-      <SectionHeader title={title} count={rows.length} />
+      {/* 보관함 안에서는 위의 '보관함 (n)' 줄이 제목 역할 */}
+      {listMode !== "archive" && <SectionHeader title={title} count={rows.length} />}
       {rows.length === 0 ? (
         <EmptyCard hint={emptyHint} />
       ) : (
@@ -412,6 +573,13 @@ function HostSection({
                         완료
                       </button>
                     )}
+                    {listMode && onListChange && isFinished(b.status, b.scheduled_at) && (
+                      <ListStateButtons
+                        mode={listMode}
+                        disabled={pending}
+                        onChange={(change) => onListChange(b.id, change)}
+                      />
+                    )}
                   </div>
                 </div>
               </li>
@@ -431,6 +599,8 @@ function GuestSection({
   muted,
   emptyHint,
   reviewedBookingIds = [],
+  listMode,
+  onListChange,
 }: {
   title: string;
   rows: GuestBookingRow[];
@@ -440,6 +610,8 @@ function GuestSection({
   muted?: boolean;
   emptyHint: string;
   reviewedBookingIds?: string[];
+  listMode?: ListMode;
+  onListChange?: OnListChange;
 }) {
   const [reschedulingId, setReschedulingId] = useState<string | null>(null);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
@@ -447,7 +619,8 @@ function GuestSection({
   const reviewed = new Set([...reviewedBookingIds, ...reviewedLocal]);
   return (
     <section className="space-y-3">
-      <SectionHeader title={title} count={rows.length} />
+      {/* 보관함 안에서는 위의 '보관함 (n)' 줄이 제목 역할 */}
+      {listMode !== "archive" && <SectionHeader title={title} count={rows.length} />}
       {rows.length === 0 ? (
         <EmptyCard hint={emptyHint} />
       ) : (
@@ -563,6 +736,13 @@ function GuestSection({
                       <span className="px-2.5 py-1 text-center text-2xs text-charcoal-600">
                         후기 완료
                       </span>
+                    )}
+                    {listMode && onListChange && isFinished(b.status, b.scheduled_at) && (
+                      <ListStateButtons
+                        mode={listMode}
+                        disabled={pending}
+                        onChange={(change) => onListChange(b.id, change)}
+                      />
                     )}
                   </div>
                 </div>

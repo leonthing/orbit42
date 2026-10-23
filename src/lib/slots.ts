@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { changeBookingListState, type BookingListChange } from "@/lib/booking-list-state";
 import { removeBookingCalendarEvent } from "@/lib/booking-calendar";
 import { getAdminClient } from "@/lib/supabase";
 import { getSession } from "@/lib/auth";
@@ -1430,6 +1431,21 @@ export async function listMyHostBookings(
   await hydrateSelectedMenus(rows);
   for (const r of rows) r.reschedule_by_me = r.reschedule_by === userId;
   return rows;
+}
+
+/**
+ * 웹 예약 화면의 보관/되돌리기/삭제(개선-28) — 앱 API와 같은 규칙(booking-list-state).
+ * 내 목록에서만 바뀌고 상대방 목록은 그대로다.
+ */
+export async function changeMyBookingListState(
+  id: string,
+  change: BookingListChange,
+): Promise<{ ok: true } | { error: string }> {
+  const userId = await requireUserId();
+  const result = await changeBookingListState(userId, id, change);
+  if ("error" in result) return { error: result.error };
+  revalidatePath("/", "layout");
+  return { ok: true };
 }
 
 export async function updateBookingStatus(

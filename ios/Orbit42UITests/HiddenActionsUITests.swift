@@ -64,6 +64,22 @@ final class HiddenActionsUITests: XCTestCase {
         shot(app, "4b-archived-detail-menu")
     }
 
+    /// 지난 확정 예약이 여럿일 때 행의 '완료 처리'가 작은 테두리 버튼인지 (검수 손질)
+    func testRowCompleteCompact() throws {
+        let app = try launch()
+        app.tabBars.buttons["예약"].tap()
+        let seg = app.segmentedControls.buttons["받은 예약"]
+        XCTAssertTrue(seg.waitForExistence(timeout: 10))
+        seg.tap()
+        let complete = app.buttons.matching(identifier: "완료 처리").firstMatch
+        scrollTo(app, complete)
+        XCTAssertTrue(complete.waitForExistence(timeout: 15))
+        XCTAssertEqual(app.buttons.matching(identifier: "완료 처리").count, 2, "지난 확정 2건에 버튼이 하나씩")
+        XCTAssertLessThan(complete.frame.width, 200, "완료 처리 버튼이 여전히 넓음")
+        sleep(1)
+        shot(app, "1-row-complete-compact")
+    }
+
     func testSettingsActionsVisible() throws {
         let app = try launch()
         app.tabBars.buttons["프로필"].tap()
