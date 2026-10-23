@@ -98,6 +98,14 @@ final class APIClient {
         return try await perform(request)
     }
 
+    /// 응답을 기다리지도 읽지도 않는 POST — 방문 흐름 기록처럼 실패해도 상관없는 것 (개선-32)
+    func fireAndForget<Body: Encodable>(_ path: String, body: Body) {
+        var request = request(path: path, method: "POST")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try? JSONEncoder().encode(body)
+        session.dataTask(with: request).resume()
+    }
+
     func patch<Body: Encodable, Response: Decodable>(_ path: String, body: Body) async throws -> Response {
         var request = request(path: path, method: "PATCH")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")

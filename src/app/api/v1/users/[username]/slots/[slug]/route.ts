@@ -128,6 +128,7 @@ export async function POST(
     availabilityId: body.availabilityId,
     message: body.message?.slice(0, 1000),
     selected_location: body.location ?? null,
+    funnelSource: "ios",
     selected_menu_ids: Array.isArray(body.selectedMenuIds)
       ? body.selectedMenuIds.map(String).slice(0, 20)
       : undefined,

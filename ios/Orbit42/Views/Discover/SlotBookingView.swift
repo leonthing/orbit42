@@ -6,6 +6,7 @@ struct SlotBookingView: View {
     @State private var viewModel: SlotBookingViewModel
     /// 예약 확인 시트에 올라간 옵션
     @State private var confirmingOption: BookingOption?
+    @State private var reportedPick = false
     @State private var copied = false
     /// 내 예약 링크에서 누른 시간 — '이 시간 예약 안 받기' 확인용
     @State private var blockingOption: BookingOption?
@@ -65,6 +66,8 @@ struct SlotBookingView: View {
         }
         .task {
             await viewModel.load()
+            // 방문 흐름 ② 예약 링크 열람 — 내 링크는 세지 않는다 (개선-32)
+            if let slot = viewModel.data?.slot, !slot.isMine { Funnel.slotViewed(slotId: slot.id) }
         }
     }
 
@@ -386,6 +389,11 @@ struct SlotBookingView: View {
                 blockingOption = option
             } else {
                 confirmingOption = option
+                // 방문 흐름 ③ 시간 고름 — 이 화면에서 처음 고른 한 번만 (개선-32)
+                if !reportedPick, let slotId = viewModel.data?.slot.id {
+                    reportedPick = true
+                    Funnel.timePicked(slotId: slotId)
+                }
             }
         } label: {
             VStack(spacing: 2) {

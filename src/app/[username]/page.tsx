@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { FunnelBeacon } from "@/components/FunnelBeacon";
 import { getProfile, getSession } from "@/lib/auth";
 import type { SocialLinks, Education, Experience } from "@/lib/auth";
 import { getFollowStats, isFollowing } from "@/lib/follows";
@@ -211,6 +212,8 @@ export default async function PublicProfile({
     return (
       <>
         <JsonLd data={[personSchema, breadcrumbSchema]} />
+        {/* 방문 흐름 ① 링크(프로필) 페이지 열람 — 본인 제외, 횟수만 (개선-32) */}
+        <FunnelBeacon step="profile_view" hostUsername={params.username} />
         <PublicLinkProfile
           username={params.username}
           displayName={profile.display_name || profile.username}

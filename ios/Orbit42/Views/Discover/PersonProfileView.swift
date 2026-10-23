@@ -73,6 +73,8 @@ struct PersonProfileView: View {
         }
         .task {
             await viewModel.load()
+            // 방문 흐름 ① 다른 사람 프로필 열람 (개선-32)
+            if let data = viewModel.data, !data.isMe { Funnel.profileViewed(username: viewModel.username) }
         }
     }
 

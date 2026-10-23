@@ -13,6 +13,7 @@ import {
 } from "react";
 import { getSlotPanelData, type SlotPanelData } from "@/lib/slot-panel";
 import BookingForm from "@/app/[username]/s/[slug]/BookingForm";
+import { reportFunnel } from "@/lib/funnel-client";
 import { SlotDatePreview } from "@/components/SlotDatePicker";
 
 type OpenArgs = { slug: string; startAt?: string };
@@ -186,6 +187,10 @@ function SlotPanelBody({
   startAt?: string;
 }) {
   const { slot, host, isAuction, isOwner, loggedIn, options, menus } = data;
+  // 방문 흐름 ② 프로필에서 예약 링크를 펼쳐 봄 — 예약 링크 페이지 열람과 같은 단계 (개선-32)
+  useEffect(() => {
+    if (!isOwner) reportFunnel(slot.id, "slot_view");
+  }, [slot.id, isOwner]);
 
   return (
     <div className="space-y-5">

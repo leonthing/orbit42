@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { AppStoreAwareLink } from "@/components/AppStoreAwareLink";
 import { notFound } from "next/navigation";
+import { FunnelBeacon } from "@/components/FunnelBeacon";
 import { getSlotBySlug, getBookableOptions, getUpcomingAvailabilities } from "@/lib/slots";
 import { listBids } from "@/lib/auctions";
 import { listMenusForSlot } from "@/lib/menus";
@@ -85,6 +86,7 @@ export default async function SlotPage({
   const session = await getSession();
   const isOwner = session?.username === params.username;
   const isAuction = slot.pricing_model === "auction";
+
   const [attachedMenus, hostRating, hostReviews] = await Promise.all([
     listMenusForSlot(slot.id),
     getHostRating(slot.host_id),
@@ -131,6 +133,8 @@ export default async function SlotPage({
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <JsonLd data={productSchema} />
+      {/* 방문 흐름 ② 예약 링크 페이지 열람 — 본인 제외, 횟수만 (개선-32) */}
+      {!isOwner && <FunnelBeacon step="slot_view" slotId={slot.id} />}
       {isOwner ? (
         <Link
           href={`/${params.username}/slots`}

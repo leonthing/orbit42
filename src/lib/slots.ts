@@ -807,6 +807,8 @@ export async function bookSlot(args: {
   selected_menu_ids?: string[];
   /** Guest's chosen location when the slot offers multiple. */
   selected_location?: string | null;
+  /** 방문 흐름 집계 출처 — 앱 API 는 "ios" (개선-32) */
+  funnelSource?: "web" | "ios";
 }) {
   const session = await getSession();
   const guestId = await getUserId();
@@ -982,6 +984,19 @@ export async function bookSlot(args: {
     .select("id")
     .single();
   if (bookErr || !booking) return { error: "예약에 실패했습니다." };
+
+  // 방문 흐름 ④ 예약 성공 — 횟수만 (개선-32). 봇 판정은 하지 않는다(예약까지 온 건 사람).
+  {
+    const { recordFunnel } = await import("@/lib/funnel");
+    recordFunnel({
+      hostId: slot.host_id as string,
+      slotId: slot.id as string,
+      step: "booked",
+      source: args.funnelSource === "ios" ? "ios" : "web",
+      viewerId: guestId,
+      userAgent: "booking",
+    });
+  }
 
   // Notify host (always) and guest (only if auto-confirmed — otherwise
   // they'll get a confirmation email later when the host approves).

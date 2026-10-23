@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { bookSlot, refreshBookableOptions } from "@/lib/slots";
+import { reportFunnel } from "@/lib/funnel-client";
 import type { BookableOption } from "@/lib/slots";
 import { findMyConflicts } from "@/lib/mutual-availability";
 import { SlotDatePicker } from "@/components/SlotDatePicker";
@@ -60,6 +61,15 @@ export default function BookingForm({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [selectedMenus, setSelectedMenus] = useState<string[]>([]);
+  // 방문 흐름 ③ 시간 고름 — 방문자가 직접 시간을 누른 첫 번째만 (개선-32)
+  const [reportedPick, setReportedPick] = useState(false);
+  const pickTime = (key: string) => {
+    setSelectedKey(key);
+    if (!reportedPick) {
+      setReportedPick(true);
+      reportFunnel(slotId, "time_picked");
+    }
+  };
   // Mutual free-time: viewer's own busy times, fetched on demand.
   const [onlyMyFree, setOnlyMyFree] = useState(false);
   const [myConflicts, setMyConflicts] = useState<Set<string> | null>(null);
@@ -399,7 +409,7 @@ export default function BookingForm({
         <SlotDatePicker
           options={visibleOptions}
           selectedKey={selectedKey}
-          onSelect={setSelectedKey}
+          onSelect={pickTime}
           keyOf={keyOf}
         />
       )}
