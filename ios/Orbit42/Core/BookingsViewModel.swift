@@ -153,7 +153,8 @@ final class BookingsViewModel {
         bookingId: String,
         startAt: String?,
         availabilityId: String?,
-        note: String?
+        note: String?,
+        propose: Bool = false
     ) async -> Bool {
         guard !actingIds.contains(bookingId) else { return false }
         actingIds.insert(bookingId)
@@ -165,7 +166,8 @@ final class BookingsViewModel {
                 body: RescheduleRequest(
                     startAt: startAt,
                     availabilityId: availabilityId,
-                    note: note
+                    note: note,
+                    propose: propose ? true : nil
                 )
             )
             await load(force: true)

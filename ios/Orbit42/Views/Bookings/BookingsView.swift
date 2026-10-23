@@ -404,7 +404,10 @@ struct BookingsView: View {
             },
             onOpen: { detailTarget = BookingDetailTarget(id: booking.id, role: .host) },
             // 끝났는데 아직 확정 상태 — 꾹 누르지 않아도 보이게 (개선-26)
-            showsComplete: isPast && booking.status == .confirmed && !editingPast
+            showsComplete: isPast && booking.status == .confirmed && !editingPast,
+            onRescheduleReply: { reply in
+                Task { await viewModel.respondToReschedule(bookingId: booking.id, action: reply) }
+            }
         )
         .bookingRowChrome()
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
@@ -613,6 +616,9 @@ struct BookingsView: View {
                             onCancel: { cancelTarget = booking },
                             onOpen: {
                                 detailTarget = BookingDetailTarget(id: booking.id, role: .guest)
+                            },
+                            onRescheduleReply: { reply in
+                                Task { await viewModel.respondToReschedule(bookingId: booking.id, action: reply) }
                             }
                         )
                         .bookingRowChrome()
@@ -698,6 +704,8 @@ private struct HostBookingRow: View {
     let onOpen: () -> Void
     /// 지난 확정 예약이면 '완료 처리' 버튼을 행에 바로 보여 준다.
     var showsComplete = false
+    /// 시간 변경 제안 수락·거절·철회 (개선-29) — nil 이면 안내만
+    var onRescheduleReply: ((RescheduleReply) -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -734,6 +742,15 @@ private struct HostBookingRow: View {
 
             if let payment = booking.payment {
                 PaymentPill(payment: payment, priceCents: booking.priceCents)
+            }
+
+            if let proposal = booking.reschedule {
+                RescheduleRowNotice(
+                    proposal: proposal,
+                    counterpart: "게스트",
+                    isActing: isActing,
+                    onReply: onRescheduleReply
+                )
             }
 
             if booking.status == .pending {
@@ -776,6 +793,69 @@ private struct HostBookingRow: View {
         .opacity(booking.status == .canceled ? 0.55 : 1)
         .contentShape(Rectangle())
         .onTapGesture(perform: onOpen)
+    }
+}
+
+// MARK: - 시간 변경 제안 (목록 행, 개선-29)
+
+/// 목록 행 안의 시간 변경 제안 — 받은 제안이면 수락/거절, 내가 보낸 제안이면 안내와 제안 취소.
+private struct RescheduleRowNotice: View {
+    let proposal: BookingReschedule
+    /// 상대 호칭 — "게스트" / "호스트"
+    let counterpart: String
+    let isActing: Bool
+    let onReply: ((RescheduleReply) -> Void)?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Label(
+                proposal.byMe ? "변경 제안을 보냈어요" : "\(counterpart)가 시간 변경을 제안했어요",
+                systemImage: "clock.arrow.circlepath"
+            )
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(Theme.accent)
+
+            Text(proposal.whenText)
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Theme.primaryText)
+
+            if let note = proposal.note, !note.isEmpty {
+                Text(note)
+                    .font(.caption)
+                    .foregroundStyle(Theme.secondaryText)
+                    .lineLimit(2)
+            }
+
+            if let onReply {
+                if proposal.byMe {
+                    HStack {
+                        Text("\(counterpart)가 수락하시면 옮겨져요")
+                            .font(.caption)
+                            .foregroundStyle(Theme.secondaryText)
+                        Spacer(minLength: 0)
+                        Button("제안 취소") { onReply(.withdraw) }
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Theme.accent)
+                            .buttonStyle(.borderless)
+                            .disabled(isActing)
+                    }
+                } else {
+                    HStack(spacing: 8) {
+                        BookingActionButton(title: "수락", prominent: true, disabled: isActing) {
+                            onReply(.accept)
+                        }
+                        BookingActionButton(title: "거절", prominent: false, disabled: isActing) {
+                            onReply(.decline)
+                        }
+                    }
+                }
+            }
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("rescheduleRowNotice")
     }
 }
 
@@ -908,6 +988,8 @@ private struct GuestBookingRow: View {
     let onCancel: () -> Void
     /// 카드 탭 → 예약 상세. 취소 버튼은 자기 탭을 먼저 가져간다.
     let onOpen: () -> Void
+    /// 시간 변경 제안 수락·거절·철회 (개선-29) — nil 이면 안내만
+    var onRescheduleReply: ((RescheduleReply) -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -938,6 +1020,15 @@ private struct GuestBookingRow: View {
 
             if let payment = booking.payment {
                 PaymentPill(payment: payment, priceCents: booking.priceCents)
+            }
+
+            if let proposal = booking.reschedule {
+                RescheduleRowNotice(
+                    proposal: proposal,
+                    counterpart: "호스트",
+                    isActing: isActing,
+                    onReply: onRescheduleReply
+                )
             }
 
             if canCancel {

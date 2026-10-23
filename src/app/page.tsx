@@ -107,14 +107,14 @@ export default async function LandingPage() {
           <FeatureHeader
             eyebrow="예약 링크"
             title="링크를 보내면 상대가 시간을 골라요"
-            body="슬롯을 열고 링크를 보내면, 상대는 이름과 이메일만 남기고 바로 예약 완료. 가입도, 로그인도 필요 없어요."
+            body="예약 링크를 만들어 보내면, 상대는 이름과 이메일만 남기고 바로 예약 완료. 가입도, 로그인도 필요 없어요."
           />
           <div className="mt-8 grid gap-6 md:grid-cols-2 md:items-start">
             <div className="space-y-3">
               <Step
                 n={1}
-                title="슬롯 열기"
-                body="요일 · 시간대 · 가격을 정해 슬롯을 만들어요. 30초면 충분해요."
+                title="예약 링크 만들기"
+                body="요일 · 시간대 · 가격을 정해 예약 링크를 만들어요. 30초면 충분해요."
               />
               <Step
                 n={2}
@@ -211,7 +211,7 @@ export default async function LandingPage() {
             />
             <ValueCard
               title="Messages"
-              body="슬롯 예약 전에 1:1로 가볍게 이야기를 먼저 나눠볼 수 있어요."
+              body="예약 전에 1:1로 가볍게 이야기를 먼저 나눠볼 수 있어요."
             />
           </div>
         </section>
@@ -561,7 +561,7 @@ function DemoCalendar() {
                     : "bg-navy-400/15 text-navy-700 ring-1 ring-navy-400/30 dark:text-navy-200 dark:ring-0"
                 }`}
               >
-                {item.auction ? "경매" : "슬롯"}
+                {item.auction ? "경매" : "예약 링크"}
               </span>
             )}
             <div className="min-w-0 flex-1">

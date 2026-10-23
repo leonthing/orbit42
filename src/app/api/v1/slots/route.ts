@@ -84,7 +84,7 @@ export async function POST(request: Request) {
   const slots = await listMySlots();
   const created = slots.find((s) => s.id === (result as { id: string }).id);
   if (!created) {
-    return Response.json({ error: "슬롯을 만들었지만 불러오지 못했어요." }, { status: 500 });
+    return Response.json({ error: "예약 링크를 만들었지만 불러오지 못했어요." }, { status: 500 });
   }
   return Response.json({ slot: toApiSlotDetail(created, session.username, []) });
 }

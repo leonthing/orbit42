@@ -62,7 +62,7 @@ export function WorkHoursForm({ initial }: Props) {
             근무 시간
           </h2>
           <p className="mt-1 text-xs text-charcoal-500">
-            시간 분석과 예약 슬롯의 기본 가용 시간대로 쓰여요. 주당 총{" "}
+            시간 분석과 예약 링크의 기본 가용 시간대로 쓰여요. 주당 총{" "}
             <span className="font-semibold text-charcoal-300">
               {totalHours}h
             </span>

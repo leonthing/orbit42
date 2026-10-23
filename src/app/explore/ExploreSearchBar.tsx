@@ -30,7 +30,7 @@ export function ExploreSearchBar() {
         type="text"
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder="이름, @아이디, 슬롯 제목 검색…"
+        placeholder="이름, @아이디, 예약 링크 제목 검색…"
         className="w-full rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 py-3 pl-11 pr-4 text-sm text-charcoal-100 placeholder:text-charcoal-500 focus:border-charcoal-700 focus:outline-none"
       />
     </form>

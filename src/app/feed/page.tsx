@@ -693,7 +693,7 @@ function KindBadge({ kind }: { kind: FeedItem["kind"] }) {
         "bg-navy-400/15 text-navy-700 ring-1 ring-navy-400/40 dark:text-navy-200 dark:ring-navy-400/30",
     },
     slot: {
-      label: "슬롯",
+      label: "예약 링크",
       color:
         "bg-navy-400/15 text-navy-700 ring-1 ring-navy-400/40 dark:text-navy-200 dark:ring-navy-400/30",
     },

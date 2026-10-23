@@ -127,7 +127,7 @@ export default async function ExplorePage() {
     bio: string | null;
     avatar_url: string | null;
     last_active: string;
-    activity: "글" | "슬롯" | "신규";
+    activity: "글" | "예약 링크" | "신규";
   };
   const peopleMap = new Map<string, ActiveUser>();
 
@@ -167,7 +167,7 @@ export default async function ExplorePage() {
         bio: u.bio,
         avatar_url: u.avatar_url,
         last_active: s.created_at as string,
-        activity: "슬롯",
+        activity: "예약 링크",
       });
     }
   }
@@ -311,9 +311,9 @@ export default async function ExplorePage() {
       </section>
 
       <section>
-        <SectionTitle title="열린 슬롯" hint="지금 열려 있는 시간들" />
+        <SectionTitle title="열린 예약 링크" hint="지금 열려 있는 시간들" />
         {slots.length === 0 ? (
-          <EmptyState title="열린 슬롯이 아직 없어요." />
+          <EmptyState title="열린 예약 링크가 아직 없어요." />
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
             {slots.map((s) => (

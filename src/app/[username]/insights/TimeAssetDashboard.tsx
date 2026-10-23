@@ -101,7 +101,7 @@ export function TimeAssetDashboard({
         </p>
         <p className="mt-1 text-xs text-charcoal-500">
           {business.monthTotalKrw > 0
-            ? `슬롯 거래 ${won(business.monthBookedKrw)} · 직접 기록 ${won(business.monthManualKrw)}`
+            ? `예약 링크 거래 ${won(business.monthBookedKrw)} · 직접 기록 ${won(business.monthManualKrw)}`
             : "예약 링크 판매와 일정 수익 기록이 여기에 쌓여요."}
         </p>
         <div className="mt-4 flex h-16 items-end gap-2">

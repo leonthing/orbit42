@@ -98,7 +98,7 @@ export default async function SlotPage({
     name: slot.title,
     description:
       slot.description ||
-      `${slot.duration_min}분 · ${host.display_name || host.username}의 타임슬롯`,
+      `${slot.duration_min}분 · ${host.display_name || host.username}의 예약 링크`,
     url: slotUrl,
     category: slot.slot_type || "TimeSlot",
     brand: {
@@ -386,7 +386,7 @@ async function BookingSection({
     <section className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-6">
       <h2 className="text-sm font-semibold text-charcoal-200">예약 가능한 시간</h2>
       {!slot.active ? (
-        <p className="mt-3 text-sm text-charcoal-500">현재 예약을 받지 않는 슬롯이에요.</p>
+        <p className="mt-3 text-sm text-charcoal-500">지금은 예약을 받지 않는 링크예요.</p>
       ) : options.length === 0 ? (
         <p className="mt-3 text-sm text-charcoal-500">
           예약 가능한 시간이 없어요. 잠시 후 다시 확인해주세요.

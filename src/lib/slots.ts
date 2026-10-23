@@ -433,7 +433,7 @@ export async function createSlot(input: SlotInput) {
     .select()
     .single();
 
-  if (error || !slot) return { error: "슬롯 생성에 실패했습니다." };
+  if (error || !slot) return { error: "예약 링크를 만들지 못했어요." };
 
   if (input.availability_starts && input.availability_starts.length > 0) {
     const rows = input.availability_starts.map((start_at) => ({
@@ -486,7 +486,7 @@ async function notifyFollowersOfNewSlot(
       createNotification({
         userId: f.follower_id as string,
         type: "new_slot",
-        title: `${label}님이 '${slotTitle}' 타임슬롯을 열었어요`,
+        title: `${label}님이 '${slotTitle}' 예약 링크를 열었어요`,
         body: "지금 예약할 수 있어요",
         link: `/${host.username}/s/${slug}`,
         actorId: hostId,
@@ -556,7 +556,7 @@ export async function cloneSlot(id: string) {
     .eq("id", id)
     .eq("host_id", userId)
     .single();
-  if (!src) return { error: "슬롯을 찾을 수 없어요." };
+  if (!src) return { error: "예약 링크를 찾을 수 없어요." };
 
   const newTitle = `${src.title} (사본)`;
   const slug = slugify(newTitle) + "-" + Math.random().toString(36).slice(2, 6);
@@ -660,7 +660,7 @@ function buildSlotPreset(
     return {
       ...base,
       title: "업무 미팅",
-      description: "1:1 업무 논의 · 60분. 평일 낮에 받는 공식 미팅 슬롯.",
+      description: "1:1 업무 논의 · 60분. 평일 낮에 받는 공식 미팅.",
       duration_min: 60,
       slot_type: "1on1",
       location_type: "in_person",
@@ -836,9 +836,9 @@ export async function bookSlot(args: {
     )
     .eq("id", args.slotId)
     .single();
-  if (!slot || !slot.active) return { error: "예약할 수 없는 슬롯입니다." };
+  if (!slot || !slot.active) return { error: "지금은 예약할 수 없는 링크예요." };
   if (slot.pricing_model === "auction") {
-    return { error: "경매 슬롯은 입찰을 통해 거래됩니다." };
+    return { error: "경매 방식 예약 링크는 입찰로 거래돼요." };
   }
 
   const windowFrom = slot.valid_from
@@ -871,7 +871,7 @@ export async function bookSlot(args: {
       null;
     if (locList.length > 1 && args.selected_location) {
       if (!locList.some((l) => l.toLowerCase() === pickedLoc?.toLowerCase())) {
-        return { error: "이 슬롯에 허용된 위치가 아니에요." };
+        return { error: "이 예약 링크에서 고를 수 있는 위치가 아니에요." };
       }
     }
     const options = await computeAutoAvailability(slot.host_id as string, {
@@ -1739,7 +1739,7 @@ export async function rescheduleMyBooking(
     .select("*")
     .eq("id", booking.slot_id)
     .single();
-  if (!slot) return { error: "슬롯을 찾을 수 없어요." };
+  if (!slot) return { error: "예약 링크를 찾을 수 없어요." };
 
   let newStart: Date;
   let newAvailabilityId: string | null = null;
@@ -1896,7 +1896,7 @@ export async function proposeRescheduleAsHost(
     .select("*")
     .eq("id", booking.slot_id)
     .single();
-  if (!slot) return { error: "슬롯을 찾을 수 없어요." };
+  if (!slot) return { error: "예약 링크를 찾을 수 없어요." };
 
   const newEnd = new Date(
     newStart.getTime() + (slot.duration_min as number) * 60_000,
@@ -2008,6 +2008,129 @@ export async function proposeRescheduleAsHost(
 }
 
 /**
+ * 회원 게스트가 호스트에게 다른 시간을 제안한다 (개선-29).
+ *
+ * `rescheduleMyBooking` 은 호스트가 열어 둔 시간 안에서 바로 옮기지만, 그 밖의
+ * 시각은 호스트가 되는지 알 수 없으니 제안만 얹어 두고 호스트의 수락을 기다린다.
+ * 수락·거절·철회·만료는 호스트 제안과 같은 함수(respondToReschedule 등)를 쓴다.
+ *
+ * 제안은 예약당 1건 — 이미 상대(호스트)의 제안이 있어도 새 제안으로 덮어쓴다.
+ * 이전 제안자에게 따로 알리지 않고, 화면의 배너만 바뀐다.
+ */
+export async function proposeRescheduleAsGuest(
+  bookingId: string,
+  startAt: string,
+  note?: string | null,
+): Promise<{ success: true } | { error: string }> {
+  const userId = await requireUserId();
+  const db = getAdminClient();
+
+  const { data: booking } = await db
+    .from("bookings")
+    .select("id, guest_id, host_id, slot_id, scheduled_at, status")
+    .eq("id", bookingId)
+    .eq("guest_id", userId)
+    .maybeSingle();
+  if (!booking) return { error: "예약을 찾을 수 없어요." };
+  if (booking.status === "canceled" || booking.status === "completed") {
+    return { error: "이미 종료된 예약이에요." };
+  }
+  if (new Date(booking.scheduled_at as string).getTime() <= Date.now()) {
+    return { error: "이미 지난 예약이에요." };
+  }
+
+  const newStart = new Date(startAt);
+  if (Number.isNaN(newStart.getTime())) {
+    return { error: "시간이 올바르지 않아요." };
+  }
+  if (newStart.getTime() <= Date.now()) {
+    return { error: "지난 시간으로는 제안할 수 없어요." };
+  }
+
+  const { data: slot } = await db
+    .from("time_slots")
+    .select("title, duration_min")
+    .eq("id", booking.slot_id)
+    .single();
+  if (!slot) return { error: "예약 링크를 찾을 수 없어요." };
+
+  const newEnd = new Date(
+    newStart.getTime() + (slot.duration_min as number) * 60_000,
+  );
+  const trimmedNote = note?.trim() ? note.trim().slice(0, 500) : null;
+
+  const { error } = await db
+    .from("bookings")
+    .update({
+      reschedule_by: userId,
+      reschedule_start_at: newStart.toISOString(),
+      reschedule_end_at: newEnd.toISOString(),
+      reschedule_note: trimmedNote,
+      reschedule_created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", bookingId)
+    .eq("guest_id", userId);
+  if (error) {
+    console.error("proposeRescheduleAsGuest", error);
+    return { error: "제안을 보내지 못했어요." };
+  }
+
+  try {
+    const [{ data: host }, { data: guest }] = await Promise.all([
+      db
+        .from("users")
+        .select("email, username, display_name")
+        .eq("id", booking.host_id)
+        .single(),
+      db
+        .from("users")
+        .select("username, display_name")
+        .eq("id", userId)
+        .single(),
+    ]);
+    const guestLabel = personLabel(guest, "게스트");
+    const whenLabel = newStart.toLocaleString("ko-KR", {
+      timeZone: "Asia/Seoul",
+      month: "long",
+      day: "numeric",
+      weekday: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    const { createNotification } = await import("@/lib/notifications");
+    await createNotification({
+      userId: booking.host_id as string,
+      type: "booking_reschedule_proposed",
+      title: `${guestLabel}님이 '${slot.title}' 시간 변경을 제안했어요`,
+      body: `${whenLabel} · 수락하면 예약이 옮겨져요`,
+      link: `/bookings`,
+      actorId: userId,
+    });
+    const { emailAllowed } = await import("@/lib/notification-prefs");
+    if (
+      host?.email &&
+      (await emailAllowed(booking.host_id as string, "booking_received"))
+    ) {
+      const { sendBookingRescheduleProposal } = await import("@/lib/email");
+      await sendBookingRescheduleProposal(host.email as string, {
+        slotTitle: slot.title as string,
+        previousWhen: booking.scheduled_at as string,
+        when: newStart.toISOString(),
+        proposerLabel: guestLabel,
+        note: trimmedNote,
+        decided: false,
+      });
+    }
+  } catch (err) {
+    console.error("proposeRescheduleAsGuest notify", err);
+  }
+
+  revalidatePath("/", "layout");
+  return { success: true as const };
+}
+
+/**
  * 받은 변경 제안에 응답한다 (제안자의 상대만 호출 가능).
  * 수락하면 그때 실제로 옮기고, 양쪽이 합의한 시간이므로 확정으로 둔다.
  */
@@ -2040,7 +2163,7 @@ export async function respondToReschedule(
     .select("*")
     .eq("id", booking.slot_id)
     .single();
-  if (!slot) return { error: "슬롯을 찾을 수 없어요." };
+  if (!slot) return { error: "예약 링크를 찾을 수 없어요." };
 
   const proposerId = booking.reschedule_by as string;
   const [{ data: proposer }, { data: responder }] = await Promise.all([

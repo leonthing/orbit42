@@ -57,7 +57,7 @@ export default async function Image({
   if (stats.followers > 0)
     statChips.push({ label: "orbiters", value: String(stats.followers) });
   if (slots.length > 0)
-    statChips.push({ label: "예약 가능 슬롯", value: String(slots.length) });
+    statChips.push({ label: "예약 링크", value: String(slots.length) });
 
   return new ImageResponse(
     (

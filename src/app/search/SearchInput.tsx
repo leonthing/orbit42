@@ -31,7 +31,7 @@ export function SearchInput({ initialQuery }: { initialQuery: string }) {
           type="text"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="이름, @아이디, 슬롯 제목…"
+          placeholder="이름, @아이디, 예약 링크 제목…"
           autoFocus
           className="w-full rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] py-2.5 pl-9 pr-3 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-charcoal-700 focus:outline-none"
         />

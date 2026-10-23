@@ -18,7 +18,7 @@ export default async function SearchPage({
       <div>
         <h1 className="text-xl font-semibold text-charcoal-100">검색</h1>
         <p className="mt-0.5 text-xs text-charcoal-500">
-          사람 · 슬롯 이름으로 찾아보세요
+          사람 · 예약 링크 이름으로 찾아보세요
         </p>
       </div>
 
@@ -69,11 +69,11 @@ export default async function SearchPage({
 
           <section>
             <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-charcoal-500">
-              슬롯 ({result.slots.length})
+              예약 링크 ({result.slots.length})
             </h2>
             {result.slots.length === 0 ? (
               <p className="rounded-lg border border-charcoal-800/60 bg-charcoal-900/30 p-4 text-sm text-charcoal-500">
-                일치하는 슬롯이 없어요.
+                일치하는 예약 링크가 없어요.
               </p>
             ) : (
               <ul className="divide-y divide-charcoal-800/40 overflow-hidden rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))]">

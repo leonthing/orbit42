@@ -25,7 +25,7 @@ export async function GET(
   }
   const slot = await findMySlot(params.id);
   if (!slot) {
-    return Response.json({ error: "슬롯을 찾을 수 없어요." }, { status: 404 });
+    return Response.json({ error: "예약 링크를 찾을 수 없어요." }, { status: 404 });
   }
   const { listMenusForSlot } = await import("@/lib/menus");
   const menus = await listMenusForSlot(slot.id);
@@ -102,7 +102,7 @@ export async function PATCH(
   }
   if (body.slotType !== undefined) {
     if (!SLOT_TYPES.includes(body.slotType as SlotType)) {
-      return Response.json({ error: "슬롯 유형이 올바르지 않아요." }, { status: 400 });
+      return Response.json({ error: "예약 유형이 올바르지 않아요." }, { status: 400 });
     }
     patch.slot_type = body.slotType as SlotType;
   }
@@ -170,7 +170,7 @@ export async function PATCH(
     if (Object.keys(patch).length === 0) {
       const only = await findMySlot(params.id);
       if (!only) {
-        return Response.json({ error: "슬롯을 찾을 수 없어요." }, { status: 404 });
+        return Response.json({ error: "예약 링크를 찾을 수 없어요." }, { status: 404 });
       }
       const { listMenusForSlot } = await import("@/lib/menus");
       const menus = await listMenusForSlot(params.id);
@@ -187,7 +187,7 @@ export async function PATCH(
 
   const updated = await findMySlot(params.id);
   if (!updated) {
-    return Response.json({ error: "슬롯을 찾을 수 없어요." }, { status: 404 });
+    return Response.json({ error: "예약 링크를 찾을 수 없어요." }, { status: 404 });
   }
   const { listMenusForSlot } = await import("@/lib/menus");
   const attached = await listMenusForSlot(params.id);

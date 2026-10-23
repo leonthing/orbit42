@@ -3,6 +3,7 @@ import { getAdminClient } from "@/lib/supabase";
 import {
   rescheduleMyBooking,
   proposeRescheduleAsHost,
+  proposeRescheduleAsGuest,
   respondToReschedule,
   withdrawReschedule,
 } from "@/lib/slots";
@@ -14,6 +15,9 @@ export const dynamic = "force-dynamic";
  *
  * 게스트: { startAt } 또는 { availabilityId } — 호스트가 열어둔 가용 시간
  * 안에서 고른 것이므로 바로 옮긴다 (승인이 필요한 슬롯이면 pending 으로).
+ * 게스트: { startAt, note?, propose: true } — 열린 시간 밖의 시각을 호스트에게
+ * 제안한다(개선-29). 예약은 그대로 두고 호스트의 수락을 기다린다.
+ * propose 가 없으면 예전처럼 바로 옮긴다(1.5.3 이하 앱 호환).
  * 호스트: { startAt, note? } — 게스트가 그 시간에 올 수 있는지 알 수 없으니
  * 제안만 남기고 게스트의 수락을 기다린다.
  *
@@ -32,7 +36,12 @@ export async function POST(
     return Response.json({ error: "사용자를 찾을 수 없어요." }, { status: 404 });
   }
 
-  let body: { startAt?: string; availabilityId?: string; note?: string };
+  let body: {
+    startAt?: string;
+    availabilityId?: string;
+    note?: string;
+    propose?: boolean;
+  };
   try {
     body = await request.json();
   } catch {
@@ -73,6 +82,21 @@ export async function POST(
       }
       // applied=true 는 비회원 게스트라 수락 없이 바로 옮긴 경우다.
       return Response.json({ ok: true, applied: result.applied });
+    }
+
+    if (body.propose) {
+      if (!body.startAt) {
+        return Response.json({ error: "시간을 선택해주세요." }, { status: 400 });
+      }
+      const proposed = await proposeRescheduleAsGuest(
+        params.id,
+        body.startAt,
+        body.note ?? null,
+      );
+      if ("error" in proposed) {
+        return Response.json({ error: proposed.error }, { status: 400 });
+      }
+      return Response.json({ ok: true, applied: false });
     }
 
     const result = await rescheduleMyBooking(params.id, {

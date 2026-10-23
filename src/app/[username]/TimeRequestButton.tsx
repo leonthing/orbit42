@@ -82,7 +82,7 @@ export function TimeRequestButton({
               @{targetUsername}에게 시간 요청하기
             </h3>
             <p className="mt-1 text-xs text-charcoal-500">
-              열려 있는 슬롯이 없어도 괜찮아요. 수락하면 바로 예약이 잡혀요.
+              열려 있는 시간이 없어도 괜찮아요. 수락하시면 바로 예약이 잡혀요.
             </p>
 
             <div className="mt-4 space-y-3">

@@ -28,7 +28,7 @@ export async function uploadSlotImages(
   const files = formData.getAll("files");
   if (files.length === 0) return { urls: [] };
   if (files.length > MAX_PER_SLOT) {
-    return { error: `한 슬롯에 이미지는 최대 ${MAX_PER_SLOT}장이에요.` };
+    return { error: `한 예약 링크에 이미지는 최대 ${MAX_PER_SLOT}장이에요.` };
   }
   const urls: string[] = [];
   for (const f of files) {

@@ -323,6 +323,8 @@ struct RescheduleRequest: Encodable {
     let startAt: String?
     let availabilityId: String?
     let note: String?
+    /// 게스트가 열린 시간 밖의 시각을 호스트에게 제안할 때 true (개선-29). nil 이면 보내지 않는다.
+    var propose: Bool? = nil
 }
 
 /// `PATCH /api/v1/bookings/{id}/reschedule` 의 action 값.

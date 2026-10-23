@@ -238,7 +238,9 @@ struct BookingDetailView: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Label(
-                proposal.byMe ? "변경 제안을 보냈어요" : "상대가 시간 변경을 제안했어요",
+                proposal.byMe
+                    ? "변경 제안을 보냈어요"
+                    : (role == .host ? "게스트가 시간 변경을 제안했어요" : "호스트가 시간 변경을 제안했어요"),
                 systemImage: "clock.arrow.circlepath"
             )
             .font(.caption.weight(.semibold))
@@ -265,7 +267,9 @@ struct BookingDetailView: View {
             }
 
             if proposal.byMe {
-                Text("상대가 수락하면 예약과 캘린더가 함께 옮겨져요.")
+                Text(role == .host
+                     ? "게스트가 수락하시면 예약과 캘린더가 함께 옮겨져요."
+                     : "호스트가 수락하시면 예약과 캘린더가 함께 옮겨져요.")
                     .font(.caption)
                     .foregroundStyle(Theme.secondaryText)
                 actionButton("제안 취소", prominent: false) {

@@ -9,6 +9,7 @@ import {
   rescheduleMyBooking,
   refreshBookableOptions,
   proposeRescheduleAsHost,
+  proposeRescheduleAsGuest,
   respondToReschedule,
   withdrawReschedule,
   changeMyBookingListState,
@@ -410,7 +411,8 @@ function StatusPill({ status }: { status: string }) {
 
 function TimeLine({ start, end }: { start: Date; end: Date }) {
   return (
-    <p className="mt-0.5 text-xs tabular-nums text-charcoal-500">
+    // 버튼 옆 좁은 폭(모바일 보관함)에서도 "오후 02:00 – 오후 02:30" 이 두 줄로 쪼개지지 않게
+    <p className="mt-0.5 whitespace-nowrap text-xs tabular-nums text-charcoal-500">
       {start.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}
       {" – "}
       {end.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}
@@ -688,7 +690,7 @@ function GuestSection({
                         href={`/${b.host.username}/s/${b.slot.slug}`}
                         className="rounded-lg border border-charcoal-800 px-2.5 py-1 text-center text-xs text-charcoal-400 hover:border-charcoal-700 hover:text-charcoal-100"
                       >
-                        슬롯
+                        예약 링크
                       </Link>
                     )}
                     {b.status !== "canceled" &&
@@ -922,7 +924,7 @@ function RescheduleBanner({
       {mine ? (
         <>
           <p className="mt-1 text-2xs text-charcoal-500">
-            상대가 수락하면 예약과 캘린더가 함께 옮겨져요.
+            상대가 수락하시면 예약과 캘린더가 함께 옮겨져요.
           </p>
           <button
             type="button"
@@ -1031,6 +1033,10 @@ function HostReschedulePanel({
   );
 }
 
+/**
+ * 게스트의 시간 변경 — ①호스트가 열어 둔 시간에서 바로 바꾸기 ②다른 시간 제안하기(개선-29).
+ * 열린 시간이 없으면 ②만 보여 준다. 제안은 호스트가 수락해야 옮겨진다.
+ */
 function ReschedulePanel({
   booking,
   onDone,
@@ -1042,6 +1048,9 @@ function ReschedulePanel({
   const toast = useToast();
   const [options, setOptions] = useState<BookableOption[] | null>(null);
   const [picked, setPicked] = useState("");
+  const [mode, setMode] = useState<"open" | "propose">("open");
+  const [when, setWhen] = useState("");
+  const [note, setNote] = useState("");
   const [saving, startSaving] = useTransition();
 
   useEffect(() => {
@@ -1057,6 +1066,9 @@ function ReschedulePanel({
     };
   }, [booking.slot.id]);
 
+  const hasOpen = (options?.length ?? 0) > 0;
+  const showPropose = mode === "propose" || (options !== null && !hasOpen);
+
   const submit = () => {
     const opt = (options ?? []).find((o) => o.start_at === picked);
     if (!opt) return;
@@ -1071,7 +1083,7 @@ function ReschedulePanel({
       }
       toast.success(
         "status" in res && res.status === "pending"
-          ? "시간을 변경했어요. 호스트 승인을 기다려주세요."
+          ? "시간을 변경했어요. 호스트 승인을 기다려 주세요."
           : "예약 시간을 변경했어요.",
       );
       onDone();
@@ -1079,44 +1091,124 @@ function ReschedulePanel({
     });
   };
 
+  const propose = () => {
+    if (!when) return;
+    const iso = new Date(when).toISOString();
+    startSaving(async () => {
+      const res = await proposeRescheduleAsGuest(booking.id, iso, note || null);
+      if ("error" in res) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success("호스트에게 시간을 제안했어요. 수락하시면 예약이 옮겨져요.");
+      onDone();
+      router.refresh();
+    });
+  };
+
   return (
-    <div className="mt-3 rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 p-3">
+    <div className="mt-3 space-y-3 rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 p-3">
       {options === null ? (
         <p className="text-xs text-charcoal-500">가능한 시간을 불러오는 중…</p>
-      ) : options.length === 0 ? (
-        <p className="text-xs text-charcoal-500">
-          지금은 옮길 수 있는 시간이 없어요. 호스트에게 메시지로 문의해보세요.
-        </p>
       ) : (
-        <div className="flex flex-wrap items-center gap-2">
-          <select
-            value={picked}
-            onChange={(e) => setPicked(e.target.value)}
-            className="min-w-0 flex-1 rounded-lg border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] px-3 py-1.5 text-xs text-charcoal-100 focus:border-charcoal-600 focus:outline-none"
-          >
-            <option value="">새 시간 선택…</option>
-            {options.map((o) => (
-              <option key={o.start_at} value={o.start_at}>
-                {new Date(o.start_at).toLocaleString("ko-KR", {
-                  timeZone: "Asia/Seoul",
-                  month: "long",
-                  day: "numeric",
-                  weekday: "short",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            onClick={submit}
-            disabled={!picked || saving}
-            className="rounded-lg bg-navy-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-400 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {saving ? "변경 중…" : "변경"}
-          </button>
-        </div>
+        <>
+          {hasOpen && (
+            <div className="grid grid-cols-2 gap-1 rounded-lg bg-charcoal-800/40 p-1 text-xs">
+              {(
+                [
+                  ["open", "열린 시간에서 바꾸기"],
+                  ["propose", "다른 시간 제안하기"],
+                ] as const
+              ).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setMode(value)}
+                  aria-pressed={mode === value}
+                  className={`rounded-md px-2 py-1.5 font-medium ${
+                    mode === value
+                      ? "bg-[rgb(var(--bg-surface))] text-charcoal-100 shadow-sm"
+                      : "text-charcoal-500 hover:text-charcoal-200"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {!showPropose ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={picked}
+                onChange={(e) => setPicked(e.target.value)}
+                className="min-w-0 flex-1 rounded-lg border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] px-3 py-1.5 text-xs text-charcoal-100 focus:border-charcoal-600 focus:outline-none"
+              >
+                <option value="">새 시간 선택…</option>
+                {(options ?? []).map((o) => (
+                  <option key={o.start_at} value={o.start_at}>
+                    {new Date(o.start_at).toLocaleString("ko-KR", {
+                      timeZone: "Asia/Seoul",
+                      month: "long",
+                      day: "numeric",
+                      weekday: "short",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={submit}
+                disabled={!picked || saving}
+                className="rounded-lg bg-navy-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-400 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {saving ? "변경 중…" : "변경"}
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-xs text-charcoal-500">
+                {hasOpen
+                  ? "열린 시간 밖이라도 괜찮아요. 호스트가 수락하시면 예약이 옮겨져요."
+                  : "지금은 열린 시간이 없어요. 원하시는 시간을 제안해 보세요. 호스트가 수락하시면 예약이 옮겨져요."}
+              </p>
+              <input
+                type="datetime-local"
+                value={when}
+                onChange={(e) => setWhen(e.target.value)}
+                aria-label="제안할 시간"
+                className="w-full rounded-lg border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] px-3 py-1.5 text-xs text-charcoal-100 focus:border-charcoal-600 focus:outline-none"
+              />
+              <input
+                type="text"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="한 줄 사유 (선택)"
+                maxLength={500}
+                className="w-full rounded-lg border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] px-3 py-1.5 text-xs text-charcoal-100 placeholder:text-charcoal-600 focus:border-charcoal-600 focus:outline-none"
+              />
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={onDone}
+                  className="rounded-lg border border-charcoal-700 px-3 py-1 text-xs text-charcoal-400 hover:text-charcoal-200"
+                >
+                  닫기
+                </button>
+                <button
+                  type="button"
+                  onClick={propose}
+                  disabled={!when || saving}
+                  className="rounded-lg bg-navy-500 px-3 py-1 text-xs font-semibold text-white hover:bg-navy-400 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {saving ? "보내는 중…" : "제안 보내기"}
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

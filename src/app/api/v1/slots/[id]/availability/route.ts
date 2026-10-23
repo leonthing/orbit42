@@ -23,7 +23,7 @@ function diagnoseEmpty(
   windowCount: number,
 ): string {
   if (!slot.active) {
-    return "슬롯이 꺼져 있어요. 활성화하면 다시 예약을 받을 수 있어요.";
+    return "예약을 잠시 멈춘 링크예요. 다시 받으면 예약할 수 있어요.";
   }
   const now = Date.now();
   if (slot.valid_until && Date.parse(slot.valid_until) < now) {
@@ -57,7 +57,7 @@ export async function GET(
   }
   const slot = (await listMySlots()).find((s) => s.id === params.id);
   if (!slot) {
-    return Response.json({ error: "슬롯을 찾을 수 없어요." }, { status: 404 });
+    return Response.json({ error: "예약 링크를 찾을 수 없어요." }, { status: 404 });
   }
 
   const [options, windows] = await Promise.all([

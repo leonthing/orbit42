@@ -240,7 +240,7 @@ function SlotPanelBody({
 
       {isAuction ? (
         <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5 text-sm text-charcoal-300">
-          <p>이 슬롯은 경매 방식이에요.</p>
+          <p>이 예약 링크는 경매 방식이에요.</p>
           <Link
             href={`/${username}/s/${slug}`}
             className="mt-3 inline-flex rounded-lg bg-navy-500 px-4 py-2 text-sm font-medium text-white hover:bg-navy-400"
@@ -253,7 +253,7 @@ function SlotPanelBody({
           <h3 className="text-sm font-semibold text-charcoal-200">예약 가능한 시간</h3>
           {!slot.active ? (
             <p className="mt-3 text-sm text-charcoal-500">
-              현재 예약을 받지 않는 슬롯이에요.
+              지금은 예약을 받지 않는 링크예요.
             </p>
           ) : options.length === 0 ? (
             <p className="mt-3 text-sm text-charcoal-500">

@@ -28,10 +28,10 @@ export async function placeBid(slotId: string, amountCents: number) {
     )
     .eq("id", slotId)
     .single();
-  if (!slot) return { error: "슬롯을 찾을 수 없습니다." };
-  if (slot.pricing_model !== "auction") return { error: "경매 슬롯이 아닙니다." };
-  if (!slot.active) return { error: "비활성 슬롯입니다." };
-  if (slot.host_id === userId) return { error: "본인 슬롯에는 입찰할 수 없어요." };
+  if (!slot) return { error: "예약 링크를 찾을 수 없어요." };
+  if (slot.pricing_model !== "auction") return { error: "경매 방식 예약 링크가 아니에요." };
+  if (!slot.active) return { error: "지금은 예약을 받지 않는 링크예요." };
+  if (slot.host_id === userId) return { error: "내 예약 링크에는 입찰할 수 없어요." };
 
   if (slot.auction_ends_at && new Date(slot.auction_ends_at as string) < new Date()) {
     return { error: "경매가 종료되었습니다." };

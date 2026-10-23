@@ -2,8 +2,9 @@ import SwiftUI
 
 /// 예약 시간 변경 요청 시트.
 ///
-/// 게스트는 호스트가 열어둔 가용 시간에서만 고른다 — 불가능한 시간을 제안해
-/// 왕복이 늘어나는 걸 원천 차단하고, 대부분 호스트 확인 없이 바로 반영된다.
+/// 게스트는 ①호스트가 열어둔 가용 시간에서 바로 바꾸거나(대부분 호스트 확인 없이 반영),
+/// ②그 밖의 시각을 호스트에게 제안할 수 있다(개선-29, 호스트가 수락해야 옮겨진다).
+/// 열린 시간이 없으면 ②만 보인다.
 /// 호스트는 자기 일정이라 아무 시각이나 고를 수 있지만, 게스트가 그 시간에
 /// 올 수 있는지는 알 수 없으므로 "제안"이 되어 상대 수락을 기다린다.
 struct RescheduleSheet: View {
@@ -25,6 +26,15 @@ struct RescheduleSheet: View {
     @State private var pickedDate: Date
     @State private var note = ""
     @State private var isSubmitting = false
+    /// 게스트: 열린 시간에서 바꾸기 / 다른 시간 제안
+    @State private var guestMode: GuestMode = .open
+
+    enum GuestMode: Hashable { case open, propose }
+
+    /// 게스트가 제안 화면을 보고 있는지 — 열린 시간이 없으면 늘 제안
+    private var guestProposing: Bool {
+        role == .guest && (guestMode == .propose || options?.isEmpty == true)
+    }
 
     init(
         viewModel: BookingsViewModel,
@@ -50,7 +60,7 @@ struct RescheduleSheet: View {
                 Theme.background.ignoresSafeArea()
                 Group {
                     switch role {
-                    case .guest: guestPicker
+                    case .guest: guestContent
                     case .host: hostPicker
                     }
                 }
@@ -62,7 +72,7 @@ struct RescheduleSheet: View {
                     Button("닫기") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(role == .host ? "제안" : "변경") {
+                    Button(role == .host || guestProposing ? "제안" : "변경") {
                         submit()
                     }
                     .font(.body.weight(.semibold))
@@ -75,7 +85,33 @@ struct RescheduleSheet: View {
         }
     }
 
-    // MARK: - 게스트: 호스트 가용 시간에서 선택
+    // MARK: - 게스트: 열린 시간에서 바꾸기 / 다른 시간 제안
+
+    @ViewBuilder
+    private var guestContent: some View {
+        VStack(spacing: 0) {
+            if let options, !options.isEmpty {
+                Picker("변경 방법", selection: $guestMode) {
+                    Text("열린 시간에서 바꾸기").tag(GuestMode.open)
+                    Text("다른 시간 제안").tag(GuestMode.propose)
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+                .padding(.bottom, 4)
+            }
+            if guestProposing {
+                proposeForm(
+                    footer: options?.isEmpty == true
+                        ? "지금은 열린 시간이 없어요. 원하시는 시간을 제안해 보세요. 호스트가 수락하시면 예약과 캘린더가 함께 옮겨져요."
+                        : "열린 시간 밖이라도 괜찮아요. 호스트가 수락하시면 예약과 캘린더가 함께 옮겨져요.",
+                    noteHint: "\"그날은 출장이라 다음 주가 좋아요\" 처럼 한 줄 적어 주시면 호스트가 판단하기 쉬워요."
+                )
+            } else {
+                guestPicker
+            }
+        }
+    }
 
     @ViewBuilder
     private var guestPicker: some View {
@@ -179,6 +215,14 @@ struct RescheduleSheet: View {
     // MARK: - 호스트: 자유 선택 + 사유
 
     private var hostPicker: some View {
+        proposeForm(
+            footer: "게스트가 수락하면 예약과 캘린더가 함께 옮겨져요.",
+            noteHint: "\"급한 회의가 잡혀서요\" 처럼 한 줄 적어두면 상대가 판단하기 쉬워요."
+        )
+    }
+
+    /// 아무 시각이나 고르고 한 줄 사유를 붙이는 제안 화면 — 호스트 제안과 게스트 제안이 같이 쓴다.
+    private func proposeForm(footer: String, noteHint: String) -> some View {
         Form {
             Section {
                 currentRow
@@ -190,14 +234,14 @@ struct RescheduleSheet: View {
                 )
                 .datePickerStyle(.compact)
             } footer: {
-                Text("게스트가 수락하면 예약과 캘린더가 함께 옮겨져요.")
+                Text(footer)
             }
 
             Section {
                 TextField("변경 사유 (선택)", text: $note, axis: .vertical)
                     .lineLimit(2...4)
             } footer: {
-                Text("\"급한 회의가 잡혀서요\" 처럼 한 줄 적어두면 상대가 판단하기 쉬워요.")
+                Text(noteHint)
             }
         }
         .scrollContentBackground(.hidden)
@@ -207,7 +251,7 @@ struct RescheduleSheet: View {
 
     private var canSubmit: Bool {
         switch role {
-        case .guest: return pickedOptionId != nil
+        case .guest: return guestProposing ? pickedDate > Date() : pickedOptionId != nil
         case .host: return pickedDate > Date()
         }
     }
@@ -219,6 +263,16 @@ struct RescheduleSheet: View {
             defer { isSubmitting = false }
             let ok: Bool
             switch role {
+            case .guest where guestProposing:
+                ok = await viewModel.requestReschedule(
+                    bookingId: bookingId,
+                    startAt: APIDateParser.encodeDateTime(pickedDate),
+                    availabilityId: nil,
+                    note: note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        ? nil
+                        : note,
+                    propose: true
+                )
             case .guest:
                 guard let picked = (options ?? []).first(where: { $0.id == pickedOptionId })
                 else { return }

@@ -699,7 +699,7 @@ export async function getTimeAssetSummary(
     const ratio = impliedHourly / hourly;
     if (ratio >= 1.2) {
       messages.push(
-        `슬롯 판매 단가(₩${impliedHourly.toLocaleString("ko-KR")}/시간)가 기준 시급의 ${ratio.toFixed(1)}배예요. 시간의 시장 가치가 더 높네요.`,
+        `예약 링크 판매 단가(₩${impliedHourly.toLocaleString("ko-KR")}/시간)가 기준 시급의 ${ratio.toFixed(1)}배예요. 시간의 시장 가치가 더 높네요.`,
       );
     }
   }
@@ -940,15 +940,15 @@ export async function getTimeAssetSummary(
       title: "남는 시간으로 수익을 만들어 보세요",
       body:
         hourly != null && freeH >= 5
-          ? `이번 주 비어있는 시간이 약 ${freeH}시간 — 시급 기준 ₩${Math.round(freeH * hourly).toLocaleString("ko-KR")}어치예요. 커피챗·멘토링·자문 타임슬롯을 열면 그중 일부가 실제 수익이 돼요.`
-          : "커피챗·멘토링·자문 타임슬롯을 열면 비어있는 시간이 예약 가능한 상품이 돼요. 가격은 무료부터 경매까지 자유예요.",
-      ctaLabel: "타임슬롯 만들기",
+          ? `이번 주 비어있는 시간이 약 ${freeH}시간 — 시급 기준 ₩${Math.round(freeH * hourly).toLocaleString("ko-KR")}어치예요. 커피챗·멘토링·자문 예약 링크를 열면 그중 일부가 실제 수익이 돼요.`
+          : "커피챗·멘토링·자문 예약 링크를 열면 비어 있는 시간이 예약 가능한 상품이 돼요. 가격은 무료부터 경매까지 자유예요.",
+      ctaLabel: "예약 링크 만들기",
       target: "slots",
     });
   } else if (tradedKrw === 0) {
     actions.push({
       key: "share-profile",
-      title: "열어둔 타임슬롯을 알려보세요",
+      title: "열어 둔 예약 링크를 알려 보세요",
       body: "아직 거래가 없어요. 프로필 링크를 SNS나 지인에게 공유하면 예약이 시작돼요. 팔로워에게는 오르빗 탭에도 노출돼요.",
       ctaLabel: "프로필 공유하러 가기",
       target: "profile",

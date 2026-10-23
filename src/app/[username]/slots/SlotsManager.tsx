@@ -74,11 +74,11 @@ export default function SlotsManager({
         return;
       }
       if ("skipped" in res) {
-        toast.info(`"${label}" 슬롯이 이미 있어서 건너뛰었어요.`);
+        toast.info(`"${label}" 예약 링크가 이미 있어서 건너뛰었어요.`);
         return;
       }
       setPresetPicker(false);
-      toast.success(`"${label}" 슬롯을 만들었어요.`);
+      toast.success(`"${label}" 예약 링크를 만들었어요.`);
       router.refresh();
     });
   };
@@ -126,8 +126,8 @@ export default function SlotsManager({
             템플릿 선택
           </p>
           <p className="mb-4 text-xs text-charcoal-500">
-            클릭하면 해당 기본 설정으로 슬롯 하나를 만들어요. 만든 뒤 열어서
-            장소·가격 등을 조정하세요.
+            누르면 해당 기본 설정으로 예약 링크 하나를 만들어요. 만든 뒤 열어서
+            장소·가격 등을 조정해 주세요.
           </p>
           <div className="grid gap-3 sm:grid-cols-3">
             <PresetCard
@@ -173,7 +173,7 @@ export default function SlotsManager({
 
       {initial.length === 0 && !showNew ? (
         <EmptyState
-          title="아직 슬롯이 없어요"
+          title="아직 예약 링크가 없어요"
           body="무엇을·얼마나·언제만 정하면 링크가 열려요. 인스타 프로필이나 카톡에 붙여 두세요."
           action={
             <button
@@ -293,7 +293,7 @@ function NewSlotForm({
       const ends = new Date(auctionEndsAt);
       const slotTime = new Date(windows[0]);
       if (ends >= slotTime)
-        return toast.error("경매 종료 시간은 슬롯 시간보다 앞이어야 합니다.");
+        return toast.error("경매 종료 시간은 예약 시간보다 앞이어야 해요.");
     }
     const [vFrom, vUntil] = resolveValidity(validPreset, validFrom, validUntil);
     startTransition(async () => {
@@ -645,10 +645,10 @@ function NewSlotForm({
                 <PaymentMethodPicker value={paymentMethod} onChange={setPaymentMethod} />
               </Section>
             )}
-            <Section title="이미지" hint="슬롯 페이지에 함께 보일 사진 (최대 6장).">
+            <Section title="이미지" hint="예약 링크 페이지에 함께 보일 사진 (최대 6장).">
               <SlotImagePicker urls={imageUrls} onChange={setImageUrls} />
             </Section>
-            <Section title="탐색·피드 노출" hint="꺼 두면 링크를 받은 사람만 이 슬롯을 볼 수 있어요.">
+            <Section title="탐색·피드 노출" hint="꺼 두면 링크를 받은 사람만 이 예약 링크를 볼 수 있어요.">
               <label className="flex items-center gap-3 rounded-lg border border-charcoal-800/60 bg-charcoal-800/10 px-4 py-3 text-sm text-charcoal-200">
                 <input type="checkbox" checked={showOnFeed} onChange={(e) => setShowOnFeed(e.target.checked)} className="h-4 w-4 accent-navy-400" />
                 탐색·피드에 노출
@@ -950,7 +950,7 @@ function AutoConfig({
       {!compact && (
         <>
       <div className="grid gap-4 md:grid-cols-4">
-        <Field label="슬롯 간격 (분)">
+        <Field label="시작 시간 간격 (분)">
           <input
             type="number"
             min={5}
@@ -1170,15 +1170,15 @@ function SlotCard({
 
   const remove = async () => {
     const ok = await confirm({
-      title: "슬롯을 삭제할까요?",
-      body: `"${row.slot.title}" 슬롯과 관련된 가용 시간이 모두 사라져요.`,
+      title: "예약 링크를 삭제할까요?",
+      body: `"${row.slot.title}" 예약 링크와 관련된 가용 시간이 모두 사라져요.`,
       confirmLabel: "삭제",
       danger: true,
     });
     if (!ok) return;
     startTransition(async () => {
       await deleteSlot(row.slot.id);
-      toast.success("슬롯을 삭제했어요.");
+      toast.success("예약 링크를 삭제했어요.");
       router.refresh();
     });
   };
@@ -1546,7 +1546,7 @@ function EditSlotForm({
   return (
     <form onSubmit={submit} className="space-y-5">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-charcoal-100">슬롯 수정</h3>
+        <h3 className="text-sm font-semibold text-charcoal-100">예약 링크 수정</h3>
         <p className="text-2xs text-charcoal-500">
           모드({slot.mode}) / 가격 유형({slot.pricing_model})은 고정이에요.
         </p>
@@ -1726,7 +1726,7 @@ function EditSlotForm({
         <span>
           <span className="block">피드에 노출</span>
           <span className="block text-2xs font-normal text-charcoal-500">
-            꺼두면 이 슬롯이 피드에 올라가지 않아요.
+            꺼 두면 이 예약 링크가 피드에 올라가지 않아요.
           </span>
         </span>
       </label>

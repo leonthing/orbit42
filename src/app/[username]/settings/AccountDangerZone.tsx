@@ -73,7 +73,7 @@ export function DeleteAccountSection({ username }: { username: string }) {
     }
     const ok = await confirm({
       title: "정말 탈퇴할까요?",
-      body: "모든 슬롯, 예약, 게시글, 캘린더가 즉시 삭제되며 복구할 수 없어요.",
+      body: "모든 예약 링크, 예약, 게시글, 캘린더가 즉시 삭제되며 복구할 수 없어요.",
       confirmLabel: "탈퇴",
       danger: true,
     });
@@ -97,7 +97,7 @@ export function DeleteAccountSection({ username }: { username: string }) {
       </div>
       <div className="space-y-3 p-5">
         <p className="text-sm text-charcoal-500">
-          계정을 삭제하면 프로필, 슬롯, 예약, 캘린더, 게시글이 모두 제거돼요.
+          계정을 삭제하면 프로필, 예약 링크, 예약, 캘린더, 게시글이 모두 제거돼요.
           이 작업은 되돌릴 수 없어요.
         </p>
         <div>

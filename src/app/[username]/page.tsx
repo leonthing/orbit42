@@ -386,13 +386,13 @@ export default async function PublicProfile({
         <ProfileTabs
           tabs={[
             { key: "overview", label: "홈" },
-            { key: "slots", label: "슬롯", count: slots.length },
+            { key: "slots", label: "예약 링크", count: slots.length },
             { key: "posts", label: "포스트", count: myFeedPosts.length },
           ]}
           overview={
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-                <ActionTile href={`/${params.username}/slots`} label="슬롯 만들기" highlight />
+                <ActionTile href={`/${params.username}/slots`} label="예약 링크 만들기" highlight />
                 <ActionTile href="/feed" label="소식 공유" />
                 <ActionTile href={`/${params.username}/calendar`} label="일정 추가" />
                 <ActionTile href={`/${params.username}/bookings`} label="예약 관리" />
@@ -462,7 +462,7 @@ export default async function PublicProfile({
                 <section className="space-y-3">
                   <div className="flex items-baseline justify-between">
                     <h2 className="text-lg font-semibold text-charcoal-100">
-                      모든 슬롯
+                      모든 예약 링크
                     </h2>
                     <span className="text-xs text-charcoal-500">
                       {slots.length}개
@@ -491,12 +491,12 @@ export default async function PublicProfile({
               </SlotPanelProvider>
             ) : (
               <p className="rounded-xl border border-dashed border-charcoal-800/60 bg-charcoal-900/20 px-6 py-12 text-center text-sm text-charcoal-500">
-                아직 만든 슬롯이 없어요.{" "}
+                아직 만든 예약 링크가 없어요.{" "}
                 <Link
                   href={`/${params.username}/slots`}
                   className="text-navy-400 hover:underline"
                 >
-                  첫 슬롯 만들기 →
+                  첫 예약 링크 만들기 →
                 </Link>
               </p>
             )
@@ -527,7 +527,7 @@ export default async function PublicProfile({
               <section className="space-y-3">
                 <div className="flex items-baseline justify-between">
                   <h2 className="text-lg font-semibold text-charcoal-100">
-                    예약 가능한 슬롯
+                    예약 링크
                   </h2>
                   <span className="text-xs text-charcoal-500">
                     {slots.length}개

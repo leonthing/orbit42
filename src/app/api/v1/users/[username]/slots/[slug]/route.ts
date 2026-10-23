@@ -19,7 +19,7 @@ export async function GET(
 
   const found = await getSlotBySlug(params.username, params.slug);
   if (!found || !found.slot.active) {
-    return Response.json({ error: "슬롯을 찾을 수 없어요." }, { status: 404 });
+    return Response.json({ error: "예약 링크를 찾을 수 없어요." }, { status: 404 });
   }
   const { slot, host } = found;
 
@@ -67,7 +67,7 @@ export async function GET(
       closed: o.closed ?? false,
     })),
     // 경매 슬롯 입찰은 웹에서 — 앱 v1은 고정가 예약만 지원
-    auctionNotice: isAuction ? "경매 슬롯이에요. 입찰은 웹에서 할 수 있어요." : null,
+    auctionNotice: isAuction ? "경매 방식 예약 링크예요. 입찰은 웹에서 할 수 있어요." : null,
   });
 }
 
@@ -83,16 +83,16 @@ export async function POST(
 
   const found = await getSlotBySlug(params.username, params.slug);
   if (!found || !found.slot.active) {
-    return Response.json({ error: "슬롯을 찾을 수 없어요." }, { status: 404 });
+    return Response.json({ error: "예약 링크를 찾을 수 없어요." }, { status: 404 });
   }
   if (found.slot.pricing_model === "auction") {
     return Response.json(
-      { error: "경매 슬롯이에요. 입찰은 웹에서 할 수 있어요." },
+      { error: "경매 방식 예약 링크예요. 입찰은 웹에서 할 수 있어요." },
       { status: 400 },
     );
   }
   if (session.username === params.username) {
-    return Response.json({ error: "내 슬롯은 예약할 수 없어요." }, { status: 400 });
+    return Response.json({ error: "내 예약 링크는 예약할 수 없어요." }, { status: 400 });
   }
 
   // 차단 관계(양방향)면 예약 불가.

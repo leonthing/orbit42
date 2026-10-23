@@ -37,7 +37,7 @@ export async function getSlotPanelData(
   slug: string,
 ): Promise<SlotPanelData | { error: string }> {
   const data = await getSlotBySlug(username, slug);
-  if (!data) return { error: "슬롯을 찾을 수 없어요." };
+  if (!data) return { error: "예약 링크를 찾을 수 없어요." };
   const { slot, host } = data;
   const session = await getSession();
   const isAuction = slot.pricing_model === "auction";

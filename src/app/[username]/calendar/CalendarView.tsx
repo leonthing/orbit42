@@ -1380,7 +1380,7 @@ export default function CalendarView({
             }
             emptyMessage={
               viewerIsOwner
-                ? "이 주가 비어있어요. 슬롯을 열거나 이벤트를 추가해보세요."
+                ? "이 주가 비어 있어요. 예약 링크를 열거나 일정을 추가해 보세요."
                 : "이 주에 공개된 일정이나 예약 가능한 시간이 없어요."
             }
           />

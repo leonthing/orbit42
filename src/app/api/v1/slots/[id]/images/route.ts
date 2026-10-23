@@ -41,7 +41,7 @@ export async function POST(
   }
   const slot = await findMySlot(userId, params.id);
   if (!slot) {
-    return Response.json({ error: "슬롯을 찾을 수 없어요." }, { status: 404 });
+    return Response.json({ error: "예약 링크를 찾을 수 없어요." }, { status: 404 });
   }
 
   let form: FormData;
@@ -57,7 +57,7 @@ export async function POST(
   const current = slot.image_urls ?? [];
   if (current.length + files.length > MAX_PER_SLOT) {
     return Response.json(
-      { error: `슬롯 이미지는 최대 ${MAX_PER_SLOT}장이에요.` },
+      { error: `예약 링크 이미지는 최대 ${MAX_PER_SLOT}장이에요.` },
       { status: 400 },
     );
   }
@@ -115,7 +115,7 @@ export async function DELETE(
   }
   const slot = await findMySlot(userId, params.id);
   if (!slot) {
-    return Response.json({ error: "슬롯을 찾을 수 없어요." }, { status: 404 });
+    return Response.json({ error: "예약 링크를 찾을 수 없어요." }, { status: 404 });
   }
   const url = new URL(request.url).searchParams.get("url");
   if (!url) {

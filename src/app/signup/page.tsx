@@ -62,7 +62,7 @@ export default async function SignupPage({
                 </h1>
                 <p className="mt-4 max-w-md text-sm leading-relaxed text-charcoal-400">
                   가입하면 자동으로 서로의 궤도가 되어 첫 연결이 만들어져요.
-                  캘린더로 하루를 공유하고, 남는 시간을 슬롯으로 나누거나
+                  캘린더로 하루를 공유하고, 남는 시간을 예약 링크로 나누거나
                   팔아보세요.
                 </p>
               </div>
@@ -132,8 +132,8 @@ function InvitePerks() {
       body: "하루 일정을 친구·팔로워에게 열어두고 오르빗으로 연결돼요.",
     },
     {
-      title: "시간을 슬롯으로 판매",
-      body: "비어 있는 시간을 1:1 슬롯으로 열어 예약·수익 창출.",
+      title: "시간을 예약 링크로 판매",
+      body: "비어 있는 시간을 1:1 예약 링크로 열어 예약·수익으로.",
     },
     {
       title: "무제한 추천",

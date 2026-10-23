@@ -2,7 +2,7 @@ export const SITE = {
   title: "Orbit42",
   // 포지셔닝: "시간을 자산으로 만드는 캘린더" (2026-07-27 확정, SNS 표현 폐기)
   description:
-    "시간을 자산으로 만드는 캘린더. 캘린더에 쌓인 시간을 돈으로 환산해 보여주고, 남는 시간은 타임슬롯으로 팔 수 있어요.",
+    "시간을 자산으로 만드는 캘린더. 캘린더에 쌓인 시간을 돈으로 환산해 보여주고, 남는 시간은 예약 링크로 팔 수 있어요.",
   descriptionEn:
     "The calendar that turns your time into an asset — see what your hours are worth, and sell the ones you don't use.",
   keywords: [
