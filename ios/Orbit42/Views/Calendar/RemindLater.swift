@@ -94,6 +94,15 @@ struct RemindersListView: View {
                         }
                     }
                     .disabled(item.missing)
+                    // 지워진 일정은 열 수 없어 밀기로만 취소됐다 — 보이는 버튼으로도 (개선-26)
+                    .overlay(alignment: .trailing) {
+                        if item.missing {
+                            Button("알림 취소") { cancel(item) }
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(Theme.accent)
+                                .buttonStyle(.borderless)
+                        }
+                    }
                     .swipeActions {
                         Button("취소", role: .destructive) { cancel(item) }
                     }

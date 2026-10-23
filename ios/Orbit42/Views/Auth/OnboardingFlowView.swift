@@ -599,13 +599,13 @@ private struct NotificationPermissionStep: View {
             stepHeader(
                 icon: "bell.badge",
                 title: "알림을 켜 주세요",
-                subtitle: "예약 요청·일정 초대·팔로우한 사람의\n새 타임슬롯 소식을 놓치지 않게 알려드려요."
+                subtitle: "일정이 시작되기 전과 '다시 알림'으로 정해 둔 때에\n잊지 않게 알려 드려요."
             )
 
             VStack(alignment: .leading, spacing: 10) {
-                notificationExample(icon: "calendar.badge.clock", text: "새 예약 요청이 도착했어요")
-                notificationExample(icon: "person.2", text: "OO님이 일정에 초대했어요")
-                notificationExample(icon: "clock.badge.checkmark", text: "OO님이 커피챗 타임슬롯을 열었어요")
+                notificationExample(icon: "calendar.badge.clock", text: "팀 회의 · 10분 뒤 · 오전 10:00")
+                notificationExample(icon: "star", text: "중요한 일정은 30분 전과 10분 전에 알려 드려요")
+                notificationExample(icon: "bell.badge", text: "다시 알림 · 미뤄 둔 일정을 다시 알려 드려요")
             }
             .padding(.horizontal, 24)
 

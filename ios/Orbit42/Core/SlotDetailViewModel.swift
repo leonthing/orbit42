@@ -33,6 +33,9 @@ final class SlotDetailViewModel {
     /// 저장/삭제 결과 안내 (alert 로 표시)
     var actionMessage: String?
     private(set) var isSaving = false
+    /// 예약 받는 중인지 — 목록에서 밀기로만 바꾸던 것을 상세에서도 (개선-26)
+    private(set) var isActive: Bool?
+    private(set) var isTogglingActive = false
 
     // 예약 가능 시간 미리보기 / 시간 창
     private(set) var availability: SlotAvailabilityResponse?
@@ -96,7 +99,7 @@ final class SlotDetailViewModel {
         } catch let apiError as APIError {
             errorMessage = apiError.errorDescription
         } catch {
-            errorMessage = "슬롯 정보를 불러오지 못했어요. 네트워크를 확인해 주세요."
+            errorMessage = "예약 링크를 불러오지 못했어요. 네트워크를 확인해 주세요."
         }
     }
 
@@ -152,6 +155,29 @@ final class SlotDetailViewModel {
             actionMessage = "저장하지 못했어요. 네트워크를 확인해 주세요."
             return false
         }
+    }
+
+    // MARK: - 예약 받기 켜기/끄기
+
+    /// 활성 상태만 바꾼다(편집 중인 다른 칸은 건드리지 않음). 성공하면 바뀐 슬롯을 돌려준다.
+    func toggleActive() async -> TimeSlot? {
+        guard let current = isActive, !isTogglingActive else { return nil }
+        isTogglingActive = true
+        defer { isTogglingActive = false }
+        do {
+            let response: SlotResponse = try await api.patch(
+                "/api/v1/slots/\(slotId)",
+                body: UpdateSlotRequest(active: !current)
+            )
+            isActive = response.slot.active
+            return response.slot
+        } catch let apiError as APIError {
+            actionMessage = apiError.errorDescription
+        } catch is CancellationError {
+        } catch {
+            actionMessage = "바꾸지 못했어요. 네트워크를 확인해 주세요."
+        }
+        return nil
     }
 
     // MARK: - 위치
@@ -217,6 +243,7 @@ final class SlotDetailViewModel {
 
     /// 서버 상세를 편집 필드로 반영한다.
     private func populate(from slot: SlotDetail) {
+        isActive = slot.active
         title = slot.title
         descriptionText = slot.description ?? ""
         slotType = slot.slotType

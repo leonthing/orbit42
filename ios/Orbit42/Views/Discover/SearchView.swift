@@ -24,7 +24,7 @@ struct SearchView: View {
         .searchable(
             text: $viewModel.query,
             placement: .navigationBarDrawer(displayMode: .automatic),
-            prompt: "이름, @핸들, 슬롯 제목"
+            prompt: "이름, @아이디, 예약 링크 제목"
         )
         .onChange(of: viewModel.query) {
             viewModel.queryChanged()

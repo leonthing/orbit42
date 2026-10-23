@@ -107,7 +107,7 @@ struct AssetSettingsSheet: View {
                             }
                         }
                     } footer: {
-                        Text("가동률 계산과 자동 슬롯의 기본값에 쓰여요.")
+                        Text("가동률 계산과 예약 가능 시간의 기본값에 쓰여요.")
                     }
                     .listRowBackground(Theme.surface)
 

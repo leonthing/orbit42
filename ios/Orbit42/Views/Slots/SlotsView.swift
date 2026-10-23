@@ -56,7 +56,7 @@ struct SlotsContent: View {
             }
             Button("취소", role: .cancel) {}
         } message: {
-            Text("자주 쓰는 타임슬롯을 프리셋으로 바로 만들어요")
+            Text("자주 쓰는 예약 링크를 프리셋으로 바로 만들어요")
         }
         .alert(
             "안내",
@@ -159,7 +159,7 @@ struct SlotsContent: View {
         VStack(spacing: 12) {
             ProgressView()
                 .tint(Theme.accent)
-            Text("타임슬롯을 불러오는 중이에요")
+            Text("예약 링크를 불러오는 중이에요")
                 .font(.footnote)
                 .foregroundStyle(Theme.secondaryText)
         }
@@ -260,7 +260,7 @@ struct SlotsContent: View {
                     Text("아직 열어둔 시간이 없어요")
                         .font(.title3.weight(.semibold))
                         .foregroundStyle(Theme.primaryText)
-                    Text("프리셋으로 첫 타임슬롯을 만들어 보세요")
+                    Text("프리셋으로 첫 예약 링크를 만들어 보세요")
                         .font(.subheadline)
                         .foregroundStyle(Theme.secondaryText)
                 }
@@ -413,7 +413,7 @@ struct SlotsView: View {
                 Theme.background.ignoresSafeArea()
                 SlotsContent(viewModel: viewModel, path: $path)
             }
-            .navigationTitle("타임슬롯")
+            .navigationTitle("예약 링크")
             .navigationBarTitleDisplayMode(.inline)
         }
     }
@@ -441,7 +441,7 @@ private struct SlotCreatedShareSheet: View {
                 .font(.system(size: 40))
                 .foregroundStyle(Theme.accent)
             VStack(spacing: 4) {
-                Text("‘\(slot.title)’ 슬롯을 열었어요")
+                Text("‘\(slot.title)’ 예약 링크를 만들었어요")
                     .font(.headline)
                     .foregroundStyle(Theme.primaryText)
                     .multilineTextAlignment(.center)

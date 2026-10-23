@@ -47,7 +47,7 @@ struct CalendarInvitePicker: View {
                 .pickerStyle(.segmented)
             }
 
-            TextField("이름 또는 @핸들로 찾기", text: $query)
+            TextField("이름 또는 @아이디로 찾기", text: $query)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .foregroundStyle(Theme.primaryText)

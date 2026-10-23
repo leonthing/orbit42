@@ -103,7 +103,7 @@ struct ParticipantAddSheet: View {
                 Theme.background.ignoresSafeArea()
                 List {
                     Section {
-                        TextField("이름, @핸들 또는 이메일", text: $query)
+                        TextField("이름, @아이디 또는 이메일", text: $query)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                             .keyboardType(.emailAddress)
@@ -242,7 +242,7 @@ struct ParticipantAddSheet: View {
                 Button("취소", role: .cancel) {}
                 Button("초대 보내기") { submit(pending) }
             } message: { _ in
-                Text("구글 캘린더 초대 메일이 갑니다.")
+                Text("구글 캘린더 초대 메일이 함께 보내져요.")
             }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

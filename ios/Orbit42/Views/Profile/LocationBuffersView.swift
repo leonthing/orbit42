@@ -99,7 +99,7 @@ struct LocationBuffersView: View {
             Image(systemName: "figure.walk")
                 .font(.system(size: 32, weight: .light))
                 .foregroundStyle(Theme.secondaryText)
-            Text("자주 가는 장소를 등록하면 자동 슬롯 계산에 이동시간이 반영돼요.")
+            Text("자주 가는 장소를 등록하면 예약 가능 시간을 계산할 때 이동시간이 반영돼요.")
                 .font(.subheadline)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(Theme.secondaryText)
@@ -137,7 +137,7 @@ struct LocationBuffersView: View {
                     }
                 }
             } footer: {
-                Text("행을 탭하면 이름·이동시간·별칭을 바꿀 수 있어요. 왼쪽으로 밀면 삭제할 수 있어요.")
+                Text("행을 누르면 이름·이동시간·별칭을 바꾸거나 삭제할 수 있어요.")
                     .foregroundStyle(Theme.secondaryText)
             }
             .listRowBackground(Theme.surface)
@@ -210,6 +210,7 @@ private struct LocationBufferEditorSheet: View {
     @State private var newAliasText = ""
     @State private var isSaving = false
     @State private var errorMessage: String?
+    @State private var showingDeleteConfirm = false
 
     init(mode: Mode, viewModel: LocationBuffersViewModel) {
         self.mode = mode
@@ -251,14 +252,20 @@ private struct LocationBufferEditorSheet: View {
                 } header: {
                     Text("이동시간")
                 } footer: {
-                    Text("이 장소로 오가는 데 걸리는 시간이에요. 자동 슬롯 계산 시 앞뒤로 비워 둬요.")
+                    Text("이 장소로 오가는 데 걸리는 시간이에요. 예약 가능 시간을 계산할 때 앞뒤로 비워 둬요.")
                         .foregroundStyle(Theme.secondaryText)
                 }
                 .listRowBackground(Theme.surface)
 
                 Section {
                     ForEach(aliases.indices, id: \.self) { index in
-                        Text(aliases[index])
+                        HStack {
+                            Text(aliases[index])
+                            Spacer()
+                            VisibleRemoveButton(accessibilityLabel: "\(aliases[index]) 별칭 빼기") {
+                                aliases.remove(at: index)
+                            }
+                        }
                     }
                     .onDelete { offsets in
                         aliases.remove(atOffsets: offsets)
@@ -280,13 +287,8 @@ private struct LocationBufferEditorSheet: View {
                 } header: {
                     Text("별칭")
                 } footer: {
-                    if aliases.isEmpty {
-                        Text("일정 위치에 별칭이 들어 있어도 같은 장소로 인식해요")
-                            .foregroundStyle(Theme.secondaryText)
-                    } else {
-                        Text("왼쪽으로 밀면 삭제할 수 있어요")
-                            .foregroundStyle(Theme.secondaryText)
-                    }
+                    Text("일정 위치에 별칭이 들어 있어도 같은 장소로 인식해요")
+                        .foregroundStyle(Theme.secondaryText)
                 }
                 .listRowBackground(Theme.surface)
 
@@ -297,6 +299,32 @@ private struct LocationBufferEditorSheet: View {
                             .foregroundStyle(.red)
                     }
                     .listRowBackground(Theme.surface)
+                }
+
+                // 목록에서 밀어야만 지울 수 있던 것을 편집 화면에도 (개선-26)
+                if let original {
+                    Section {
+                        Button(role: .destructive) {
+                            showingDeleteConfirm = true
+                        } label: {
+                            Label("이 장소 삭제", systemImage: "trash")
+                        }
+                        .disabled(isSaving)
+                    }
+                    .listRowBackground(Theme.surface)
+                    .confirmationDialog(
+                        "'\(original.name)' 장소를 삭제할까요?",
+                        isPresented: $showingDeleteConfirm,
+                        titleVisibility: .visible
+                    ) {
+                        Button("삭제", role: .destructive) {
+                            Task {
+                                await viewModel.delete(original)
+                                dismiss()
+                            }
+                        }
+                        Button("돌아가기", role: .cancel) {}
+                    }
                 }
             }
             .scrollContentBackground(.hidden)

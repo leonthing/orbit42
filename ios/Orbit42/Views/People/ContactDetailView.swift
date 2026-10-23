@@ -71,7 +71,28 @@ struct ContactDetailView: View {
                             .foregroundStyle(Theme.secondaryText)
                     }
                     ForEach(past) { meeting in
-                        meetingRow(meeting)
+                        HStack(spacing: 4) {
+                            meetingRow(meeting)
+                            // 직접 기록한 만남 — 밀기로만 지울 수 있던 것을 보이는 메뉴로도 (개선-26)
+                            if meeting.isManual {
+                                Menu {
+                                    Button(role: .destructive) {
+                                        Task {
+                                            if await store.deleteMeeting(meeting.id) { await load() }
+                                        }
+                                    } label: {
+                                        Label("이 기록 삭제", systemImage: "trash")
+                                    }
+                                } label: {
+                                    Image(systemName: "ellipsis.circle")
+                                        .foregroundStyle(Theme.secondaryText)
+                                        .frame(width: 32, height: 32)
+                                        .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.borderless)
+                                .accessibilityLabel("만남 기록 더 보기")
+                            }
+                        }
                             .swipeActions {
                                 if meeting.isManual {
                                     Button(role: .destructive) {
@@ -95,7 +116,7 @@ struct ContactDetailView: View {
                 sectionHeader("지난 만남")
             } footer: {
                 if detail?.past.contains(where: \.isManual) == true {
-                    Text("직접 남긴 만남은 왼쪽으로 밀어 지울 수 있어요.")
+                    Text("직접 남긴 만남은 옆의 ⋯ 에서 지울 수 있어요.")
                 }
             }
             .listRowBackground(Theme.surface)

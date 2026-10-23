@@ -91,7 +91,7 @@ struct AccountView: View {
                 }
                 .disabled(isDeleting)
             } footer: {
-                Text("모든 슬롯·예약·글이 영구 삭제되며 되돌릴 수 없어요.")
+                Text("모든 예약 링크·예약·글이 영구 삭제되며 되돌릴 수 없어요.")
                     .foregroundStyle(Theme.secondaryText)
             }
             .listRowBackground(Theme.surface)
@@ -123,7 +123,7 @@ struct AccountView: View {
             }
             Button("취소", role: .cancel) {}
         } message: {
-            Text("모든 슬롯·예약·글이 영구 삭제되며 되돌릴 수 없어요.")
+            Text("모든 예약 링크·예약·글이 영구 삭제되며 되돌릴 수 없어요.")
         }
         .alert("계정 삭제", isPresented: $showingDeleteConfirmAlert) {
             TextField("삭제", text: $deleteConfirmText)
@@ -133,7 +133,7 @@ struct AccountView: View {
             .disabled(deleteConfirmText.trimmingCharacters(in: .whitespaces) != "삭제")
             Button("취소", role: .cancel) {}
         } message: {
-            Text("계속하려면 \"삭제\" 를 입력해 주세요. 모든 슬롯·예약·글이 영구 삭제되며 되돌릴 수 없어요.")
+            Text("계속하려면 \"삭제\" 를 입력해 주세요. 모든 예약 링크·예약·글이 영구 삭제되며 되돌릴 수 없어요.")
         }
         .alert(
             "안내",

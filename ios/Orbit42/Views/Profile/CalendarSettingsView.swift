@@ -7,6 +7,7 @@ struct CalendarSettingsView: View {
     private var settings = AppSettings.shared
     @State private var editingCalendar: CalendarInfo?
     @State private var showingCreate = false
+    @State private var deleteTarget: CalendarInfo?
 
     var body: some View {
         ZStack {
@@ -30,6 +31,20 @@ struct CalendarSettingsView: View {
         }
         .sheet(isPresented: $showingCreate) {
             CalendarEditorSheet(mode: .create, viewModel: viewModel)
+        }
+        // 캘린더를 지우면 안의 일정도 함께 지워진다 — 밀기로도 한 번 더 묻는다 (개선-26)
+        .confirmationDialog(
+            "'\(deleteTarget?.name ?? "")' 캘린더를 삭제할까요?",
+            isPresented: Binding(get: { deleteTarget != nil }, set: { if !$0 { deleteTarget = nil } }),
+            titleVisibility: .visible,
+            presenting: deleteTarget
+        ) { calendar in
+            Button("삭제", role: .destructive) {
+                Task { await viewModel.delete(calendar) }
+            }
+            Button("돌아가기", role: .cancel) {}
+        } message: { _ in
+            Text(CalendarEditorSheet.deleteNotice)
         }
         .alert(
             "안내",
@@ -152,7 +167,7 @@ struct CalendarSettingsView: View {
                         // 기본 캘린더는 스와이프 삭제 자체를 막는다
                         if !calendar.isDefault, !calendar.isSharedWithMe {
                             Button(role: .destructive) {
-                                Task { await viewModel.delete(calendar) }
+                                deleteTarget = calendar
                             } label: {
                                 Label("삭제", systemImage: "trash")
                             }
@@ -160,7 +175,7 @@ struct CalendarSettingsView: View {
                     }
                 }
             } footer: {
-                Text("행을 탭하면 이름·용도·색·공개범위와 함께 쓰기(공유)를 설정할 수 있어요.")
+                Text("행을 누르면 이름·용도·색·공개 범위와 함께 쓰기(공유)를 설정하거나 캘린더를 삭제할 수 있어요.")
                     .foregroundStyle(Theme.secondaryText)
             }
             .listRowBackground(Theme.surface)

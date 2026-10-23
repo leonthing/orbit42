@@ -116,7 +116,7 @@ struct WorkHoursView: View {
             } header: {
                 Text("요일별 근무시간")
             } footer: {
-                Text("인사이트 가동률과 자동 슬롯 계산에 쓰여요.")
+                Text("리포트의 가동률과 예약 가능 시간 계산에 쓰여요.")
                     .foregroundStyle(Theme.secondaryText)
             }
             .listRowBackground(Theme.surface)

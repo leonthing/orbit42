@@ -150,7 +150,7 @@ struct ServicesView: View {
                     Text("아직 서비스가 없어요")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(Theme.primaryText)
-                    Text("컨설팅·코칭·촬영처럼 시간과 함께 파는 항목에\n가격을 붙여 타임슬롯에 연결할 수 있어요.")
+                    Text("컨설팅·코칭·촬영처럼 시간과 함께 파는 항목에\n가격을 붙여 예약 링크에 연결할 수 있어요.")
                         .font(.footnote)
                         .multilineTextAlignment(.center)
                         .foregroundStyle(Theme.secondaryText)
@@ -266,6 +266,7 @@ private struct ServiceEditorSheet: View {
     @State private var priceText: String
     @State private var isSaving = false
     @State private var errorMessage: String?
+    @State private var showingDeleteConfirm = false
 
     init(viewModel: ServicesViewModel, menu: ServiceMenu?) {
         self.viewModel = viewModel
@@ -323,6 +324,47 @@ private struct ServiceEditorSheet: View {
                                 .foregroundStyle(.red)
                         }
                         .listRowBackground(Theme.surface)
+                    }
+
+                    // 목록에서 밀어야만 되던 숨기기·삭제를 수정 화면에도 (개선-26)
+                    if let menu {
+                        Section {
+                            Button {
+                                Task {
+                                    await viewModel.toggleActive(menu)
+                                    dismiss()
+                                }
+                            } label: {
+                                Label(
+                                    menu.active ? "예약 화면에서 숨기기" : "예약 화면에 다시 보이기",
+                                    systemImage: menu.active ? "eye.slash" : "eye"
+                                )
+                                .foregroundStyle(Theme.accent)
+                            }
+                            Button(role: .destructive) {
+                                showingDeleteConfirm = true
+                            } label: {
+                                Label("이 서비스 삭제", systemImage: "trash")
+                            }
+                        } footer: {
+                            Text("숨기면 예약할 때 고를 수 없지만, 나중에 다시 보이게 할 수 있어요.")
+                                .foregroundStyle(Theme.secondaryText)
+                        }
+                        .disabled(isSaving)
+                        .listRowBackground(Theme.surface)
+                        .confirmationDialog(
+                            "'\(menu.name)' 서비스를 삭제할까요?",
+                            isPresented: $showingDeleteConfirm,
+                            titleVisibility: .visible
+                        ) {
+                            Button("삭제", role: .destructive) {
+                                Task {
+                                    await viewModel.delete(menu)
+                                    dismiss()
+                                }
+                            }
+                            Button("돌아가기", role: .cancel) {}
+                        }
                     }
                 }
                 .scrollContentBackground(.hidden)

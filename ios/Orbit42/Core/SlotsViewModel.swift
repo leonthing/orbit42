@@ -102,7 +102,7 @@ final class SlotsViewModel {
                 body: SlotPresetRequest(key: preset.rawValue)
             )
             if response.wasSkipped {
-                actionMessage = "이미 같은 이름의 슬롯이 있어요"
+                actionMessage = "이미 같은 이름의 예약 링크가 있어요"
             } else {
                 await load(force: true)
                 if let slug = response.slug {
@@ -116,7 +116,7 @@ final class SlotsViewModel {
         } catch let apiError as APIError {
             actionMessage = apiError.errorDescription
         } catch {
-            actionMessage = "슬롯을 만들지 못했어요. 네트워크를 확인해 주세요."
+            actionMessage = "예약 링크를 만들지 못했어요. 네트워크를 확인해 주세요."
         }
     }
 
@@ -150,12 +150,12 @@ final class SlotsViewModel {
                 }
             }
             guard let slug else {
-                actionMessage = "슬롯을 만들지 못했어요. 잠시 후 다시 시도해 주세요."
+                actionMessage = "예약 링크를 만들지 못했어요. 잠시 후 다시 시도해 주세요."
                 return false
             }
             await load(force: true)
             guard let created = slots?.first(where: { $0.slug == slug }) else {
-                actionMessage = "슬롯을 만들었지만 목록에서 찾지 못했어요."
+                actionMessage = "예약 링크를 만들었어요. 목록을 아래로 당겨 새로 고쳐 주세요."
                 return false
             }
             let patched: SlotResponse = try await api.patch(
@@ -180,7 +180,7 @@ final class SlotsViewModel {
             actionMessage = apiError.errorDescription
             return false
         } catch {
-            actionMessage = "슬롯을 만들지 못했어요. 네트워크를 확인해 주세요."
+            actionMessage = "예약 링크를 만들지 못했어요. 네트워크를 확인해 주세요."
             return false
         }
     }

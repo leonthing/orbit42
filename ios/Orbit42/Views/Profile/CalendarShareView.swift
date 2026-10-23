@@ -109,6 +109,23 @@ struct CalendarShareView: View {
                         Text(member.roleLabel)
                             .font(.caption)
                             .foregroundStyle(Theme.secondaryText)
+                        // 밀기로만 되던 내보내기를 보이는 메뉴로도 (개선-26)
+                        if !member.isOwner, !isSharedWithMe {
+                            Menu {
+                                Button(role: .destructive) {
+                                    remove(member)
+                                } label: {
+                                    Label("이 캘린더에서 내보내기", systemImage: "person.badge.minus")
+                                }
+                            } label: {
+                                Image(systemName: "ellipsis.circle")
+                                    .foregroundStyle(Theme.secondaryText)
+                                    .frame(width: 32, height: 32)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.borderless)
+                            .accessibilityLabel("\(member.preferredName) 더 보기")
+                        }
                     }
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                         if !member.isOwner, !isSharedWithMe {
@@ -142,7 +159,7 @@ struct CalendarShareView: View {
 
     private var inviteSection: some View {
         Section {
-            TextField("이름 또는 @핸들로 찾기", text: $query)
+            TextField("이름 또는 @아이디로 찾기", text: $query)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .foregroundStyle(Theme.primaryText)

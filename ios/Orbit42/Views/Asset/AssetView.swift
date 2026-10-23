@@ -396,7 +396,7 @@ struct AssetView: View {
                 .monospacedDigit()
 
             if business.monthTotalKrw > 0 {
-                Text("슬롯 거래 \(AssetFormat.won(business.monthBookedKrw)) · 직접 기록 \(AssetFormat.won(business.monthManualKrw))")
+                Text("예약 링크 거래 \(AssetFormat.won(business.monthBookedKrw)) · 직접 기록 \(AssetFormat.won(business.monthManualKrw))")
                     .font(.caption)
                     .foregroundStyle(Theme.secondaryText)
             } else {

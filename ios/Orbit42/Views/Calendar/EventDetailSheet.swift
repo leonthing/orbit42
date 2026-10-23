@@ -42,6 +42,8 @@ struct EventDetailSheet: View {
     @State private var showingEdit = false
     @State private var showingDeleteConfirm = false
     @State private var isDeleting = false
+    /// 썸네일 X 로 지우기 전에 한 번 묻는다 (개선-26)
+    @State private var photoToDelete: String?
     @State private var errorMessage: String?
 
     /// 현재 표시 중인 자산 분류 (nil = 기본, 캘린더 용도 따름)
@@ -823,7 +825,7 @@ struct EventDetailSheet: View {
                 Text(earningErrorMessage ?? "")
             }
         } footer: {
-            Text("수입으로 분류된 일정은 시급×시간으로 자동 계산돼요. 실제 금액이 다르면 직접 기록하세요.")
+            Text("수입으로 분류된 일정은 시급×시간으로 자동 계산돼요. 실제 금액이 다르면 직접 기록해 주세요.")
         }
         .listRowBackground(Theme.surface)
     }
@@ -1071,6 +1073,11 @@ struct EventDetailSheet: View {
                             }
                             .frame(width: 64, height: 64)
                             .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .overlay(alignment: .topTrailing) {
+                                ThumbnailRemoveButton(accessibilityLabel: "사진 삭제") {
+                                    photoToDelete = url
+                                }
+                            }
                             .contextMenu {
                                 Button(role: .destructive) {
                                     deletePhoto(url)
@@ -1083,6 +1090,20 @@ struct EventDetailSheet: View {
                 }
                 .listRowSeparator(.hidden)
             }
+
+            Color.clear
+                .frame(height: 0)
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+                .confirmationDialog(
+                    "이 사진을 삭제할까요?",
+                    isPresented: Binding(get: { photoToDelete != nil }, set: { if !$0 { photoToDelete = nil } }),
+                    titleVisibility: .visible,
+                    presenting: photoToDelete
+                ) { url in
+                    Button("삭제", role: .destructive) { deletePhoto(url) }
+                    Button("돌아가기", role: .cancel) {}
+                }
 
             PhotosPicker(
                 selection: $photoItems,
@@ -1297,6 +1318,23 @@ struct EventDetailSheet: View {
                                         ? .orange
                                         : Theme.secondaryText
                             )
+                        // 꾹 눌러야만 되던 초대 취소를 보이는 메뉴로도 (개선-26) — 참석자를 추가할 수 있는 사람만
+                        if canAddParticipants {
+                            Menu {
+                                Button(role: .destructive) {
+                                    removeParticipant(participant)
+                                } label: {
+                                    Label("초대 취소", systemImage: "person.badge.minus")
+                                }
+                            } label: {
+                                Image(systemName: "ellipsis.circle")
+                                    .foregroundStyle(Theme.secondaryText)
+                                    .frame(width: 30, height: 30)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.borderless)
+                            .accessibilityLabel("\(participant.label) 더 보기")
+                        }
                     }
                     .contextMenu {
                         Button(role: .destructive) {

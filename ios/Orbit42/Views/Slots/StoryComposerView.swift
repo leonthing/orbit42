@@ -140,13 +140,13 @@ struct StoryCard: View {
                     chip(slot.priceText)
                 }
 
-                Text("DM 대신, 여기서 바로 예약하세요")
+                Text("DM 대신, 여기서 바로 예약해 주세요")
                     .font(.system(size: 44, weight: .semibold))
                     .foregroundStyle(sub)
             }
         case .profile(let bio, let interests, let slots, _):
             VStack(alignment: .leading, spacing: 30) {
-                Text("DM 대신, 링크로\n시간을 예약하세요")
+                Text("DM 대신, 링크로\n시간을 예약해 주세요")
                     .font(.system(size: 82, weight: .heavy))
                     .foregroundStyle(fg)
                     .lineLimit(3)

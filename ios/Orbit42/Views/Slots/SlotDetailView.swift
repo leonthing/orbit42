@@ -24,6 +24,8 @@ struct SlotDetailView: View {
     @State private var viewModel: SlotDetailViewModel
     @State private var showingAddWindowSheet = false
     @State private var newWindowDate = Date()
+    /// 썸네일 X 로 지우기 전에 한 번 묻는다 (개선-26)
+    @State private var photoToDelete: String?
     /// 미리보기 미니 캘린더에서 선택한 날 (자정 기준)
     @State private var previewDay: Date?
     /// 공유(OG) 이미지 — nil 이면 서버 값(detail.imageUrls) 사용
@@ -109,7 +111,7 @@ struct SlotDetailView: View {
         VStack(spacing: 12) {
             ProgressView()
                 .tint(Theme.accent)
-            Text("슬롯 정보를 불러오는 중이에요")
+            Text("예약 링크를 불러오는 중이에요")
                 .font(.footnote)
                 .foregroundStyle(Theme.secondaryText)
         }
@@ -141,6 +143,7 @@ struct SlotDetailView: View {
 
     private var editorForm: some View {
         Form {
+            activeSection
             basicSection
             priceSection
             locationSection
@@ -162,6 +165,41 @@ struct SlotDetailView: View {
 
     // MARK: 기본 정보
 
+    /// 예약 받기 켜기/끄기 — 목록의 밀기·꾹 누르기로만 되던 것 (개선-26)
+    @ViewBuilder
+    private var activeSection: some View {
+        if let active = viewModel.isActive {
+            Section {
+                HStack(spacing: 10) {
+                    Image(systemName: active ? "checkmark.circle.fill" : "pause.circle.fill")
+                        .foregroundStyle(active ? .green : .orange)
+                    Text(active ? "예약을 받고 있어요" : "예약을 잠시 멈췄어요")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.primaryText)
+                    Spacer()
+                    if viewModel.isTogglingActive {
+                        ProgressView().tint(Theme.accent)
+                    } else {
+                        Button(active ? "멈추기" : "다시 받기") {
+                            Task {
+                                if let slot = await viewModel.toggleActive() {
+                                    listViewModel.applyUpdated(slot)
+                                }
+                            }
+                        }
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.accent)
+                        .buttonStyle(.borderless)
+                    }
+                }
+            } footer: {
+                Text(active ? "멈추면 링크로 새 예약을 받지 않아요. 이미 받은 예약은 그대로예요." : "다시 받으면 링크로 예약할 수 있어요.")
+                    .foregroundStyle(Theme.secondaryText)
+            }
+            .listRowBackground(Theme.surface)
+        }
+    }
+
     private var basicSection: some View {
         Section("기본 정보") {
             TextField("제목", text: $viewModel.title)
@@ -178,7 +216,7 @@ struct SlotDetailView: View {
                     .frame(minHeight: 76, maxHeight: 120)
             }
 
-            Picker("슬롯 유형", selection: $viewModel.slotType) {
+            Picker("예약 유형", selection: $viewModel.slotType) {
                 Text("1:1").tag("1on1")
                 Text("함께하기").tag("companion")
                 Text("그룹").tag("group")
@@ -203,7 +241,7 @@ struct SlotDetailView: View {
     private var priceSection: some View {
         Section {
             if viewModel.detail?.isAuction == true {
-                Label("경매 슬롯의 가격 설정은 웹에서 관리해요", systemImage: "lock")
+                Label("경매 방식의 가격은 웹에서 설정할 수 있어요", systemImage: "lock")
                     .font(.subheadline)
                     .foregroundStyle(Theme.secondaryText)
             } else {
@@ -233,7 +271,13 @@ struct SlotDetailView: View {
     private var locationSection: some View {
         Section {
             ForEach(viewModel.locations.indices, id: \.self) { index in
-                Text(viewModel.locations[index])
+                HStack {
+                    Text(viewModel.locations[index])
+                    Spacer()
+                    VisibleRemoveButton(accessibilityLabel: "\(viewModel.locations[index]) 위치 빼기") {
+                        viewModel.locations.remove(at: index)
+                    }
+                }
             }
             .onDelete { offsets in
                 viewModel.locations.remove(atOffsets: offsets)
@@ -256,7 +300,7 @@ struct SlotDetailView: View {
             Text("위치")
         } footer: {
             if !viewModel.locations.isEmpty {
-                Text("왼쪽으로 밀면 삭제할 수 있어요")
+                Text("옆의 빨간 빼기 버튼으로 지울 수 있어요")
             }
         }
         .listRowBackground(Theme.surface)
@@ -342,6 +386,10 @@ struct SlotDetailView: View {
                         Text("\(window.bookedCount)/\(window.capacity) 예약")
                             .font(.footnote)
                             .foregroundStyle(Theme.secondaryText)
+                        VisibleRemoveButton(accessibilityLabel: "\(window.displayText) 시간 삭제") {
+                            Task { await viewModel.deleteWindow(window) }
+                        }
+                        .disabled(viewModel.deletingWindowIds.contains(window.id))
                     }
                     .opacity(viewModel.deletingWindowIds.contains(window.id) ? 0.4 : 1)
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
@@ -562,6 +610,11 @@ struct SlotDetailView: View {
                             }
                             .frame(width: 96, height: 60)
                             .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .overlay(alignment: .topTrailing) {
+                                ThumbnailRemoveButton(accessibilityLabel: "공유 이미지 삭제") {
+                                    photoToDelete = url
+                                }
+                            }
                             .contextMenu {
                                 Button(role: .destructive) {
                                     deleteShareImage(url)
@@ -574,6 +627,20 @@ struct SlotDetailView: View {
                 }
                 .listRowSeparator(.hidden)
             }
+
+            Color.clear
+                .frame(height: 0)
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+                .confirmationDialog(
+                    "이 공유 이미지를 삭제할까요?",
+                    isPresented: Binding(get: { photoToDelete != nil }, set: { if !$0 { photoToDelete = nil } }),
+                    titleVisibility: .visible,
+                    presenting: photoToDelete
+                ) { url in
+                    Button("삭제", role: .destructive) { deleteShareImage(url) }
+                    Button("돌아가기", role: .cancel) {}
+                }
 
             PhotosPicker(
                 selection: $sharePhotoItems,

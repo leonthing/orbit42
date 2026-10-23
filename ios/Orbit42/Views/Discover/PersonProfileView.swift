@@ -389,7 +389,7 @@ struct PersonProfileView: View {
                     Text("아직 열어둔 시간이 없어요")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(Theme.primaryText)
-                    Text(data.isMe ? "슬롯 탭에서 시간을 열어보세요" : "시간 요청을 보내보세요")
+                    Text(data.isMe ? "예약 탭의 '예약 링크'에서 시간을 열어 보세요" : "시간 요청을 보내 보세요")
                         .font(.footnote)
                         .foregroundStyle(Theme.secondaryText)
                 }

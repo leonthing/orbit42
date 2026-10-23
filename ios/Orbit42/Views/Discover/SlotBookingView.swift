@@ -80,7 +80,7 @@ struct SlotBookingView: View {
             VStack(spacing: 12) {
                 ProgressView()
                     .tint(Theme.accent)
-                Text("슬롯 정보를 불러오는 중이에요")
+                Text("예약 링크를 불러오는 중이에요")
                     .font(.footnote)
                     .foregroundStyle(Theme.secondaryText)
             }

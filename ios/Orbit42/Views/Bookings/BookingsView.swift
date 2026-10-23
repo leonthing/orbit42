@@ -224,7 +224,7 @@ struct BookingsView: View {
                     emptyState(
                         icon: "calendar.badge.clock",
                         title: "예약한 일정이 없어요",
-                        message: "오르빗 탭에서 사람을 찾아 시간을 예약해보세요"
+                        message: "오르빗 탭에서 사람을 찾아 시간을 예약해 보세요"
                     )
                 } else {
                     guestList(data.guest)
@@ -402,7 +402,9 @@ struct BookingsView: View {
             onAction: { action in
                 Task { await viewModel.act(action, on: booking.id) }
             },
-            onOpen: { detailTarget = BookingDetailTarget(id: booking.id, role: .host) }
+            onOpen: { detailTarget = BookingDetailTarget(id: booking.id, role: .host) },
+            // 끝났는데 아직 확정 상태 — 꾹 누르지 않아도 보이게 (개선-26)
+            showsComplete: isPast && booking.status == .confirmed && !editingPast
         )
         .bookingRowChrome()
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
@@ -694,6 +696,8 @@ private struct HostBookingRow: View {
     let onAction: (BookingAction) -> Void
     /// 카드 탭 → 예약 상세. 수락/거절 버튼은 자기 탭을 먼저 가져간다.
     let onOpen: () -> Void
+    /// 지난 확정 예약이면 '완료 처리' 버튼을 행에 바로 보여 준다.
+    var showsComplete = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -744,6 +748,11 @@ private struct HostBookingRow: View {
                     BookingActionButton(title: "거절", prominent: false, disabled: isActing) {
                         onAction(.cancel)
                     }
+                }
+                .padding(.top, 2)
+            } else if showsComplete {
+                BookingActionButton(title: "완료 처리", prominent: true, disabled: isActing) {
+                    onAction(.complete)
                 }
                 .padding(.top, 2)
             }
@@ -1064,7 +1073,7 @@ private struct ArchivedBookingsView: View {
                             }
                         }
                     } header: {
-                        Text("왼쪽으로 밀거나 꾹 눌러 되돌리기·삭제할 수 있어요")
+                        Text("예약을 눌러 오른쪽 위 ⋯ 에서 되돌리거나 삭제할 수 있어요")
                             .font(.footnote)
                             .foregroundStyle(Theme.secondaryText)
                             .textCase(nil)

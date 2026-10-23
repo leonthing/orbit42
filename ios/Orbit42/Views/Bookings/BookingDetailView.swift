@@ -27,6 +27,8 @@ struct BookingDetailView: View {
     @State private var showingCancelConfirm = false
     @State private var showingReschedule = false
     @State private var copiedToast: String?
+    @State private var showingArchiveConfirm = false
+    @State private var showingDeleteConfirm = false
 
     private var hostBooking: HostBooking? {
         guard role == .host else { return nil }
@@ -41,6 +43,19 @@ struct BookingDetailView: View {
     }
 
     private var isActing: Bool { viewModel.actingIds.contains(bookingId) }
+
+    /// 보관함에 든 예약인지 (지금 목록이 아니라 보관함에서 찾은 경우)
+    private var isArchived: Bool {
+        let inArchive = role == .host
+            ? viewModel.archived?.host.contains { $0.id == bookingId }
+            : viewModel.archived?.guest.contains { $0.id == bookingId }
+        return inArchive == true
+    }
+
+    /// 끝난 예약(지난 시간·취소·완료)만 보관·삭제할 수 있다 — 서버 규칙과 같다.
+    private func isFinished(_ detail: Detail) -> Bool {
+        detail.status == .canceled || detail.status == .completed || detail.end < Date()
+    }
 
     /// 목록이 로드된 상태에서 이 예약이 사라졌으면 false.
     private var stillExists: Bool { viewModel.data == nil || detail != nil }
@@ -94,6 +109,54 @@ struct BookingDetailView: View {
         }
         .navigationTitle("예약 상세")
         .navigationBarTitleDisplayMode(.inline)
+        // 밀기·꾹 누르기로만 되던 보관·삭제를 보이는 곳에도 (개선-26)
+        .toolbar {
+            if let detail, isFinished(detail) {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        if isArchived {
+                            Button {
+                                Task { await viewModel.unarchive([bookingId]) }
+                            } label: {
+                                Label("보관함에서 되돌리기", systemImage: "arrow.uturn.backward")
+                            }
+                        } else {
+                            Button {
+                                showingArchiveConfirm = true
+                            } label: {
+                                Label("보관", systemImage: "archivebox")
+                            }
+                        }
+                        Button(role: .destructive) {
+                            showingDeleteConfirm = true
+                        } label: {
+                            Label("삭제", systemImage: "trash")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                    .disabled(isActing)
+                    .accessibilityLabel("더 보기")
+                    .accessibilityIdentifier("bookingDetailMore")
+                }
+            }
+        }
+        .confirmationDialog("이 예약을 보관할까요?", isPresented: $showingArchiveConfirm, titleVisibility: .visible) {
+            Button("보관") {
+                Task { await viewModel.archive([bookingId]) }
+            }
+            Button("돌아가기", role: .cancel) {}
+        } message: {
+            Text("보관함에서 언제든 다시 꺼낼 수 있어요.")
+        }
+        .confirmationDialog("이 예약을 목록에서 삭제할까요?", isPresented: $showingDeleteConfirm, titleVisibility: .visible) {
+            Button("삭제", role: .destructive) {
+                Task { await viewModel.deleteBookings([bookingId]) }
+            }
+            Button("돌아가기", role: .cancel) {}
+        } message: {
+            Text("내 목록에서만 사라지고 상대방의 기록은 유지돼요.")
+        }
         .confirmationDialog(
             "이 예약을 취소할까요?",
             isPresented: $showingCancelConfirm,

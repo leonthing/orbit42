@@ -36,6 +36,10 @@ struct CalendarEditorSheet: View {
     @State private var inviteRole = "editor"
     @State private var isSaving = false
     @State private var errorMessage: String?
+    @State private var showingDeleteConfirm = false
+
+    /// 캘린더 삭제 확인 안내 — 목록 밀기와 편집 화면이 같은 문구를 쓴다
+    static let deleteNotice = "이 캘린더에 든 일정도 orbit42에서 함께 지워져요. 구글 캘린더는 그대로예요."
 
     init(mode: Mode, viewModel: CalendarSettingsViewModel) {
         self.mode = mode
@@ -176,6 +180,34 @@ struct CalendarEditorSheet: View {
                             .foregroundStyle(.red)
                     }
                     .listRowBackground(Theme.surface)
+                }
+
+                // 목록에서 밀어야만 지울 수 있던 것을 편집 화면에도 (개선-26)
+                if let original, !original.isDefault, !original.isSharedWithMe {
+                    Section {
+                        Button(role: .destructive) {
+                            showingDeleteConfirm = true
+                        } label: {
+                            Label("이 캘린더 삭제", systemImage: "trash")
+                        }
+                        .disabled(isSaving)
+                    }
+                    .listRowBackground(Theme.surface)
+                    .confirmationDialog(
+                        "'\(original.name)' 캘린더를 삭제할까요?",
+                        isPresented: $showingDeleteConfirm,
+                        titleVisibility: .visible
+                    ) {
+                        Button("삭제", role: .destructive) {
+                            Task {
+                                await viewModel.delete(original)
+                                dismiss()
+                            }
+                        }
+                        Button("돌아가기", role: .cancel) {}
+                    } message: {
+                        Text(Self.deleteNotice)
+                    }
                 }
             }
             .scrollContentBackground(.hidden)

@@ -249,7 +249,7 @@ struct AddEventSheet: View {
                 Button("취소", role: .cancel) {}
                 Button("저장하고 초대") { save() }
             } message: {
-                Text("구글 캘린더 초대 메일이 갑니다.")
+                Text("구글 캘린더 초대 메일이 함께 보내져요.")
             }
         }
     }
@@ -276,6 +276,10 @@ struct AddEventSheet: View {
                             .lineLimit(1)
                     }
                     Spacer()
+                    VisibleRemoveButton(accessibilityLabel: "\(pending.label) 빼기") {
+                        pendingParticipants.removeAll { $0.id == pending.id }
+                    }
+                    .disabled(isSaving)
                 }
             }
             .onDelete { offsets in
