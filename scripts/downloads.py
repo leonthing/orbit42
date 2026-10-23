@@ -1,6 +1,6 @@
 """Orbit42 App Store 일별·국가별 다운로드 → PO_orbit42/지표_다운로드.csv (ASC 판매 보고서 SALES/SUMMARY/DAILY).
 사용 (/usr/bin/python3, PyJWT 필요):
-  /usr/bin/python3 scripts/downloads.py                    # 어제까지 비어 있는 날짜만 채움 (없으면 어제 하루)
+  /usr/bin/python3 scripts/downloads.py                    # CSV 마지막 날 다음부터 어제까지 채움 (CSV 없으면 어제 하루)
   /usr/bin/python3 scripts/downloads.py --from 2026-07-28  # 그날부터 어제까지 비어 있는 날짜를 모두 채움
 vendor 번호는 환경변수 ASC_VENDOR 또는 Martcal 의 vendor.txt 를 읽는다(같은 ASC 계정, 공개 저장소라 여기 두지 않음).
 열: date,country,first_downloads,redownloads,updates
@@ -54,7 +54,8 @@ def main():
     v = vendor()
     have = {r["date"] for r in csv.DictReader(OUT.open())} if OUT.exists() else set()
     yesterday = dt.date.today() - dt.timedelta(days=1)
-    start = dt.date.fromisoformat(sys.argv[sys.argv.index("--from") + 1]) if "--from" in sys.argv else yesterday
+    if "--from" in sys.argv: start = dt.date.fromisoformat(sys.argv[sys.argv.index("--from") + 1])
+    else: start = min(yesterday, dt.date.fromisoformat(max(have)) + dt.timedelta(days=1)) if have else yesterday
     new = not OUT.exists()
     with OUT.open("a", newline="") as f:
         w = csv.writer(f)
@@ -68,6 +69,8 @@ def main():
                 if not rows: w.writerow([ds, "ALL", 0, 0, 0])
                 print(ds, sum(x[0] for x in rows.values()), "first", sum(x[2] for x in rows.values()), "updates", flush=True)
             d += dt.timedelta(days=1)
+    with OUT.open() as f: head, *rows = list(csv.reader(f))
+    with OUT.open("w", newline="") as f: csv.writer(f).writerows([head] + sorted(rows, key=lambda r: (r[0], r[1])))
 
 
 if __name__ == "__main__":

@@ -89,6 +89,7 @@ private struct MyProfileContent: View {
             Theme.background.ignoresSafeArea()
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
+                    EmailVerifyBanner()
                     header
                     actionButtons
                     publicPageLink

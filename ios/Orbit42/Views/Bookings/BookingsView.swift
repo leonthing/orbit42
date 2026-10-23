@@ -6,8 +6,14 @@ struct BookingsView: View {
     @State private var viewModel = BookingsViewModel()
     /// "예약 취소" 확인 다이얼로그 대상 (guest)
     @State private var cancelTarget: GuestBooking?
-    /// "목록에서 삭제" 확인 다이얼로그 대상 예약 id
-    @State private var deleteTargetId: String?
+    /// "목록에서 삭제" 확인 다이얼로그 대상 예약 id 들 (한 개 또는 편집에서 고른 여러 개)
+    @State private var deleteTargets: [String]?
+    /// "보관" 확인 다이얼로그 대상 예약 id 들 (개선-25)
+    @State private var archiveTargets: [String]?
+    /// 지난 예약 편집(여러 개 선택) 모드와 고른 예약
+    @State private var editingPast = false
+    @State private var selectedPast: Set<String> = []
+    @State private var showingArchive = false
     /// 카드 탭 → 상세로 push 할 대상
     @State private var detailTarget: BookingDetailTarget?
     /// 받은 시간 요청 — 수락할 시간 고르기 시트 / 거절 확인 대상
@@ -44,9 +50,22 @@ struct BookingsView: View {
                 if forcedSegment == nil {
                     segmentPicker
                 }
+                // 받은 예약 위 — 미인증이면 예약·초대 메일을 못 받는다는 안내 (개선-24)
+                if viewModel.segment == .host {
+                    EmailVerifyBanner()
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 6)
+                }
                 content
             }
         }
+        // 지난 예약 편집 중이면 아래에 보관 / 삭제 (개선-25)
+        .safeAreaInset(edge: .bottom) {
+            if editingPast {
+                editBar
+            }
+        }
+        .onChange(of: viewModel.segment) { _, _ in finishEditing() }
         .onAppear {
             if let forcedSegment { viewModel.segment = forcedSegment }
         }
@@ -89,20 +108,45 @@ struct BookingsView: View {
                 Text("\(booking.slotTitle) · \(booking.scheduledText)")
             }
             .confirmationDialog(
-                "이 예약을 목록에서 삭제할까요?",
+                (deleteTargets?.count ?? 0) > 1
+                    ? "선택한 예약 \(deleteTargets?.count ?? 0)건을 목록에서 삭제할까요?"
+                    : "이 예약을 목록에서 삭제할까요?",
                 isPresented: Binding(
-                    get: { deleteTargetId != nil },
-                    set: { if !$0 { deleteTargetId = nil } }
+                    get: { deleteTargets != nil },
+                    set: { if !$0 { deleteTargets = nil } }
                 ),
                 titleVisibility: .visible,
-                presenting: deleteTargetId
-            ) { bookingId in
+                presenting: deleteTargets
+            ) { ids in
                 Button("삭제", role: .destructive) {
-                    Task { await viewModel.deleteBooking(bookingId) }
+                    finishEditing()
+                    Task { await viewModel.deleteBookings(ids) }
                 }
                 Button("돌아가기", role: .cancel) {}
             } message: { _ in
                 Text("내 목록에서만 사라지고 상대방의 기록은 유지돼요.")
+            }
+            .confirmationDialog(
+                (archiveTargets?.count ?? 0) > 1
+                    ? "선택한 예약 \(archiveTargets?.count ?? 0)건을 보관할까요?"
+                    : "이 예약을 보관할까요?",
+                isPresented: Binding(
+                    get: { archiveTargets != nil },
+                    set: { if !$0 { archiveTargets = nil } }
+                ),
+                titleVisibility: .visible,
+                presenting: archiveTargets
+            ) { ids in
+                Button("보관") {
+                    finishEditing()
+                    Task { await viewModel.archive(ids) }
+                }
+                Button("돌아가기", role: .cancel) {}
+            } message: { _ in
+                Text("보관함에서 언제든 다시 꺼낼 수 있어요.")
+            }
+            .navigationDestination(isPresented: $showingArchive) {
+                ArchivedBookingsView(viewModel: viewModel, segment: viewModel.segment)
             }
             .confirmationDialog(
                 "이 시간 요청을 거절할까요?",
@@ -165,17 +209,18 @@ struct BookingsView: View {
         if let data = viewModel.data {
             switch viewModel.segment {
             case .host:
-                if data.host.isEmpty, data.receivedTimeRequests.isEmpty {
+                if data.host.isEmpty, data.receivedTimeRequests.isEmpty, viewModel.archivedCount(.host) == 0 {
                     emptyState(
                         icon: "tray",
                         title: "받은 예약이 없어요",
-                        message: "예약 링크를 공유하면 받은 예약이 이곳에 모여요"
+                        message: "예약 링크를 공유하면 받은 예약이 이곳에 모여요",
+                        action: ("예약 링크 만들기", { router.openNewBookingLink() })
                     )
                 } else {
                     hostList(data.host, timeRequests: data.receivedTimeRequests)
                 }
             case .guest:
-                if data.guest.isEmpty {
+                if data.guest.isEmpty, viewModel.archivedCount(.guest) == 0 {
                     emptyState(
                         icon: "calendar.badge.clock",
                         title: "예약한 일정이 없어요",
@@ -228,7 +273,12 @@ struct BookingsView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func emptyState(icon: String, title: String, message: String) -> some View {
+    private func emptyState(
+        icon: String,
+        title: String,
+        message: String,
+        action: (title: String, run: () -> Void)? = nil
+    ) -> some View {
         ScrollView {
             VStack(spacing: 12) {
                 Image(systemName: icon)
@@ -241,6 +291,17 @@ struct BookingsView: View {
                     .font(.subheadline)
                     .multilineTextAlignment(.center)
                     .foregroundStyle(Theme.secondaryText)
+                if let action {
+                    Button(action: action.run) {
+                        Text(action.title)
+                            .font(.subheadline.weight(.semibold))
+                            .padding(.horizontal, 22)
+                            .padding(.vertical, 11)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .buttonBorderShape(.capsule)
+                    .padding(.top, 8)
+                }
             }
             .frame(maxWidth: .infinity)
             .padding(.top, 80)
@@ -310,13 +371,16 @@ struct BookingsView: View {
                 }
             }
 
-            if !past.isEmpty {
+            if !past.isEmpty || viewModel.archivedCount(.host) > 0 {
                 Section {
                     ForEach(past) { booking in
-                        hostRow(booking, isPast: true)
+                        selectable(booking.id) {
+                            hostRow(booking, isPast: true)
+                        }
                     }
+                    archiveRow(count: viewModel.archivedCount(.host))
                 } header: {
-                    sectionHeader("지난 예약")
+                    pastHeader(ids: past.map(\.id))
                 }
             }
         }
@@ -329,10 +393,10 @@ struct BookingsView: View {
 
     @ViewBuilder
     private func hostRow(_ booking: HostBooking, isPast: Bool) -> some View {
-        // 진행 중(대기/확정 + 미래) 예약은 삭제 불가 — 먼저 취소해야 한다.
-        let deletable =
+        // 진행 중(대기/확정 + 미래) 예약은 보관·삭제 불가 — 먼저 취소해야 한다.
+        let finished =
             isPast || booking.status == .canceled || booking.status == .completed
-        let row = HostBookingRow(
+        HostBookingRow(
             booking: booking,
             isActing: viewModel.actingIds.contains(booking.id),
             onAction: { action in
@@ -342,26 +406,168 @@ struct BookingsView: View {
         )
         .bookingRowChrome()
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            if deletable {
-                Button(role: .destructive) {
-                    deleteTargetId = booking.id
-                } label: {
-                    Label("삭제", systemImage: "trash")
-                }
+            if finished && !editingPast {
+                finishedSwipeButtons(booking.id)
             }
         }
+        .contextMenu {
+            if finished && !editingPast {
+                if isPast, booking.status == .confirmed {
+                    Button {
+                        Task { await viewModel.act(.complete, on: booking.id) }
+                    } label: {
+                        Label("완료 처리", systemImage: "checkmark.circle")
+                    }
+                }
+                finishedMenuButtons(booking.id)
+            }
+        }
+    }
 
-        if isPast, booking.status == .confirmed {
-            row.contextMenu {
-                Button {
-                    Task { await viewModel.act(.complete, on: booking.id) }
-                } label: {
-                    Label("완료 처리", systemImage: "checkmark.circle")
-                }
-            }
-        } else {
-            row
+    // MARK: - 보관·삭제 공통 (개선-25)
+
+    /// 끝난 예약 행의 밀기 버튼 — 삭제(빨강) / 보관
+    @ViewBuilder
+    private func finishedSwipeButtons(_ id: String) -> some View {
+        Button(role: .destructive) {
+            deleteTargets = [id]
+        } label: {
+            Label("삭제", systemImage: "trash")
         }
+        Button {
+            archiveTargets = [id]
+        } label: {
+            Label("보관", systemImage: "archivebox")
+        }
+        .tint(.indigo)
+    }
+
+    /// 끝난 예약 행을 꾹 눌렀을 때 메뉴
+    @ViewBuilder
+    private func finishedMenuButtons(_ id: String) -> some View {
+        Button {
+            archiveTargets = [id]
+        } label: {
+            Label("보관", systemImage: "archivebox")
+        }
+        Button(role: .destructive) {
+            deleteTargets = [id]
+        } label: {
+            Label("삭제", systemImage: "trash")
+        }
+    }
+
+    /// '지난 예약' 헤더 — 오른쪽에 편집 / 완료
+    private func pastHeader(ids: [String]) -> some View {
+        HStack {
+            sectionHeader("지난 예약")
+            Spacer()
+            if !ids.isEmpty {
+                Button(editingPast ? "완료" : "편집") {
+                    withAnimation {
+                        if editingPast {
+                            finishEditing()
+                        } else {
+                            selectedPast = []
+                            editingPast = true
+                        }
+                    }
+                }
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Theme.accent)
+                .accessibilityIdentifier("pastEditButton")
+            }
+        }
+    }
+
+    /// 편집 중이면 행 앞에 고르기 원을 붙이고, 행을 누르면 상세 대신 고르기
+    @ViewBuilder
+    private func selectable<Row: View>(_ id: String, @ViewBuilder _ row: () -> Row) -> some View {
+        if editingPast {
+            let on = selectedPast.contains(id)
+            HStack(spacing: 10) {
+                Image(systemName: on ? "checkmark.circle.fill" : "circle")
+                    .font(.title3)
+                    .foregroundStyle(on ? Theme.accent : Theme.secondaryText)
+                row()
+                    .allowsHitTesting(false)
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                if on { selectedPast.remove(id) } else { selectedPast.insert(id) }
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(on ? "선택됨" : "선택 안 됨")
+            .accessibilityAddTraits(.isButton)
+            .accessibilityIdentifier("pastSelect")
+            .bookingRowChrome()
+        } else {
+            row()
+        }
+    }
+
+    /// 지난 예약 맨 아래 '보관함 (n)' — 보관한 게 없으면 안 보인다
+    @ViewBuilder
+    private func archiveRow(count: Int) -> some View {
+        if count > 0 && !editingPast {
+            Button {
+                showingArchive = true
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "archivebox")
+                        .foregroundStyle(Theme.accent)
+                    Text("보관함 (\(count))")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Theme.primaryText)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Theme.secondaryText)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .bookingRowChrome()
+        }
+    }
+
+    /// 편집 중 아래 막대 — 고른 예약 보관 / 삭제
+    private var editBar: some View {
+        let ids = Array(selectedPast)
+        return HStack(spacing: 12) {
+            Button {
+                archiveTargets = ids
+            } label: {
+                Text(ids.isEmpty ? "보관" : "보관 (\(ids.count))")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
+            }
+            Button(role: .destructive) {
+                deleteTargets = ids
+            } label: {
+                Text(ids.isEmpty ? "삭제" : "삭제 (\(ids.count))")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(ids.isEmpty ? Theme.secondaryText : .red)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(ids.isEmpty)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(.bar)
+    }
+
+    private func finishEditing() {
+        editingPast = false
+        selectedPast = []
     }
 
     /// 탭 배지(시간 요청 + 승인 대기)와 같은 셈이 보이게 — 시간 요청은 있을 때만
@@ -410,11 +616,12 @@ struct BookingsView: View {
                         .bookingRowChrome()
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             if booking.status == .canceled || booking.status == .completed {
-                                Button(role: .destructive) {
-                                    deleteTargetId = booking.id
-                                } label: {
-                                    Label("삭제", systemImage: "trash")
-                                }
+                                finishedSwipeButtons(booking.id)
+                            }
+                        }
+                        .contextMenu {
+                            if booking.status == .canceled || booking.status == .completed {
+                                finishedMenuButtons(booking.id)
                             }
                         }
                     }
@@ -423,29 +630,31 @@ struct BookingsView: View {
                 }
             }
 
-            if !past.isEmpty {
+            if !past.isEmpty || viewModel.archivedCount(.guest) > 0 {
                 Section {
                     ForEach(past) { booking in
-                        GuestBookingRow(
-                            booking: booking,
-                            isActing: false,
-                            canCancel: false,
-                            onCancel: {},
-                            onOpen: {
-                                detailTarget = BookingDetailTarget(id: booking.id, role: .guest)
+                        selectable(booking.id) {
+                            GuestBookingRow(
+                                booking: booking,
+                                isActing: viewModel.actingIds.contains(booking.id),
+                                canCancel: false,
+                                onCancel: {},
+                                onOpen: {
+                                    detailTarget = BookingDetailTarget(id: booking.id, role: .guest)
+                                }
+                            )
+                            .bookingRowChrome()
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                if !editingPast { finishedSwipeButtons(booking.id) }
                             }
-                        )
-                        .bookingRowChrome()
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button(role: .destructive) {
-                                deleteTargetId = booking.id
-                            } label: {
-                                Label("삭제", systemImage: "trash")
+                            .contextMenu {
+                                if !editingPast { finishedMenuButtons(booking.id) }
                             }
                         }
                     }
+                    archiveRow(count: viewModel.archivedCount(.guest))
                 } header: {
-                    sectionHeader("지난 예약")
+                    pastHeader(ids: past.map(\.id))
                 }
             }
         }
@@ -793,4 +1002,146 @@ private struct StatusBadge: View {
 #Preview {
     BookingsView()
         .tint(Theme.accent)
+}
+
+// MARK: - 보관함 (개선-25)
+
+/// 보관한 지난 예약 — 되돌리기(목록으로) / 삭제(내 목록에서 숨김). 상세는 그대로 열린다.
+private struct ArchivedBookingsView: View {
+    let viewModel: BookingsViewModel
+    let segment: BookingsViewModel.Segment
+
+    @State private var deleteTarget: String?
+    @State private var detailTarget: BookingDetailTarget?
+
+    private var hostRows: [HostBooking] {
+        (viewModel.archived?.host ?? []).sorted { $0.scheduledAt > $1.scheduledAt }
+    }
+
+    private var guestRows: [GuestBooking] {
+        (viewModel.archived?.guest ?? []).sorted { $0.scheduledAt > $1.scheduledAt }
+    }
+
+    var body: some View {
+        ZStack {
+            Theme.background.ignoresSafeArea()
+            if viewModel.archivedCount(segment) == 0 {
+                VStack(spacing: 12) {
+                    Image(systemName: "archivebox")
+                        .font(.system(size: 40, weight: .light))
+                        .foregroundStyle(Theme.accent)
+                    Text("보관한 예약이 없어요")
+                        .font(.headline)
+                        .foregroundStyle(Theme.primaryText)
+                }
+            } else {
+                List {
+                    Section {
+                        if segment == .host {
+                            ForEach(hostRows) { booking in
+                                HostBookingRow(
+                                    booking: booking,
+                                    isActing: viewModel.actingIds.contains(booking.id),
+                                    onAction: { action in
+                                        Task { await viewModel.act(action, on: booking.id) }
+                                    },
+                                    onOpen: { detailTarget = BookingDetailTarget(id: booking.id, role: .host) }
+                                )
+                                .bookingRowChrome()
+                                .modifier(ArchivedRowActions(id: booking.id, viewModel: viewModel, deleteTarget: $deleteTarget))
+                            }
+                        } else {
+                            ForEach(guestRows) { booking in
+                                GuestBookingRow(
+                                    booking: booking,
+                                    isActing: viewModel.actingIds.contains(booking.id),
+                                    canCancel: false,
+                                    onCancel: {},
+                                    onOpen: { detailTarget = BookingDetailTarget(id: booking.id, role: .guest) }
+                                )
+                                .bookingRowChrome()
+                                .modifier(ArchivedRowActions(id: booking.id, viewModel: viewModel, deleteTarget: $deleteTarget))
+                            }
+                        }
+                    } header: {
+                        Text("왼쪽으로 밀거나 꾹 눌러 되돌리기·삭제할 수 있어요")
+                            .font(.footnote)
+                            .foregroundStyle(Theme.secondaryText)
+                            .textCase(nil)
+                    }
+                }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .refreshable { await viewModel.load(force: true) }
+            }
+        }
+        .navigationTitle("보관함")
+        .navigationBarTitleDisplayMode(.inline)
+        .confirmationDialog(
+            "이 예약을 목록에서 삭제할까요?",
+            isPresented: Binding(
+                get: { deleteTarget != nil },
+                set: { if !$0 { deleteTarget = nil } }
+            ),
+            titleVisibility: .visible,
+            presenting: deleteTarget
+        ) { id in
+            Button("삭제", role: .destructive) {
+                Task { await viewModel.deleteBookings([id]) }
+            }
+            Button("돌아가기", role: .cancel) {}
+        } message: { _ in
+            Text("내 목록에서만 사라지고 상대방의 기록은 유지돼요.")
+        }
+        .alert(
+            "안내",
+            isPresented: Binding(
+                get: { viewModel.actionMessage != nil },
+                set: { if !$0 { viewModel.actionMessage = nil } }
+            )
+        ) {
+            Button("확인", role: .cancel) {}
+        } message: {
+            Text(viewModel.actionMessage ?? "")
+        }
+        .navigationDestination(item: $detailTarget) { target in
+            BookingDetailView(viewModel: viewModel, bookingId: target.id, role: target.role)
+        }
+    }
+}
+
+/// 보관함 행 — 밀기: 삭제 / 되돌리기, 꾹 누르기: 되돌리기 / 삭제
+private struct ArchivedRowActions: ViewModifier {
+    let id: String
+    let viewModel: BookingsViewModel
+    @Binding var deleteTarget: String?
+
+    func body(content: Content) -> some View {
+        content
+            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                Button(role: .destructive) {
+                    deleteTarget = id
+                } label: {
+                    Label("삭제", systemImage: "trash")
+                }
+                Button {
+                    Task { await viewModel.unarchive([id]) }
+                } label: {
+                    Label("되돌리기", systemImage: "arrow.uturn.backward")
+                }
+                .tint(.indigo)
+            }
+            .contextMenu {
+                Button {
+                    Task { await viewModel.unarchive([id]) }
+                } label: {
+                    Label("되돌리기", systemImage: "arrow.uturn.backward")
+                }
+                Button(role: .destructive) {
+                    deleteTarget = id
+                } label: {
+                    Label("삭제", systemImage: "trash")
+                }
+            }
+    }
 }

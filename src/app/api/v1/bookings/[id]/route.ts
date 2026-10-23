@@ -64,9 +64,55 @@ const HOST_ACTIONS = {
   complete: "completed",
 } as const;
 
-// PATCH { action: "confirm" | "cancel" | "complete" | "cancelMine" }
+/**
+ * 보관/되돌리기(개선-25) — 내 쪽 목록에서만. 상대방 목록은 그대로.
+ * 보관은 삭제와 같은 규칙: 진행 중(대기/확정 + 미래) 예약은 안 된다.
+ */
+async function setArchived(request: Request, id: string, archived: boolean) {
+  const userId = await apiUserId(request);
+  if (!userId) {
+    return Response.json({ error: "사용자를 찾을 수 없어요." }, { status: 404 });
+  }
+  const db = getAdminClient();
+  const { data: booking } = await db
+    .from("bookings")
+    .select("id, host_id, guest_id, status, scheduled_at")
+    .eq("id", id)
+    .maybeSingle();
+  if (!booking) {
+    return Response.json({ error: "예약을 찾을 수 없어요." }, { status: 404 });
+  }
+  const isHost = booking.host_id === userId;
+  const isGuest = booking.guest_id === userId;
+  if (!isHost && !isGuest) {
+    return Response.json({ error: "권한이 없어요." }, { status: 403 });
+  }
+  const active =
+    ["pending", "confirmed"].includes(booking.status as string) &&
+    new Date(booking.scheduled_at as string).getTime() > Date.now();
+  if (archived && active) {
+    return Response.json(
+      { error: "진행 중인 예약은 보관할 수 없어요. 끝난 예약만 보관할 수 있어요." },
+      { status: 400 },
+    );
+  }
+  const { error } = await db
+    .from("bookings")
+    .update(isHost ? { archived_by_host: archived } : { archived_by_guest: archived })
+    .eq("id", id);
+  if (error) {
+    console.error("booking archive", error);
+    return Response.json(
+      { error: archived ? "보관하지 못했어요." : "되돌리지 못했어요." },
+      { status: 400 },
+    );
+  }
+  return Response.json({ ok: true });
+}
+
+// PATCH { action: "confirm" | "cancel" | "complete" | "cancelMine" | "archive" | "unarchive" }
 // confirm/cancel/complete 는 호스트 액션(소유권은 updateBookingStatus가 검증),
-// cancelMine 은 게스트 본인 취소.
+// cancelMine 은 게스트 본인 취소, archive/unarchive 는 내 목록의 보관(개선-25).
 export async function PATCH(
   request: Request,
   { params }: { params: { id: string } },
@@ -84,6 +130,9 @@ export async function PATCH(
   }
 
   const action = body.action ?? "";
+  if (action === "archive" || action === "unarchive") {
+    return setArchived(request, params.id, action === "archive");
+  }
   try {
     if (action === "cancelMine") {
       const result = await cancelMyBooking(params.id);

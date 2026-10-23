@@ -44,6 +44,10 @@ final class CalendarViewModel {
     var currentMonthKey: MonthKey { Self.key(for: displayedMonth) }
 
     var currentMonthData: MonthData? { cache[currentMonthKey] }
+    /// 그 날짜가 든 달에 일정이 하나라도 있는지 — 아직 안 받았으면 nil (다음에 할 일 카드용)
+    func monthHasEvents(containing date: Date) -> Bool? {
+        cache[Self.key(for: date)].map { !$0.events.isEmpty }
+    }
 
     var calendars: [CalendarInfo] { currentMonthData?.calendars ?? [] }
 

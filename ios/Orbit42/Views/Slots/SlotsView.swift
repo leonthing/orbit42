@@ -17,12 +17,15 @@ struct SlotsContent: View {
     /// 인스타 스토리용 이미지 작성 화면
     @State private var storySubject: StorySubject?
     @Environment(AuthViewModel.self) private var auth
+    @Environment(TabRouter.self) private var router
 
     var body: some View {
         ZStack {
             content
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear { consumeNewLinkRequest() }
+        .onChange(of: router.newBookingLinkRequest) { _, _ in consumeNewLinkRequest() }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
@@ -124,6 +127,13 @@ struct SlotsContent: View {
             }
             #endif
         }
+    }
+
+    /// 다른 화면이 보낸 '새 예약 링크' 요청 — 시트를 바로 연다.
+    private func consumeNewLinkRequest() {
+        guard router.newBookingLinkRequest else { return }
+        router.newBookingLinkRequest = false
+        showingSimpleCreate = true
     }
 
     // MARK: - 상태별 콘텐츠

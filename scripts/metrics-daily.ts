@@ -5,7 +5,7 @@
  */
 import { getAdminClient } from "@/lib/supabase";
 
-const INTERNAL = ["leokim5854", "leotaurus13", "appreview", "mina", "junho", "sora", "daeun", "theo"]; // Leo 본인·테스트·심사 데모·시드(seed-demo.mjs)
+const INTERNAL = ["leokim5854", "appreview"]; // Leo 본인·심사 데모 (시드 데모 5명·leotaurus13 은 10/22 삭제 — 같은 이름으로 새로 가입한 외부 사용자를 빼지 않도록 목록에서도 지움)
 
 (async () => {
   const db = getAdminClient();
