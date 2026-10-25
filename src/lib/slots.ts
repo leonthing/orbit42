@@ -1063,7 +1063,14 @@ export async function bookSlot(args: {
     .eq("id", slot.host_id)
     .single();
   const guestEmail = args.guest_email ?? (await getEmailForUser(guestId));
-  const guestLabel = args.guest_name ?? host?.display_name ?? "Guest";
+  // 로그인한 게스트는 예약 행에 이름을 저장하지 않는다 — 표시 이름을 users 에서 가져온다
+  // (예전엔 여기서 호스트 이름이 들어가 호스트 알림·메일에 자기 이름이 보였다)
+  let guestUserLabel: string | null = null;
+  if (!args.guest_name && guestId) {
+    const { data: g } = await db.from("users").select("display_name, username").eq("id", guestId).maybeSingle();
+    guestUserLabel = (g?.display_name as string | null) || (g?.username as string | null) || null;
+  }
+  const guestLabel = args.guest_name ?? guestUserLabel ?? "게스트";
   const whenLabel = startAt.toLocaleString("ko-KR", {
     timeZone: "Asia/Seoul",
     month: "long",
@@ -1184,15 +1191,7 @@ export async function bookSlot(args: {
 
     // Host's event shows who's coming; the guest's event shows who they're
     // meeting. Resolve a human label for the guest (registered or anonymous).
-    let guestDisplay = args.guest_name ?? null;
-    if (!guestDisplay && guestId) {
-      const { data: g } = await db
-        .from("users")
-        .select("display_name, username")
-        .eq("id", guestId)
-        .maybeSingle();
-      guestDisplay = (g?.display_name as string | null) || (g?.username as string | null) || null;
-    }
+    const guestDisplay = args.guest_name ?? guestUserLabel;
     const guestLabel = guestDisplay ?? "게스트";
     const hostLabel = (host?.display_name || host?.username || "호스트") as string;
     const baseDescription =
