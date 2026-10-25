@@ -36,7 +36,7 @@ export async function POST(request: Request) {
   }
   const duration = Number(body.durationMin ?? 60);
   if (!Number.isInteger(duration) || duration < 5 || duration > 480) {
-    return Response.json({ error: "소요시간은 5~480분이어야 해요." }, { status: 400 });
+    return Response.json({ error: "길이는 5~480분이어야 해요." }, { status: 400 });
   }
   const price = Number(body.priceCents ?? 0);
   if (!Number.isInteger(price) || price < 0 || price > 100_000_000_00) {

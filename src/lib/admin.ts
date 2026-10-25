@@ -50,6 +50,12 @@ export async function adminDeleteUser(userId: string) {
     return { error: "본인 계정은 여기서 삭제할 수 없어요 (Settings에서 진행)." };
   }
 
+  // 게스트 입장에선 탈퇴와 같다 — 앞으로 남은 예약 게스트에게 취소 안내(실패해도 삭제는 진행)
+  {
+    const { notifyGuestsBeforeHostLeaves } = await import("@/lib/host-leaving");
+    await notifyGuestsBeforeHostLeaves(userId);
+  }
+
   const { error } = await db.from("users").delete().eq("id", userId);
   if (error) {
     console.error("adminDeleteUser", error);

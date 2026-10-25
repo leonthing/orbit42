@@ -269,7 +269,7 @@ final class SlotDetailViewModel {
             actionMessage = apiError.errorDescription
             return false
         } catch {
-            actionMessage = "시간 창을 추가하지 못했어요. 네트워크를 확인해 주세요."
+            actionMessage = "시간을 추가하지 못했어요. 네트워크를 확인해 주세요."
             return false
         }
     }
@@ -289,7 +289,7 @@ final class SlotDetailViewModel {
         } catch let apiError as APIError {
             actionMessage = apiError.errorDescription
         } catch {
-            actionMessage = "시간 창을 삭제하지 못했어요. 네트워크를 확인해 주세요."
+            actionMessage = "시간을 지우지 못했어요. 네트워크를 확인해 주세요."
         }
     }
 

@@ -108,7 +108,7 @@ export async function PATCH(
   if (body.durationMin !== undefined) {
     const v = Number(body.durationMin);
     if (!Number.isInteger(v) || v < 5 || v > 480) {
-      return Response.json({ error: "소요시간은 5~480분이어야 해요." }, { status: 400 });
+      return Response.json({ error: "길이는 5~480분이어야 해요." }, { status: 400 });
     }
     patch.duration_min = v;
   }
@@ -147,14 +147,14 @@ export async function PATCH(
       body.locations.length > 10 ||
       body.locations.some((l) => typeof l !== "string" || l.length > 100)
     ) {
-      return Response.json({ error: "위치 목록이 올바르지 않아요." }, { status: 400 });
+      return Response.json({ error: "장소 목록이 올바르지 않아요." }, { status: 400 });
     }
     patch.locations = body.locations as string[];
   }
   if (body.workingHours !== undefined) {
     const wh = sanitizeWorkingHours(body.workingHours);
     if (wh === null) {
-      return Response.json({ error: "근무시간 형식이 올바르지 않아요." }, { status: 400 });
+      return Response.json({ error: "매주 열어둘 시간 형식이 올바르지 않아요." }, { status: 400 });
     }
     patch.working_hours = wh;
   }
