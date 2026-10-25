@@ -4,7 +4,8 @@ name: Orbit42
 
 options:
   minimumXcodeGenVersion: "2.40.0"
-  defaultLocalization: ko
+  # 앱 전체 한국어 — 시스템 날짜·시각 고르기, 시스템 버튼까지 한국어로(영어 기기에서도)
+  developmentLanguage: ko
   deploymentTarget:
     iOS: "17.0"
   createIntermediateGroups: true
@@ -42,6 +43,9 @@ targets:
       path: Orbit42/Info.plist
       properties:
         CFBundleDisplayName: Orbit42
+        CFBundleDevelopmentRegion: ko
+        CFBundleLocalizations:
+          - ko
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         UILaunchScreen: {}
@@ -99,6 +103,9 @@ targets:
       path: Orbit42Widget/Info.plist
       properties:
         CFBundleDisplayName: Orbit42
+        CFBundleDevelopmentRegion: ko
+        CFBundleLocalizations:
+          - ko
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         NSExtension:
