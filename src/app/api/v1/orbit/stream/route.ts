@@ -3,6 +3,7 @@ import { getAdminClient } from "@/lib/supabase";
 import { listFollowing } from "@/lib/follows";
 import { toApiSlot } from "@/lib/api-slots";
 import type { TimeSlot } from "@/lib/slots";
+import { withoutDemo } from "@/lib/demo-visibility";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,12 @@ export async function GET(request: Request) {
     return Response.json({ error: "로그인이 필요해요." }, { status: 401 });
   }
 
-  const people = await listFollowing(session.username);
+  // 데모 계정의 최근 활동은 내부 계정에게만 (개선-33)
+  const people = withoutDemo(
+    await listFollowing(session.username),
+    (p) => (p as { username?: string }).username,
+    session.username,
+  );
   if (people.length === 0) {
     return Response.json({ items: [] });
   }

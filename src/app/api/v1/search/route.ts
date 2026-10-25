@@ -1,6 +1,7 @@
 import { apiSession, apiUserId } from "@/lib/api-auth";
 import { getAdminClient } from "@/lib/supabase";
 import { searchAll } from "@/lib/search";
+import { withoutDemo } from "@/lib/demo-visibility";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,12 @@ export async function GET(request: Request) {
       slots: result.slots.filter((s) => !hidden.has(s.host.username)),
     };
   }
+
+  // 데모 계정은 내부 계정의 검색에서만 (개선-33)
+  result = {
+    users: withoutDemo(result.users, (u) => u.username, session.username),
+    slots: withoutDemo(result.slots, (s) => s.host.username, session.username),
+  };
 
   return Response.json({
     users: result.users.map((u) => ({

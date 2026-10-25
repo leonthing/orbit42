@@ -10,6 +10,7 @@ import { Avatar } from "@/components/Avatar";
 import { FollowButton } from "@/app/[username]/FollowButton";
 import { ExploreSearchBar } from "./ExploreSearchBar";
 import { EmptyState } from "@/components/EmptyState";
+import { withoutDemo } from "@/lib/demo-visibility";
 
 export const metadata: Metadata = { title: "탐색" };
 export const dynamic = "force-dynamic";
@@ -76,6 +77,9 @@ export default async function ExplorePage() {
         .slice(0, 6);
     }
   }
+  // 데모 계정은 내부 계정에게만 보인다 (개선-33)
+  const viewer = session?.username ?? null;
+  suggested = withoutDemo(suggested, (u) => u.username, viewer);
   const recentSince = new Date(Date.now() - 30 * 24 * 60 * 60_000).toISOString();
 
   // Active people: anyone who posted or opened a slot in the last 30 days,
@@ -185,11 +189,15 @@ export default async function ExplorePage() {
     }
   }
 
-  const activePeople = Array.from(peopleMap.values()).sort(
+  const activePeople = withoutDemo(Array.from(peopleMap.values()), (p) => p.username, viewer).sort(
     (a, b) => new Date(b.last_active).getTime() - new Date(a.last_active).getTime(),
   );
 
-  const slots = (openSlots.data ?? []).map((s) => ({
+  const slots = withoutDemo(
+    openSlots.data ?? [],
+    (s) => (s.host as unknown as { username?: string } | null)?.username,
+    viewer,
+  ).map((s) => ({
     id: s.id as string,
     slug: s.slug as string,
     title: s.title as string,
@@ -199,6 +207,12 @@ export default async function ExplorePage() {
     location_detail: (s.location_detail as string | null) ?? null,
     host: s.host as unknown as { username: string; display_name: string | null },
   }));
+
+  const liveAuctionList = withoutDemo(
+    liveAuctions.data ?? [],
+    (a) => (a.host as unknown as { username?: string } | null)?.username,
+    viewer,
+  );
 
   const slotReactions = await getReactionsForMany(
     "slot",
@@ -217,11 +231,11 @@ export default async function ExplorePage() {
         <ExploreSearchBar />
       </header>
 
-      {(liveAuctions.data ?? []).length > 0 && (
+      {liveAuctionList.length > 0 && (
         <section className="mb-10">
           <SectionTitle title="진행 중인 시간 경매" hint="마감 임박순" />
           <div className="grid gap-3 sm:grid-cols-2">
-            {(liveAuctions.data ?? []).map((a) => {
+            {liveAuctionList.map((a) => {
               const host = a.host as unknown as {
                 username: string;
                 display_name: string | null;

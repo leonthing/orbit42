@@ -1,5 +1,6 @@
 import { apiSession, apiUserId } from "@/lib/api-auth";
 import { getAdminClient } from "@/lib/supabase";
+import { withoutDemo } from "@/lib/demo-visibility";
 
 export const dynamic = "force-dynamic";
 
@@ -47,7 +48,8 @@ export async function GET(request: Request) {
     .limit(200);
 
   // 겹치는 관심사 수로 정렬 (동률이면 최근 가입 순 유지 — sort는 stable).
-  const scored = (candidates ?? [])
+  // 데모 계정은 내부 계정에게만 추천 (개선-33)
+  const scored = withoutDemo(candidates ?? [], (u) => u.username as string, session.username)
     .filter((u) => !u.is_private && !excluded.has(u.id as string))
     .map((u) => {
       const tags = (u.interests as string[] | null) ?? [];

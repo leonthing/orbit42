@@ -2,6 +2,8 @@ import Link from "next/link";
 import { searchAll } from "@/lib/search";
 import { Avatar } from "@/components/Avatar";
 import { SearchInput } from "./SearchInput";
+import { getSession } from "@/lib/auth";
+import { withoutDemo } from "@/lib/demo-visibility";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +13,13 @@ export default async function SearchPage({
   searchParams: { q?: string };
 }) {
   const q = (searchParams.q ?? "").trim();
-  const result = q ? await searchAll(q) : { users: [], slots: [] };
+  const raw = q ? await searchAll(q) : { users: [], slots: [] };
+  // 데모 계정은 내부 계정의 검색에서만 (개선-33)
+  const viewer = (await getSession())?.username ?? null;
+  const result = {
+    users: withoutDemo(raw.users, (u) => u.username, viewer),
+    slots: withoutDemo(raw.slots, (s) => s.host.username, viewer),
+  };
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
