@@ -1662,6 +1662,9 @@ async function moveBookingTo(args: {
 }): Promise<{ error?: string }> {
   const { booking, slot, newStart, newEnd, newAvailabilityId, newStatus } = args;
   const db = getAdminClient();
+  // 리마인더는 새 시각 기준으로 다시 — 이미 그 안쪽이면 방금 간 변경 알림이 리마인더를 대신한다.
+  const leadMs = newStart.getTime() - Date.now();
+  const nowIso = new Date().toISOString();
 
   const { error } = await db
     .from("bookings")
@@ -1670,7 +1673,8 @@ async function moveBookingTo(args: {
       scheduled_end_at: newEnd.toISOString(),
       availability_id: newAvailabilityId,
       status: newStatus,
-      reminder_sent_at: null,
+      reminder_sent_at: leadMs < 24 * 60 * 60_000 ? nowIso : null,
+      reminder_1h_sent_at: leadMs < 2 * 60 * 60_000 ? nowIso : null,
       reschedule_by: null,
       reschedule_start_at: null,
       reschedule_end_at: null,

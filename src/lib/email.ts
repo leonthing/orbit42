@@ -202,17 +202,29 @@ export async function sendPaymentInstructionsToGuest(
 export async function sendBookingReminderEmail(
   to: string,
   args: {
+    /** day: 하루 전(3~24시간 전) · hour: 1시간 전 */
+    kind: "day" | "hour";
+    /** day 일 때 '오늘'/'내일'/'M월 D일' */
+    lead: string;
     role: "host" | "guest";
     slotTitle: string;
     when: string;
     otherLabel: string;
     location: string | null;
     manageUrl: string;
+    /** 받는 사람이 가입자면 알림 설정에서 끌 수 있다는 한 줄 */
+    hasAccount: boolean;
   },
 ) {
+  const hour = args.kind === "hour";
+  const heading = hour ? "1시간 뒤에 예약이 있어요" : `${args.lead} 예약이 있어요`;
+  const note =
+    args.role === "guest"
+      ? "위 버튼에서 예약을 보고, 취소하거나 다른 시간으로 바꿀 수 있어요."
+      : "시간을 바꿔야 하면 상대에게 미리 알려 주세요.";
   const html = renderEmail({
     eyebrow: "리마인더",
-    heading: "내일 예약이 있어요",
+    heading,
     preheader: `${args.slotTitle} · ${fmtWhen(args.when)}`,
     bodyHtml:
       detailCard(escapeHtml(args.slotTitle), [
@@ -224,9 +236,13 @@ export async function sendBookingReminderEmail(
         { label: "장소", value: args.location ? escapeHtml(args.location) : "" },
       ]) +
       emailButton("예약 확인하기", siteUrl(args.manageUrl)) +
-      mutedNote("시간을 바꿔야 하면 상대에게 미리 알려 주세요."),
+      mutedNote(note) +
+      (args.hasAccount ? mutedNote("리마인더 메일은 Orbit42 알림 설정에서 끌 수 있어요.") : ""),
   });
-  return send(to, `[Orbit42] 내일 예약: ${args.slotTitle}`, html);
+  const subject = hour
+    ? `[Orbit42] 1시간 뒤 예약: ${args.slotTitle}`
+    : `[Orbit42] ${args.lead} 예약: ${args.slotTitle}`;
+  return send(to, subject, html);
 }
 
 export async function sendBookingCanceledToGuest(
