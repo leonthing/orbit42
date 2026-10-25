@@ -357,6 +357,55 @@ final class CalendarViewModel {
         }
     }
 
+    /// 하루 보기에서 종일↔시간 끌기 (개선-34).
+    /// - allDay true: start·end 는 그 날(들)의 0시 — 끝은 마지막 날 포함(수정 화면과 같은 형식, 구글엔 서버가 다음 날로 쓴다)
+    /// - allDay false: start~end 시각
+    /// 캐시에 먼저 반영하고, 저장에 실패하면 원래대로 되돌린 뒤 에러를 다시 던진다. 반복 회차는 부르지 않는다(화면에서 막음).
+    func setAllDay(
+        _ event: CalendarEvent,
+        allDay: Bool,
+        start newStart: Date,
+        end newEnd: Date,
+        notifyAttendees: Bool = false
+    ) async throws {
+        let before = current(event)
+        mutate(event.id) {
+            $0.allDay = allDay
+            $0.startAt = newStart
+            $0.endAt = newEnd
+            $0.endWasDateOnly = allDay
+        }
+        var body = UpdateEventRequest()
+        body.startAt = allDay ? APIDateParser.encodeDateOnly(newStart) : APIDateParser.encodeDateTime(newStart)
+        body.endAt = allDay ? APIDateParser.encodeDateOnly(newEnd) : APIDateParser.encodeDateTime(newEnd)
+        body.allDay = allDay
+        if event.isGoogle {
+            body.sourceCalendarId = event.calendarId
+            if notifyAttendees { body.notifyAttendees = true }
+        }
+        do {
+            let _: EventMutationResponse = try await api.patch(
+                "/api/v1/calendar/events/\(event.id)",
+                body: body
+            )
+        } catch {
+            mutate(event.id) {
+                $0.allDay = before.allDay
+                $0.startAt = before.startAt
+                $0.endAt = before.endAt
+                $0.endWasDateOnly = before.endWasDateOnly
+            }
+            throw error
+        }
+        // 서버가 정리한 모양(종일 끝 날짜 등)으로 다시 받는다 — 지금 보는 달은 화면을 비우지 않고 덮어쓴다
+        let shownKey = currentMonthKey
+        for date in [before.startAt, before.endAt, newStart, newEnd] where Self.key(for: date) != shownKey {
+            cache.removeValue(forKey: Self.key(for: date))
+        }
+        await loadDisplayedMonth(force: true)
+        WidgetBridge.reload(); EventReminders.shared.refreshSoon()
+    }
+
     // MARK: - 중요도·별점 (1.5.0 A, 나만 본다)
 
     /// 중요도 — 화면에 먼저 반영하고 실패하면 되돌린다.

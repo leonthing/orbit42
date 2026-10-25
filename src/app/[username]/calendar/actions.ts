@@ -256,13 +256,16 @@ export async function updateGoogleEvent(
     body.extendedProperties = { private: privateProps };
   }
   if (input.start_at !== undefined && input.end_at !== undefined) {
+    // 종일↔시간을 바꿀 때(all_day 를 보냈을 때)는 반대쪽 칸을 null 로 비운다 — 구글 patch 는 start/end 안의
+    // 칸을 합쳐서 남기므로, 안 비우면 date 와 dateTime 이 같이 남아 "Invalid start time" 으로 거절된다(개선-34 실측).
+    const switching = input.all_day !== undefined;
     if (input.all_day) {
-      body.start = { date: input.start_at.split("T")[0] };
+      body.start = { date: input.start_at.split("T")[0], ...(switching && { dateTime: null, timeZone: null }) };
       // Orbit42 종일 끝은 그날 포함, 구글은 다음 날 — 하루 더해서 쓴다
-      body.end = { date: inclusiveAllDayEndToGoogle(input.end_at.split("T")[0]) };
+      body.end = { date: inclusiveAllDayEndToGoogle(input.end_at.split("T")[0]), ...(switching && { dateTime: null, timeZone: null }) };
     } else {
-      body.start = { dateTime: input.start_at, timeZone: "Asia/Seoul" };
-      body.end = { dateTime: input.end_at, timeZone: "Asia/Seoul" };
+      body.start = { dateTime: input.start_at, timeZone: "Asia/Seoul", ...(switching && { date: null }) };
+      body.end = { dateTime: input.end_at, timeZone: "Asia/Seoul", ...(switching && { date: null }) };
     }
   }
   try {

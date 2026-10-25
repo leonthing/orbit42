@@ -39,6 +39,12 @@ struct DayTimelineView: View {
     /// 위쪽 주간 날짜 칸들(전역 좌표) — 여기에 놓으면 그날 같은 시각
     var stripFrames: [Date: CGRect] = [:]
 
+    // ── 종일↔시간 끌기 (개선-34) ──
+    /// (일정, 종일로?, 시작, 끝) — 종일이면 시작·끝은 그 날 0시(끝은 마지막 날 포함), 시간이면 놓은 시각부터 1시간. nil 이면 기능 꺼짐
+    var onConvert: ((CalendarEvent, Bool, Date, Date) -> Void)? = nil
+    /// 끌어서 바꿀 수 없는 일정을 꾹 눌렀을 때의 짧은 안내
+    var onNotice: (String) -> Void = { _ in }
+
     struct CrossDayDrag: Equatable {
         let title: String
         let color: Color
@@ -88,6 +94,27 @@ struct DayTimelineView: View {
 
     private enum DragMode { case move, resize }
 
+    /// 종일↔시간 끌기 (개선-34)
+    struct AllDayDrag {
+        let event: CalendarEvent
+        var finger: CGPoint
+        /// 놓을 시각(그 날 0시부터 분) — nil 이면 아직 종일 줄 위
+        var minutes: Int?
+        /// 시간축 안쪽(위 가장자리 아래)까지 내려온 적이 있다 — 그 전엔 위로 자동 스크롤하지 않는다
+        /// (종일 줄에서 내려오며 위 가장자리를 지나는 순간 한 시간씩 밀려 올라가던 문제)
+        var reachedTimeline = false
+    }
+    @State private var allDayDrag: AllDayDrag?
+    /// 시간 일정을 끄는 중 손가락이 종일 칸(위쪽 띠·종일 줄) 위에 있다
+    @State private var allDayHover = false
+    @State private var allDayRowHeight: CGFloat = 0
+    /// 시간축 보이는 영역의 맨 위 — 이 뷰 전체 좌표 기준
+    @State private var timelineTopInContent: CGFloat = 0
+    /// 막힌 일정 안내를 한 번 꾹 누름에 한 번만
+    @State private var noticeShownFor: String?
+    private static let contentSpace = "dayTimelineContent"
+    private let allDayDropHeight: CGFloat = 40
+
     private static let viewportSpace = "dayTimelineViewport"
     private let snapMinutes = 15
 
@@ -118,21 +145,22 @@ struct DayTimelineView: View {
             .onChange(of: dragGestureActive) { _, active in
                 guard !active else { return }
                 // 정상 종료면 onEnded 가 먼저 정리한다 — 그다음에도 남아 있으면 취소된 것
-                DispatchQueue.main.async { if dragId != nil { cancelDrag() } }
+                DispatchQueue.main.async { if dragId != nil || allDayDrag != nil { cancelDrag() } }
             }
-            .onDisappear { if dragId != nil { cancelDrag() } }
+            .onDisappear { if dragId != nil || allDayDrag != nil { cancelDrag() } }
             .onChange(of: scenePhase) { _, phase in
-                if phase != .active, dragId != nil { cancelDrag() }
+                if phase != .active, dragId != nil || allDayDrag != nil { cancelDrag() }
             }
     }
 
     private var content: some View {
+        ScrollViewReader { proxy in
         VStack(spacing: 0) {
             if !allDayEvents.isEmpty {
-                allDayRow
+                allDayRow(proxy)
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { allDayRowHeight = $0 }
                 Divider().overlay(Theme.fill(0.08))
             }
-            ScrollViewReader { proxy in
                 ScrollView {
                     grid(proxy)
                         .frame(height: hourHeight * 24 + topInset * 2)
@@ -163,13 +191,23 @@ struct DayTimelineView: View {
                 )
                 .onAppear { scrollToAnchor(proxy, animated: false) }
                 .onChange(of: dayStart) { _, _ in scrollToAnchor(proxy, animated: true) }
-            }
+                .onGeometryChange(for: CGFloat.self) { $0.frame(in: .named(Self.contentSpace)).minY } action: {
+                    timelineTopInContent = $0
+                }
+                // 시간 일정을 끄는 동안 맨 위에 '종일' 놓을 자리
+                .overlay(alignment: .top) {
+                    if showAllDayDropBand { allDayDropBand }
+                }
+        }
+        .coordinateSpace(name: Self.contentSpace)
+        .overlay(alignment: .topLeading) { allDayDragGhost }
+        .onChange(of: allDayEvents.isEmpty) { _, empty in if empty { allDayRowHeight = 0 } }
         }
     }
 
     // MARK: - 종일 줄
 
-    private var allDayRow: some View {
+    private func allDayRow(_ proxy: ScrollViewProxy) -> some View {
         HStack(alignment: .top, spacing: 0) {
             Text("종일")
                 .font(.caption2)
@@ -196,12 +234,18 @@ struct DayTimelineView: View {
                     .padding(.leading, 3)
                     .padding(.trailing, 8)
                     .background(blockColor(event), in: RoundedRectangle(cornerRadius: 6))
-                    .opacity(blockOpacity(event))
+                    .opacity(allDayDrag?.event.id == event.id ? 0.35 : blockOpacity(event))
+                    .simultaneousGesture(
+                        allDayDragGesture(event, proxy: proxy),
+                        including: onConvert != nil && dragId == nil ? .all : .subviews
+                    )
                 }
             }
             .padding(.trailing, 12)
         }
         .padding(.vertical, 6)
+        // 시간 일정을 이리로 끌어오면 강조
+        .background(allDayHover ? Theme.accent.opacity(0.14) : Color.clear)
     }
 
     // MARK: - 시간축
@@ -258,10 +302,28 @@ struct DayTimelineView: View {
                         )
                         .zIndex(isLifted || ratingPromptId == block.id ? 1 : 0)
                         // 다른 날로 넘어간 동안엔 부모의 유령 블록(날짜·시각 표시)이 손가락을 따라간다 — 이 블록은 제스처를 붙들고만 있다
-                        .opacity(isLifted && crossDayActive ? 0.01 : 1)
+                        .opacity(isLifted && crossDayActive && !allDayHover ? 0.01 : 1)
                         .simultaneousGesture(
                             dragGesture(block, mode: .move, proxy: proxy),
                             including: movable ? .all : .subviews
+                        )
+                        // 끌 수 없는 일정(예약·남이 주최·여러 날)은 꾹 누르면 이유를 짧게 알린다 (개선-34)
+                        .simultaneousGesture(
+                            LongPressGesture(minimumDuration: 0.4)
+                                .sequenced(before: DragGesture(minimumDistance: 0))
+                                .onChanged { value in
+                                    guard case .second(true, _) = value, noticeShownFor != block.id,
+                                          let reason = lockReason(block.event, converting: false) else { return }
+                                    noticeShownFor = block.id
+                                    lastDragEnd = Date()
+                                    UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                                    onNotice(reason)
+                                }
+                                .onEnded { _ in
+                                    if noticeShownFor != nil { lastDragEnd = Date() }
+                                    noticeShownFor = nil
+                                },
+                            including: !movable && onConvert != nil ? .all : .subviews
                         )
                         .animation(.easeOut(duration: 0.12), value: shift)
                 }
@@ -353,7 +415,9 @@ struct DayTimelineView: View {
     }
 
     private func open(_ event: CalendarEvent) {
-        guard dragId == nil, Date().timeIntervalSince(lastDragEnd) > 0.5 else { return }
+        // 끌기·막힌 일정 안내를 띄운 꾹 누름을 뗄 때 상세가 열리지 않게
+        guard dragId == nil, allDayDrag == nil, noticeShownFor == nil,
+              Date().timeIntervalSince(lastDragEnd) > 0.5 else { return }
         onOpen(event)
     }
 
@@ -411,7 +475,8 @@ struct DayTimelineView: View {
                     lastSnap = snap
                     UISelectionFeedbackGenerator().selectionChanged()
                 }
-                updateAutoScroll(fingerY: drag.location.y, proxy: proxy)
+                if mode == .move { updateAllDayHover() }
+                updateAutoScroll(fingerY: drag.location.y, proxy: proxy, topBand: showAllDayDropBand ? allDayDropHeight : nil)
                 if mode == .move {
                     updateEdgeHover(fingerX: drag.location.x, block: block)
                     publishCrossDay(block)
@@ -424,9 +489,20 @@ struct DayTimelineView: View {
                 }
                 let delta = snappedDelta(block)
                 let times = retimed(block)
-                let cross = mode == .move ? crossDayTarget(block) : nil
+                let toAllDay = mode == .move && allDayHover
+                let cross = mode == .move && !toAllDay ? crossDayTarget(block) : nil
+                let droppedDay = viewingDayStart
                 endDrag()
-                if let cross {
+                if toAllDay {
+                    // 종일 칸에 놓음 — 그날 하루짜리 종일 일정으로 (개선-34)
+                    if let reason = lockReason(block.event, converting: true) {
+                        UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                        onNotice(reason)
+                    } else {
+                        onConvert?(block.event, true, droppedDay, droppedDay)
+                        if droppedDay != dayStart { onSettleDay(droppedDay) }
+                    }
+                } else if let cross {
                     if cross.start != block.event.startAt { onRetime(block.event, cross.start, cross.end) }
                     // 가장자리로 넘어가서 놓았으면 그 날을 보던 그대로 그 날 페이지로 (주간 칸에 놓은 건 기존대로 알림의 '보기')
                     if cross.stripDay == nil { onSettleDay(calendar.startOfDay(for: cross.start)) }
@@ -464,12 +540,14 @@ struct DayTimelineView: View {
         if dragId != nil { lastDragEnd = Date() }
         dragId = nil
         dragTranslation = 0
+        allDayHover = false
         isDragging = false
     }
 
     /// 놓지 않고 끝난 끌기 — 아무것도 옮기지 않고, 다른 날로 넘어가 있었으면 원래 날로 되돌린다
     private func cancelDrag() {
-        endDrag()
+        if allDayDrag != nil { endAllDayDrag() }
+        if dragId != nil { endDrag() }
     }
 
     // MARK: - 다른 날로 끌기 (1.5.1)
@@ -535,7 +613,7 @@ struct DayTimelineView: View {
     }
 
     private func publishCrossDay(_ block: Block) {
-        guard let target = crossDayTarget(block) else {
+        guard !allDayHover, let target = crossDayTarget(block) else {
             onCrossDayDrag(nil)
             return
         }
@@ -574,9 +652,17 @@ struct DayTimelineView: View {
     }
 
     /// 손가락이 화면 위/아래 60pt 안에 들어오면 그 방향으로 한 시간씩 스크롤한다.
-    private func updateAutoScroll(fingerY: CGFloat, proxy: ScrollViewProxy) {
+    /// topBand: 맨 위 이만큼은 '종일' 놓을 자리라 스크롤하지 않고, 그 바로 아래부터 위로 스크롤한다 (개선-34)
+    /// allowUp false 면 위로는 스크롤하지 않는다(종일 줄에서 끌어내리는 길)
+    private func updateAutoScroll(fingerY: CGFloat, proxy: ScrollViewProxy, topBand: CGFloat? = nil, allowUp: Bool = true) {
         let edge: CGFloat = 60
-        let direction = fingerY < edge ? -1 : (fingerY > viewportHeight - edge ? 1 : 0)
+        var direction: Int
+        if let topBand {
+            direction = fingerY < topBand ? 0 : (fingerY < topBand + 50 ? -1 : (fingerY > viewportHeight - edge ? 1 : 0))
+        } else {
+            direction = fingerY < edge ? -1 : (fingerY > viewportHeight - edge ? 1 : 0)
+        }
+        if direction < 0 && !allowUp { direction = 0 }
         autoScrollDirection = direction
         guard direction != 0, autoScrollTask == nil else { return }
         autoScrollTask = Task { @MainActor in
@@ -595,14 +681,161 @@ struct DayTimelineView: View {
 
     private func dragTimeBadge(_ block: Block) -> some View {
         let (start, end) = retimed(block)
-        // 옮기기는 날짜까지("10월 16일 (금) 오후 2:00–3:00"), 늘리기는 시각만
-        return Text(dragMode == .move ? Self.dateTimeLabel(start, end) : "\(Self.timeFormatter.string(from: start))–\(Self.timeFormatter.string(from: end))")
+        // 옮기기는 날짜까지("10월 16일 (금) 오후 2:00–3:00"), 늘리기는 시각만, 종일 칸 위면 "10월 16일 (금) 종일"
+        let label = allDayHover
+            ? "\(Self.dayLabelFormatter.string(from: viewingDayStart)) 종일"
+            : (dragMode == .move ? Self.dateTimeLabel(start, end) : "\(Self.timeFormatter.string(from: start))–\(Self.timeFormatter.string(from: end))")
+        return Text(label)
             .font(.caption2.weight(.semibold).monospacedDigit())
             .foregroundStyle(.white)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
             .background(.black.opacity(0.55), in: Capsule())
             .padding(4)
+    }
+
+    // MARK: - 종일↔시간 끌기 (개선-34)
+
+    /// 시간 일정을 옮기는 동안(주간 날짜 칸 위는 빼고) 맨 위 '종일' 놓을 자리를 보인다
+    private var showAllDayDropBand: Bool {
+        onConvert != nil && dragId != nil && dragMode == .move && stripDayUnderFinger() == nil
+    }
+
+    /// 손가락이 위쪽 띠 안이거나 그 위 종일 줄 위면 종일 칸에 놓는 것으로 본다
+    private func updateAllDayHover() {
+        let hover = showAllDayDropBand
+            && lastFinger.y < allDayDropHeight
+            && lastFinger.y > -(allDayRowHeight + 12)
+        if hover != allDayHover {
+            allDayHover = hover
+            UIImpactFeedbackGenerator(style: hover ? .medium : .light).impactOccurred()
+        }
+    }
+
+    /// 끌어서 종일↔시간을 바꿀 수 없는 이유 (nil = 바꿀 수 있음). converting false 면 시간 옮기기 기준(반복은 옮길 수 있다).
+    private func lockReason(_ event: CalendarEvent, converting: Bool) -> String? {
+        if event.isBooking { return "예약 일정은 예약 화면에서 시간을 바꿀 수 있어요." }
+        if event.isGoogle && !event.isOrganizer { return "다른 분이 만든 구글 일정은 끌어서 바꿀 수 없어요." }
+        if !canMove(event) { return "이 일정은 끌어서 바꿀 수 없어요." }
+        if calendar.startOfDay(for: event.startAt) != calendar.startOfDay(for: event.effectiveEnd(calendar: calendar)) {
+            return event.allDay ? "여러 날에 걸친 종일 일정은 끌어서 바꿀 수 없어요. 상세에서 수정해 주세요." : "여러 날에 걸친 일정은 끌어서 바꿀 수 없어요."
+        }
+        if converting && event.isRecurring { return "반복 일정은 끌어서 종일·시간을 바꿀 수 없어요. 상세에서 수정해 주세요." }
+        return nil
+    }
+
+    private var allDayDropBand: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "sun.max")
+            Text(allDayHover ? "놓으면 종일 일정이 돼요" : "여기에 놓으면 종일 일정")
+        }
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(allDayHover ? Color.white : Theme.accent)
+        .frame(maxWidth: .infinity)
+        .frame(height: allDayDropHeight - 8)
+        .background(allDayHover ? Theme.accent : Theme.background, in: RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(Theme.accent.opacity(0.7), style: StrokeStyle(lineWidth: 1.2, dash: allDayHover ? [] : [5, 4]))
+        )
+        .padding(.leading, labelWidth)
+        .padding(.trailing, 12)
+        .padding(.top, 4)
+        .allowsHitTesting(false)
+        .accessibilityIdentifier("allDayDropBand")
+    }
+
+    /// 종일 일정을 꾹 눌러 시간축으로 끌어내린다 — 놓은 자리(15분 단위)부터 1시간
+    private func allDayDragGesture(_ event: CalendarEvent, proxy: ScrollViewProxy) -> some Gesture {
+        LongPressGesture(minimumDuration: 0.4)
+            .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named(Self.contentSpace)))
+            .updating($dragGestureActive) { value, active, _ in
+                if case .second(true, _) = value { active = true }
+            }
+            .onChanged { value in
+                guard case .second(true, let drag) = value, dragId == nil else { return }
+                if allDayDrag?.event.id != event.id {
+                    if let reason = lockReason(event, converting: true) {
+                        if noticeShownFor != event.id {
+                            noticeShownFor = event.id
+                            lastDragEnd = Date()
+                            UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                            onNotice(reason)
+                        }
+                        return
+                    }
+                    allDayDrag = AllDayDrag(event: event, finger: drag?.location ?? .zero, minutes: nil)
+                    isDragging = true
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                }
+                guard let drag else { return }
+                let minutes = allDayDropMinutes(fingerY: drag.location.y)
+                if let minutes, minutes != allDayDrag?.minutes { UISelectionFeedbackGenerator().selectionChanged() }
+                allDayDrag?.finger = drag.location
+                allDayDrag?.minutes = minutes
+                let timelineY = drag.location.y - timelineTopInContent
+                if timelineY > 120 { allDayDrag?.reachedTimeline = true }
+                // 내려오는 길엔 위 가장자리를 지나도 스크롤하지 않는다(아래로는 그대로)
+                updateAutoScroll(fingerY: timelineY, proxy: proxy, topBand: 0, allowUp: allDayDrag?.reachedTimeline == true)
+            }
+            .onEnded { _ in
+                if noticeShownFor != nil { lastDragEnd = Date() }
+                noticeShownFor = nil
+                guard let drag = allDayDrag, drag.event.id == event.id else { return }
+                let minutes = drag.minutes
+                endAllDayDrag()
+                guard let minutes, let start = calendar.date(byAdding: .minute, value: minutes, to: dayStart) else { return }
+                onConvert?(event, false, start, start.addingTimeInterval(3600))
+            }
+    }
+
+    private func endAllDayDrag() {
+        autoScrollTask?.cancel()
+        autoScrollTask = nil
+        autoScrollDirection = 0
+        allDayDrag = nil
+        lastDragEnd = Date()
+        isDragging = false
+    }
+
+    /// 손가락 자리를 1시간 블록의 가운데로 보고 15분 단위 시작 시각(분) — 아직 종일 줄 위면 nil
+    private func allDayDropMinutes(fingerY: CGFloat) -> Int? {
+        let timelineY = fingerY - timelineTopInContent
+        guard timelineY > 8 else { return nil }
+        let top = timelineY - hourHeight / 2 + scrollY - topInset
+        var minutes = Int((Double(top / hourHeight * 60) / Double(snapMinutes)).rounded()) * snapMinutes
+        minutes = max(0, min(minutes, 23 * 60))
+        return minutes
+    }
+
+    /// 종일 일정을 시간축으로 끄는 동안 놓일 자리에 보이는 1시간 블록 + 시작~끝 시각
+    @ViewBuilder
+    private var allDayDragGhost: some View {
+        if let drag = allDayDrag, let minutes = drag.minutes,
+           let start = calendar.date(byAdding: .minute, value: minutes, to: dayStart) {
+            GeometryReader { geo in
+                let width = max(geo.size.width - labelWidth - 12, 60)
+                let y = timelineTopInContent + topInset + CGFloat(minutes) / 60 * hourHeight - scrollY
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(drag.event.title)
+                        .font(.caption.weight(.semibold))
+                        .lineLimit(1)
+                    Text("\(Self.timeFormatter.string(from: start))–\(Self.timeFormatter.string(from: start.addingTimeInterval(3600)))")
+                        .font(.caption2.weight(.semibold).monospacedDigit())
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(.black.opacity(0.55), in: Capsule())
+                }
+                .foregroundStyle(.white)
+                .padding(6)
+                .frame(width: width, height: hourHeight, alignment: .topLeading)
+                .background(blockColor(drag.event), in: RoundedRectangle(cornerRadius: 6))
+                .shadow(color: .black.opacity(0.25), radius: 8, y: 3)
+                .offset(x: labelWidth, y: max(y, timelineTopInContent))
+            }
+            .allowsHitTesting(false)
+            .accessibilityIdentifier("allDayDragGhost")
+        }
     }
 
     // 보관한 일정은 회색 블록 + 제목 앞 "보관" — 완료(취소선)와 구분된다.

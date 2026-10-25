@@ -71,7 +71,8 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
     /// 하루 보기 드래그 이동을 화면에 먼저 반영하려고 var
     var startAt: Date
     var endAt: Date
-    let allDay: Bool
+    /// 종일↔시간 끌기(개선-34)를 화면에 먼저 반영하려고 var
+    var allDay: Bool
     let calendarId: String?
     let source: String        // "local" | "google"
     let tentative: Bool
@@ -96,7 +97,7 @@ struct CalendarEvent: Decodable, Identifiable, Sendable {
     /// 시작 전 이동시간(분) — 예약 가능 시간 계산에서 그만큼 앞이 막힌다.
     let travelMin: Int?
     /// endAt 이 "2026-07-26" 처럼 날짜만으로 왔는지 (종일 이벤트의 마지막 날 포함 여부 판단용)
-    let endWasDateOnly: Bool
+    var endWasDateOnly: Bool
     /// 구글 일정의 참석자 (구글 캘린더에서 초대한 사람 — Orbit42 사용자가 아니어도). 없으면 빈 배열.
     let attendees: [GoogleAttendee]
     /// 구글 일정에서 내가 주최자인지 — 주최자만 참석자를 추가할 수 있다 (구글이 아니면 false)
