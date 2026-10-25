@@ -36,8 +36,8 @@ targets:
         # UISupportedInterfaceOrientations~ipad 를 따로 준다.
         TARGETED_DEVICE_FAMILY: "1,2"
         CODE_SIGN_STYLE: Automatic
-        MARKETING_VERSION: "1.6.0"
-        CURRENT_PROJECT_VERSION: 41
+        MARKETING_VERSION: "1.7.0"
+        CURRENT_PROJECT_VERSION: 42
         ENABLE_PREVIEWS: YES
     info:
       path: Orbit42/Info.plist
@@ -96,8 +96,8 @@ targets:
         PRODUCT_NAME: Orbit42Widget
         TARGETED_DEVICE_FAMILY: "1,2"
         CODE_SIGN_STYLE: Automatic
-        MARKETING_VERSION: "1.6.0"
-        CURRENT_PROJECT_VERSION: 41
+        MARKETING_VERSION: "1.7.0"
+        CURRENT_PROJECT_VERSION: 42
         SKIP_INSTALL: YES
     info:
       path: Orbit42Widget/Info.plist
