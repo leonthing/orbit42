@@ -68,8 +68,9 @@ struct AuthView: View {
                     divider
                     appleButton
                     googleButton
-                    browseButton
+                    // 약관 안내는 가입·로그인 버튼 바로 아래 — 둘러보기는 그 아래라 동의와 섞여 읽히지 않게 (개선-47)
                     consentNotice
+                    browseButton
                 }
                 .padding(.horizontal, 24)
                 .padding(.vertical, compact ? 12 : 24)
