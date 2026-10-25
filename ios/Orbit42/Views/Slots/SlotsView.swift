@@ -434,6 +434,14 @@ private struct SlotCreatedShareSheet: View {
     var onStory: () -> Void = {}
     @Environment(\.dismiss) private var dismiss
     @State private var copied = false
+    @State private var copiedBio = false
+
+    /// 바이오에 붙일 내 링크 페이지 주소 — 예약 링크 주소(https://orbit42.org/아이디/s/…)에서 아이디까지만 (개선-39)
+    private var bioURL: URL? {
+        guard let url = URL(string: slot.shareUrl), let host = url.host,
+              let owner = url.pathComponents.dropFirst().first else { return nil }
+        return URL(string: "\(url.scheme ?? "https")://\(host)/\(owner)")
+    }
 
     var body: some View {
         VStack(spacing: 16) {
@@ -481,6 +489,33 @@ private struct SlotCreatedShareSheet: View {
                             .background(Theme.accent, in: Capsule())
                     }
                 }
+            }
+            // 인스타·유튜브 바이오에는 예약 링크 하나보다 내 링크 페이지(모든 예약 링크·소개)가 낫다 (개선-39)
+            if let bioURL {
+                Button {
+                    UIPasteboard.general.url = bioURL
+                    copiedBio = true
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: copiedBio ? "checkmark" : "person.crop.square")
+                            .foregroundStyle(Theme.accent)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(copiedBio ? "복사했어요 — 바이오에 붙여 주세요" : "바이오용 내 링크 페이지 주소 복사")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Theme.primaryText)
+                            Text(bioURL.absoluteString.replacingOccurrences(of: "https://", with: ""))
+                                .font(.caption.monospaced())
+                                .foregroundStyle(Theme.secondaryText)
+                                .lineLimit(1)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("copyBioURL")
             }
             Button {
                 onStory()
