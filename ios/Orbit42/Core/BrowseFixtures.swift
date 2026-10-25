@@ -303,8 +303,13 @@ enum BrowseFixtures {
         return #"{"items":["# + items.joined(separator: ",") + "]}"
     }
 
+    /// 추천은 아직 팔로우하지 않은 사람 — 실제 서버처럼 팔로우한 사람(people)과 겹치지 않게 (개선-44)
     private static var recommendations: String {
-        let list = people.map { p in
+        let others: [(username: String, name: String, interests: String)] = [
+            ("writer.example", "예시 작가", #"["글쓰기","브랜딩"]"#),
+            ("founder.example", "예시 창업가", #"["스타트업","커리어"]"#),
+        ]
+        let list = others.map { p in
             #"{"username":""# + p.username + #"","displayName":""# + p.name + #"","avatarUrl":null,"bio":null,"interests":"# + p.interests + #","overlapCount":1}"#
         }
         return #"{"users":["# + list.joined(separator: ",") + "]}"

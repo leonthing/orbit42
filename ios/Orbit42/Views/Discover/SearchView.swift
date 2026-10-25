@@ -196,12 +196,15 @@ struct SearchView: View {
                     }
                 }
 
-                if let suggested = suggestions.users, !suggested.isEmpty {
+                // 이미 팔로우한 사람은 추천에서 뺀다(서버도 빼지만 한 번 더 — 같은 사람이 두 칸에 그려지면 화면이 섞인다)
+                let followedNames = Set(people.map(\.username))
+                if let suggested = suggestions.users?.filter({ !followedNames.contains($0.username) }), !suggested.isEmpty {
                     sectionHeader("추천")
                         .padding(.top, 14)
 
                     ForEach(suggested) { user in
                         suggestionRow(user)
+                            .id("suggest-\(user.username)")
                     }
 
                     Text("아직 팔로우하지 않은 사람들이에요. 관심사가 비슷한 사람부터 보여드려요.")
@@ -276,6 +279,7 @@ struct SearchView: View {
         if !people.isEmpty {
             ForEach(people) { person in
                 OrbitPersonCard(person: person)
+                    .id("open-\(person.username)")   // 추천 행과 id 가 겹치지 않게
             }
             Text("팔로우한 사람들의 열린 시간이에요. 친구를 초대하면 자동으로 맞팔로우돼요.")
                 .font(.caption)
@@ -372,6 +376,14 @@ private extension View {
 
 private struct OrbitPersonCard: View {
     let person: OrbitPerson
+    /// 가장 가까운 열린 시간 (개선-44) — 손님 화면과 같은 서버 계산(?days=7)에서 첫 시각. nil = 아직 모름
+    @State private var nextOpen: NextOpen?
+    @State private var nextOpenLoaded = false
+
+    struct NextOpen {
+        let start: Date
+        let slot: TimeSlot
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -381,6 +393,41 @@ private struct OrbitPersonCard: View {
                 personRow
             }
             .buttonStyle(.plain)
+
+            if let nextOpen {
+                NavigationLink {
+                    SlotBookingView(username: person.username, slug: nextOpen.slot.slug)
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "calendar.badge.clock")
+                            .font(.footnote)
+                            .foregroundStyle(Theme.accent)
+                        Text("\(Self.whenText(nextOpen.start))부터 · \(nextOpen.slot.title)")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(Theme.primaryText)
+                            .lineLimit(1)
+                        Spacer(minLength: 0)
+                        Text("예약")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 5)
+                            .background(Theme.accent, in: Capsule())
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 10)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("orbitNextOpen.\(person.username)")
+            } else if nextOpenLoaded, !person.slots.isEmpty {
+                Text("이번 주에는 열린 시간이 없어요")
+                    .font(.caption)
+                    .foregroundStyle(Theme.secondaryText)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 10)
+            }
 
             if !person.slots.isEmpty {
                 Rectangle()
@@ -404,6 +451,45 @@ private struct OrbitPersonCard: View {
             }
         }
         .background(Theme.surface, in: RoundedRectangle(cornerRadius: 14))
+        .task(id: person.slots.map(\.id)) { await loadNextOpen() }
+    }
+
+    /// 사람의 예약 링크(최대 3개)마다 앞으로 7일 열린 시각을 받아 가장 이른 것 하나.
+    /// 손님 화면과 같은 API — 열람 집계에는 잡히지 않는다(집계는 화면이 따로 보냄).
+    private func loadNextOpen() async {
+        guard !person.slots.isEmpty else { nextOpenLoaded = true; return }
+        let user = person.username.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? person.username
+        var best: NextOpen?
+        for slot in person.slots.prefix(3) {
+            let slug = slot.slug.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? slot.slug
+            guard let r: SlotBookingResponse = try? await APIClient.shared.get("/api/v1/users/\(user)/slots/\(slug)?days=7") else { continue }
+            if let first = r.options.filter({ !$0.closed && $0.startAt > Date() }).map(\.startAt).min(),
+               best == nil || first < best!.start {
+                best = NextOpen(start: first, slot: slot)
+            }
+        }
+        nextOpen = best
+        nextOpenLoaded = true
+    }
+
+    /// "오늘 15:00" · "내일 10:00" · "10월 29일 (목) 10:00" — 한국 시간
+    static func whenText(_ date: Date, now: Date = Date()) -> String {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "Asia/Seoul") ?? .current
+        let f = DateFormatter()
+        f.calendar = cal
+        f.timeZone = cal.timeZone
+        f.locale = Locale(identifier: "ko_KR")
+        f.dateFormat = "HH:mm"
+        let time = f.string(from: date)
+        let days = cal.dateComponents([.day], from: cal.startOfDay(for: now), to: cal.startOfDay(for: date)).day ?? 0
+        switch days {
+        case 0: return "오늘 \(time)"
+        case 1: return "내일 \(time)"
+        default:
+            f.dateFormat = "M월 d일 (E) HH:mm"
+            return f.string(from: date)
+        }
     }
 
     /// 상단 행 — 행 전체 탭 = 프로필 (표준 관례라 별도 affordance 없이 충분).

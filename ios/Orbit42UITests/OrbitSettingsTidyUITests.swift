@@ -39,6 +39,8 @@ final class OrbitSettingsTidyUITests: XCTestCase {
         shot("44-orbit-filled")
         for _ in 0..<3 { app.swipeUp() }
         XCTAssertTrue(searchField.exists && searchField.isHittable, "스크롤하면 검색창이 사라짐")
+        // 추천은 아직 팔로우하지 않은 다른 사람(예시 작가) — 열린 시간 칸과 섞이지 않는다
+        XCTAssertTrue(app.staticTexts["예시 작가"].firstMatch.exists || { app.swipeUp(); return app.staticTexts["예시 작가"].firstMatch.exists }(), "추천이 안 보임")
         shot("44-orbit-filled-scrolled")
     }
 
@@ -52,11 +54,23 @@ final class OrbitSettingsTidyUITests: XCTestCase {
         XCTAssertLessThan(header.frame.minY, row.frame.minY, "열린 시간이 맨 위가 아님")
         XCTAssertFalse(app.staticTexts["나를 중심으로, 요즘 만나는 사람들"].exists, "빈 궤도인데 큰 궤도 칸이 보임")
         XCTAssertTrue(searchField.isHittable)
+        // 열린 시간 칸: 이미 팔로우한 사람이라 팔로우 버튼이 없고, 가장 가까운 열린 시간 한 줄이 있다
+        let next = app.buttons["orbitNextOpen.coach.example"]
+        XCTAssertTrue(next.waitForExistence(timeout: 10), "가장 가까운 열린 시간 줄 없음")
+        XCTAssertTrue(next.label.contains("커리어 상담 40분") && next.label.contains("부터"), "줄 내용: \(next.label)")
+        let followButtons = app.buttons.matching(NSPredicate(format: "label == %@", "팔로우")).allElementsBoundByIndex
+            .filter { $0.frame.maxY < row.frame.minY }
+        XCTAssertTrue(followButtons.isEmpty, "열린 시간 칸에 팔로우 버튼이 보임")
         sleep(1)
         shot("44-orbit-empty")
         row.tap()
         XCTAssertTrue(app.staticTexts["나를 중심으로, 요즘 만나는 사람들"].waitForExistence(timeout: 5), "펼치면 궤도 칸이 나와야 함")
         shot("44-orbit-empty-expanded")
+        // 열린 시간 줄을 누르면 그 예약 링크(손님 화면)로
+        for _ in 0..<3 where !next.isHittable { app.swipeDown() }
+        next.tap()
+        XCTAssertTrue(app.staticTexts["커리어 상담 40분"].firstMatch.waitForExistence(timeout: 10), "예약 링크로 안 감")
+        shot("44-orbit-next-open-tapped")
     }
 
     /// 설정의 모든 항목이 새 묶음 어딘가에 있고, 들어가는 항목은 들어가진다
