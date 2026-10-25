@@ -134,6 +134,7 @@ export async function listMySlots(): Promise<TimeSlot[]> {
     .from("time_slots")
     .select("*")
     .eq("host_id", userId)
+    .is("archived_at", null) // 보관한 링크는 목록에서 뺀다(예약 기록은 그대로)
     .order("created_at", { ascending: false });
   return (data ?? []) as TimeSlot[];
 }
@@ -195,6 +196,7 @@ export async function getSlotBySlug(
     .select("*")
     .eq("host_id", user.id)
     .eq("slug", decoded)
+    .is("archived_at", null) // 보관한 링크는 열리지 않는다
     .maybeSingle();
   if (!slot) return null;
 
@@ -536,12 +538,15 @@ export async function updateSlot(id: string, patch: Partial<SlotInput>) {
       updateData.location_detail = normalized[0] ?? null;
     }
   }
-  const { error } = await db
+  const { data: updated, error } = await db
     .from("time_slots")
     .update(updateData)
     .eq("id", id)
-    .eq("host_id", userId);
+    .eq("host_id", userId)
+    .is("archived_at", null) // 보관한 링크는 다시 켜거나 고치지 않는다
+    .select("id");
   if (error) return { error: "수정 실패" };
+  if (!updated?.length) return { error: "예약 링크를 찾을 수 없어요." };
   revalidatePath("/", "layout");
   return { success: true };
 }
@@ -741,11 +746,53 @@ export async function refreshBookableOptions(
   return getBookableOptions(slot as TimeSlot, pickedLocation);
 }
 
+/** 이 예약 링크에 걸린 예약 수(지난·취소 포함). 내 링크가 아니면 null. */
+export async function countSlotBookings(id: string): Promise<number | null> {
+  const userId = await requireUserId();
+  const db = getAdminClient();
+  const { data: slot } = await db.from("time_slots").select("id").eq("id", id).eq("host_id", userId).maybeSingle();
+  if (!slot) return null;
+  const { count, error } = await db.from("bookings").select("id", { count: "exact", head: true }).eq("slot_id", id);
+  if (error || count === null) return null;
+  return count;
+}
+
+/**
+ * 예약 링크 삭제 — 예약 기록이 한 건도 없을 때만(CEO 10/26: 예약 데이터는 어떤 경우에도 지우지 않는다).
+ * bookings.slot_id 가 ON DELETE CASCADE 라 링크를 지우면 예약까지 사라지므로, 예약이 있으면 거절하고 보관(archiveSlot)을 안내한다.
+ */
 export async function deleteSlot(id: string) {
   const userId = await requireUserId();
   const db = getAdminClient();
+  const bookingCount = await countSlotBookings(id);
+  if (bookingCount === null) return { error: "삭제 실패" };
+  if (bookingCount > 0) {
+    return {
+      error: `예약 기록 ${bookingCount}건이 있어 지울 수 없어요. 대신 보관할 수 있어요.`,
+      code: "has_bookings" as const,
+      bookingCount,
+    };
+  }
   const { error } = await db.from("time_slots").delete().eq("id", id).eq("host_id", userId);
   if (error) return { error: "삭제 실패" };
+  revalidatePath("/", "layout");
+  return { success: true };
+}
+
+/** 예약 링크 보관 — 비공개로 바꾸고 목록·링크에서 뺀다. 예약 기록·관리 링크·리마인더는 그대로. */
+export async function archiveSlot(id: string) {
+  const userId = await requireUserId();
+  const db = getAdminClient();
+  const now = new Date().toISOString();
+  const { data, error } = await db
+    .from("time_slots")
+    .update({ active: false, archived_at: now, updated_at: now })
+    .eq("id", id)
+    .eq("host_id", userId)
+    .is("archived_at", null)
+    .select("id");
+  if (error) return { error: "보관하지 못했어요." };
+  if (!data?.length) return { error: "예약 링크를 찾을 수 없어요." };
   revalidatePath("/", "layout");
   return { success: true };
 }
@@ -784,6 +831,14 @@ export async function removeAvailability(availabilityId: string) {
 
   const hostId = (avail?.slot as unknown as { host_id?: string } | null)?.host_id;
   if (!avail || hostId !== userId) return { error: "권한 없음" };
+
+  // 이 시간에 예약 기록이 있으면 지우지 않는다 — bookings.availability_id 가 ON DELETE CASCADE 라 예약까지 사라진다
+  const { count, error: countErr } = await db
+    .from("bookings")
+    .select("id", { count: "exact", head: true })
+    .eq("availability_id", availabilityId);
+  if (countErr || count === null) return { error: "삭제 실패" };
+  if (count > 0) return { error: `이 시간에 예약 기록 ${count}건이 있어 지울 수 없어요.`, code: "has_bookings" as const, bookingCount: count };
 
   const { error } = await db.from("slot_availabilities").delete().eq("id", availabilityId);
   if (error) return { error: "삭제 실패" };

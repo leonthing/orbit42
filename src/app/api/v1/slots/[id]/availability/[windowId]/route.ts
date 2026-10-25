@@ -13,6 +13,10 @@ export async function DELETE(
     return Response.json({ error: "로그인이 필요해요." }, { status: 401 });
   }
   const result = await removeAvailability(params.windowId);
+  // 이 시간에 예약 기록이 있으면 지우지 않는다(예약 데이터 보호)
+  if ("code" in result && result.code === "has_bookings") {
+    return Response.json({ error: result.error, code: result.code, bookingCount: result.bookingCount }, { status: 409 });
+  }
   if ("error" in result && result.error) {
     return Response.json({ error: result.error }, { status: 400 });
   }
