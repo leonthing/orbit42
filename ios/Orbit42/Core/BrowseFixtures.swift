@@ -4,9 +4,24 @@ import Foundation
 /// 사람·아이디는 모두 '예시'이고, 아이디에 마침표를 넣어 실제 계정(소문자·숫자·_·- 만 허용)과 겹칠 수 없다.
 /// 날짜는 실행한 날 기준: @D(일수,HH:mm) = 그날 그 시각, @DATE(일수) = yyyy-MM-dd, @WEEK(주) = 이번 주 월요일 0시에서 그만큼.
 enum BrowseFixtures {
-    static let username = "example.user"
+    static var username: String { storeNames ? "harin.design" : "example.user" }
     /// '손님에게 이렇게 보여요' — 같은 예시 사용자를 남의 눈으로(isMe·isMine false) 보는 별칭
-    static let guestPreviewUsername = "example.user.guest"
+    static var guestPreviewUsername: String { username + ".guest" }
+
+    /// 스토어 촬영용(DEBUG, STORE_NAMES=1) — '예시 …' 대신 자연스러운 가상 이름(성 없이). 둘러보기 화면은 그대로 '예시'.
+    /// 실제 가입자 표시명과 겹치지 않는지 10/25 대조함.
+    static var storeNames: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.environment["STORE_NAMES"] == "1"
+        #else
+        false
+        #endif
+    }
+    private static let storeNameMap: [(String, String)] = [
+        ("예시 게스트 A", "민준"), ("예시 게스트 B", "서연"), ("예시 게스트 C", "지호"), ("예시 게스트 D", "유나"),
+        ("예시 게스트 E", "도윤"), ("예시 게스트", "민준"), ("예시 동료", "수아"), ("예시 친구", "준서"),
+        ("예시 사용자", "하린"), ("예시 코치", "시우"), ("예시 디자이너", "하은"), ("example.user", "harin.design"),
+    ]
 
     /// 둘러보기용 예시 사용자
     static var user: User? {
@@ -83,6 +98,9 @@ enum BrowseFixtures {
     private static func fill(_ template: String) -> String {
         let today = calendar.startOfDay(for: Date())
         var out = template
+        if storeNames {
+            for (from, to) in storeNameMap { out = out.replacingOccurrences(of: from, with: to) }
+        }
         out = replace(out, pattern: #"@D\((-?\d+),(\d{2}):(\d{2})\)"#) { g in
             let day = calendar.date(byAdding: .day, value: Int(g[0])!, to: today)!
             let date = calendar.date(bySettingHour: Int(g[1])!, minute: Int(g[2])!, second: 0, of: day)!
@@ -161,8 +179,23 @@ enum BrowseFixtures {
             event("browse-e9", "포트폴리오 리뷰", "@D(2,13:00)", "@D(2,14:00)"),
             event("browse-e10", "요가", "@D(3,08:00)", "@D(3,09:00)", cal: "browse-cal-life"),
             event("browse-e11", "클라이언트 미팅", "@D(4,16:00)", "@D(4,17:00)", location: "강남"),
-        ] + denseDay
+        ] + denseDay + storeDay
         return #"{"events":["# + list.joined(separator: ",") + ##"],"calendars":[{"id":"browse-cal-work","name":"업무","color":"#6366f1","purpose":"work","source":"native","isDefault":true},{"id":"browse-cal-life","name":"개인","color":"#22c55e","purpose":"personal","source":"native","isDefault":false}]}"##
+    }
+
+    /// 스토어 촬영용(DEBUG, BROWSE_STORE_DAY=1) — 오늘 07:00~17:00 을 채운다(완료 2·중요 2, 짧은·긴 일정)
+    private static var storeDay: [String] {
+        #if DEBUG
+        guard ProcessInfo.processInfo.environment["BROWSE_STORE_DAY"] == "1" else { return [] }
+        return [
+            event("browse-st1", "팀 스탠드업", "@D(0,09:00)", "@D(0,09:30)", completed: true),
+            event("browse-st2", "점심 · 디자인 스터디", "@D(0,12:00)", "@D(0,13:00)", cal: "browse-cal-life"),
+            event("browse-st3", "피드백 정리", "@D(0,16:15)", "@D(0,17:00)", importance: "high"),
+            event("browse-st4", "메일 답장", "@D(0,10:00)", "@D(0,10:30)"),
+        ]
+        #else
+        return []
+        #endif
     }
 
     /// UI 테스트용(DEBUG, BROWSE_DENSE_DAY=1) — 오늘을 긴 일정으로 거의 채운다 (개선-50 스크롤 확인)
@@ -299,8 +332,8 @@ enum BrowseFixtures {
         if owner == Self.guestPreviewUsername { owner = Self.username }
         let slug = slug.removingPercentEncoding ?? slug
         let catalog: [(owner: String, slug: String, title: String, desc: String, minutes: Int, price: Int, host: String)] = [
-            ("example.user", "coffee-chat-30", "커피챗 30분", "커피 한 잔 하며 편하게 이야기해요.", 30, 0, "예시 사용자"),
-            ("example.user", "mentoring-60", "포트폴리오 멘토링 60분", "포트폴리오를 같이 보며 다음 단계를 정해요.", 60, 50000, "예시 사용자"),
+            (Self.username, "coffee-chat-30", "커피챗 30분", "커피 한 잔 하며 편하게 이야기해요.", 30, 0, "예시 사용자"),
+            (Self.username, "mentoring-60", "포트폴리오 멘토링 60분", "포트폴리오를 같이 보며 다음 단계를 정해요.", 60, 50000, "예시 사용자"),
             ("coach.example", "career-chat", "커리어 상담 40분", "이직·커리어 고민을 같이 정리해요.", 40, 30000, "예시 코치"),
             ("designer.example", "ux-review", "UX 리뷰 30분", "화면 흐름을 같이 봐요.", 30, 0, "예시 디자이너"),
         ]

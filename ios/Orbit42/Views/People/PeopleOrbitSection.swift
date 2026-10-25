@@ -41,7 +41,12 @@ struct PeopleOrbitSection: View {
     }
 
     static func greetingText(for date: Date) -> String {
-        switch Calendar.current.component(.hour, from: date) {
+        var hour = Calendar.current.component(.hour, from: date)
+        #if DEBUG
+        // 스토어 촬영용 — 상태바 9:41 에 맞춘 아침 인사
+        if let h = ProcessInfo.processInfo.environment["DEMO_GREETING_HOUR"].flatMap(Int.init) { hour = h }
+        #endif
+        return switch hour {
         case 5..<11: "좋은 아침이에요"
         case 11..<17: "좋은 오후예요"
         case 17..<22: "좋은 저녁이에요"

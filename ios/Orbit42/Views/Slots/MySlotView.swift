@@ -18,17 +18,20 @@ struct MySlotView: View {
             if let username = auth.user?.username {
                 SlotBookingView(username: username, slug: route.slug, title: route.title)
                     // 둘러보기에선 손님 화면으로 보여 준다 (개선-47)
-                    .safeAreaInset(edge: .top, spacing: 0) { if BrowseGate.isOn { GuestPreviewHint() } }
+                    .safeAreaInset(edge: .top, spacing: 0) { if BrowseGate.isOn && !BrowseMode.hideBannerForCapture { GuestPreviewHint() } }
             } else {
                 ProgressView().tint(Theme.accent)
             }
         }
         .toolbar {
+            // 스토어 촬영(DEBUG BROWSE_HIDE_BANNER)에선 손님 화면 그대로 — 편집 버튼 숨김
             ToolbarItem(placement: .topBarTrailing) {
+                if !BrowseMode.hideBannerForCapture {
                 NavigationLink {
                     SlotDetailView(route: SlotRoute(id: route.id, title: route.title), listViewModel: listViewModel)
                 } label: {
                     Text("편집").fontWeight(.semibold)
+                }
                 }
             }
         }
