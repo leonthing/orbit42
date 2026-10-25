@@ -1217,7 +1217,7 @@ function SlotCard({
 
   const priceLabel =
     row.slot.price_cents === 0
-      ? "Free"
+      ? "무료"
       : `₩${(row.slot.price_cents / 100).toLocaleString("ko-KR")}`;
 
   return (

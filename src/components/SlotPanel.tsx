@@ -208,7 +208,7 @@ function SlotPanelBody({
           {isAuction
             ? `시작가 ₩${((slot.reserve_price_cents ?? 0) / 100).toLocaleString("ko-KR")}`
             : slot.price_cents === 0
-              ? "Free"
+              ? "무료"
               : `₩${(slot.price_cents / 100).toLocaleString("ko-KR")}`}
           {" · "}
           {slotTypeLabel(slot.slot_type)}
@@ -233,7 +233,7 @@ function SlotPanelBody({
                   <span className="text-charcoal-200">{m.name}</span>
                   <span className="shrink-0 text-xs font-semibold text-charcoal-400">
                     {m.price_cents === 0
-                      ? "Free"
+                      ? "무료"
                       : `+ ₩${(m.price_cents / 100).toLocaleString("ko-KR")}`}
                   </span>
                 </li>

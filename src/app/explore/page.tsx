@@ -357,7 +357,7 @@ export default async function ExplorePage() {
                     {s.location_detail && `· ${s.location_detail}`}{" "}
                     ·{" "}
                     {s.price_cents === 0
-                      ? "Free"
+                      ? "무료"
                       : `${(s.price_cents / 100).toLocaleString("ko-KR")}원`}
                   </p>
                 </Link>

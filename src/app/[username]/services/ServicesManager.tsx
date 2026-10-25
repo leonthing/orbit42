@@ -257,7 +257,7 @@ function MenuRow({ menu, onChanged }: { menu: Menu; onChanged: () => void }) {
           )}
           <span className="rounded-full bg-navy-400/15 px-2 py-0.5 text-2xs font-bold text-navy-700 ring-1 ring-navy-400/30 dark:text-navy-200 dark:ring-0">
             {menu.price_cents === 0
-              ? "Free"
+              ? "무료"
               : `₩${(menu.price_cents / 100).toLocaleString("ko-KR")}`}
           </span>
         </div>
