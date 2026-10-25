@@ -1,5 +1,6 @@
 import Observation
 import SwiftUI
+import UIKit
 
 /// 캘린더 탭에서 열어야 할 특정 일정 — 알림 딥링크용.
 struct CalendarEventRequest: Equatable {
@@ -23,6 +24,15 @@ final class TabRouter {
     var bookingDetailRequest: BookingDetailTarget?
     /// 예약 링크 구역에서 '새 예약 링크' 화면을 바로 연다 — 다음에 할 일 카드·받은 예약 빈 화면, 소비 후 false
     var newBookingLinkRequest = false
+
+    /// 이미 보고 있는 탭을 다시 누른 횟수 (개선-49) — 캘린더는 오늘로, 나머지는 맨 위로
+    var reselectCount: [MainTabView.Tab: Int] = [:]
+
+    func reselect(_ tab: MainTabView.Tab) {
+        reselectCount[tab, default: 0] += 1
+        // 캘린더 말고는 iOS 기본 습관대로 목록 맨 위로 — 이미 맨 위면 아무 일도 없다
+        if tab != .calendar { ScrollToTop.visibleLists() }
+    }
 
     /// 닫았던 '다음에 할 일' 카드를 다시 연다 — 캘린더 탭(월 보기)으로 (개선-35), 소비 후 false
     var gettingStartedRequest = false
@@ -112,8 +122,14 @@ struct MainTabView: View {
     }
 
     private var tabs: some View {
-        @Bindable var router = router
-        return TabView(selection: $router.selection) {
+        // 같은 탭을 다시 누르면 setter 가 같은 값으로 불린다 — 그때 '다시 누름'을 알린다 (개선-49)
+        let selection = Binding<Tab>(
+            get: { router.selection },
+            set: { tab in
+                if tab == router.selection { router.reselect(tab) } else { router.selection = tab }
+            }
+        )
+        return TabView(selection: selection) {
             CalendarView()
                 .tabItem { Label("캘린더", systemImage: "calendar") }
                 .tag(Tab.calendar)
@@ -160,4 +176,35 @@ struct MainTabView: View {
         .environment(AuthViewModel())
         .environment(TabRouter())
         .tint(Theme.accent)
+}
+
+
+/// 지금 화면에 보이는 세로 스크롤 목록을 맨 위로 (탭 다시 누름, 개선-49).
+/// SwiftUI 탭은 이걸 해 주지 않아 UIKit 스크롤 뷰를 직접 찾는다 — 화면에 붙어 있는(선택된 탭의) 것만.
+@MainActor
+enum ScrollToTop {
+    static func visibleLists() {
+        guard let window = UIApplication.shared.connectedScenes
+            .compactMap({ ($0 as? UIWindowScene)?.keyWindow }).first,
+              window.rootViewController?.presentedViewController == nil   // 시트가 열려 있으면 그대로
+        else { return }
+        var found: [UIScrollView] = []
+        collect(window, into: &found)
+        for scrollView in found {
+            let top = -scrollView.adjustedContentInset.top
+            guard scrollView.contentOffset.y > top + 1 else { continue }
+            scrollView.setContentOffset(CGPoint(x: scrollView.contentOffset.x, y: top), animated: true)
+        }
+    }
+
+    private static func collect(_ view: UIView, into found: inout [UIScrollView]) {
+        guard !view.isHidden, view.alpha > 0.01 else { return }
+        if let scrollView = view as? UIScrollView,
+           scrollView.contentSize.height > scrollView.bounds.height + 1,
+           scrollView.bounds.height > 120 {
+            found.append(scrollView)
+            return   // 안쪽(가로 칩 줄 등)은 건드리지 않는다
+        }
+        for sub in view.subviews { collect(sub, into: &found) }
+    }
 }

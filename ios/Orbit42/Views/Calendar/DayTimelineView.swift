@@ -44,6 +44,8 @@ struct DayTimelineView: View {
     var onConvert: ((CalendarEvent, Bool, Date, Date) -> Void)? = nil
     /// 끌어서 바꿀 수 없는 일정을 꾹 눌렀을 때의 짧은 안내
     var onNotice: (String) -> Void = { _ in }
+    /// 바뀌면 기준 시각(오늘이면 지금, 둘러보기면 첫 일정)으로 다시 스크롤 — 캘린더 탭 다시 누름 (개선-49)
+    var scrollAnchorTick = 0
 
     struct CrossDayDrag: Equatable {
         let title: String
@@ -91,6 +93,11 @@ struct DayTimelineView: View {
     @State private var lastSnap = 0
     /// 끌기를 막 끝낸 손가락이 블록 탭으로 상세를 열지 않게
     @State private var lastDragEnd = Date.distantPast
+    /// iOS 18+ 꾹 누르기가 시작된 자리(viewportSpace)
+    @State private var pressStart: CGPoint?
+    /// 스크롤이 마지막으로 움직인 때 — 움직이는 중(관성 포함)에 닿은 터치는 상세를 열지 않는다 (개선-50).
+    /// 매 프레임 바뀌므로 화면을 다시 그리지 않게 참조 상자에 둔다.
+    @State private var scrollClock = ScrollClock()
 
     private enum DragMode { case move, resize }
 
@@ -169,6 +176,7 @@ struct DayTimelineView: View {
                         .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { gridTop in
                             gridTopGlobal = gridTop
                             let y = max(0, viewportGlobal.minY - gridTop)
+                            if abs(y - scrollY) > 0.5, dragId == nil { scrollClock.lastMove = Date() }
                             scrollY = y
                             onScrollY(dayStart, y)
                         }
@@ -191,6 +199,7 @@ struct DayTimelineView: View {
                 )
                 .onAppear { scrollToAnchor(proxy, animated: false) }
                 .onChange(of: dayStart) { _, _ in scrollToAnchor(proxy, animated: true) }
+                .onChange(of: scrollAnchorTick) { _, _ in scrollToAnchor(proxy, animated: true) }
                 // 둘러보기: 예시 일정이 화면이 뜬 뒤에 들어오면 첫 일정으로 한 번 맞춘다
                 .onChange(of: timedEvents.isEmpty) { wasEmpty, isEmpty in
                     if BrowseGate.isOn, wasEmpty, !isEmpty { scrollToAnchor(proxy, animated: false) }
@@ -294,8 +303,13 @@ struct DayTimelineView: View {
                         // 아래 끝 손잡이 — 꾹 눌러 끌면 길이 바꾸기 (옮기기보다 먼저 잡힌다)
                         .overlay(alignment: .bottom) {
                             if movable && block.height >= 28 {
-                                resizeHandle(visible: isResizing)
-                                    .highPriorityGesture(dragGesture(block, mode: .resize, proxy: proxy))
+                                if #available(iOS 18.0, *) {
+                                    // iOS 18+: 손잡이도 블록의 UIKit 꾹 누르기가 맡는다(누른 자리로 늘리기/옮기기를 가른다)
+                                    resizeHandle(visible: isResizing).allowsHitTesting(false)
+                                } else {
+                                    resizeHandle(visible: isResizing)
+                                        .highPriorityGesture(dragGesture(block, mode: .resize, proxy: proxy))
+                                }
                             }
                         }
                         .scaleEffect(isLifted && !isResizing ? 1.03 : 1)
@@ -308,28 +322,16 @@ struct DayTimelineView: View {
                         // 다른 날로 넘어간 동안엔 부모의 유령 블록(날짜·시각 표시)이 손가락을 따라간다 — 이 블록은 제스처를 붙들고만 있다
                         // 다른 날로 넘어간 동안(유령 블록)·종일 칸 위(띠가 제목을 보여 줌)에선 이 블록은 제스처만 붙든다
                         .opacity(isLifted && (allDayHover || crossDayActive) ? 0.01 : 1)
-                        .simultaneousGesture(
-                            dragGesture(block, mode: .move, proxy: proxy),
-                            including: movable ? .all : .subviews
-                        )
-                        // 끌 수 없는 일정(예약·남이 주최·여러 날)은 꾹 누르면 이유를 짧게 알린다 (개선-34)
-                        .simultaneousGesture(
-                            LongPressGesture(minimumDuration: 0.4)
-                                .sequenced(before: DragGesture(minimumDistance: 0))
-                                .onChanged { value in
-                                    guard case .second(true, _) = value, noticeShownFor != block.id,
-                                          let reason = lockReason(block.event, converting: false) else { return }
-                                    noticeShownFor = block.id
-                                    lastDragEnd = Date()
-                                    UINotificationFeedbackGenerator().notificationOccurred(.warning)
-                                    onNotice(reason)
-                                }
-                                .onEnded { _ in
-                                    if noticeShownFor != nil { lastDragEnd = Date() }
-                                    noticeShownFor = nil
-                                },
-                            including: !movable && onConvert != nil ? .all : .subviews
-                        )
+                        .modifier(BlockPressGestures(
+                            legacyMove: dragGesture(block, mode: .move, proxy: proxy),
+                            legacyNotice: lockNoticeGesture(block),
+                            movable: movable,
+                            noticeEnabled: !movable && onConvert != nil,
+                            space: Self.viewportSpace,
+                            onBegan: { pressBegan(block, at: $0, movable: movable) },
+                            onChanged: { pressMoved(block, to: $0, proxy: proxy) },
+                            onEnded: { pressEnded(block, completed: $0) }
+                        ))
                         .animation(.easeOut(duration: 0.12), value: shift)
                 }
                 if calendar.isDateInToday(viewingDayStart) {
@@ -422,7 +424,8 @@ struct DayTimelineView: View {
     private func open(_ event: CalendarEvent) {
         // 끌기·막힌 일정 안내를 띄운 꾹 누름을 뗄 때 상세가 열리지 않게
         guard dragId == nil, allDayDrag == nil, noticeShownFor == nil,
-              Date().timeIntervalSince(lastDragEnd) > 0.5 else { return }
+              Date().timeIntervalSince(lastDragEnd) > 0.5,
+              !scrollClock.movedRecently else { return }
         onOpen(event)
     }
 
@@ -458,6 +461,59 @@ struct DayTimelineView: View {
             .contentShape(Rectangle())
     }
 
+    /// 끌 수 없는 일정(예약·남이 주최·여러 날)은 꾹 누르면 이유를 짧게 알린다 (개선-34) — iOS 17 경로
+    private func lockNoticeGesture(_ block: Block) -> some Gesture {
+        LongPressGesture(minimumDuration: 0.4)
+            .sequenced(before: DragGesture(minimumDistance: 0))
+            .onChanged { value in
+                guard case .second(true, _) = value else { return }
+                showLockNotice(block)
+            }
+            .onEnded { _ in
+                if noticeShownFor != nil { lastDragEnd = Date() }
+                noticeShownFor = nil
+            }
+    }
+
+    private func showLockNotice(_ block: Block) {
+        guard noticeShownFor != block.id, let reason = lockReason(block.event, converting: false) else { return }
+        noticeShownFor = block.id
+        lastDragEnd = Date()
+        UINotificationFeedbackGenerator().notificationOccurred(.warning)
+        onNotice(reason)
+    }
+
+    // MARK: iOS 18+ 꾹 누르기(UIKit) — 스크롤 손짓을 가로채지 않는다 (개선-50)
+
+    /// 꾹 누름이 인식됨 — 아래 끝 손잡이(12pt) 위면 길이 바꾸기, 아니면 옮기기. 끌 수 없는 일정은 이유 안내.
+    private func pressBegan(_ block: Block, at location: CGPoint, movable: Bool) {
+        guard movable else {
+            if onConvert != nil { showLockNotice(block) }
+            return
+        }
+        let bottom = topInset + block.y + block.height - scrollY
+        let mode: DragMode = block.height >= 28 && location.y >= bottom - 14 ? .resize : .move
+        pressStart = location
+        beginDrag(block, mode: mode)
+        grabOffsetY = nil
+    }
+
+    private func pressMoved(_ block: Block, to location: CGPoint, proxy: ScrollViewProxy) {
+        guard dragId == block.id, let pressStart else { return }
+        dragMoved(block, mode: dragMode, location: location, start: pressStart, proxy: proxy)
+    }
+
+    private func pressEnded(_ block: Block, completed: Bool) {
+        defer { pressStart = nil }
+        if noticeShownFor == block.id {
+            lastDragEnd = Date()
+            noticeShownFor = nil
+            return
+        }
+        guard dragId == block.id else { return }
+        if completed { dragFinished(block, mode: dragMode) } else { cancelDrag() }
+    }
+
     private func dragGesture(_ block: Block, mode: DragMode, proxy: ScrollViewProxy) -> some Gesture {
         LongPressGesture(minimumDuration: mode == .resize ? 0.25 : 0.4)
             .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named(Self.viewportSpace)))
@@ -467,54 +523,64 @@ struct DayTimelineView: View {
             .onChanged { value in
                 guard case .second(true, let drag) = value else { return }
                 if dragId != block.id { beginDrag(block, mode: mode) }
-                guard dragMode == mode else { return }
                 guard let drag else { return }
-                dragTranslation = drag.translation.height
-                lastFinger = drag.location
-                if grabOffsetY == nil {
-                    // 블록 위쪽(화면 좌표) = topInset + block.y - 스크롤
-                    grabOffsetY = drag.startLocation.y - (topInset + block.y - dragStartScrollY)
-                }
-                let snap = snappedDelta(block)
-                if snap != lastSnap {
-                    lastSnap = snap
-                    UISelectionFeedbackGenerator().selectionChanged()
-                }
-                if mode == .move { updateAllDayHover() }
-                updateAutoScroll(fingerY: drag.location.y, proxy: proxy, topBand: showAllDayDropBand ? allDayDropHeight : nil)
-                if mode == .move {
-                    updateEdgeHover(fingerX: drag.location.x, block: block)
-                    publishCrossDay(block)
-                }
+                dragMoved(block, mode: mode, location: drag.location, start: drag.startLocation, proxy: proxy)
             }
             .onEnded { value in
                 guard case .second(true, _) = value, dragId == block.id, dragMode == mode else {
                     if dragMode == mode { endDrag() }
                     return
                 }
-                let delta = snappedDelta(block)
-                let times = retimed(block)
-                let toAllDay = mode == .move && allDayHover
-                let cross = mode == .move && !toAllDay ? crossDayTarget(block) : nil
-                let droppedDay = viewingDayStart
-                endDrag()
-                if toAllDay {
-                    // 종일 칸에 놓음 — 그날 하루짜리 종일 일정으로 (개선-34)
-                    if let reason = lockReason(block.event, converting: true) {
-                        UINotificationFeedbackGenerator().notificationOccurred(.warning)
-                        onNotice(reason)
-                    } else {
-                        onConvert?(block.event, true, droppedDay, droppedDay)
-                        if droppedDay != dayStart { onSettleDay(droppedDay) }
-                    }
-                } else if let cross {
-                    if cross.start != block.event.startAt { onRetime(block.event, cross.start, cross.end) }
-                    // 가장자리로 넘어가서 놓았으면 그 날을 보던 그대로 그 날 페이지로 (주간 칸에 놓은 건 기존대로 알림의 '보기')
-                    if cross.stripDay == nil { onSettleDay(calendar.startOfDay(for: cross.start)) }
-                } else if delta != 0 {
-                    onRetime(block.event, times.start, times.end)
-                }
+                dragFinished(block, mode: mode)
             }
+    }
+
+    /// 끄는 손가락이 움직임 — location·start 는 보이는 영역(viewportSpace) 좌표
+    private func dragMoved(_ block: Block, mode: DragMode, location: CGPoint, start: CGPoint, proxy: ScrollViewProxy) {
+        guard dragMode == mode else { return }
+        dragTranslation = location.y - start.y
+        lastFinger = location
+        if grabOffsetY == nil {
+            // 블록 위쪽(화면 좌표) = topInset + block.y - 스크롤
+            grabOffsetY = start.y - (topInset + block.y - dragStartScrollY)
+        }
+        let snap = snappedDelta(block)
+        if snap != lastSnap {
+            lastSnap = snap
+            UISelectionFeedbackGenerator().selectionChanged()
+        }
+        if mode == .move { updateAllDayHover() }
+        updateAutoScroll(fingerY: location.y, proxy: proxy, topBand: showAllDayDropBand ? allDayDropHeight : nil)
+        if mode == .move {
+            updateEdgeHover(fingerX: location.x, block: block)
+            publishCrossDay(block)
+        }
+    }
+
+    /// 손을 뗌 — 놓은 자리로 옮기거나(같은 날·다른 날·종일 칸) 길이를 바꾼다
+    private func dragFinished(_ block: Block, mode: DragMode) {
+        let delta = snappedDelta(block)
+        let times = retimed(block)
+        let toAllDay = mode == .move && allDayHover
+        let cross = mode == .move && !toAllDay ? crossDayTarget(block) : nil
+        let droppedDay = viewingDayStart
+        endDrag()
+        if toAllDay {
+            // 종일 칸에 놓음 — 그날 하루짜리 종일 일정으로 (개선-34)
+            if let reason = lockReason(block.event, converting: true) {
+                UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                onNotice(reason)
+            } else {
+                onConvert?(block.event, true, droppedDay, droppedDay)
+                if droppedDay != dayStart { onSettleDay(droppedDay) }
+            }
+        } else if let cross {
+            if cross.start != block.event.startAt { onRetime(block.event, cross.start, cross.end) }
+            // 가장자리로 넘어가서 놓았으면 그 날을 보던 그대로 그 날 페이지로 (주간 칸에 놓은 건 기존대로 알림의 '보기')
+            if cross.stripDay == nil { onSettleDay(calendar.startOfDay(for: cross.start)) }
+        } else if delta != 0 {
+            onRetime(block.event, times.start, times.end)
+        }
     }
 
     private func beginDrag(_ block: Block, mode: DragMode) {
@@ -890,6 +956,8 @@ struct DayTimelineView: View {
     /// 위젯과 같은 모양의 완료 체크 — 중요함은 동그라미 대신 별 — 누르면 바로 토글 (`CalendarViewModel.setCompletion`, 낙관적 반영)
     private func checkbox(_ event: CalendarEvent, size: CGFloat) -> some View {
         Button {
+            // 스크롤이 움직이는 중(관성 포함)에 닿은 손가락은 멈춤으로만 (개선-50)
+            guard !scrollClock.movedRecently else { return }
             let completing = !event.completed
             onToggleCompletion(event)
             if completing { showRatingPrompt(for: event) } else if ratingPromptId == event.id { ratingPromptId = nil }
@@ -1143,5 +1211,88 @@ struct DayPager<Page: View>: View {
     private func offset(of date: Date, unclamped: Bool = false) -> Int {
         let days = calendar.dateComponents([.day], from: anchor, to: calendar.startOfDay(for: date)).day ?? 0
         return unclamped ? days : max(-Self.span, min(Self.span, days))
+    }
+}
+
+
+/// 하루 보기 스크롤이 마지막으로 움직인 때 (개선-50)
+final class ScrollClock {
+    var lastMove = Date.distantPast
+    /// 방금까지 움직였다 — 관성 중에 닿아 멈춘 손가락을 떼는 데 걸리는 시간보다 조금 길게
+    var movedRecently: Bool { Date().timeIntervalSince(lastMove) < 0.3 }
+}
+
+/// 일정 블록의 꾹 눌러 끌기·막힌 일정 안내.
+/// iOS 18 부터 스크롤 안의 SwiftUI 꾹 누르기 제스처가 스크롤 손짓을 가로채서(일정 위에서 시작하면 스크롤이 안 됨),
+/// iOS 18+ 는 UIKit 꾹 누르기 인식기를 쓴다 — 스크롤 팬과 함께 동작하고, 10pt 넘게 움직이면 스스로 실패해 스크롤에 양보한다.
+/// iOS 17 은 그 문제가 없어 기존 SwiftUI 제스처 그대로.
+private struct BlockPressGestures<Move: Gesture, Notice: Gesture>: ViewModifier {
+    let legacyMove: Move
+    let legacyNotice: Notice
+    let movable: Bool
+    let noticeEnabled: Bool
+    let space: String
+    let onBegan: (CGPoint) -> Void
+    let onChanged: (CGPoint) -> Void
+    let onEnded: (Bool) -> Void
+
+    func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content.gesture(BlockLongPressRecognizer(
+                enabled: movable || noticeEnabled,
+                space: space,
+                onBegan: onBegan,
+                onChanged: onChanged,
+                onEnded: onEnded
+            ))
+        } else {
+            content
+                .simultaneousGesture(legacyMove, including: movable ? .all : .subviews)
+                .simultaneousGesture(legacyNotice, including: noticeEnabled ? .all : .subviews)
+        }
+    }
+}
+
+@available(iOS 18.0, *)
+private struct BlockLongPressRecognizer: UIGestureRecognizerRepresentable {
+    let enabled: Bool
+    let space: String
+    let onBegan: (CGPoint) -> Void
+    let onChanged: (CGPoint) -> Void
+    /// true: 손을 뗌 · false: 취소(전화·뷰 교체 등)
+    let onEnded: (Bool) -> Void
+
+    func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator { Coordinator() }
+
+    /// 블록 안 버튼(상세·체크)과는 함께 인식하고, 스크롤 팬과는 겨룬다 — 움직이면 스크롤, 꾹 누르면 끌기
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                               shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
+            !(other.view is UIScrollView)
+        }
+    }
+
+    func makeUIGestureRecognizer(context: Context) -> UILongPressGestureRecognizer {
+        let recognizer = UILongPressGestureRecognizer()
+        recognizer.delegate = context.coordinator
+        recognizer.minimumPressDuration = 0.4
+        recognizer.allowableMovement = 10
+        recognizer.isEnabled = enabled
+        return recognizer
+    }
+
+    func updateUIGestureRecognizer(_ recognizer: UILongPressGestureRecognizer, context: Context) {
+        recognizer.isEnabled = enabled
+    }
+
+    func handleUIGestureRecognizerAction(_ recognizer: UILongPressGestureRecognizer, context: Context) {
+        let location = context.converter.location(in: .named(space))
+        switch recognizer.state {
+        case .began: onBegan(location)
+        case .changed: onChanged(location)
+        case .ended: onEnded(true)
+        case .cancelled, .failed: onEnded(false)
+        default: break
+        }
     }
 }

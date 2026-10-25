@@ -28,6 +28,8 @@ struct CalendarView: View {
     @State private var stripFrames: [Date: CGRect] = [:]
     /// 날짜별 하루 보기 스크롤 위치 — 화면을 다시 그리지 않도록 참조로 둔다
     @State private var dayScrollRegistry = DayScrollRegistry()
+    /// 탭 다시 누름 — 하루 보기를 지금 시각 근처로 다시 스크롤 (개선-49)
+    @State private var todayScrollTick = 0
     /// 다른 날로 옮긴 뒤 아래에 잠깐 뜨는 안내 ("10월 23일 (금)로 옮겼어요 · 보기")
     /// 끌어 옮긴 뒤 아래 안내 — 다른 날로 옮겼으면 그 날(보기), 반복 회차면 '이 회차만'
     @State private var movedToast: MovedToast?
@@ -150,6 +152,12 @@ struct CalendarView: View {
             }
             .onChange(of: router.calendarDateRequest) { _, date in
                 applyDateRequest(date)
+            }
+            // 캘린더 탭을 다시 누르면 보기 종류는 그대로 두고 오늘로 (개선-49). 시트가 열려 있으면 아무것도 안 한다.
+            .onChange(of: router.reselectCount[.calendar]) { _, _ in
+                guard selectedEvent == nil, addRequest == nil, pendingMove == nil, crossDrag == nil, !isDraggingEvent else { return }
+                withAnimation { viewModel.showToday() }
+                todayScrollTick += 1
             }
         }
     }
@@ -690,7 +698,8 @@ struct CalendarView: View {
                     onConvert: { event, toAllDay, start, end in
                         requestMove(PendingMove(event: event, newStart: start, newEnd: end, toAllDay: toAllDay))
                     },
-                    onNotice: { showNotice($0) }
+                    onNotice: { showNotice($0) },
+                    scrollAnchorTick: todayScrollTick
                 )
                 // 달 경계 너머 날짜는 미리 받아 둔다
                 .task(id: day) {

@@ -161,9 +161,26 @@ enum BrowseFixtures {
             event("browse-e9", "포트폴리오 리뷰", "@D(2,13:00)", "@D(2,14:00)"),
             event("browse-e10", "요가", "@D(3,08:00)", "@D(3,09:00)", cal: "browse-cal-life"),
             event("browse-e11", "클라이언트 미팅", "@D(4,16:00)", "@D(4,17:00)", location: "강남"),
-        ]
+        ] + denseDay
         return #"{"events":["# + list.joined(separator: ",") + ##"],"calendars":[{"id":"browse-cal-work","name":"업무","color":"#6366f1","purpose":"work","source":"native","isDefault":true},{"id":"browse-cal-life","name":"개인","color":"#22c55e","purpose":"personal","source":"native","isDefault":false}]}"##
     }
+
+    /// UI 테스트용(DEBUG, BROWSE_DENSE_DAY=1) — 오늘을 긴 일정으로 거의 채운다 (개선-50 스크롤 확인)
+    private static var denseDay: [String] {
+        #if DEBUG
+        guard ProcessInfo.processInfo.environment["BROWSE_DENSE_DAY"] == "1" else { return [] }
+        return [
+            event("browse-d1", "긴 일정 A", "@D(0,00:30)", "@D(0,07:00)"),
+            event("browse-d2", "긴 일정 B", "@D(0,08:30)", "@D(0,11:00)"),
+            event("browse-d3", "긴 일정 C", "@D(0,11:30)", "@D(0,14:00)"),
+            event("browse-d4", "긴 일정 D", "@D(0,16:00)", "@D(0,19:30)"),
+            event("browse-d5", "긴 일정 E", "@D(0,19:30)", "@D(0,23:30)"),
+        ]
+        #else
+        return []
+        #endif
+    }
+
 
 
     private static func contact(_ id: String, _ name: String, color: String, ring: Int, days: Int, meetings: Int, hours: Double, last: String, next: String?) -> String {
