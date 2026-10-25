@@ -255,7 +255,8 @@ struct CalendarView: View {
                 swipeableEventList
             case .week:
                 weekHeader
-                weekStrip
+                // 하루 보기와 같은 날짜 줄 — 밀면 지난주·다음 주(요일 유지, 개선-52)
+                swipeableWeekStrip
                 Divider()
                     .overlay(Theme.fill(0.08))
                     .padding(.top, 8)
@@ -594,6 +595,7 @@ struct CalendarView: View {
             )
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("weekDay")
     }
 
     // MARK: - 하루 보기
