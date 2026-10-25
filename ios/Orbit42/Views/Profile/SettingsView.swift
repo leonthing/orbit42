@@ -1,8 +1,7 @@
 import SwiftUI
 
 /// 설정 화면 — 프로필 탭 우상단 톱니에서 push.
-/// 내 캘린더 / Google 캘린더 / 알림 설정 / 이동시간 버퍼 / 친구 초대 / 차단 관리 / 계정 /
-/// 웹 설정 안내 / 프로필 비공개 / 로그아웃 + 앱 버전.
+/// 묶음(개선-44): 계정 / 캘린더·연결 / 예약 링크 / 알림·화면 / 정보·지원 / 로그아웃 + 앱 버전.
 /// (근로시간·급여·수면은 자산 탭 > 자산 설정에서 관리)
 struct SettingsView: View {
     @Environment(AuthViewModel.self) private var auth
@@ -19,10 +18,11 @@ struct SettingsView: View {
 
     var body: some View {
         List {
-            menuSection
-            appearanceSection
-            privacySection
-            legalSection
+            accountSection
+            calendarSection
+            bookingSection
+            notificationSection
+            supportSection
             logoutSection
         }
         .scrollContentBackground(.hidden)
@@ -61,68 +61,134 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - 설정 메뉴
+    // MARK: - 설정 메뉴 (개선-44: 13줄 한 묶음 → 주제별 묶음, 없앤 항목 없음)
 
-    private var menuSection: some View {
+    private var accountSection: some View {
         Section {
+            NavigationLink {
+                AccountView()
+            } label: {
+                menuRow(icon: "person.crop.circle", title: "계정")
+            }
+            .accessibilityIdentifier("settings.account")
+
+            Toggle(isOn: Binding(
+                get: { isPrivate },
+                set: { newValue in
+                    guard newValue != isPrivate else { return }
+                    isPrivate = newValue
+                    Task { await updatePrivacy(newValue) }
+                }
+            )) {
+                menuRow(icon: "lock", title: "프로필 비공개")
+            }
+            .tint(Theme.accent)
+            .disabled(isSavingPrivacy)
+            .accessibilityIdentifier("settings.private")
+
+            NavigationLink {
+                BlockedUsersView()
+            } label: {
+                menuRow(icon: "hand.raised", title: "차단 관리")
+            }
+            .accessibilityIdentifier("settings.blocked")
+        } header: {
+            Text("계정")
+        } footer: {
+            Text("프로필 비공개를 켜면 검색과 프로필 조회, 다른 사람의 오르빗에서 숨겨져요. 직접 공유한 예약 링크는 계속 동작해요.")
+                .foregroundStyle(Theme.secondaryText)
+        }
+        .listRowBackground(Theme.surface)
+    }
+
+    private var calendarSection: some View {
+        Section("캘린더·연결") {
             NavigationLink {
                 CalendarSettingsView()
             } label: {
                 menuRow(icon: "calendar", title: "내 캘린더")
             }
+            .accessibilityIdentifier("settings.calendars")
 
             NavigationLink {
                 GoogleSettingsView()
             } label: {
                 menuRow(icon: "arrow.triangle.2.circlepath", title: "Google 캘린더")
             }
+            .accessibilityIdentifier("settings.google")
 
             NavigationLink {
                 PeopleImportSettingsView()
             } label: {
                 menuRow(icon: "person.2.circle", title: "사람 찾기")
             }
-
-            NavigationLink {
-                NotificationPrefsView()
-            } label: {
-                menuRow(icon: "bell", title: "알림 설정")
-            }
+            .accessibilityIdentifier("settings.peopleImport")
 
             NavigationLink {
                 LocationBuffersView()
             } label: {
                 menuRow(icon: "figure.walk", title: "이동시간 버퍼")
             }
+            .accessibilityIdentifier("settings.buffers")
+        }
+        .listRowBackground(Theme.surface)
+    }
 
-            if let referralURL {
-                ShareLink(item: referralURL) {
-                    menuRow(icon: "person.badge.plus", title: "친구 초대")
-                }
-            }
-
+    private var bookingSection: some View {
+        Section("예약 링크") {
             NavigationLink {
                 PaymentInstructionsView()
             } label: {
                 menuRow(icon: "banknote", title: "결제 안내 (계좌이체)")
             }
+            .accessibilityIdentifier("settings.payment")
 
             NavigationLink {
                 ServicesView()
             } label: {
                 menuRow(icon: "list.bullet.rectangle", title: "서비스")
             }
+            .accessibilityIdentifier("settings.services")
 
             NavigationLink {
                 LinkThemeView()
             } label: {
                 menuRow(icon: "paintpalette", title: "공개 링크 테마")
             }
+            .accessibilityIdentifier("settings.linkTheme")
+        }
+        .listRowBackground(Theme.surface)
+    }
 
+    private var notificationSection: some View {
+        Section("알림·화면") {
             NavigationLink {
-                BlockedUsersView()
+                NotificationPrefsView()
             } label: {
-                menuRow(icon: "hand.raised", title: "차단 관리")
+                menuRow(icon: "bell", title: "알림 설정")
+            }
+            .accessibilityIdentifier("settings.notifications")
+
+            Picker(selection: $appearanceMode) {
+                Text("시스템 설정 따름").tag("system")
+                Text("라이트").tag("light")
+                Text("다크").tag("dark")
+            } label: {
+                menuRow(icon: "circle.lefthalf.filled", title: "화면 모드")
+            }
+            .tint(Theme.secondaryText)
+            .accessibilityIdentifier("settings.appearance")
+        }
+        .listRowBackground(Theme.surface)
+    }
+
+    private var supportSection: some View {
+        Section("정보·지원") {
+            if let referralURL {
+                ShareLink(item: referralURL) {
+                    menuRow(icon: "person.badge.plus", title: "친구 초대")
+                }
+                .accessibilityIdentifier("settings.invite")
             }
 
             Button {
@@ -130,12 +196,7 @@ struct SettingsView: View {
             } label: {
                 menuRow(icon: "paperplane", title: "피드백 보내기")
             }
-
-            NavigationLink {
-                AccountView()
-            } label: {
-                menuRow(icon: "person.crop.circle", title: "계정")
-            }
+            .accessibilityIdentifier("settings.feedback")
 
             if let url = webSettingsURL {
                 Link(destination: url) {
@@ -147,7 +208,13 @@ struct SettingsView: View {
                             .foregroundStyle(Theme.secondaryText)
                     }
                 }
+                .accessibilityIdentifier("settings.web")
             }
+
+            legalLink(title: "이용약관", path: "terms")
+                .accessibilityIdentifier("settings.terms")
+            legalLink(title: "개인정보처리방침", path: "privacy")
+                .accessibilityIdentifier("settings.privacyPolicy")
         }
         .listRowBackground(Theme.surface)
     }
@@ -173,29 +240,6 @@ struct SettingsView: View {
     private var referralURL: URL? {
         guard let username = auth.user?.username else { return nil }
         return URL(string: "https://orbit42.org/signup?ref=\(username)")
-    }
-
-    // MARK: - 프로필 비공개
-
-    private var privacySection: some View {
-        Section {
-            Toggle(isOn: Binding(
-                get: { isPrivate },
-                set: { newValue in
-                    guard newValue != isPrivate else { return }
-                    isPrivate = newValue
-                    Task { await updatePrivacy(newValue) }
-                }
-            )) {
-                menuRow(icon: "lock", title: "프로필 비공개")
-            }
-            .tint(Theme.accent)
-            .disabled(isSavingPrivacy)
-        } footer: {
-            Text("켜면 검색과 프로필 조회, 다른 사람의 오르빗에서 숨겨져요. 직접 공유한 예약 링크는 계속 동작해요.")
-                .foregroundStyle(Theme.secondaryText)
-        }
-        .listRowBackground(Theme.surface)
     }
 
     private func updatePrivacy(_ newValue: Bool) async {
@@ -225,29 +269,7 @@ struct SettingsView: View {
 
     @AppStorage("appearanceMode") private var appearanceMode = "system"
 
-    private var appearanceSection: some View {
-        Section {
-            Picker(selection: $appearanceMode) {
-                Text("시스템 설정 따름").tag("system")
-                Text("라이트").tag("light")
-                Text("다크").tag("dark")
-            } label: {
-                menuRow(icon: "circle.lefthalf.filled", title: "화면 모드")
-            }
-            .tint(Theme.secondaryText)
-        }
-        .listRowBackground(Theme.surface)
-    }
-
     // MARK: - 약관·정책
-
-    private var legalSection: some View {
-        Section {
-            legalLink(title: "이용약관", path: "terms")
-            legalLink(title: "개인정보처리방침", path: "privacy")
-        }
-        .listRowBackground(Theme.surface)
-    }
 
     private func legalLink(title: String, path: String) -> some View {
         Link(destination: URL(string: "https://orbit42.org/\(path)")!) {

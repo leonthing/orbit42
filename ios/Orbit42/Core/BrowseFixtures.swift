@@ -234,6 +234,12 @@ enum BrowseFixtures {
             contact("browse-p3", "예시 동료", color: "#22C55E", ring: 2, days: 14, meetings: 3, hours: 4, last: "주간 회고", next: nil),
             contact("browse-p4", "예시 친구", color: "#F59E0B", ring: 3, days: 40, meetings: 1, hours: 1.5, last: "저녁 약속", next: nil),
         ]
+        #if DEBUG
+        // 촬영·테스트용(BROWSE_EMPTY_ORBIT=1) — 궤도가 빈 새 계정 모습 (개선-44)
+        if ProcessInfo.processInfo.environment["BROWSE_EMPTY_ORBIT"] == "1" {
+            return #"{"people":[],"followingOnly":[],"suggestions":[],"archived":[],"nudges":[],"importEnabled":false,"googleConnected":false,"syncedAt":null}"#
+        }
+        #endif
         return #"{"people":["# + list.joined(separator: ",") + #"],"followingOnly":[],"suggestions":[],"archived":[],"nudges":[],"importEnabled":false,"googleConnected":false,"syncedAt":null}"#
     }
 

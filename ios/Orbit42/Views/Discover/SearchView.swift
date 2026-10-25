@@ -8,6 +8,8 @@ struct SearchView: View {
     @State private var suggestions = FollowSuggestionsViewModel()
     /// 관계 궤도 — 탭 맨 위 (캘린더 탭의 가로 줄과 같은 store)
     @Environment(PeopleStore.self) private var people
+    /// 빈 궤도 한 줄을 눌러 펼쳤는지 (개선-44)
+    @State private var orbitExpanded = false
 
     var body: some View {
         ZStack {
@@ -17,13 +19,10 @@ struct SearchView: View {
         }
         .navigationTitle("오르빗")
         .navigationBarTitleDisplayMode(.inline)
-        // 검색창을 화면 맨 위에 두면 이 탭이 "검색 화면"으로 읽혀서, 정작
-        // 팔로우한 사람들의 열린 시간·새 소식·추천이 아래로 밀린다.
-        // navigationBarDrawer(.automatic) 는 평소엔 숨어 있다가 위로 당길 때만
-        // 나타나므로, 탭을 열면 "내 오르빗"이 먼저 보인다.
+        // 검색창은 스크롤해도 늘 보이게 (개선-44) — 사람·예약 링크 찾기가 이 탭의 첫 동작이 되도록
         .searchable(
             text: $viewModel.query,
-            placement: .navigationBarDrawer(displayMode: .automatic),
+            placement: .navigationBarDrawer(displayMode: .always),
             prompt: "이름, @아이디, 예약 링크 제목"
         )
         .onChange(of: viewModel.query) {
@@ -177,26 +176,15 @@ struct SearchView: View {
         ScrollViewReader { proxy in
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 10) {
-                PeopleOrbitSection()
-
-                if !people.isEmpty {
-                    sectionHeader("팔로우한 사람들의 열린 시간")
+                // 궤도가 비었으면(개선-44) 그 칸을 한 줄 안내로 접고 '열린 시간'을 맨 위로 —
+                // 처음 여는 사람이 빈 궤도부터 보고 무슨 탭인지 모르는 일이 없게
+                if orbitIsEmpty && !orbitExpanded {
+                    openTimesSection(people)
+                    emptyOrbitRow
                         .padding(.top, 14)
-
-                    ForEach(people) { person in
-                        OrbitPersonCard(person: person)
-                    }
-
-                    Text("팔로우한 사람들의 열린 시간이에요. 친구를 초대하면 자동으로 맞팔로우돼요.")
-                        .font(.caption)
-                        .foregroundStyle(Theme.secondaryText)
-                        .padding(.top, 4)
                 } else {
-                    sectionHeader("팔로우한 사람들의 열린 시간")
-                        .padding(.top, 14)
-                    Text("아직 비어있어요. 아래에서 관심 가는 사람을 팔로우해 보세요.")
-                        .font(.caption)
-                        .foregroundStyle(Theme.secondaryText)
+                    PeopleOrbitSection()
+                    openTimesSection(people)
                 }
 
                 if let stream = viewModel.stream, !stream.isEmpty {
@@ -242,6 +230,61 @@ struct SearchView: View {
             await suggestions.load(force: true)
             await self.people.refresh(force: true)
         }
+        }
+    }
+
+    /// 궤도가 비었는지 — 불러오기 전(nil)에는 비었다고 보지 않는다(잠깐 접혔다 펴지는 깜빡임 방지).
+    /// 캘린더에서 찾은 사람(제안)이 있으면 고를 일이 있으므로 펼친다.
+    private var orbitIsEmpty: Bool {
+        self.people.data != nil && self.people.people.isEmpty && self.people.suggestions.isEmpty
+    }
+
+    /// 빈 궤도 한 줄 — 누르면 궤도 칸(사람 추가·캘린더에서 찾기)을 펼친다
+    private var emptyOrbitRow: some View {
+        Button {
+            withAnimation { orbitExpanded = true }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "circle.dotted.circle")
+                    .foregroundStyle(Theme.accent)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("내 궤도가 아직 비어 있어요")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.primaryText)
+                    Text("만난 사람을 추가하거나 캘린더에서 찾아 궤도를 채워 보세요")
+                        .font(.caption)
+                        .foregroundStyle(Theme.secondaryText)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.down")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Theme.secondaryText)
+            }
+            .padding(12)
+            .background(Theme.surface, in: RoundedRectangle(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("orbitEmptyRow")
+    }
+
+    /// 팔로우한 사람들의 열린 시간
+    @ViewBuilder
+    private func openTimesSection(_ people: [OrbitPerson]) -> some View {
+        sectionHeader("팔로우한 사람들의 열린 시간")
+            .padding(.top, orbitIsEmpty && !orbitExpanded ? 4 : 14)
+            .accessibilityIdentifier("orbitOpenTimesHeader")
+        if !people.isEmpty {
+            ForEach(people) { person in
+                OrbitPersonCard(person: person)
+            }
+            Text("팔로우한 사람들의 열린 시간이에요. 친구를 초대하면 자동으로 맞팔로우돼요.")
+                .font(.caption)
+                .foregroundStyle(Theme.secondaryText)
+                .padding(.top, 4)
+        } else {
+            Text("아직 비어있어요. 아래에서 관심 가는 사람을 팔로우해 보세요.")
+                .font(.caption)
+                .foregroundStyle(Theme.secondaryText)
         }
     }
 
