@@ -13,9 +13,9 @@ struct OnboardingFlowView: View {
     @Environment(AuthViewModel.self) private var auth
 
     private enum Step: String, CaseIterable {
-        case consent, profile, interests, calendar, notifications, verifyEmail, follow
-        /// 지금 온보딩에 쓰는 단계와 순서
-        static let flow: [Step] = [.consent, .profile, .calendar, .notifications, .verifyEmail]
+        case consent, profile, interests, calendar, notifications, verifyEmail, follow, link
+        /// 지금 온보딩에 쓰는 단계와 순서 — 마지막은 '내 예약 링크 만들기'(건너뛰기 가능, 1.6.0 ①)
+        static let flow: [Step] = [.consent, .profile, .calendar, .notifications, .verifyEmail, .link]
     }
 
     @State private var steps: [Step] = []
@@ -78,6 +78,7 @@ struct OnboardingFlowView: View {
             case .notifications: NotificationPermissionStep(onNext: advance)
             case .verifyEmail: VerifyEmailStep(onNext: advance)
             case .follow: FollowStep()
+            case .link: LinkStep(onFinish: advance)
             }
         }
     }
@@ -754,7 +755,51 @@ private struct VerifyEmailStep: View {
     }
 }
 
-// MARK: - 7. 팔로우 추천 (마지막)
+// MARK: - 마지막. 내 예약 링크 만들기 (1.6.0 ①)
+
+/// 만들면 바로 공유 화면(예약 링크·바이오용 링크 페이지 주소)으로, 건너뛰면 그대로 시작.
+private struct LinkStep: View {
+    let onFinish: () -> Void
+    @State private var slots = SlotsViewModel()
+    @State private var showingCreate = false
+    @State private var created: TimeSlot?
+
+    var body: some View {
+        if let created {
+            ScrollView {
+                SlotCreatedShareSheet(slot: created, onStory: nil, doneTitle: "시작하기", onDone: onFinish)
+                    .padding(.top, 12)
+            }
+        } else {
+            VStack(spacing: 0) {
+                stepHeader(
+                    icon: "link",
+                    title: "내 예약 링크를 만들어 볼까요?",
+                    subtitle: "링크를 보내면 상대가 내 빈 시간을 직접 골라 예약해요.\n30초면 만들고, 나중에 예약 탭에서 고칠 수 있어요."
+                )
+                Spacer()
+                primaryButton("내 예약 링크 만들기") { showingCreate = true }
+                    .accessibilityIdentifier("onboardingMakeLink")
+                Button("건너뛰기") { onFinish() }
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.secondaryText)
+                    .padding(.top, 10)
+                    .padding(.bottom, 20)
+                    .accessibilityIdentifier("onboardingSkipLink")
+            }
+            .sheet(isPresented: $showingCreate, onDismiss: {
+                if let slot = slots.pendingShare {
+                    slots.pendingShare = nil
+                    withAnimation { created = slot }
+                }
+            }) {
+                SimpleSlotSheet(viewModel: slots)
+            }
+        }
+    }
+}
+
+// MARK: - 7. 팔로우 추천 (지금은 흐름에서 빠짐)
 
 private struct FollowStep: View {
     @Environment(AuthViewModel.self) private var auth

@@ -224,7 +224,9 @@ struct SlotsContent: View {
                             )
                         }
                         if let url = URL(string: slot.shareUrl) {
-                            ShareLink(item: url) {
+                            Button {
+                                ShareSheet.shareMyLink(url, username: auth.user?.username)
+                            } label: {
                                 Label("공유", systemImage: "square.and.arrow.up")
                             }
                         }
@@ -325,6 +327,8 @@ struct SlotsContent: View {
 // MARK: - 슬롯 행
 
 private struct SlotRow: View {
+    @Environment(AuthViewModel.self) private var auth
+    private var shareUsername: String? { auth.user?.username }
     let slot: TimeSlot
     /// 인스타 스토리용 이미지 만들기
     var onStory: () -> Void = {}
@@ -357,7 +361,9 @@ private struct SlotRow: View {
 
             if let url = URL(string: slot.shareUrl) {
                 Menu {
-                    ShareLink(item: url) {
+                    Button {
+                        ShareSheet.shareMyLink(url, username: shareUsername)
+                    } label: {
                         Label("링크 공유", systemImage: "link")
                     }
                     Button {
@@ -428,11 +434,15 @@ struct SlotsView: View {
 // MARK: - 만든 직후 공유
 
 /// 슬롯을 만들자마자 링크를 퍼뜨릴 수 있게 — 인스타 바이오·카톡 프로필에 붙이는 게 첫 행동이다.
-private struct SlotCreatedShareSheet: View {
+struct SlotCreatedShareSheet: View {
     let slot: TimeSlot
-    /// 인스타 스토리용 이미지 만들기
-    var onStory: () -> Void = {}
+    /// 인스타 스토리용 이미지 만들기 (nil 이면 버튼을 숨긴다 — 온보딩)
+    var onStory: (() -> Void)? = {}
+    /// 있으면 '나중에' 대신 이 버튼으로 끝낸다 (온보딩 마지막 단계)
+    var doneTitle: String? = nil
+    var onDone: (() -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
+    @Environment(AuthViewModel.self) private var auth
     @State private var copied = false
     @State private var copiedBio = false
 
@@ -472,6 +482,7 @@ private struct SlotCreatedShareSheet: View {
                     Button {
                         UIPasteboard.general.url = url
                         copied = true
+                        LinkShareRecorder.record(username: auth.user?.username)
                     } label: {
                         Label(copied ? "복사했어요" : "링크 복사", systemImage: copied ? "checkmark" : "doc.on.doc")
                             .font(.subheadline.weight(.semibold))
@@ -480,7 +491,9 @@ private struct SlotCreatedShareSheet: View {
                             .background(Theme.surface, in: Capsule())
                     }
                     .buttonStyle(.plain)
-                    ShareLink(item: url) {
+                    Button {
+                        ShareSheet.shareMyLink(url, username: auth.user?.username)
+                    } label: {
                         Label("공유", systemImage: "square.and.arrow.up")
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.white)
@@ -488,6 +501,7 @@ private struct SlotCreatedShareSheet: View {
                             .padding(.vertical, 12)
                             .background(Theme.accent, in: Capsule())
                     }
+                    .buttonStyle(.plain)
                 }
             }
             // 인스타·유튜브 바이오에는 예약 링크 하나보다 내 링크 페이지(모든 예약 링크·소개)가 낫다 (개선-39)
@@ -495,6 +509,7 @@ private struct SlotCreatedShareSheet: View {
                 Button {
                     UIPasteboard.general.url = bioURL
                     copiedBio = true
+                    LinkShareRecorder.record(username: auth.user?.username)
                 } label: {
                     HStack(spacing: 10) {
                         Image(systemName: copiedBio ? "checkmark" : "person.crop.square")
@@ -517,6 +532,7 @@ private struct SlotCreatedShareSheet: View {
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("copyBioURL")
             }
+            if let onStory {
             Button {
                 onStory()
             } label: {
@@ -539,9 +555,22 @@ private struct SlotCreatedShareSheet: View {
                     )
             }
             .buttonStyle(.plain)
-            Button("나중에") { dismiss() }
-                .font(.subheadline)
-                .foregroundStyle(Theme.secondaryText)
+            }
+            if let onDone {
+                Button(action: onDone) {
+                    Text(doneTitle ?? "시작하기")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Theme.accent)
+                .accessibilityIdentifier("onboardingLinkDone")
+            } else {
+                Button("나중에") { dismiss() }
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.secondaryText)
+            }
         }
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
