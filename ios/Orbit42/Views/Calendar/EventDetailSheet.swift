@@ -62,6 +62,9 @@ struct EventDetailSheet: View {
     @State private var earningInputText = ""
     @State private var earningErrorMessage: String?
 
+    /// '기록 더하기'를 눌러 펼침 (개선-36)
+    @State private var showExtraRecords = false
+
     /// 시간 로그 (사진 + 공개 범위)
     @State private var post: EventPost?
     @State private var didLoadPost = false
@@ -150,6 +153,13 @@ struct EventDetailSheet: View {
         guard let calendarId = event.calendarId else { return nil }
         return viewModel.calendars.first { $0.id == calendarId }
     }
+
+    /// 이미 적어 둔 분류·수익·사진이 있으면 접지 않는다
+    private var hasExtraRecords: Bool {
+        selectedBucket != nil || earningKrw != nil || (post?.imageUrls.isEmpty == false)
+    }
+
+    private var isPastEvent: Bool { event.endAt < Date() }
 
     var body: some View {
         NavigationStack {
@@ -278,61 +288,91 @@ struct EventDetailSheet: View {
                     importanceSection
                 }
 
-                Section {
-                    Menu {
-                        Picker("자산 분류", selection: bucketSelection) {
-                            Text("기본 (캘린더 용도)")
-                                .tag(nil as String?)
-                            ForEach(AssetBucketChoice.allCases) { choice in
-                                HStack(spacing: 6) {
-                                    Circle()
-                                        .fill(choice.color)
-                                        .frame(width: 8, height: 8)
-                                    Text(choice.label)
-                                }
-                                .tag(choice.rawValue as String?)
-                            }
-                        }
-                    } label: {
-                        HStack {
-                            Text("자산 분류")
-                                .foregroundStyle(Theme.primaryText)
-                            Spacer()
-                            if isSavingBucket {
-                                ProgressView()
-                                    .tint(Theme.secondaryText)
-                            } else {
-                                HStack(spacing: 6) {
-                                    if let choice = currentBucketChoice {
+                // 자산 분류·수익 기록·시간 로그는 '기록 더하기' 한 줄 안에 — 값이 있으면 펼쳐 둔다 (개선-36, 숨기기만)
+                if showExtraRecords || hasExtraRecords {
+                    Section {
+                        Menu {
+                            Picker("자산 분류", selection: bucketSelection) {
+                                Text("기본 (캘린더 용도)")
+                                    .tag(nil as String?)
+                                ForEach(AssetBucketChoice.allCases) { choice in
+                                    HStack(spacing: 6) {
                                         Circle()
                                             .fill(choice.color)
                                             .frame(width: 8, height: 8)
                                         Text(choice.label)
-                                    } else {
-                                        Text("기본 (캘린더 용도)")
                                     }
-                                    Image(systemName: "chevron.up.chevron.down")
-                                        .font(.caption2)
+                                    .tag(choice.rawValue as String?)
                                 }
-                                .font(.subheadline)
-                                .foregroundStyle(Theme.secondaryText)
+                            }
+                        } label: {
+                            HStack {
+                                Text("자산 분류")
+                                    .foregroundStyle(Theme.primaryText)
+                                Spacer()
+                                if isSavingBucket {
+                                    ProgressView()
+                                        .tint(Theme.secondaryText)
+                                } else {
+                                    HStack(spacing: 6) {
+                                        if let choice = currentBucketChoice {
+                                            Circle()
+                                                .fill(choice.color)
+                                                .frame(width: 8, height: 8)
+                                            Text(choice.label)
+                                        } else {
+                                            Text("기본 (캘린더 용도)")
+                                        }
+                                        Image(systemName: "chevron.up.chevron.down")
+                                            .font(.caption2)
+                                    }
+                                    .font(.subheadline)
+                                    .foregroundStyle(Theme.secondaryText)
+                                }
                             }
                         }
+                        .disabled(isSavingBucket || isDeleting)
+                        .alert("분류를 저장하지 못했어요", isPresented: showBucketErrorAlert) {
+                            Button("확인", role: .cancel) { bucketErrorMessage = nil }
+                        } message: {
+                            Text(bucketErrorMessage ?? "")
+                        }
+                    } footer: {
+                        Text("리포트 탭 분석에서 이 일정만 다른 분류로 계산돼요.")
                     }
-                    .disabled(isSavingBucket || isDeleting)
-                    .alert("분류를 저장하지 못했어요", isPresented: showBucketErrorAlert) {
-                        Button("확인", role: .cancel) { bucketErrorMessage = nil }
-                    } message: {
-                        Text(bucketErrorMessage ?? "")
+                    .listRowBackground(Theme.surface)
+
+                    // 수익 기록은 지난 일정에만 (이미 적어 둔 값이 있으면 그대로 보인다)
+                    if isPastEvent || earningKrw != nil {
+                        earningSection
                     }
-                } footer: {
-                    Text("리포트 탭 분석에서 이 일정만 다른 분류로 계산돼요.")
+
+                    timelogSection
+                } else {
+                    Section {
+                        Button {
+                            withAnimation { showExtraRecords = true }
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "plus.circle")
+                                    .foregroundStyle(Theme.accent)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("기록 더하기")
+                                        .foregroundStyle(Theme.primaryText)
+                                    Text(isPastEvent ? "자산 분류 · 수익 · 사진" : "자산 분류 · 사진")
+                                        .font(.caption)
+                                        .foregroundStyle(Theme.secondaryText)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(Theme.secondaryText)
+                            }
+                        }
+                        .accessibilityIdentifier("addRecords")
+                    }
+                    .listRowBackground(Theme.surface)
                 }
-                .listRowBackground(Theme.surface)
-
-                earningSection
-
-                timelogSection
 
                 }
             }

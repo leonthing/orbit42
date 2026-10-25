@@ -137,20 +137,20 @@ enum BrowseFixtures {
 
     private static func event(_ id: String, _ title: String, _ start: String, _ end: String, cal: String = "browse-cal-work",
                               allDay: Bool = false, booking: Bool = false, completed: Bool = false, rating: Int? = nil,
-                              location: String? = nil, importance: String = "normal") -> String {
+                              location: String? = nil, importance: String = "normal", bucket: String? = nil) -> String {
         let loc = location.map { "\"\($0)\"" } ?? "null"
         return """
         {"id":"\(id)","title":"\(title)","description":null,"startAt":"\(start)","endAt":"\(end)","allDay":\(allDay),"calendarId":"\(cal)","source":"local",
         "tentative":false,"location":\(loc),"locationLat":null,"locationLng":null,"travelMin":null,"isBooking":\(booking),"bookingId":\(booking ? "\"browse-b-\(id)\"" : "null"),
         "bookingRole":\(booking ? "\"host\"" : "null"),"isRecurring":false,"seriesId":null,"originalStart":null,"isAnniversary":false,"anniversaryYears":null,
-        "bucketOverride":null,"earningKrw":null,"autoValueKrw":0,"completed":\(completed),"status":null,"importance":"\(importance)","rating":\(rating.map(String.init) ?? "null"),
+        "bucketOverride":\(bucket.map { "\"\($0)\"" } ?? "null"),"earningKrw":null,"autoValueKrw":0,"completed":\(completed),"status":null,"importance":"\(importance)","rating":\(rating.map(String.init) ?? "null"),
         "ratingNote":null,"reminderMinutes":null,"remindAt":null}
         """
     }
 
     private static var events: String {
         let list = [
-            event("browse-e1", "디자인 스터디", "@D(-2,10:00)", "@D(-2,12:00)", cal: "browse-cal-life", completed: true, rating: 5),
+            event("browse-e1", "디자인 스터디", "@D(-2,10:00)", "@D(-2,12:00)", cal: "browse-cal-life", completed: true, rating: 5, bucket: "invest"),
             event("browse-e2", "주간 회고", "@D(-1,15:00)", "@D(-1,16:00)", completed: true, rating: 4),
             event("browse-e3", "아침 운동", "@D(0,07:30)", "@D(0,08:30)", cal: "browse-cal-life", completed: true, rating: 5),
             event("browse-e4", "커피챗 30분 — 예시 게스트", "@D(0,11:00)", "@D(0,11:30)", booking: true, location: "성수"),
