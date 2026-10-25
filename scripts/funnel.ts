@@ -3,6 +3,7 @@
  * 실행: npx tsx --env-file=.env.local --tsconfig tsconfig.json scripts/funnel.ts [--include-internal] [--by-host]
  * 호스트 이름은 출력하지 않고 H1~Hn(기간 합계 많은 순)으로만 보인다. 기본은 내부 계정 제외.
  * 저장된 값은 날짜·호스트·예약 링크·단계·출처별 횟수뿐 — 사람을 알아볼 값은 없다.
+ * 공유 카드(?via=card)로 들어온 방문은 booking_funnel_via_daily 에 따로 센다(위 합계에 포함된 일부, 1.7.0).
  */
 import { getAdminClient } from "@/lib/supabase";
 
@@ -69,5 +70,29 @@ function summarize(title: string, rows: Row[], byHost: boolean) {
   // 앱 '가입 없이 둘러보기' (개선-47) — 날짜·단계별 횟수만
   const { data: browse } = await db.from("app_browse_daily").select("day, step, count").gte("day", since);
   const b = (step: string, from: string) => (browse ?? []).filter((r) => r.step === step && r.day >= from).reduce((s, r) => s + (r.count as number), 0);
+  // 공유 카드 등 출처별 (1.7.0, ?via=card) — 위 합계 안에 포함된 일부
+  {
+    const { data: viaRows, error: viaErr } = await db
+      .from("booking_funnel_via_daily")
+      .select("day, host_id, step, via, count")
+      .gte("day", since);
+    if (viaErr) {
+      console.log(`\n■ 출처별: 읽지 못함(${viaErr.message})`);
+    } else {
+      let vr = (viaRows ?? []) as Array<{ day: string; host_id: string; step: string; via: string; count: number }>;
+      if (!includeInternal) {
+        const { data: internal } = await db.from("users").select("id").in("username", INTERNAL);
+        const ids = new Set((internal ?? []).map((r) => r.id as string));
+        vr = vr.filter((r) => !ids.has(r.host_id));
+      }
+      const v = (via: string, step: string, from: string) =>
+        vr.filter((r) => r.via === via && r.step === step && r.day >= from).reduce((x, r) => x + r.count, 0);
+      for (const via of ["card"]) {
+        const line = (from: string) => `② ${v(via, "slot_view", from)} → ③ ${v(via, "time_picked", from)} → ④ ${v(via, "booked", from)}`;
+        console.log(`\n■ 출처 ${via === "card" ? "공유 카드" : via}(?via=${via})  7일: ${line(kstDay(6))} · 30일: ${line(since)}`);
+      }
+    }
+  }
+
   console.log(`\n■ 앱 둘러보기  7일: 시작 ${b("start", kstDay(6))} → 가입 ${b("signup", kstDay(6))} · 30일: 시작 ${b("start", since)} → 가입 ${b("signup", since)}`);
 })();

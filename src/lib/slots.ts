@@ -864,6 +864,8 @@ export async function bookSlot(args: {
   selected_location?: string | null;
   /** 방문 흐름 집계 출처 — 앱 API 는 "ios" (개선-32) */
   funnelSource?: "web" | "ios";
+  /** 방문 출처(공유 카드 ?via=card) — 정해 둔 값만 */
+  funnelVia?: string | null;
 }) {
   const session = await getSession();
   const guestId = await getUserId();
@@ -1042,7 +1044,7 @@ export async function bookSlot(args: {
 
   // 방문 흐름 ④ 예약 성공 — 횟수만 (개선-32). 봇 판정은 하지 않는다(예약까지 온 건 사람).
   {
-    const { recordFunnel } = await import("@/lib/funnel");
+    const { recordFunnel, parseFunnelVia } = await import("@/lib/funnel");
     recordFunnel({
       hostId: slot.host_id as string,
       slotId: slot.id as string,
@@ -1050,6 +1052,7 @@ export async function bookSlot(args: {
       source: args.funnelSource === "ios" ? "ios" : "web",
       viewerId: guestId,
       userAgent: "booking",
+      via: parseFunnelVia(args.funnelVia),
     });
   }
 

@@ -23,7 +23,11 @@ export async function GET(
   }
   const { slot, host } = found;
 
-  const location = new URL(request.url).searchParams.get("location");
+  const params2 = new URL(request.url).searchParams;
+  const location = params2.get("location");
+  // ?days=1~7 — 앞으로 N일 안의 시간만, 100개 제한 없이(공유 카드가 한 주를 다 담도록, 1.7.0). 없으면 예전 그대로.
+  const daysParam = Number(params2.get("days"));
+  const withinDays = Number.isInteger(daysParam) && daysParam >= 1 && daysParam <= 7 ? daysParam : null;
   const isAuction = slot.pricing_model === "auction";
   const isMine = session.username === host.username;
   // 호스트 본인에겐 닫은 시간도 '예약 안 받음'으로 보여 다시 열 수 있게 한다.
@@ -59,7 +63,10 @@ export async function GET(
         description: m.description,
         priceCents: m.price_cents,
       })),
-    options: options.slice(0, 100).map((o) => ({
+    options: (withinDays
+      ? options.filter((o) => new Date(o.start_at).getTime() < Date.now() + withinDays * 86_400_000).slice(0, 400)
+      : options.slice(0, 100)
+    ).map((o) => ({
       startAt: o.start_at,
       endAt: o.end_at,
       remaining: o.remaining,
