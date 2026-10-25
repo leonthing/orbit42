@@ -28,6 +28,7 @@ import { ComingUpCard } from "./ComingUpCard";
 import { InsightsCard } from "./InsightsCard";
 import { ProfileCalendarCards } from "./ProfileCalendarCards";
 import { PublicLinkProfile } from "./PublicLinkProfile";
+import { displayCustomLinks } from "@/lib/custom-links";
 import { ProfileTabs } from "./ProfileTabs";
 import { MobileProfileLinks } from "./MobileProfileLinks";
 import { ShareMenu } from "@/components/ShareMenu";
@@ -238,6 +239,7 @@ export default async function PublicProfile({
           rating={hostRating}
           totalBookings={value?.total_bookings ?? 0}
           themeKey={(profile.link_theme as string | null) ?? null}
+          customLinks={displayCustomLinks((profile as { custom_links?: unknown }).custom_links)}
         />
       </>
     );

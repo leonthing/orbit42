@@ -61,6 +61,7 @@ enum BrowseFixtures {
         case ["location-buffers"]: template = #"{"buffers":[]}"#
         case ["calendars", "goals"]: template = #"{"goals":[]}"#
         case ["blocks"]: template = #"{"users":[]}"#
+        case ["me", "links"]: template = #"{"links":[{"title":"포트폴리오","url":"https://example.com/portfolio"},{"title":"카카오 오픈채팅","url":"https://open.kakao.com/o/example"},{"title":"블로그","url":"https://blog.example.com"}]}"#
         case ["reminders"]: template = #"{"reminders":[]}"#
         case ["timeline"]: template = timeline
         default:

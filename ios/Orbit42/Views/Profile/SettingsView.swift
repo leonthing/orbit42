@@ -156,6 +156,13 @@ struct SettingsView: View {
                 menuRow(icon: "paintpalette", title: "공개 링크 테마")
             }
             .accessibilityIdentifier("settings.linkTheme")
+
+            NavigationLink {
+                CustomLinksView()
+            } label: {
+                menuRow(icon: "link", title: "링크 페이지 버튼")
+            }
+            .accessibilityIdentifier("settings.customLinks")
         }
         .listRowBackground(Theme.surface)
     }

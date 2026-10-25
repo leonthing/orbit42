@@ -332,7 +332,7 @@ export async function getProfile(username: string) {
   const { data } = await db
     .from("users")
     .select(
-      "username, display_name, birth_date, bio, avatar_url, social_links, education, experience, interests, email, email_verified, created_at, share_image_url, link_theme",
+      "username, display_name, birth_date, bio, avatar_url, social_links, custom_links, education, experience, interests, email, email_verified, created_at, share_image_url, link_theme",
     )
     .eq("username", username)
     .single();
