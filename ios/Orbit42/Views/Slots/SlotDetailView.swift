@@ -22,6 +22,10 @@ struct SlotDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AuthViewModel.self) private var auth
     @State private var viewModel: SlotDetailViewModel
+    /// 결제 안내 (계정 값, 유료일 때 가격 아래에서 바로 — 개선-38)
+    @State private var paymentText = ""
+    @State private var confirmingNoPayment = false
+    @State private var paymentError: String?
     @State private var showingAddWindowSheet = false
     @State private var newWindowDate = Date()
     /// 썸네일 X 로 지우기 전에 한 번 묻는다 (개선-26)
@@ -57,7 +61,7 @@ struct SlotDetailView: View {
                         .tint(Theme.accent)
                 } else {
                     Button("저장") {
-                        Task { await save() }
+                        Task { await attemptSave() }
                     }
                     .fontWeight(.semibold)
                     .disabled(viewModel.detail == nil)
@@ -81,9 +85,44 @@ struct SlotDetailView: View {
         .task {
             await viewModel.load()
         }
+        .onAppear { paymentText = auth.user?.paymentInstructions ?? "" }
+        .alert(PaymentConfirmCopy.title, isPresented: $confirmingNoPayment) {
+            Button("결제 안내 적기", role: .cancel) {}
+            Button("그대로 저장") { Task { await save() } }
+        } message: {
+            Text(PaymentConfirmCopy.message)
+        }
+        .alert("결제 안내를 저장하지 못했어요", isPresented: Binding(get: { paymentError != nil }, set: { if !$0 { paymentError = nil } })) {
+            Button("확인", role: .cancel) {}
+        } message: {
+            Text(paymentError ?? "")
+        }
+    }
+
+    private var editedPriceWon: Int { Int(viewModel.priceWonText.filter(\.isNumber)) ?? 0 }
+
+    /// 유료인데 결제 안내가 비어 있으면 한 번 묻는다 (서버 동작은 그대로 — 바로 확정)
+    private func attemptSave() async {
+        if viewModel.detail?.isAuction != true, editedPriceWon > 0,
+           paymentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            confirmingNoPayment = true
+        } else {
+            await save()
+        }
     }
 
     private func save() async {
+        if viewModel.detail?.isAuction != true, editedPriceWon > 0 {
+            do {
+                try await PaymentInstructionsSaver.saveIfChanged(paymentText, auth: auth)
+            } catch let apiError as APIError {
+                if let message = apiError.errorDescription { paymentError = message }
+                return
+            } catch {
+                paymentError = "네트워크를 확인해 주세요."
+                return
+            }
+        }
         if await viewModel.save(), let detail = viewModel.detail {
             listViewModel.applyUpdated(detail.asTimeSlot)
             // 저장 성공 시 목록으로 복귀 — "저장했어요" alert 대신 pop이 피드백.
@@ -255,12 +294,15 @@ struct SlotDetailView: View {
                     Text("원")
                         .foregroundStyle(Theme.secondaryText)
                 }
+                if editedPriceWon > 0 {
+                    PaymentInlineField(text: $paymentText)
+                }
             }
         } header: {
             Text("가격")
         } footer: {
             if viewModel.detail?.isAuction != true {
-                Text("0원이면 무료로 열려요")
+                Text(editedPriceWon > 0 ? PaymentConfirmCopy.footer : "0원이면 무료로 열려요")
             }
         }
         .listRowBackground(Theme.surface)

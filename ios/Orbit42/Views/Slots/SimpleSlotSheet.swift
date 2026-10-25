@@ -5,6 +5,11 @@ import SwiftUI
 struct SimpleSlotSheet: View {
     let viewModel: SlotsViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(AuthViewModel.self) private var auth
+    /// 결제 안내 (계정 값, 유료일 때 가격 아래에서 바로 적는다 — 개선-38)
+    @State private var paymentText = ""
+    @State private var confirmingNoPayment = false
+    @State private var paymentError: String?
 
     @State private var title = ""
     @State private var duration = 60
@@ -61,10 +66,13 @@ struct SimpleSlotSheet: View {
                             .keyboardType(.numberPad)
                         Text("원").foregroundStyle(Theme.secondaryText)
                     }
+                    if priceWon > 0 {
+                        PaymentInlineField(text: $paymentText)
+                    }
                 } header: {
                     Text("가격")
                 } footer: {
-                    Text(priceWon == 0 ? "0원이면 무료로 받아요." : "설정 > 결제 안내(계좌이체)를 적어 두면 입금 확인 후 확정돼요.")
+                    Text(priceWon == 0 ? "0원이면 무료로 받아요." : PaymentConfirmCopy.footer)
                 }
 
                 Section {
@@ -101,11 +109,25 @@ struct SimpleSlotSheet: View {
                     Button("취소") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(viewModel.isCreatingPreset ? "만드는 중…" : "만들기") { save() }
+                    Button(viewModel.isCreatingPreset ? "만드는 중…" : "만들기") { attemptSave() }
                         .disabled(!canSave)
                 }
             }
-            .onAppear { titleFocused = true }
+            .onAppear {
+                titleFocused = true
+                paymentText = auth.user?.paymentInstructions ?? ""
+            }
+            .alert(PaymentConfirmCopy.title, isPresented: $confirmingNoPayment) {
+                Button("결제 안내 적기", role: .cancel) {}
+                Button("그대로 만들기") { save() }
+            } message: {
+                Text(PaymentConfirmCopy.message)
+            }
+            .alert("결제 안내를 저장하지 못했어요", isPresented: Binding(get: { paymentError != nil }, set: { if !$0 { paymentError = nil } })) {
+                Button("확인", role: .cancel) {}
+            } message: {
+                Text(paymentError ?? "")
+            }
         }
     }
 
@@ -119,6 +141,15 @@ struct SimpleSlotSheet: View {
                 .background(selected ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(Theme.fill(0.08)), in: Capsule())
         }
         .buttonStyle(.borderless)
+    }
+
+    /// 유료인데 결제 안내가 비어 있으면 한 번 묻는다 (서버 동작은 그대로 — 바로 확정)
+    private func attemptSave() {
+        if priceWon > 0, paymentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            confirmingNoPayment = true
+        } else {
+            save()
+        }
     }
 
     private func save() {
@@ -135,6 +166,17 @@ struct SimpleSlotSheet: View {
             showOnFeed: false
         )
         Task {
+            if priceWon > 0 {
+                do {
+                    try await PaymentInstructionsSaver.saveIfChanged(paymentText, auth: auth)
+                } catch let apiError as APIError {
+                    if let message = apiError.errorDescription { paymentError = message }
+                    return
+                } catch {
+                    paymentError = "네트워크를 확인해 주세요."
+                    return
+                }
+            }
             if await viewModel.createSimple(input) { dismiss() }
         }
     }
