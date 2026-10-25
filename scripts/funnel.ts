@@ -65,4 +65,9 @@ function summarize(title: string, rows: Row[], byHost: boolean) {
   console.log(`예약 링크 방문 흐름 (한국 시간, ${includeInternal ? "내부 계정 포함" : "내부 계정 제외"})`);
   summarize(`최근 7일 (${kstDay(6)} ~ ${kstDay(0)})`, rows.filter((r) => r.day >= kstDay(6)), byHost);
   summarize(`최근 30일 (${since} ~ ${kstDay(0)})`, rows, byHost);
+
+  // 앱 '가입 없이 둘러보기' (개선-47) — 날짜·단계별 횟수만
+  const { data: browse } = await db.from("app_browse_daily").select("day, step, count").gte("day", since);
+  const b = (step: string, from: string) => (browse ?? []).filter((r) => r.step === step && r.day >= from).reduce((s, r) => s + (r.count as number), 0);
+  console.log(`\n■ 앱 둘러보기  7일: 시작 ${b("start", kstDay(6))} → 가입 ${b("signup", kstDay(6))} · 30일: 시작 ${b("start", since)} → 가입 ${b("signup", since)}`);
 })();
