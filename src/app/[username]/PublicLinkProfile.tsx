@@ -321,19 +321,7 @@ export function PublicLinkProfile({
           </div>
         )}
 
-        {/* 가입 CTA */}
-        {!loggedIn && (
-          <AppStoreAwareLink
-            href={`/signup?ref=${username}`}
-            iosLabel="앱으로 나도 예약 링크 만들기"
-            className="mt-10 inline-block rounded-full px-6 py-3 text-sm font-bold transition-transform hover:scale-[1.02]"
-            style={{ backgroundColor: theme.accent, color: theme.onAccent }}
-          >
-            나도 예약 링크 만들기
-          </AppStoreAwareLink>
-        )}
-
-        <p className="mt-6 text-2xs leading-relaxed" style={{ color: theme.muted }}>
+        <p className="mt-10 text-2xs leading-relaxed" style={{ color: theme.muted }}>
           <AppStoreAwareLink href="/" className="font-semibold">
             orbit42
           </AppStoreAwareLink>{" "}

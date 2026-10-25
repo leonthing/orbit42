@@ -136,7 +136,7 @@ function ownLinkNote() {
   );
 }
 
-/** 예약 관리 링크가 있으면 그쪽으로(로그인 없이 조회·취소·시간 변경 제안), 없으면 내 예약 목록 */
+/** 예약 관리 링크가 있으면 그쪽으로(로그인 없이 조회·취소·시간 바꾸기), 없으면 내 예약 목록 */
 function manageHref(managePath?: string) {
   return siteUrl(managePath ?? "/bookings");
 }
