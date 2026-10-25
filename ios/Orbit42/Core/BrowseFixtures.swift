@@ -326,7 +326,7 @@ enum BrowseFixtures {
         "mode":"auto","pricingModel":"fixed","active":true,"autoApprove":\(s.5 == 0),"paymentMethod":"\("offline")","shareUrl":"https://orbit42.org/example.user/s/\(s.1)",
         "createdAt":"@D(-20,09:00)","locations":["성수","Google Meet"],
         "workingHours":{"mon":[{"start":"10:00","end":"18:00"}],"tue":[{"start":"10:00","end":"18:00"}],"wed":[{"start":"10:00","end":"18:00"}],"thu":[{"start":"10:00","end":"18:00"}],"fri":[{"start":"10:00","end":"18:00"}]},
-        "slotIntervalMin":\(s.4),"minNoticeHours":4,"maxAdvanceDays":30,"bufferMin":10,"validFrom":null,"validUntil":null,"imageUrls":[],"menuIds":[]}}
+        "slotIntervalMin":\(s.4),"minNoticeHours":4,"maxAdvanceDays":30,"bufferMin":10,"validFrom":null,"validUntil":null,"imageUrls":[],"menuIds":[]},"bookingCount":\(s.0 == "browse-s1" ? 3 : 0)}
         """
     }
 

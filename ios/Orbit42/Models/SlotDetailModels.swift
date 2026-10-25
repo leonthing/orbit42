@@ -102,6 +102,8 @@ struct SlotDetail: Decodable, Identifiable, Sendable {
 
 struct SlotDetailResponse: Decodable {
     let slot: SlotDetail
+    /// 이 링크로 받은 예약 기록 수(지난·취소 포함) — 0이면 삭제, 있으면 보관만 (개선-45). 옛 서버면 nil.
+    let bookingCount: Int?
 }
 
 // MARK: - 예약 가능 시간 (availability)

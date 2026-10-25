@@ -27,6 +27,9 @@ struct SlotDetailView: View {
     @State private var confirmingNoPayment = false
     @State private var paymentError: String?
     @State private var showingAddWindowSheet = false
+    /// 고급 설정 펼침 (개선-45) — 접어도 값은 그대로 저장된다
+    @State private var showingAdvanced = false
+    @State private var confirmingRemove = false
     @State private var newWindowDate = Date()
     /// 썸네일 X 로 지우기 전에 한 번 묻는다 (개선-26)
     @State private var photoToDelete: String?
@@ -81,6 +84,23 @@ struct SlotDetailView: View {
         }
         .sheet(isPresented: $showingAddWindowSheet) {
             addWindowSheet
+        }
+        .alert(
+            (viewModel.bookingCount ?? 0) == 0 ? "예약 링크를 삭제할까요?" : "예약 링크를 보관할까요?",
+            isPresented: $confirmingRemove
+        ) {
+            if (viewModel.bookingCount ?? 0) == 0 {
+                Button("삭제", role: .destructive) { Task { await performRemove() } }
+            } else {
+                Button("보관") { Task { await performRemove() } }
+            }
+            Button("취소", role: .cancel) {}
+        } message: {
+            if let count = viewModel.bookingCount, count > 0 {
+                Text("예약 기록 \(count)건이 있어 지울 수 없고 보관만 돼요. 보관하면 공개 페이지에서 내려가고 새 예약을 받지 않아요. 받은 예약과 입금 상태는 그대로 남아요.")
+            } else {
+                Text("열어 둔 시간과 함께 사라지고 되돌릴 수 없어요. 이 링크로 받은 예약은 없어요.")
+            }
         }
         .task {
             await viewModel.load()
@@ -182,21 +202,30 @@ struct SlotDetailView: View {
 
     private var editorForm: some View {
         Form {
+            // 처음 보이는 칸 — 제목·길이·가격·장소·열어 둘 시간 (개선-45: 처음 만드는 호스트가 겁먹지 않게)
             activeSection
             basicSection
             priceSection
             locationSection
-            modeSection
             if viewModel.mode == "auto" {
-                autoSettingsSection
                 workingHoursSection
             } else {
                 windowsSection
             }
-            validitySection
-            servicesSection
-            shareImagesSection
+            advancedToggleSection
+            // 고급 — 접어도 값은 그대로 저장된다
+            if showingAdvanced {
+                advancedBasicSection
+                modeSection
+                if viewModel.mode == "auto" {
+                    autoSettingsSection
+                }
+                validitySection
+                servicesSection
+                shareImagesSection
+            }
             previewSection
+            removeSection
         }
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
@@ -243,6 +272,59 @@ struct SlotDetailView: View {
         Section("기본 정보") {
             TextField("제목", text: $viewModel.title)
 
+            Picker("길이", selection: $viewModel.durationMin) {
+                ForEach(optionList([15, 30, 45, 60, 90, 120], current: viewModel.durationMin), id: \.self) { minutes in
+                    Text("\(minutes)분").tag(minutes)
+                }
+            }
+        }
+        .listRowBackground(Theme.surface)
+    }
+
+    // MARK: 고급 (개선-45)
+
+    /// 접힌 상태에서도 기본값과 다른 고급 설정을 한 줄로 보여 준다 — 숨은 설정 때문에 헷갈리지 않게
+    private var advancedSummary: String {
+        var parts: [String] = []
+        if !viewModel.autoApprove { parts.append("내가 수락해야 확정") }
+        if viewModel.slotType != "1on1" { parts.append(viewModel.slotType == "group" ? "그룹" : "함께하기") }
+        if viewModel.capacity > 1 { parts.append("정원 \(viewModel.capacity)명") }
+        if viewModel.mode != "auto" { parts.append("시간 직접 고르기") }
+        if viewModel.validFromEnabled || viewModel.validUntilEnabled { parts.append("예약 받는 기간") }
+        if !currentMenuIds.isEmpty { parts.append("서비스 \(currentMenuIds.count)개") }
+        if !(shareImages ?? viewModel.detail?.imageUrls ?? []).isEmpty { parts.append("공유 이미지") }
+        return parts.isEmpty ? "설명·확정 방식·예약 받는 기간·서비스 등" : parts.joined(separator: " · ")
+    }
+
+    private var advancedToggleSection: some View {
+        Section {
+            Button {
+                withAnimation { showingAdvanced.toggle() }
+            } label: {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("고급 설정")
+                            .foregroundStyle(Theme.primaryText)
+                        if !showingAdvanced {
+                            Text(advancedSummary)
+                                .font(.caption)
+                                .foregroundStyle(Theme.secondaryText)
+                                .lineLimit(2)
+                        }
+                    }
+                    Spacer()
+                    Image(systemName: showingAdvanced ? "chevron.up" : "chevron.down")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Theme.secondaryText)
+                }
+            }
+            .accessibilityIdentifier("slotAdvancedToggle")
+        }
+        .listRowBackground(Theme.surface)
+    }
+
+    private var advancedBasicSection: some View {
+        Section {
             ZStack(alignment: .topLeading) {
                 if viewModel.descriptionText.isEmpty {
                     Text("설명")
@@ -261,16 +343,14 @@ struct SlotDetailView: View {
                 Text("그룹").tag("group")
             }
 
-            Picker("소요시간", selection: $viewModel.durationMin) {
-                ForEach(optionList([15, 30, 45, 60, 90, 120], current: viewModel.durationMin), id: \.self) { minutes in
-                    Text("\(minutes)분").tag(minutes)
-                }
-            }
-
             Stepper("정원 \(viewModel.capacity)명", value: $viewModel.capacity, in: 1...20)
 
-            Toggle("자동 승인", isOn: $viewModel.autoApprove)
+            Toggle("예약을 바로 확정", isOn: $viewModel.autoApprove)
                 .tint(Theme.accent)
+        } header: {
+            Text("설명·확정 방식")
+        } footer: {
+            Text(viewModel.autoApprove ? "예약이 들어오면 바로 확정돼요." : "예약이 들어오면 내가 수락해야 확정돼요.")
         }
         .listRowBackground(Theme.surface)
     }
@@ -316,7 +396,7 @@ struct SlotDetailView: View {
                 HStack {
                     Text(viewModel.locations[index])
                     Spacer()
-                    VisibleRemoveButton(accessibilityLabel: "\(viewModel.locations[index]) 위치 빼기") {
+                    VisibleRemoveButton(accessibilityLabel: "\(viewModel.locations[index]) 장소 빼기") {
                         viewModel.locations.remove(at: index)
                     }
                 }
@@ -326,7 +406,7 @@ struct SlotDetailView: View {
             }
 
             HStack {
-                TextField("위치 추가 (예: 강남역, 온라인)", text: $viewModel.newLocationText)
+                TextField("장소 추가 (예: 강남역, 온라인)", text: $viewModel.newLocationText)
                     .onSubmit { viewModel.addLocation() }
                 Button {
                     viewModel.addLocation()
@@ -336,10 +416,10 @@ struct SlotDetailView: View {
                 }
                 .buttonStyle(.borderless)
                 .disabled(viewModel.newLocationText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                .accessibilityLabel("위치 추가")
+                .accessibilityLabel("장소 추가")
             }
         } header: {
-            Text("위치")
+            Text("장소")
         } footer: {
             if !viewModel.locations.isEmpty {
                 Text("옆의 빨간 빼기 버튼으로 지울 수 있어요")
@@ -353,8 +433,8 @@ struct SlotDetailView: View {
     private var modeSection: some View {
         Section("예약 방식") {
             Picker("방식", selection: $viewModel.mode) {
-                Text("자동(캘린더 기반)").tag("auto")
-                Text("수동(직접 시간 등록)").tag("manual")
+                Text("내 일정 피해 자동으로").tag("auto")
+                Text("시간 직접 고르기").tag("manual")
             }
         }
         .listRowBackground(Theme.surface)
@@ -363,7 +443,7 @@ struct SlotDetailView: View {
     // MARK: 자동 모드 설정
 
     private var autoSettingsSection: some View {
-        Section("자동 예약 설정") {
+        Section("자동으로 열 때 세부 설정") {
             Picker("시간 간격", selection: $viewModel.slotIntervalMin) {
                 ForEach(optionList([15, 30, 60], current: viewModel.slotIntervalMin), id: \.self) { minutes in
                     Text("\(minutes)분").tag(minutes)
@@ -406,10 +486,12 @@ struct SlotDetailView: View {
                 }
             }
         } header: {
-            Text("요일별 근무시간")
+            Text("매주 열어둘 시간")
         } footer: {
             if viewModel.hasMultiIntervalDay {
                 Text("여러 구간이 설정된 요일은 첫 구간만 편집할 수 있어요. 여러 구간은 웹에서 편집할 수 있어요")
+            } else {
+                Text("이 시간대 안에서 내 일정과 겹치지 않는 시간이 자동으로 열려요.")
             }
         }
         .listRowBackground(Theme.surface)
@@ -525,12 +607,12 @@ struct SlotDetailView: View {
 
     private var validitySection: some View {
         Section {
-            Toggle("판매 시작일 설정", isOn: $viewModel.validFromEnabled)
+            Toggle("예약 받기 시작일 정하기", isOn: $viewModel.validFromEnabled)
                 .tint(Theme.accent)
             if viewModel.validFromEnabled {
                 DatePicker("시작", selection: $viewModel.validFromDate, displayedComponents: [.date, .hourAndMinute])
             }
-            Toggle("판매 종료일 설정", isOn: $viewModel.validUntilEnabled)
+            Toggle("예약 받기 마감일 정하기", isOn: $viewModel.validUntilEnabled)
                 .tint(Theme.accent)
             if viewModel.validUntilEnabled {
                 DatePicker("종료", selection: $viewModel.validUntilDate, displayedComponents: [.date, .hourAndMinute])
@@ -809,6 +891,45 @@ struct SlotDetailView: View {
         formatter.dateFormat = "HH:mm"
         return formatter
     }()
+
+    // MARK: 삭제·보관 (개선-45) — 예약 데이터는 어떤 경우에도 지우지 않는다(CEO 10/26)
+
+    @ViewBuilder
+    private var removeSection: some View {
+        if let count = viewModel.bookingCount {
+            Section {
+                Button(role: count == 0 ? .destructive : nil) {
+                    confirmingRemove = true
+                } label: {
+                    HStack {
+                        Spacer()
+                        if viewModel.isRemoving {
+                            ProgressView()
+                        } else {
+                            Text(count == 0 ? "예약 링크 삭제" : "예약 링크 보관")
+                                .foregroundStyle(count == 0 ? Color.red : Theme.accent)
+                        }
+                        Spacer()
+                    }
+                }
+                .disabled(viewModel.isRemoving)
+                .accessibilityIdentifier("slotRemove")
+            } footer: {
+                Text(count == 0
+                     ? "이 링크로 받은 예약이 없어 지울 수 있어요."
+                     : "예약 기록 \(count)건이 있어 지울 수 없고 보관만 돼요. 받은 예약과 입금 상태는 그대로 남아요.")
+            }
+            .listRowBackground(Theme.surface)
+        }
+    }
+
+    private func performRemove() async {
+        let removed = (viewModel.bookingCount ?? 0) == 0 ? await viewModel.deleteSlot() : await viewModel.archiveSlot()
+        if removed {
+            listViewModel.removeFromList(id: viewModel.slotId)
+            dismiss()
+        }
+    }
 
     private var previewSection: some View {
         Section {

@@ -168,7 +168,7 @@ struct SlotBookingView: View {
                     text: slot.isAuction ? "경매" : slot.priceText
                 )
                 if slot.autoApprove {
-                    infoBadge(icon: "bolt", text: "자동 확정")
+                    infoBadge(icon: "bolt", text: "바로 확정")
                 }
             }
 
