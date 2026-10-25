@@ -87,7 +87,9 @@ struct SimpleSlotSheet: View {
                         }
                     }
                     DatePicker("시작", selection: $start, displayedComponents: .hourAndMinute)
+                        .environment(\.locale, Locale(identifier: "ko_KR"))   // 앱에 ko 현지화가 없어 '10:00 AM' 으로 나오던 것
                     DatePicker("끝", selection: $end, displayedComponents: .hourAndMinute)
+                        .environment(\.locale, Locale(identifier: "ko_KR"))
                 } header: {
                     Text("매주 열어둘 시간")
                 } footer: {

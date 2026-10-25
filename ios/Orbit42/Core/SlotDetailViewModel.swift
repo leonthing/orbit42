@@ -36,6 +36,9 @@ final class SlotDetailViewModel {
     /// 예약 받는 중인지 — 목록에서 밀기로만 바꾸던 것을 상세에서도 (개선-26)
     private(set) var isActive: Bool?
     private(set) var isTogglingActive = false
+    /// 이 링크로 받은 예약 기록 수 — 0이면 삭제, 있으면 보관만 (개선-45). nil 이면 모름(옛 서버) → 버튼 숨김.
+    private(set) var bookingCount: Int?
+    private(set) var isRemoving = false
 
     // 예약 가능 시간 미리보기 / 시간 창
     private(set) var availability: SlotAvailabilityResponse?
@@ -90,6 +93,7 @@ final class SlotDetailViewModel {
         do {
             let response: SlotDetailResponse = try await api.get("/api/v1/slots/\(slotId)")
             detail = response.slot
+            bookingCount = response.bookingCount
             populate(from: response.slot)
             await loadAvailability()
         } catch is CancellationError {
@@ -193,6 +197,56 @@ final class SlotDetailViewModel {
         newLocationText = ""
     }
 
+    // MARK: - 삭제·보관 (개선-45)
+
+    /// 예약 기록이 없는 링크만 지운다. 그 사이 예약이 들어왔으면 서버가 409로 거절 → 예약 수를 다시 받아 보관을 안내한다.
+    func deleteSlot() async -> Bool {
+        guard !isRemoving else { return false }
+        isRemoving = true
+        defer { isRemoving = false }
+        do {
+            let _: OkResponse = try await api.delete("/api/v1/slots/\(slotId)")
+            return true
+        } catch let APIError.server(message, statusCode) where statusCode == 409 {
+            if let response: SlotDetailResponse = try? await api.get("/api/v1/slots/\(slotId)") {
+                bookingCount = response.bookingCount
+            }
+            actionMessage = message
+            return false
+        } catch is CancellationError {
+            return false
+        } catch let urlError as URLError where urlError.code == .cancelled {
+            return false
+        } catch let apiError as APIError {
+            actionMessage = apiError.errorDescription
+            return false
+        } catch {
+            actionMessage = "예약 링크를 삭제하지 못했어요. 네트워크를 확인해 주세요."
+            return false
+        }
+    }
+
+    /// 보관 — 비공개로 바꾸고 목록·링크에서 뺀다. 받은 예약·입금 상태는 그대로.
+    func archiveSlot() async -> Bool {
+        guard !isRemoving else { return false }
+        isRemoving = true
+        defer { isRemoving = false }
+        do {
+            let _: OkResponse = try await api.post("/api/v1/slots/\(slotId)/archive", body: EmptyBody())
+            return true
+        } catch is CancellationError {
+            return false
+        } catch let urlError as URLError where urlError.code == .cancelled {
+            return false
+        } catch let apiError as APIError {
+            actionMessage = apiError.errorDescription
+            return false
+        } catch {
+            actionMessage = "예약 링크를 보관하지 못했어요. 네트워크를 확인해 주세요."
+            return false
+        }
+    }
+
     // MARK: - 시간 창 (manual 슬롯)
 
     func addWindow(startAt: Date) async -> Bool {
@@ -215,7 +269,7 @@ final class SlotDetailViewModel {
             actionMessage = apiError.errorDescription
             return false
         } catch {
-            actionMessage = "시간 창을 추가하지 못했어요. 네트워크를 확인해 주세요."
+            actionMessage = "시간을 추가하지 못했어요. 네트워크를 확인해 주세요."
             return false
         }
     }
@@ -235,7 +289,7 @@ final class SlotDetailViewModel {
         } catch let apiError as APIError {
             actionMessage = apiError.errorDescription
         } catch {
-            actionMessage = "시간 창을 삭제하지 못했어요. 네트워크를 확인해 주세요."
+            actionMessage = "시간을 지우지 못했어요. 네트워크를 확인해 주세요."
         }
     }
 

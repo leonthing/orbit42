@@ -176,6 +176,13 @@ export async function deleteMyAccount() {
       await revokeGoogleToken(e.refresh_token);
     }
   }
+  // 앞으로 남은 확정·대기 예약의 게스트에게 취소 안내 — 예약을 지우기 전에 보낸다.
+  // 발송용으로 따로 남기는 데이터 없음, 실패해도 탈퇴는 그대로 진행(로그만).
+  {
+    const { notifyGuestsBeforeHostLeaves } = await import("@/lib/host-leaving");
+    await notifyGuestsBeforeHostLeaves(user.id as string);
+  }
+
   const { error } = await db.from("users").delete().eq("id", user.id);
   if (error) {
     console.error("delete account", error);

@@ -270,6 +270,20 @@ export async function sendBookingCanceledToGuest(
 }
 
 /**
+ * 호스트가 탈퇴해 예약이 취소됐다는 안내 (CEO 10/26) — 안내만, 홍보 줄·버튼 없음.
+ * 호스트 이름은 넣지 않는다(탈퇴한 사람의 정보).
+ */
+export async function sendHostLeftCancelToGuest(to: string, args: { slotTitle: string; when: string }) {
+  const html = renderEmail({
+    heading: "예약이 취소되었습니다",
+    intro: `예약하신 ${fmtWhen(args.when)} 일정이 호스트 사정으로 취소되었습니다. 불편을 드려 죄송합니다.`,
+    preheader: `${args.slotTitle} · ${fmtWhen(args.when)}`,
+    bodyHtml: detailCard(escapeHtml(args.slotTitle), [{ label: "일시", value: fmtWhen(args.when) }]),
+  });
+  return send(to, `[Orbit42] 예약 취소 안내: ${args.slotTitle}`, html);
+}
+
+/**
  * 예약 시간 변경 — 제안(수락 대기)과 확정 양쪽에 쓴다.
  * `decided: true` 면 이미 옮겨진 것이고, false 면 상대의 수락을 기다린다.
  */

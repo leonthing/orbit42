@@ -864,6 +864,8 @@ export async function bookSlot(args: {
   selected_location?: string | null;
   /** 방문 흐름 집계 출처 — 앱 API 는 "ios" (개선-32) */
   funnelSource?: "web" | "ios";
+  /** 방문 출처(공유 카드 ?via=card) — 정해 둔 값만 */
+  funnelVia?: string | null;
 }) {
   const session = await getSession();
   const guestId = await getUserId();
@@ -1042,7 +1044,7 @@ export async function bookSlot(args: {
 
   // 방문 흐름 ④ 예약 성공 — 횟수만 (개선-32). 봇 판정은 하지 않는다(예약까지 온 건 사람).
   {
-    const { recordFunnel } = await import("@/lib/funnel");
+    const { recordFunnel, parseFunnelVia } = await import("@/lib/funnel");
     recordFunnel({
       hostId: slot.host_id as string,
       slotId: slot.id as string,
@@ -1050,6 +1052,7 @@ export async function bookSlot(args: {
       source: args.funnelSource === "ios" ? "ios" : "web",
       viewerId: guestId,
       userAgent: "booking",
+      via: parseFunnelVia(args.funnelVia),
     });
   }
 
@@ -1063,7 +1066,14 @@ export async function bookSlot(args: {
     .eq("id", slot.host_id)
     .single();
   const guestEmail = args.guest_email ?? (await getEmailForUser(guestId));
-  const guestLabel = args.guest_name ?? host?.display_name ?? "Guest";
+  // 로그인한 게스트는 예약 행에 이름을 저장하지 않는다 — 표시 이름을 users 에서 가져온다
+  // (예전엔 여기서 호스트 이름이 들어가 호스트 알림·메일에 자기 이름이 보였다)
+  let guestUserLabel: string | null = null;
+  if (!args.guest_name && guestId) {
+    const { data: g } = await db.from("users").select("display_name, username").eq("id", guestId).maybeSingle();
+    guestUserLabel = (g?.display_name as string | null) || (g?.username as string | null) || null;
+  }
+  const guestLabel = args.guest_name ?? guestUserLabel ?? "게스트";
   const whenLabel = startAt.toLocaleString("ko-KR", {
     timeZone: "Asia/Seoul",
     month: "long",
@@ -1184,15 +1194,7 @@ export async function bookSlot(args: {
 
     // Host's event shows who's coming; the guest's event shows who they're
     // meeting. Resolve a human label for the guest (registered or anonymous).
-    let guestDisplay = args.guest_name ?? null;
-    if (!guestDisplay && guestId) {
-      const { data: g } = await db
-        .from("users")
-        .select("display_name, username")
-        .eq("id", guestId)
-        .maybeSingle();
-      guestDisplay = (g?.display_name as string | null) || (g?.username as string | null) || null;
-    }
+    const guestDisplay = args.guest_name ?? guestUserLabel;
     const guestLabel = guestDisplay ?? "게스트";
     const hostLabel = (host?.display_name || host?.username || "호스트") as string;
     const baseDescription =

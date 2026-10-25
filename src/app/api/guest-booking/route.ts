@@ -12,7 +12,8 @@ export const dynamic = "force-dynamic";
 
 /**
  * 게스트 예약 관리 (개선-40) — 로그인 없이, 관리 링크의 토큰 하나로 그 예약 하나만.
- * POST { token, action: "view" | "options" | "cancel" | "reschedule" | "ics", confirm?, startAt?, availabilityId? }
+ * POST { token, action: "view" | "options" | "cancel" | "reschedule" | "ics" | "reminders", confirm?, startAt?, availabilityId?, on? }
+ * - reminders: 이 예약의 게스트 리마인더 메일 끄기/켜기(on: boolean). 다른 메일·호스트 쪽은 그대로.
  * - 시간 바꾸기는 같은 예약 행에서 시간만 옮긴다(새 시간이 잡혀야 바뀌고, 실패하면 그대로, 호스트 알림 한 번).
  * - 토큰은 본문으로만 받는다(URL·로그에 남지 않게). 로그에도 토큰을 적지 않는다.
  * - 잘못된 토큰은 IP당 15분에 20번까지(넘으면 429), 전체 요청은 IP당 15분에 120번까지.
@@ -22,7 +23,7 @@ export const dynamic = "force-dynamic";
 const MISS_LIMIT = 20;
 const WINDOW_MS = 15 * 60_000;
 
-type Body = { token?: unknown; action?: unknown; confirm?: unknown; startAt?: unknown; availabilityId?: unknown };
+type Body = { token?: unknown; action?: unknown; confirm?: unknown; startAt?: unknown; availabilityId?: unknown; on?: unknown };
 
 const json = (data: unknown, status = 200) =>
   Response.json(data, { status, headers: { "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" } });
@@ -50,7 +51,7 @@ export async function POST(request: Request) {
   const { data: b } = await db
     .from("bookings")
     .select(
-      "id, slot_id, host_id, guest_id, guest_name, scheduled_at, scheduled_end_at, status, selected_location, payment_status, payment_due_at, reschedule_by, reschedule_start_at, reschedule_end_at, reschedule_note, slot:time_slots!bookings_slot_id_fkey(id, title, location_detail, price_cents, duration_min), host:users!bookings_host_id_fkey(username, display_name, payment_instructions)",
+      "id, slot_id, host_id, guest_id, guest_name, scheduled_at, scheduled_end_at, status, selected_location, payment_status, payment_due_at, reschedule_by, reschedule_start_at, reschedule_end_at, reschedule_note, guest_reminders_off_at, slot:time_slots!bookings_slot_id_fkey(id, title, location_detail, price_cents, duration_min), host:users!bookings_host_id_fkey(username, display_name, payment_instructions)",
     )
     .eq("guest_manage_token_hash", manageTokenHash(body.token))
     .maybeSingle();
@@ -65,6 +66,7 @@ export async function POST(request: Request) {
   const ended = new Date(endIso).getTime() <= Date.now();
   const canCancel = !expired && live && !ended;
   const canPropose = !expired && live && new Date(b.scheduled_at as string).getTime() > Date.now();
+  const canToggleReminders = !expired && live && !ended;
   // 계정이 있는 게스트면 그 계정으로, 없으면 링크 게스트로 행동한다
   const actor = { userId: (b.guest_id as string | null) ?? null };
   const action = typeof body.action === "string" ? body.action : "view";
@@ -105,6 +107,20 @@ export async function POST(request: Request) {
     const res = await rescheduleBookingAsGuest(b.id as string, actor, pick);
     if ("error" in res) return json({ error: res.error }, 400);
     return json({ ok: true, status: res.status });
+  }
+
+  if (action === "reminders") {
+    if (typeof body.on !== "boolean") return json({ error: "잘못된 요청이에요." }, 400);
+    if (!canToggleReminders) return json({ error: "이 예약은 알림 설정을 바꿀 수 없어요." }, 400);
+    const { error } = await db
+      .from("bookings")
+      .update({ guest_reminders_off_at: body.on ? null : new Date().toISOString() })
+      .eq("id", b.id as string);
+    if (error) {
+      console.error("[guest-booking] reminders", error.message);
+      return json({ error: "알림 설정을 바꾸지 못했어요. 잠시 후 다시 시도해 주세요." }, 500);
+    }
+    return json({ ok: true, remindersOn: body.on });
   }
 
   if (action === "options") {
@@ -152,6 +168,8 @@ export async function POST(request: Request) {
       ended,
       canCancel,
       canPropose,
+      remindersOn: !b.guest_reminders_off_at,
+      canToggleReminders,
     },
   });
 }

@@ -173,7 +173,7 @@ export default async function LandingPage() {
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
             <ValueCard
               title="자동 가용시간"
-              body="근무 시간만 정하면 Google Calendar를 보고 알아서 빈 시간을 뽑아줘요. 수동으로 하나씩 열 필요 없음."
+              body="매주 열어둘 시간만 정하면 Google Calendar를 보고 알아서 빈 시간을 뽑아줘요. 하나씩 직접 열 필요 없어요."
               icon={
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />

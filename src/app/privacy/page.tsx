@@ -1,9 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { LEGAL_EFFECTIVE_DATE, koDate, legalChangeState } from "@/lib/legal-change";
 
 export const metadata: Metadata = { title: "개인정보처리방침 · Orbit42" };
+// 시행일에 배포 없이 새 문장으로 바뀌도록 1시간마다 다시 그린다 (lib/legal-change)
+export const revalidate = 3600;
 
 export default function PrivacyPage() {
+  const change = legalChangeState();
+  const effective = change === "effective";
   return (
     <div className="min-h-screen bg-[rgb(var(--bg-base))]">
       <header className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4 sm:px-6">
@@ -24,8 +29,21 @@ export default function PrivacyPage() {
       <main className="mx-auto max-w-3xl px-4 pb-24 pt-6 sm:px-6">
         <h1 className="text-3xl font-bold text-charcoal-100">개인정보처리방침</h1>
         <p className="mt-2 text-sm text-charcoal-500">
-          최종 업데이트: 2026년 10월 15일
+          최종 업데이트: {effective && LEGAL_EFFECTIVE_DATE ? koDate(LEGAL_EFFECTIVE_DATE) : "2026년 10월 15일"}
         </p>
+        {change === "notice" && LEGAL_EFFECTIVE_DATE && (
+          <div className="mt-6 rounded-xl border border-navy-400/40 bg-navy-400/10 p-4 text-sm text-charcoal-200">
+            <p className="font-semibold text-charcoal-100">
+              개인정보처리방침 변경 안내 — 시행일 {koDate(LEGAL_EFFECTIVE_DATE)}
+            </p>
+            <ul className="mt-2 list-disc space-y-1 pl-5 marker:text-charcoal-500">
+              <li>회사는 호스트와 게스트 사이의 결제를 중개하지 않아, 전자상거래법상 거래 기록을 따로 보관한다는 문장을 지웁니다.</li>
+              <li>예약 기록은 호스트가 관리하는 기록으로, 호스트가 탈퇴하면 함께 파기되고 진행 전 예약의 게스트에게 취소 안내 메일을 보내 드린다는 내용을 더합니다.</li>
+              <li>접속 기록(IP·기기 정보·접속 시각)은 서비스 데이터베이스에 저장하지 않고 호스팅 업체 기록에 최대 7일 남는다는 사실대로 고칩니다.</li>
+            </ul>
+            <p className="mt-2 text-xs text-charcoal-400">시행일 전까지는 아래 지금의 방침이 적용됩니다.</p>
+          </div>
+        )}
 
         <div className="mt-10 space-y-8">
           <Section title="1. 개인정보 수집 항목 및 수집 방법">
@@ -84,16 +102,40 @@ export default function PrivacyPage() {
 
           <Section title="3. 개인정보의 보유 및 이용 기간">
             <List>
-              <li>
-                회원 정보: 회원 탈퇴 시 즉시 파기. 단, 아래 법령상 의무가 있는
-                정보는 해당 기간 동안 별도 저장소에 분리 보관 후 파기합니다.
-                <ul className="mt-2 list-disc space-y-1 pl-5 marker:text-charcoal-600">
-                  <li>계약·청약철회 등 기록: 5년(전자상거래법)</li>
-                  <li>대금결제·재화공급 기록: 5년(전자상거래법)</li>
-                  <li>소비자 불만·분쟁처리 기록: 3년(전자상거래법)</li>
-                  <li>로그인 기록: 3개월(통신비밀보호법)</li>
-                </ul>
-              </li>
+              {effective ? (
+                <>
+                  <li>회원 정보: 회원 탈퇴 시 즉시 파기합니다.</li>
+                  <li>
+                    접속 기록: 접속 IP·기기 정보·접속 시각은 서비스 데이터베이스에 따로
+                    저장하지 않습니다. 서비스 운영을 위해 호스팅 업체(Vercel, Supabase)의
+                    접속 기록에 남으며, 업체의 보관 정책에 따라 최대 7일 뒤 자동으로
+                    삭제됩니다.
+                  </li>
+                  <li>
+                    예약 기록: 회사는 호스트와 게스트 사이의 결제를 중개하지 않습니다.
+                    예약 내용과 입금 확인 상태는 호스트가 서비스 안에서 관리하는
+                    기록이며, 호스트가 탈퇴하면 함께 즉시 파기됩니다. 이때 아직 진행되지
+                    않은 예약이 있으면, 파기 전에 해당 게스트에게 예약 취소 안내 메일을
+                    보내 드립니다.
+                  </li>
+                  <li>
+                    회사가 직접 받는 유료 결제: 현재는 없습니다. 도입하게 되면 관련
+                    법령(전자상거래법 등)에 따른 결제 기록 보관 기간을 이 방침에 추가하고,
+                    시행 7일 전에 알려 드립니다.
+                  </li>
+                </>
+              ) : (
+                <li>
+                  회원 정보: 회원 탈퇴 시 즉시 파기. 단, 아래 법령상 의무가 있는
+                  정보는 해당 기간 동안 별도 저장소에 분리 보관 후 파기합니다.
+                  <ul className="mt-2 list-disc space-y-1 pl-5 marker:text-charcoal-600">
+                    <li>계약·청약철회 등 기록: 5년(전자상거래법)</li>
+                    <li>대금결제·재화공급 기록: 5년(전자상거래법)</li>
+                    <li>소비자 불만·분쟁처리 기록: 3년(전자상거래법)</li>
+                    <li>로그인 기록: 3개월(통신비밀보호법)</li>
+                  </ul>
+                </li>
+              )}
               <li>
                 쿠키/세션: 세션 유지를 위한 httpOnly 쿠키는 최대 7일까지 저장
                 후 자동 만료됩니다.
@@ -397,6 +439,14 @@ export default function PrivacyPage() {
                 알림·중요도·별점·다시 알림·완료 표시·분류·수익 기록·사진 기록의 저장
                 범위(Google 일정 제목·시각은 저장하지 않음)와 삭제 시점을 사용 목적에 추가
               </li>
+              {effective && LEGAL_EFFECTIVE_DATE && (
+                <li>
+                  {LEGAL_EFFECTIVE_DATE}: 보유 기간 정리 — 회사가 결제를 중개하지 않으므로
+                  전자상거래법상 거래 기록 분리 보관 문장을 지우고, 예약 기록의 파기 시점과
+                  호스트 탈퇴 시 게스트 취소 안내, 접속 기록의 실제 보관(호스팅 업체 기록 최대
+                  7일)을 추가
+                </li>
+              )}
             </List>
           </Section>
         </div>

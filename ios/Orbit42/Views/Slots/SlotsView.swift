@@ -16,6 +16,10 @@ struct SlotsContent: View {
     @State private var didAutoPushDemo = false
     /// 인스타 스토리용 이미지 작성 화면
     @State private var storySubject: StorySubject?
+    /// "이번 주 빈 시간" 공유 카드 (1.7.0)
+    @State private var cardSlot: TimeSlot?
+    /// 카드에서 열린 시간이 없을 때 '예약 링크 편집'으로
+    @State private var cardEditRoute: SlotRoute?
     @Environment(AuthViewModel.self) private var auth
     @Environment(TabRouter.self) private var router
 
@@ -81,18 +85,40 @@ struct SlotsContent: View {
             get: { viewModel.justCreated },
             set: { viewModel.justCreated = $0 }
         )) { slot in
-            SlotCreatedShareSheet(slot: slot) {
+            SlotCreatedShareSheet(slot: slot, onStory: {
                 // 시트를 닫은 뒤 전체 화면 작성기를 연다 (시트 위에 바로 올리면 안 뜬다)
                 viewModel.justCreated = nil
                 Task {
                     try? await Task.sleep(for: .milliseconds(450))
                     storySubject = .slot(slot)
                 }
-            }
+            }, onCard: {
+                viewModel.justCreated = nil
+                Task {
+                    try? await Task.sleep(for: .milliseconds(450))
+                    cardSlot = slot
+                }
+            })
             .presentationDetents([.medium, .large])
         }
         .fullScreenCover(item: $storySubject) { subject in
             StoryComposerView(subject: subject)
+        }
+        .sheet(item: $cardSlot) { slot in
+            ShareCardComposer(
+                slots: (viewModel.slots ?? [slot]).filter { $0.active && !$0.isAuction },
+                initial: slot,
+                onEdit: { target in
+                    cardSlot = nil
+                    Task {
+                        try? await Task.sleep(for: .milliseconds(450))
+                        cardEditRoute = SlotRoute(id: target.id, title: target.title)
+                    }
+                }
+            )
+        }
+        .navigationDestination(item: $cardEditRoute) { route in
+            SlotDetailView(route: route, listViewModel: viewModel)
         }
         .navigationDestination(for: SlotRoute.self) { route in
             SlotDetailView(route: route, listViewModel: viewModel)
@@ -193,7 +219,7 @@ struct SlotsContent: View {
         List {
             ForEach(slots) { slot in
                 ZStack {
-                    SlotRow(slot: slot) { storySubject = .slot(slot) }
+                    SlotRow(slot: slot, onStory: { storySubject = .slot(slot) }, onCard: { cardSlot = slot })
                     // 카드 스타일을 유지하면서 행 전체 탭 → 상세 push (chevron 숨김용 투명 링크)
                     NavigationLink(value: MySlotRoute(id: slot.id, slug: slot.slug, title: slot.title)) {
                         EmptyView()
@@ -332,6 +358,8 @@ private struct SlotRow: View {
     let slot: TimeSlot
     /// 인스타 스토리용 이미지 만들기
     var onStory: () -> Void = {}
+    /// 이번 주 빈 시간 카드 (1.7.0)
+    var onCard: () -> Void = {}
 
     var body: some View {
         HStack(spacing: 12) {
@@ -365,6 +393,13 @@ private struct SlotRow: View {
                         ShareSheet.shareMyLink(url, username: shareUsername)
                     } label: {
                         Label("링크 공유", systemImage: "link")
+                    }
+                    if slot.active && !slot.isAuction {
+                        Button {
+                            onCard()
+                        } label: {
+                            Label("이번 주 빈 시간 카드", systemImage: "calendar.badge.clock")
+                        }
                     }
                     Button {
                         onStory()
@@ -438,6 +473,8 @@ struct SlotCreatedShareSheet: View {
     let slot: TimeSlot
     /// 인스타 스토리용 이미지 만들기 (nil 이면 버튼을 숨긴다 — 온보딩)
     var onStory: (() -> Void)? = {}
+    /// 이번 주 빈 시간 카드 (1.7.0) — nil 이면 버튼 숨김
+    var onCard: (() -> Void)? = nil
     /// 있으면 '나중에' 대신 이 버튼으로 끝낸다 (온보딩 마지막 단계)
     var doneTitle: String? = nil
     var onDone: (() -> Void)? = nil
@@ -531,6 +568,17 @@ struct SlotCreatedShareSheet: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("copyBioURL")
+            }
+            if let onCard {
+                Button(action: onCard) {
+                    Label("이번 주 빈 시간 카드 만들기", systemImage: "calendar.badge.clock")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Theme.surface, in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("createdShareCard")
             }
             if let onStory {
             Button {

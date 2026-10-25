@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { rememberFunnelVia } from "@/lib/funnel-client";
 
 /**
  * 방문 흐름 단계를 페이지가 처음 뜰 때 한 번만 알린다 (개선-32).
@@ -15,7 +16,7 @@ export function FunnelBeacon(props: { step: "profile_view"; hostUsername: string
     const body =
       props.step === "profile_view"
         ? { step: "profile_view", hostUsername: props.hostUsername, source: "web" }
-        : { step: "slot_view", slotId: props.slotId, source: "web" };
+        : { step: "slot_view", slotId: props.slotId, source: "web", via: rememberFunnelVia(props.slotId) };
     void fetch("/api/v1/funnel", {
       method: "POST",
       headers: { "content-type": "application/json" },

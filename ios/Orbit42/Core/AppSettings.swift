@@ -125,8 +125,8 @@ final class AppSettings {
     @ObservationIgnored private var foregroundObserver: NSObjectProtocol?
 
     private init() {
-        let stored = (UserDefaults.standard.object(forKey: Self.weekStartKey) as? Int)
-            .flatMap(WeekStart.init(rawValue:)) ?? .system
+        // integer(forKey:) — 값이 없으면 0(시스템), 테스트 실행 인자(-weekStart 2, 문자열)도 읽힌다
+        let stored = WeekStart(rawValue: UserDefaults.standard.integer(forKey: Self.weekStartKey)) ?? .system
         weekStart = stored
         calendar = Self.makeCalendar(firstWeekday: stored.resolvedFirstWeekday)
         eventDuration =

@@ -10,6 +10,13 @@ import { getAdminClient } from "@/lib/supabase";
  */
 export type FunnelStep = "profile_view" | "slot_view" | "time_picked" | "booked";
 export type FunnelSource = "web" | "ios";
+/** 방문 출처(링크에 붙은 ?via=) — 정해 둔 값만 센다 (1.7.0 공유 카드) */
+export type FunnelVia = "card";
+
+/** 아무 문자열이나 받지 않는다 — 정해 둔 값이 아니면 null */
+export function parseFunnelVia(v: unknown): FunnelVia | null {
+  return v === "card" ? "card" : null;
+}
 
 const BOT_UA =
   /bot|crawl|spider|slurp|preview|facebookexternalhit|kakaotalk-scrap|yeti|daum|headlesschrome|lighthouse|vercel|curl|wget|python-requests|node-fetch|axios/i;
@@ -32,6 +39,8 @@ export function recordFunnel(args: {
   /** 보는 사람(로그인했으면) — 호스트 본인이면 세지 않는다. 저장하지 않는다. */
   viewerId?: string | null;
   userAgent?: string | null;
+  /** 공유 카드 등으로 들어온 방문이면 출처별 표에도 +1 (예약 링크 단계만) */
+  via?: FunnelVia | null;
 }) {
   if (!args.hostId) return;
   if (process.env.VERCEL_ENV === "preview") return;
@@ -49,6 +58,16 @@ export function recordFunnel(args: {
         p_source: args.source,
       });
       if (error) console.error("recordFunnel", error.message);
+      if (args.via && args.slotId && args.step !== "profile_view") {
+        const { error: viaErr } = await getAdminClient().rpc("bump_booking_funnel_via", {
+          p_day: todayKst(),
+          p_host: args.hostId,
+          p_slot: args.slotId,
+          p_step: args.step,
+          p_via: args.via,
+        });
+        if (viaErr) console.error("recordFunnel via", viaErr.message);
+      }
     } catch (err) {
       console.error("recordFunnel", err);
     }

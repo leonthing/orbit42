@@ -135,21 +135,21 @@ export default function SlotsManager({
             <PresetCard
               title="업무 미팅"
               hint="60분 · 평일 10–18 · 24h 전까지"
-              meta="수동 승인 · buffer 15분"
+              meta="내가 수락해야 확정 · 앞뒤 여유 15분"
               onClick={() => pickPreset("meeting", "업무 미팅")}
               pending={presetPending}
             />
             <PresetCard
               title="식사"
               hint="90분 · 평일 점심/저녁 + 주말 점심"
-              meta="수동 승인 · buffer 30분"
+              meta="내가 수락해야 확정 · 앞뒤 여유 30분"
               onClick={() => pickPreset("meal", "식사")}
               pending={presetPending}
             />
             <PresetCard
               title="커피챗"
               hint="30분 · 주말 10–18 · 1h 전까지"
-              meta="자동 승인 · buffer 10분"
+              meta="바로 확정 · 앞뒤 여유 10분"
               onClick={() => pickPreset("coffee", "커피챗")}
               pending={presetPending}
             />
@@ -566,7 +566,7 @@ function NewSlotForm({
           onClick={() => setAdvanced((v) => !v)}
           className="flex w-full items-center justify-between rounded-lg border border-charcoal-800/60 px-4 py-3 text-sm font-medium text-charcoal-300 hover:border-charcoal-700"
         >
-          <span>고급 설정 — 설명·승인 방식·정원·캘린더·서비스·기간·이미지·노출</span>
+          <span>고급 설정 — 설명·확정 방식·정원·캘린더·서비스·기간·이미지·노출</span>
           <span className="text-charcoal-500">{advanced ? "접기" : "펼치기"}</span>
         </button>
 
@@ -581,7 +581,7 @@ function NewSlotForm({
                 className={INPUT}
               />
             </Section>
-            <Section title="수락 방식" hint="예약을 자동으로 확정할지, 직접 확인 후 수락할지 선택해요.">
+            <Section title="확정 방식" hint="예약을 바로 확정할지, 내가 수락해야 확정할지 골라요.">
               <ApprovalPicker value={autoApprove} onChange={setAutoApprove} />
             </Section>
             <Section title="정원·형식">
@@ -903,7 +903,7 @@ function AutoConfig({
   return (
     <div className="space-y-5 rounded-lg border border-charcoal-800/60 bg-charcoal-900/30 p-4">
       <div>
-        <p className="mb-3 text-xs font-medium text-charcoal-400">요일별 근무 시간</p>
+        <p className="mb-3 text-xs font-medium text-charcoal-400">매주 열어둘 시간</p>
         <div className="space-y-1.5">
           {DAYS.map((d) => {
             const range = workingHours[d.key];
@@ -952,7 +952,7 @@ function AutoConfig({
       {!compact && (
         <>
       <div className="grid gap-4 md:grid-cols-4">
-        <Field label="시작 시간 간격 (분)">
+        <Field label="시간 간격 (분)">
           <input
             type="number"
             min={5}
@@ -962,7 +962,7 @@ function AutoConfig({
             className={INPUT}
           />
         </Field>
-        <Field label="최소 예고 (시간)">
+        <Field label="최소 몇 시간 전까지 예약 (시간)">
           <input
             type="number"
             min={0}
@@ -971,7 +971,7 @@ function AutoConfig({
             className={INPUT}
           />
         </Field>
-        <Field label="최대 사전 예약 (일)">
+        <Field label="최대 예약 가능 (며칠 후까지)">
           <input
             type="number"
             min={1}
@@ -981,7 +981,7 @@ function AutoConfig({
             className={INPUT}
           />
         </Field>
-        <Field label="버퍼 (분)">
+        <Field label="앞뒤 여유 시간 (분)">
           <input
             type="number"
             min={0}
@@ -993,7 +993,7 @@ function AutoConfig({
       </div>
 
       <p className="text-xs text-charcoal-500">
-        Google Calendar 빈 시간을 읽어와 위 근무 시간 안에서 자동으로 예약 가능 시간을 생성해요. 캘린더 연결이 필요합니다.
+        Google Calendar 빈 시간을 읽어와 위 열어둘 시간 안에서 자동으로 예약 가능 시간을 생성해요. 캘린더 연결이 필요합니다.
       </p>
         </>
       )}
@@ -1127,8 +1127,8 @@ function LocationsInput({
 
       <p className="text-2xs text-charcoal-500">
         게스트가 예약할 때 이 중에서 만날 장소를 골라요. 등록한 장소가 설정의{" "}
-        <b>장소별 이동시간</b> 프리셋과 매칭되면 인접 일정과의 버퍼가 자동
-        최적화돼요.
+        <b>장소별 이동시간</b> 프리셋과 맞으면 앞뒤 일정과의 여유 시간이
+        자동으로 맞춰져요.
       </p>
     </div>
   );
@@ -1633,7 +1633,7 @@ function EditSlotForm({
         />
       </Field>
       <div className="grid gap-3 md:grid-cols-3">
-        <Field label="소요 시간 (분)">
+        <Field label="길이 (분)">
           <input
             type="number"
             min={5}
@@ -1715,7 +1715,7 @@ function EditSlotForm({
       </div>
 
       <div>
-        <p className="mb-2 text-xs font-medium text-charcoal-400">판매 기간</p>
+        <p className="mb-2 text-xs font-medium text-charcoal-400">예약 받는 기간</p>
         <ValidityPicker
           preset={validPreset}
           setPreset={setValidPreset}
@@ -1982,13 +1982,13 @@ function ApprovalPicker({
       <ChoiceCard
         active={value}
         onClick={() => onChange(true)}
-        title="자동 수락"
+        title="바로 확정"
         hint="예약이 들어오면 바로 확정돼요."
       />
       <ChoiceCard
         active={!value}
         onClick={() => onChange(false)}
-        title="직접 확인"
+        title="내가 수락해야 확정"
         hint="호스트가 수락해야 확정돼요."
       />
     </div>

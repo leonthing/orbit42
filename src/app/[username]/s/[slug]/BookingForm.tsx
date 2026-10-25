@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { bookSlot, refreshBookableOptions } from "@/lib/slots";
-import { reportFunnel } from "@/lib/funnel-client";
+import { funnelVia, reportFunnel } from "@/lib/funnel-client";
 import type { BookableOption } from "@/lib/slots";
 import { findMyConflicts } from "@/lib/mutual-availability";
 import { SlotDatePicker } from "@/components/SlotDatePicker";
@@ -172,6 +172,7 @@ export default function BookingForm({
         guest_email: loggedIn ? undefined : email.trim() || undefined,
         selected_menu_ids: selectedMenus,
         selected_location: selectedLocation || undefined,
+        funnelVia: funnelVia(slotId) ?? null,
       });
       if (res.error) return toast.error(res.error);
       setAwaitingHost("status" in res && res.status === "pending");

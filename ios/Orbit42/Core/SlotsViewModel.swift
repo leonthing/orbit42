@@ -61,6 +61,11 @@ final class SlotsViewModel {
         slots?[index] = slot
     }
 
+    /// 상세에서 삭제·보관한 링크를 목록에서 뺀다 (개선-45).
+    func removeFromList(id: String) {
+        slots?.removeAll { $0.id == id }
+    }
+
     // MARK: - 활성/비활성 토글
 
     func toggleActive(_ slot: TimeSlot) async {

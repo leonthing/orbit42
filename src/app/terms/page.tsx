@@ -1,9 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { LEGAL_EFFECTIVE_DATE, koDate, legalChangeState } from "@/lib/legal-change";
 
 export const metadata: Metadata = { title: "이용약관 · Orbit42" };
+// 시행일에 배포 없이 새 문장으로 바뀌도록 1시간마다 다시 그린다 (lib/legal-change)
+export const revalidate = 3600;
 
 export default function TermsPage() {
+  const change = legalChangeState();
+  const effective = change === "effective";
   return (
     <div className="min-h-screen bg-[rgb(var(--bg-base))]">
       <header className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4 sm:px-6">
@@ -24,8 +29,19 @@ export default function TermsPage() {
       <main className="mx-auto max-w-3xl px-4 pb-24 pt-6 sm:px-6">
         <h1 className="text-3xl font-bold text-charcoal-100">이용약관</h1>
         <p className="mt-2 text-sm text-charcoal-500">
-          최종 업데이트: 2026년 4월 15일
+          최종 업데이트: {effective && LEGAL_EFFECTIVE_DATE ? koDate(LEGAL_EFFECTIVE_DATE) : "2026년 4월 15일"}
         </p>
+        {change === "notice" && LEGAL_EFFECTIVE_DATE && (
+          <div className="mt-6 rounded-xl border border-navy-400/40 bg-navy-400/10 p-4 text-sm text-charcoal-200">
+            <p className="font-semibold text-charcoal-100">
+              이용약관 변경 안내 — 시행일 {koDate(LEGAL_EFFECTIVE_DATE)}
+            </p>
+            <ul className="mt-2 list-disc space-y-1 pl-5 marker:text-charcoal-500">
+              <li>제7조(결제): 회사는 서비스 안에서 대금을 받거나 결제를 중개하지 않으며, 유료 타임슬롯의 대금은 게스트가 호스트에게 직접 지급한다는 지금의 방식대로 고칩니다. 유료·결제 기능을 도입하면 시행 7일 전까지 알려 드립니다.</li>
+            </ul>
+            <p className="mt-2 text-xs text-charcoal-400">시행일 전까지는 아래 지금의 약관이 적용됩니다.</p>
+          </div>
+        )}
 
         <div className="prose-legal mt-10 space-y-8 text-sm leading-relaxed text-charcoal-300">
           <Section title="제1조 (목적)">
@@ -134,10 +150,22 @@ export default function TermsPage() {
           </Section>
 
           <Section title="제7조 (결제)">
-            현재 서비스는 유료 결제 기능을 단계적으로 도입 중입니다. 유료
-            타임슬롯의 결제는 외부 결제대행사(예: 토스페이먼츠 등)를 통해
-            이루어지며, 결제·환불 관련 세부 정책은 결제 기능 활성화 시 별도로
-            고지됩니다.
+            {effective ? (
+              <>
+                현재 회사는 서비스 안에서 대금을 받거나 결제를 중개하지 않습니다.
+                유료 타임슬롯의 대금은 호스트가 안내한 방법으로 게스트가 호스트에게
+                직접 지급하며, 그 지급과 환불은 제6조에 따라 호스트와 게스트가 직접
+                협의합니다. 회사가 유료 기능이나 결제 기능을 도입하는 경우, 요금과
+                결제·환불 정책을 시행 7일 전까지 서비스 안에 미리 알려 드립니다.
+              </>
+            ) : (
+              <>
+                현재 서비스는 유료 결제 기능을 단계적으로 도입 중입니다. 유료
+                타임슬롯의 결제는 외부 결제대행사(예: 토스페이먼츠 등)를 통해
+                이루어지며, 결제·환불 관련 세부 정책은 결제 기능 활성화 시 별도로
+                고지됩니다.
+              </>
+            )}
           </Section>
 
           <Section title="제8조 (이용자의 의무 및 금지 행위)">
