@@ -469,7 +469,7 @@ struct SlotCreatedShareSheet: View {
                     .multilineTextAlignment(.center)
             }
             if let url = URL(string: slot.shareUrl) {
-                Text(url.absoluteString)
+                Text(DisplayURL.short(url.absoluteString))
                     .font(.footnote.monospaced())
                     .foregroundStyle(Theme.secondaryText)
                     .lineLimit(1)
@@ -518,7 +518,7 @@ struct SlotCreatedShareSheet: View {
                             Text(copiedBio ? "복사했어요 — 바이오에 붙여 주세요" : "바이오용 내 링크 페이지 주소 복사")
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(Theme.primaryText)
-                            Text(bioURL.absoluteString.replacingOccurrences(of: "https://", with: ""))
+                            Text(DisplayURL.short(bioURL.absoluteString))
                                 .font(.caption.monospaced())
                                 .foregroundStyle(Theme.secondaryText)
                                 .lineLimit(1)

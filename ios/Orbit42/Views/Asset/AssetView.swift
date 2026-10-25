@@ -5,6 +5,7 @@ import SwiftUI
 /// 이번 주 시간 사용을 수입/투자/소비/생활 버킷으로 분석한다.
 struct AssetView: View {
     @Environment(TabRouter.self) private var router
+    @Environment(AuthViewModel.self) private var auth
     @State private var viewModel = AssetViewModel()
     @State private var showingSettingsSheet = false
     @State private var showingGoalsSheet = false
@@ -95,7 +96,12 @@ struct AssetView: View {
                     }
                 }
                 if let report = summary.report {
-                    reportCard(report)
+                    // 가입한 뒤 한 주를 다 채우기 전엔 가입 전 주를 보여 주지 않는다 (잃어버린 시간 118시간 같은 첫인상)
+                    if signedUpBefore(report.weekStart) {
+                        reportCard(report)
+                    } else {
+                        reportPlaceholder
+                    }
                 }
                 // 완료 후 별점 모아 보기 (1.5.0 A, 나만 봄)
                 RatingsCard()
@@ -668,6 +674,31 @@ struct AssetView: View {
 
     // MARK: 1.6 지난주 리포트
 
+    /// 그 주가 시작되기 전에 가입했는지 — 가입일을 모르면(옛 서버) 그대로 보여 준다
+    private func signedUpBefore(_ weekStartISO: String) -> Bool {
+        guard let raw = auth.user?.createdAt, let created = AssetFormat.weekStartDate(raw),
+              let weekStart = AssetFormat.weekStartDate(weekStartISO) else { return true }
+        return created <= weekStart
+    }
+
+    private var reportPlaceholder: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("지난주 리포트")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Theme.secondaryText)
+            Text("첫 주가 지나면 지난주 리포트가 여기 생겨요")
+                .font(.subheadline)
+                .foregroundStyle(Theme.primaryText)
+            Text("한 주 동안의 투자 시간·수입을 지난주와 견줘서 보여 드려요.")
+                .font(.caption)
+                .foregroundStyle(Theme.secondaryText)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16))
+        .accessibilityIdentifier("reportPlaceholder")
+    }
+
     private func reportCard(_ report: TimeAssetWeeklyReport) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -675,7 +706,7 @@ struct AssetView: View {
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(Theme.secondaryText)
                 Spacer()
-                Text(AssetFormat.weekLabel(report.weekStart))
+                Text(AssetFormat.weekRangeLabel(report.weekStart))
                     .font(.caption)
                     .foregroundStyle(Theme.secondaryText)
             }

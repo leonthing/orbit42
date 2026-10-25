@@ -761,8 +761,23 @@ private struct VerifyEmailStep: View {
 private struct LinkStep: View {
     let onFinish: () -> Void
     @State private var slots = SlotsViewModel()
-    @State private var showingCreate = false
+    @State private var preset: LinkPreset?
     @State private var created: TimeSlot?
+
+    /// 바로 고르는 예시 — 누르면 이름·길이가 채워진 만들기 시트 (가격은 시트에서)
+    struct LinkPreset: Identifiable {
+        let id: String
+        let title: String?
+        let duration: Int?
+        let icon: String
+        let label: String
+        let caption: String
+    }
+    private let presets: [LinkPreset] = [
+        LinkPreset(id: "coffee", title: "커피챗 30분", duration: 30, icon: "cup.and.saucer", label: "커피챗 30분", caption: "무료로 가볍게 만나요"),
+        LinkPreset(id: "consult", title: "상담 60분", duration: 60, icon: "person.2.wave.2", label: "상담 60분", caption: "코칭·레슨·컨설팅"),
+        LinkPreset(id: "custom", title: nil, duration: nil, icon: "square.and.pencil", label: "직접 만들기", caption: "이름·길이를 내가 정해요"),
+    ]
 
     var body: some View {
         if let created {
@@ -777,9 +792,39 @@ private struct LinkStep: View {
                     title: "내 예약 링크를 만들어 볼까요?",
                     subtitle: "링크를 보내면 상대가 내 빈 시간을 직접 골라 예약해요.\n30초면 만들고, 나중에 예약 탭에서 고칠 수 있어요."
                 )
+                VStack(spacing: 10) {
+                    ForEach(presets) { p in
+                        Button {
+                            preset = p
+                        } label: {
+                            HStack(spacing: 14) {
+                                Image(systemName: p.icon)
+                                    .font(.title3)
+                                    .foregroundStyle(Theme.accent)
+                                    .frame(width: 32)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(p.label)
+                                        .font(.body.weight(.semibold))
+                                        .foregroundStyle(Theme.primaryText)
+                                    Text(p.caption)
+                                        .font(.caption)
+                                        .foregroundStyle(Theme.secondaryText)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(Theme.secondaryText)
+                            }
+                            .padding(16)
+                            .background(Theme.surface, in: RoundedRectangle(cornerRadius: 14))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("preset-\(p.id)")
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 24)
                 Spacer()
-                primaryButton("내 예약 링크 만들기") { showingCreate = true }
-                    .accessibilityIdentifier("onboardingMakeLink")
                 Button("건너뛰기") { onFinish() }
                     .font(.subheadline)
                     .foregroundStyle(Theme.secondaryText)
@@ -787,13 +832,13 @@ private struct LinkStep: View {
                     .padding(.bottom, 20)
                     .accessibilityIdentifier("onboardingSkipLink")
             }
-            .sheet(isPresented: $showingCreate, onDismiss: {
+            .sheet(item: $preset, onDismiss: {
                 if let slot = slots.pendingShare {
                     slots.pendingShare = nil
                     withAnimation { created = slot }
                 }
-            }) {
-                SimpleSlotSheet(viewModel: slots)
+            }) { p in
+                SimpleSlotSheet(viewModel: slots, presetTitle: p.title, presetDuration: p.duration)
             }
         }
     }

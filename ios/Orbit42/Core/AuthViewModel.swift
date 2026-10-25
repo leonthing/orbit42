@@ -52,6 +52,12 @@ final class AuthViewModel {
         KeychainStore.syncSharedCopy()
         do {
             let response: MeResponse = try await api.get("/api/v1/me")
+            #if DEBUG
+            // UI 테스트: 이 단계부터 온보딩을 연다 — 실행 인자(-key value)는 끝낸 뒤에도 값이 남아 다음 실행을 막아서 쓰지 않는다
+            if let step = ProcessInfo.processInfo.environment["DEMO_ONBOARDING_STEP"], !step.isEmpty {
+                UserDefaults.standard.set(step, forKey: Self.onboardingKey(response.user.username))
+            }
+            #endif
             resumeOnboardingIfNeeded(for: response.user)
             #if DEBUG
             // UI 테스트용: Apple 가입처럼 '방금 가입한 계정'으로 온보딩을 연다 (이미 진행 중이면 그 단계부터)

@@ -8,11 +8,12 @@ final class OnboardingLinkUITests: XCTestCase {
         guard let token = env["DEMO_TOKEN"], let user = env["DEMO_USERNAME"] else { throw XCTSkip("DEMO_TOKEN·DEMO_USERNAME 필요") }
         let app = XCUIApplication()
         app.launchEnvironment["DEMO_TOKEN"] = token
-        app.launchArguments += ["-onboarding.step.\(user)", "link"]
+        app.launchEnvironment["DEMO_ONBOARDING_STEP"] = "link"
+        _ = user
         app.launch()
         let dir = env["SHOT_DIR"] ?? NSTemporaryDirectory()
         func shot(_ n: String) { try? app.screenshot().pngRepresentation.write(to: URL(fileURLWithPath: dir).appendingPathComponent("\(n).png")) }
-        let make = app.buttons["onboardingMakeLink"]
+        let make = app.buttons["preset-coffee"]
         XCTAssertTrue(make.waitForExistence(timeout: 20), "링크 만들기 단계가 안 뜸")
         XCTAssertTrue(app.buttons["onboardingSkipLink"].exists, "건너뛰기 없음")
         sleep(1)
@@ -20,6 +21,12 @@ final class OnboardingLinkUITests: XCTestCase {
         make.tap()
         let title = app.textFields.firstMatch
         XCTAssertTrue(title.waitForExistence(timeout: 5))
+        // 예시를 고르면 이름이 채워져 있다 — 테스트 표시로 바꾼다
+        XCTAssertEqual(title.value as? String, "커피챗 30분", "예시 이름이 안 채워짐")
+        sleep(1)
+        shot("1b-prefilled")
+        title.tap()
+        title.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 12))
         title.typeText("T41 테스트")
         app.buttons["만들기"].tap()
         let done = app.buttons["onboardingLinkDone"]

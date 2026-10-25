@@ -319,9 +319,26 @@ enum AssetFormat {
     }
 
     /// ISO 주 시작일 → "7/20" 형태 라벨. 파싱 실패 시 원문 앞 10자.
+    /// 서버는 주 시작을 한국 월요일 0시의 UTC 로 준다("2026-10-11T15:00:00Z" = 10/12 월) — 앞 10자를 자르면
+    /// 하루 전 날짜(UTC)가 되므로, 시각까지 읽어 이 기기 시간대로 바꾼다.
+    static func weekStartDate(_ isoString: String) -> Date? {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let d = f.date(from: isoString) { return d }
+        f.formatOptions = [.withInternetDateTime]
+        if let d = f.date(from: isoString) { return d }
+        return weekLabelInput.date(from: String(isoString.prefix(10)))
+    }
+
     static func weekLabel(_ isoString: String) -> String {
-        let dayPart = String(isoString.prefix(10))
-        guard let date = weekLabelInput.date(from: dayPart) else { return dayPart }
+        guard let date = weekStartDate(isoString) else { return String(isoString.prefix(10)) }
         return weekLabelOutput.string(from: date)
+    }
+
+    /// "10/12–10/18" (주 시작 ~ 6일 뒤)
+    static func weekRangeLabel(_ isoString: String) -> String {
+        guard let start = weekStartDate(isoString),
+              let end = Calendar.current.date(byAdding: .day, value: 6, to: start) else { return weekLabel(isoString) }
+        return "\(weekLabelOutput.string(from: start))–\(weekLabelOutput.string(from: end))"
     }
 }

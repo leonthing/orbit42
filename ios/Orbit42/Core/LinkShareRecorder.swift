@@ -38,3 +38,15 @@ enum ShareSheet {
         present([url])
     }
 }
+
+/// 화면에 보여 줄 주소 — 앞의 https:// 를 떼고 퍼센트 인코딩(한글 슬러그)을 풀어 읽을 수 있게.
+/// 복사·공유하는 실제 값은 원래 주소 그대로 쓴다.
+enum DisplayURL {
+    static func short(_ raw: String) -> String {
+        var s = raw
+        for prefix in ["https://", "http://", "www."] where s.hasPrefix(prefix) {
+            s.removeFirst(prefix.count)
+        }
+        return s.removingPercentEncoding ?? s
+    }
+}

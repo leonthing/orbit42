@@ -4,6 +4,9 @@ import SwiftUI
 /// 나머지(장소·정원·예약 받는 기간 등)는 만든 뒤 상세에서 고친다.
 struct SimpleSlotSheet: View {
     let viewModel: SlotsViewModel
+    /// 미리 채울 값 (온보딩 예시 고르기 — 1.6.0 ① 손질)
+    var presetTitle: String? = nil
+    var presetDuration: Int? = nil
     @Environment(\.dismiss) private var dismiss
     @Environment(AuthViewModel.self) private var auth
     /// 결제 안내 (계정 값, 유료일 때 가격 아래에서 바로 적는다 — 개선-38)
@@ -114,7 +117,9 @@ struct SimpleSlotSheet: View {
                 }
             }
             .onAppear {
-                titleFocused = true
+                if let presetTitle, title.isEmpty { title = presetTitle }
+                if let presetDuration { duration = presetDuration }
+                titleFocused = presetTitle == nil
                 paymentText = auth.user?.paymentInstructions ?? ""
             }
             .alert(PaymentConfirmCopy.title, isPresented: $confirmingNoPayment) {

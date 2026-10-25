@@ -758,7 +758,7 @@ struct EventDetailSheet: View {
         if current.importance == .high { return "알림: 30분·10분 전 (중요함 기본값)" }
         let settings = AppSettings.shared
         let on = event.isGoogle ? settings.notifyGoogleEvents : settings.notifyOrbitEvents
-        return on ? "알림: \(settings.defaultReminder.label) 전 (기본값)" : "알림: 없음 (기본값)"
+        return on ? "알림: \(settings.defaultReminder.label) (기본값)" : "알림: 없음 (기본값)"
     }
 
     private var importanceSelection: Binding<EventImportance> {
