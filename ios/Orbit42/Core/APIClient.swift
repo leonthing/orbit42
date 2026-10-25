@@ -211,7 +211,7 @@ final class APIClient {
         let startsAction = path.hasPrefix("/api/v1/google/connect-url")
         guard request.httpMethod == "GET", !startsAction else {
             // 화면이 열릴 때 저절로 보내는 것(사용자가 누른 게 아님)은 시트 없이 건너뛴다
-            if !Self.browseBackgroundWrites.contains(path) { Self.promptSignup() }
+            if !Self.browseBackgroundWrites.contains(path) { Self.promptSignup(trigger: Self.browseTrigger(path: path, method: request.httpMethod ?? "")) }
             throw APIError.browsing
         }
         guard let data = BrowseFixtures.json(for: path + query) else {
@@ -233,7 +233,16 @@ final class APIClient {
     /// 둘러보기 중 저절로 나가는 쓰기 — 가입 안내 없이 막기만 한다
     private static let browseBackgroundWrites: Set<String> = ["/api/v1/people/sync"]
 
-    static func promptSignup() {
-        Task { @MainActor in BrowseMode.shared.promptSignup() }
+    static func promptSignup(trigger: String = "other") {
+        Task { @MainActor in BrowseMode.shared.promptSignup(trigger: trigger) }
+    }
+
+    /// 가입 시트를 연 동작 분류 (1.8.0 집계) — 일정 저장·끌기 / 예약 링크 / 예약하기 / 그 밖
+    static func browseTrigger(path: String, method: String) -> String {
+        if path.hasPrefix("/api/v1/calendar/events") || path.hasPrefix("/api/v1/events") { return "event" }
+        if path.hasPrefix("/api/v1/users/"), path.contains("/slots/"), method == "POST" { return "booking" }
+        if path.hasPrefix("/api/v1/bookings") { return "booking" }
+        if path.hasPrefix("/api/v1/slots") { return "link" }
+        return "other"
     }
 }

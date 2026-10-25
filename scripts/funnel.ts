@@ -95,4 +95,14 @@ function summarize(title: string, rows: Row[], byHost: boolean) {
   }
 
   console.log(`\n■ 앱 둘러보기  7일: 시작 ${b("start", kstDay(6))} → 가입 ${b("signup", kstDay(6))} · 30일: 시작 ${b("start", since)} → 가입 ${b("signup", since)}`);
+  // 둘러보기 안 단계 (1.8.0) — 7일 합계. 탭은 한 둘러보기에서 첫 진입만, 시트는 연 동작별·고른 것별
+  {
+    const { data: steps } = await db.from("app_browse_step_daily").select("day, step, count").gte("day", kstDay(6));
+    const st = (k: string) => (steps ?? []).filter((r) => r.step === k).reduce((x, r) => x + (r.count as number), 0);
+    console.log(
+      `  둘러보기 안(7일): 탭 캘린더 ${st("tab_calendar")}·예약 ${st("tab_bookings")}·오르빗 ${st("tab_orbit")}·리포트 ${st("tab_asset")}·프로필 ${st("tab_profile")}` +
+        ` | 가입 시트 열림 일정 ${st("prompt_event")}·링크 ${st("prompt_link")}·예약 ${st("prompt_booking")}·그 밖 ${st("prompt_other")}` +
+        ` → 가입 ${st("sheet_signup")}·로그인 ${st("sheet_login")}·닫음 ${st("sheet_close")} | 띠의 가입하기 ${st("banner_signup")}`,
+    );
+  }
 })();

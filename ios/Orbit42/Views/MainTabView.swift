@@ -161,6 +161,13 @@ struct MainTabView: View {
             await pendingBookings.refresh()
             await EventReminders.shared.refresh()
         }
+        // 둘러보기 안 탭 첫 진입 (1.8.0 집계) — 처음 보이는 탭도 센다
+        .onChange(of: router.selection, initial: true) { _, tab in
+            BrowseMode.shared.noteTab(tab.rawValue)
+        }
+        .onChange(of: BrowseMode.shared.active) { _, active in
+            if active { BrowseMode.shared.noteTab(router.selection.rawValue) }
+        }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 Task { await pendingBookings.refresh() }
