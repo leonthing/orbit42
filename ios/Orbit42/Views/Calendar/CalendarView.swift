@@ -44,6 +44,8 @@ struct CalendarView: View {
         let event: CalendarEvent
         let newStart: Date
         let newEnd: Date
+        /// 종일↔시간 바꾸기(개선-34)면 바꾼 뒤 종일인지, 시간만 옮기면 nil
+        var toAllDay: Bool? = nil
         var id: String { event.id }
     }
 
@@ -94,7 +96,8 @@ struct CalendarView: View {
                 Text(completionErrorMessage ?? "")
             }
             .alert(
-                pendingMove.map { calendar.isDate($0.newStart, inSameDayAs: $0.event.startAt) } == false ? "일정을 옮길까요?" : "시간을 바꿀까요?",
+                pendingMove?.toAllDay != nil ? "일정을 바꿀까요?"
+                    : (pendingMove.map { calendar.isDate($0.newStart, inSameDayAs: $0.event.startAt) } == false ? "일정을 옮길까요?" : "시간을 바꿀까요?"),
                 isPresented: Binding(
                     get: { pendingMove != nil },
                     set: { if !$0 { pendingMove = nil } }
@@ -104,7 +107,7 @@ struct CalendarView: View {
                 Button("취소", role: .cancel) {}
                 Button("바꾸기") { performMove(move, notifyAttendees: true) }
             } message: { move in
-                Text("\(DayTimelineView.dateTimeLabel(move.newStart, move.newEnd))로 바꿔요. 참석자분들께 구글 캘린더 변경 알림을 보내 드려요.")
+                Text("\(moveTargetLabel(move))로 바꿔요. 참석자분들께 구글 캘린더 변경 알림을 보내 드려요.")
             }
             .alert("시간을 바꾸지 못했어요", isPresented: Binding(
                 get: { moveErrorMessage != nil },
@@ -422,6 +425,26 @@ struct CalendarView: View {
         let text: String
         /// 있으면 '보기'로 그 날로
         let date: Date?
+        /// 있으면 '되돌리기' (종일↔시간 바꾸기, 개선-34)
+        var undo: (() -> Void)? = nil
+        var id = UUID()
+
+        static func == (lhs: MovedToast, rhs: MovedToast) -> Bool { lhs.id == rhs.id }
+    }
+
+    /// 짧은 안내 한 줄 (끌 수 없는 일정 등)
+    private func showNotice(_ text: String) {
+        showToast(MovedToast(text: text, date: nil), seconds: 3)
+    }
+
+    private func showToast(_ toast: MovedToast, seconds: Double) {
+        movedToastTask?.cancel()
+        withAnimation(.easeOut(duration: 0.2)) { movedToast = toast }
+        movedToastTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeIn(duration: 0.2)) { movedToast = nil }
+        }
     }
 
     private func showMovedToast(to date: Date?, occurrenceOnly: Bool = false) {
@@ -448,6 +471,16 @@ struct CalendarView: View {
                     Text(toast.text)
                         .font(.subheadline)
                         .foregroundStyle(.white)
+                    if let undo = toast.undo {
+                        Button("되돌리기") {
+                            movedToastTask?.cancel()
+                            withAnimation { movedToast = nil }
+                            undo()
+                        }
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color(hexString: "#a5b4fc") ?? .white)
+                        .accessibilityIdentifier("convertUndo")
+                    }
                     if let date = toast.date {
                         Button("보기") {
                             movedToastTask?.cancel()
@@ -644,7 +677,11 @@ struct CalendarView: View {
                             .flatMap { dayScrollRegistry.y[calendar.startOfDay(for: $0)] }
                     },
                     onScrollY: { date, y in dayScrollRegistry.y[date] = y },
-                    stripFrames: stripFrames
+                    stripFrames: stripFrames,
+                    onConvert: { event, toAllDay, start, end in
+                        requestMove(PendingMove(event: event, newStart: start, newEnd: end, toAllDay: toAllDay))
+                    },
+                    onNotice: { showNotice($0) }
                 )
                 // 달 경계 너머 날짜는 미리 받아 둔다
                 .task(id: day) {
@@ -1020,8 +1057,55 @@ struct CalendarView: View {
         }
     }
 
+    /// "10월 16일 (금) 종일" / "10월 16일 (금) 오후 2:00–3:00"
+    private func moveTargetLabel(_ move: PendingMove) -> String {
+        if move.toAllDay == true { return "\(Self.toastDayFormatter.string(from: move.newStart)) 종일 일정" }
+        return DayTimelineView.dateTimeLabel(move.newStart, move.newEnd)
+    }
+
+    /// 종일↔시간 바꾸기 (개선-34) — 뷰모델이 먼저 화면에 바꿔 두고 실패하면 되돌린다. 성공하면 아래 안내에 '되돌리기'.
+    private func performConvert(_ move: PendingMove, toAllDay: Bool, notifyAttendees: Bool) {
+        let original = viewModel.current(move.event)
+        Task {
+            do {
+                try await viewModel.setAllDay(
+                    original, allDay: toAllDay, start: move.newStart, end: move.newEnd, notifyAttendees: notifyAttendees
+                )
+                let text = toAllDay
+                    ? "종일 일정으로 바꿨어요"
+                    : "\(Self.moveTimeFormatter.string(from: move.newStart)) 시간 일정으로 바꿨어요"
+                showToast(MovedToast(text: text, date: nil, undo: { undoConvert(original, notifyAttendees: notifyAttendees) }), seconds: 5)
+            } catch let apiError as APIError {
+                moveErrorMessage = apiError.errorDescription
+            } catch {
+                moveErrorMessage = "잠시 후 다시 시도해 주세요."
+            }
+        }
+    }
+
+    /// 바꾸기 전 모습으로 — 종일이었으면 그 날(마지막 날 포함), 시간이었으면 원래 시각
+    private func undoConvert(_ original: CalendarEvent, notifyAttendees: Bool) {
+        let now = viewModel.current(original)
+        let start = original.allDay ? calendar.startOfDay(for: original.startAt) : original.startAt
+        let end = original.allDay ? calendar.startOfDay(for: original.effectiveEnd(calendar: calendar)) : original.endAt
+        Task {
+            do {
+                try await viewModel.setAllDay(now, allDay: original.allDay, start: start, end: end, notifyAttendees: notifyAttendees)
+                showNotice("되돌렸어요")
+            } catch let apiError as APIError {
+                moveErrorMessage = apiError.errorDescription
+            } catch {
+                moveErrorMessage = "잠시 후 다시 시도해 주세요."
+            }
+        }
+    }
+
     /// 뷰모델이 먼저 화면에 옮겨 두고, 실패하면 되돌린다 — 여기선 실패 alert 만.
     private func performMove(_ move: PendingMove, notifyAttendees: Bool) {
+        if let toAllDay = move.toAllDay {
+            performConvert(move, toAllDay: toAllDay, notifyAttendees: notifyAttendees)
+            return
+        }
         Task {
             do {
                 try await viewModel.retimeEvent(
