@@ -81,6 +81,18 @@ enum ShareCardPlanner {
         return ranges.count > max ? "\(shown) 외 \(ranges.count - max)" : shown
     }
 
+    /// 구간 단위 줄 나누기 — 줄마다 시각으로 시작, 넘치면 마지막 줄 끝에 "외 n"
+    static func rangeLines(_ ranges: [ShareCardRange], perLine: Int, max: Int) -> [String] {
+        let shown = Array(ranges.prefix(max))
+        var lines: [String] = stride(from: 0, to: shown.count, by: perLine).map { i in
+            shown[i..<min(i + perLine, shown.count)].map(rangeText).joined(separator: "  ")
+        }
+        if ranges.count > max, !lines.isEmpty {
+            lines[lines.count - 1] += " 외 \(ranges.count - max)"
+        }
+        return lines
+    }
+
     /// 카드 링크 — 방문 집계가 카드에서 온 것을 따로 센다
     static func cardURL(_ shareUrl: String) -> String {
         shareUrl + (shareUrl.contains("?") ? "&" : "?") + "via=card"
@@ -142,6 +154,8 @@ private extension Color {
 
 /// 카드 본체 — 픽셀 크기 그대로(ImageRenderer scale 1).
 /// 들어가는 것: 내 표시 이름, 예약 링크 이름, 날짜별 열린 시각, 짧은 주소, QR. 그 밖의 정보는 받지도 않는다.
+/// 스토리(9:16)는 인스타·카톡이 위(프로필·진행 막대)와 아래(메시지 줄)를 가리므로
+/// 위 250px·아래 340px 안에는 아무것도 두지 않고 내용을 가운데로 모은다.
 struct ShareCardImage: View {
     let size: ShareCardSize
     let theme: ShareCardTheme
@@ -151,88 +165,110 @@ struct ShareCardImage: View {
     let url: String
     let qr: UIImage?
 
+    /// 스토리 가림 영역 (1080×1920 기준)
+    static let storySafeTop: CGFloat = 250
+    static let storySafeBottom: CGFloat = 340
+
     private var isStory: Bool { size == .story }
-    private var pad: CGFloat { isStory ? 96 : 72 }
+    /// 한 줄에 넣는 구간 수 / 하루에 보여 줄 구간 수(넘으면 '외 n')
+    private var perLine: Int { 2 }
+    /// 스토리는 하루 두 줄(4구간)까지 — 7일이 모두 두 줄이라 안전 영역을 넘을 만하면 하루 한 줄(2구간)로
+    private var maxRanges: Int {
+        guard isStory else { return 2 }
+        let shownDays = days.prefix(7)
+        let twoLineDays = shownDays.filter { $0.ranges.count > 2 }.count
+        // 캡처로 잰 값: 한 줄 행 ≈ 77px, 두 줄 행 ≈ 131px(행 사이 포함) — 안전 영역 안에서 시간표에 쓸 수 있는 높이 ≈ 800px
+        let height = shownDays.count * 77 + twoLineDays * 54
+        return height <= 800 ? 4 : 2
+    }
+    private var timeFont: CGFloat { isStory ? 42 : 40 }
+    private var dayFont: CGFloat { isStory ? 40 : 38 }
 
     var body: some View {
         ZStack {
             theme.background
-            VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: isStory ? 40 : 26) {
                 header
                 rows
-                    .padding(.top, isStory ? 64 : 28)
-                Spacer(minLength: isStory ? 48 : 24)
                 footer
             }
-            .padding(pad)
+            .padding(.horizontal, isStory ? 84 : 64)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.top, isStory ? Self.storySafeTop : 56)
+            .padding(.bottom, isStory ? Self.storySafeBottom : 56)
         }
         .frame(width: size.pixels.width, height: size.pixels.height)
         .environment(\.colorScheme, theme == .paper ? .light : .dark)
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: isStory ? 18 : 10) {
+        VStack(alignment: .leading, spacing: isStory ? 10 : 6) {
             Text("이번 주 빈 시간")
-                .font(.system(size: isStory ? 44 : 34, weight: .semibold))
+                .font(.system(size: isStory ? 40 : 34, weight: .semibold))
                 .foregroundStyle(theme.accent)
             Text(hostName)
-                .font(.system(size: isStory ? 92 : 64, weight: .bold))
+                .font(.system(size: isStory ? 84 : 62, weight: .bold))
                 .foregroundStyle(theme.ink)
                 .lineLimit(1)
                 .minimumScaleFactor(0.45)
             Text(linkTitle)
-                .font(.system(size: isStory ? 44 : 34, weight: .medium))
+                .font(.system(size: isStory ? 40 : 32, weight: .medium))
                 .foregroundStyle(theme.sub)
-                .lineLimit(isStory ? 2 : 1)
+                .lineLimit(1)
                 .minimumScaleFactor(0.7)
         }
     }
 
     private var rows: some View {
-        VStack(alignment: .leading, spacing: isStory ? 18 : 10) {
+        VStack(alignment: .leading, spacing: isStory ? 12 : 9) {
             ForEach(days.prefix(7), id: \.day) { d in
-                HStack(alignment: .firstTextBaseline, spacing: isStory ? 28 : 20) {
+                HStack(alignment: .firstTextBaseline, spacing: 22) {
                     Text(ShareCardPlanner.dayText(d.day))
-                        .font(.system(size: isStory ? 40 : 30, weight: .semibold))
+                        .font(.system(size: dayFont, weight: .semibold))
                         .foregroundStyle(theme.ink)
-                        .frame(width: isStory ? 290 : 220, alignment: .leading)
+                        .frame(width: isStory ? 268 : 256, alignment: .leading)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                    Text(ShareCardPlanner.rangesText(d.ranges, max: isStory ? 3 : 2))
-                        .font(.system(size: isStory ? 38 : 29, weight: .regular).monospacedDigit())
-                        .foregroundStyle(theme.ink.opacity(0.92))
-                        .lineLimit(isStory ? 2 : 1)
-                        .minimumScaleFactor(0.6)
+                        .minimumScaleFactor(0.8)
+                    // 구간 단위로 끊는다 — 줄마다 시각으로 시작
+                    VStack(alignment: .leading, spacing: 2) {
+                        ForEach(Array(ShareCardPlanner.rangeLines(d.ranges, perLine: perLine, max: maxRanges).enumerated()), id: \.offset) { _, line in
+                            Text(line)
+                                .font(.system(size: timeFont, weight: .regular).monospacedDigit())
+                                .foregroundStyle(theme.ink.opacity(0.95))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                        }
+                    }
                     Spacer(minLength: 0)
                 }
-                .padding(.horizontal, isStory ? 30 : 22)
-                .padding(.vertical, isStory ? 22 : 12)
-                .background(theme.rowFill, in: RoundedRectangle(cornerRadius: isStory ? 28 : 20))
+                .padding(.horizontal, 24)
+                .padding(.vertical, isStory ? 11 : 7)
+                .background(theme.rowFill, in: RoundedRectangle(cornerRadius: isStory ? 24 : 18))
             }
         }
     }
 
     private var footer: some View {
-        HStack(alignment: .center, spacing: isStory ? 40 : 30) {
+        HStack(alignment: .center, spacing: isStory ? 32 : 26) {
             if let qr {
                 Image(uiImage: qr)
                     .interpolation(.none)
                     .resizable()
-                    .frame(width: isStory ? 230 : 170, height: isStory ? 230 : 170)
-                    .padding(isStory ? 18 : 14)
-                    .background(Color.white, in: RoundedRectangle(cornerRadius: isStory ? 28 : 22))
+                    .frame(width: isStory ? 176 : 138, height: isStory ? 176 : 138)
+                    .padding(isStory ? 14 : 11)
+                    .background(Color.white, in: RoundedRectangle(cornerRadius: isStory ? 22 : 18))
             }
-            VStack(alignment: .leading, spacing: isStory ? 12 : 8) {
+            VStack(alignment: .leading, spacing: isStory ? 8 : 6) {
                 Text("예약하기")
-                    .font(.system(size: isStory ? 48 : 36, weight: .bold))
+                    .font(.system(size: isStory ? 46 : 38, weight: .bold))
                     .foregroundStyle(theme.ink)
                 Text(DisplayURL.short(url).replacingOccurrences(of: "?via=card", with: ""))
-                    .font(.system(size: isStory ? 34 : 27, weight: .medium))
+                    .font(.system(size: isStory ? 32 : 28, weight: .medium))
                     .foregroundStyle(theme.sub)
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
                 Text("Orbit42")
-                    .font(.system(size: isStory ? 30 : 24, weight: .semibold))
+                    .font(.system(size: isStory ? 28 : 24, weight: .semibold))
                     .foregroundStyle(theme.accent)
             }
             Spacer(minLength: 0)
@@ -269,6 +305,7 @@ struct ShareCardComposer: View {
     @State private var image: UIImage?
     @State private var sharing = false
     @State private var saveMessage: String?
+    @State private var copiedNotice = false
 
     private var slot: TimeSlot { slots.first { $0.id == selectedId } ?? initial }
 
@@ -381,8 +418,14 @@ struct ShareCardComposer: View {
                     }
                     .buttonStyle(.plain)
                     Button {
+                        // 스토리 속 주소·QR은 같은 폰에선 못 누른다 — 링크를 복사해 링크 스티커에 붙이게 안내
+                        UIPasteboard.general.string = cardURL
                         LinkShareRecorder.record(username: auth.user?.username)
-                        sharing = true
+                        withAnimation { copiedNotice = true }
+                        Task {
+                            try? await Task.sleep(for: .milliseconds(1600))
+                            sharing = true
+                        }
                     } label: {
                         Label("공유", systemImage: "square.and.arrow.up")
                             .font(.subheadline.weight(.semibold))
@@ -395,9 +438,16 @@ struct ShareCardComposer: View {
                     .accessibilityIdentifier("shareCardShare")
                 }
                 .disabled(image == nil)
-                Text("링크로 들어온 방문은 '공유 카드'로 따로 세어져요.")
-                    .font(.caption)
-                    .foregroundStyle(Theme.secondaryText)
+                if copiedNotice {
+                    Label("링크를 복사했어요. 인스타 스토리에서는 링크 스티커에 붙여 넣어 주세요", systemImage: "link")
+                        .font(.footnote)
+                        .foregroundStyle(Theme.primaryText)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Theme.accent.opacity(0.18), in: RoundedRectangle(cornerRadius: 12))
+                        .accessibilityIdentifier("shareCardCopiedNotice")
+                }
             }
         } else {
             ProgressView().tint(Theme.accent).padding(.top, 60)
@@ -416,6 +466,19 @@ struct ShareCardComposer: View {
             days = ShareCardPlanner.plan(response.options.map { ($0.startAt, $0.endAt, $0.closed) })
             #if DEBUG
             if ProcessInfo.processInfo.environment["SHARECARD_EMPTY"] == "1" { days = [] }   // 촬영·테스트용 빈 화면
+            // 촬영·테스트용 꽉 찬 주 — 7일 모두 구간 6개
+            if ProcessInfo.processInfo.environment["SHARECARD_DENSE"] == "1" {
+                let cal = ShareCardPlanner.calendar
+                let today = cal.startOfDay(for: Date())
+                var dense: [(start: Date, end: Date, closed: Bool)] = []
+                for day in 0..<7 {
+                    for hour in [9, 11, 13, 15, 17, 19] {
+                        let start = cal.date(byAdding: .hour, value: hour, to: cal.date(byAdding: .day, value: day + 1, to: today)!)!
+                        dense.append((start, start.addingTimeInterval(3600), false))
+                    }
+                }
+                days = ShareCardPlanner.plan(dense, now: today.addingTimeInterval(86_400 - 1))
+            }
             #endif
             rerender()
         } catch is CancellationError {

@@ -51,8 +51,10 @@ final class ShareCardUITests: XCTestCase {
         app.buttons["shareCardTheme.violet"].tap()
         sleep(1)
         shot("card-composer")
-        // 공유 시트가 뜬다(이미지 + 링크)
+        // 공유 — 먼저 링크를 복사하고 안내, 이어서 공유 시트(이미지 + 링크)
         app.buttons["shareCardShare"].tap()
+        shot("card-copied")
+        XCTAssertTrue(app.descendants(matching: .any)["shareCardCopiedNotice"].exists || app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "링크를 복사했어요")).firstMatch.exists, "복사 안내 없음")
         sleep(2)
         shot("card-share-sheet")
     }
@@ -66,6 +68,16 @@ final class ShareCardUITests: XCTestCase {
         app.segmentedControls.buttons["정사각 1:1"].tap()
         sleep(1)
         shot("card-longname-square")
+    }
+
+    /// 7일 모두 구간이 많을 때 — 안전 영역 안에 다 들어가는지(SHARECARD_SHOT_DIR 로 카드 확인)
+    func testDenseWeek() throws {
+        launch(["SHARECARD_DENSE": "1"])
+        openCard("커피챗 30분")
+        XCTAssertTrue(app.images["shareCardPreview"].waitForExistence(timeout: 10))
+        sleep(1)
+        app.segmentedControls.buttons["정사각 1:1"].tap()
+        sleep(1)
     }
 
     func testEmptyWeek() throws {

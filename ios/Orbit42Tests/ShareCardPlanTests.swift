@@ -59,6 +59,18 @@ final class ShareCardPlanTests: XCTestCase {
         XCTAssertEqual(ShareCardPlanner.cardURL("https://orbit42.org/a/s/b?x=1"), "https://orbit42.org/a/s/b?x=1&via=card")
     }
 
+    /// 줄은 구간 단위로 — 줄마다 시각으로 시작, 넘치면 마지막 줄에 "외 n"
+    func testRangeLinesStartWithTime() {
+        let base = d("2026-10-27T01:00:00Z")
+        let ranges = (0..<5).map { i in
+            ShareCardRange(start: base.addingTimeInterval(Double(i) * 7200), end: base.addingTimeInterval(Double(i) * 7200 + 1800))
+        }
+        let lines = ShareCardPlanner.rangeLines(ranges, perLine: 2, max: 4)
+        XCTAssertEqual(lines, ["10:00–10:30  12:00–12:30", "14:00–14:30  16:00–16:30 외 1"])
+        XCTAssertTrue(lines.allSatisfy { $0.first?.isNumber == true })
+        XCTAssertEqual(ShareCardPlanner.rangeLines(Array(ranges.prefix(1)), perLine: 2, max: 2), ["10:00–10:30"])
+    }
+
     func testEmptyWhenNothingOpen() {
         XCTAssertTrue(ShareCardPlanner.plan([], now: Date()).isEmpty)
     }
