@@ -3,6 +3,7 @@ import SwiftUI
 /// 타인 슬롯 예약 화면 — 슬롯 정보 + 장소 선택 + 날짜별 예약 가능 시간 + 예약 확인 시트.
 struct SlotBookingView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(TabRouter.self) private var router
     @State private var viewModel: SlotBookingViewModel
     /// 예약 확인 시트에 올라간 옵션
     @State private var confirmingOption: BookingOption?
@@ -497,6 +498,19 @@ struct SlotBookingView: View {
                         .background(Theme.accent, in: Capsule())
                 }
                 .padding(.top, 8)
+
+                // 나도 내 예약 링크 만들기 — 담담하게 한 줄 (1.6.0 ②)
+                Button {
+                    dismiss()
+                    router.openNewBookingLink()
+                } label: {
+                    Text("나도 이런 예약 링크 만들기")
+                        .font(.footnote)
+                        .foregroundStyle(Theme.secondaryText)
+                        .underline()
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("ownLinkFromBooking")
             }
             .padding(.horizontal, 32)
             .padding(.top, 60)
