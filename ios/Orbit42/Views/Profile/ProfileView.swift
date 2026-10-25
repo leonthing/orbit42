@@ -77,6 +77,8 @@ private struct MyProfileContent: View {
     @State private var slotsViewModel = SlotsViewModel()
     /// 내 공개 페이지(게스트에게 보이는 링크 페이지)를 앱 안 Safari 로
     @State private var publicPageURL: IdentifiableURL?
+    /// 둘러보기: 공개 페이지를 웹 대신 앱 안 손님 화면으로 (개선-47)
+    @State private var showGuestPreview = false
 
     init(username: String) {
         _viewModel = State(initialValue: PersonProfileViewModel(username: username))
@@ -335,6 +337,10 @@ private struct MyProfileContent: View {
                 }
             }
         }
+        .navigationDestination(isPresented: $showGuestPreview) {
+            PersonProfileView(username: BrowseFixtures.guestPreviewUsername)
+                .safeAreaInset(edge: .top, spacing: 0) { GuestPreviewHint() }
+        }
         .sheet(item: $publicPageURL) { item in
             SafariView(url: item.url).ignoresSafeArea()
         }
@@ -343,7 +349,11 @@ private struct MyProfileContent: View {
     /// 게스트가 내 링크를 열었을 때 보는 공개 페이지
     private var publicPageLink: some View {
         Button {
-            if let shareURL { publicPageURL = IdentifiableURL(url: shareURL) }
+            if BrowseGate.isOn {
+                showGuestPreview = true
+            } else if let shareURL {
+                publicPageURL = IdentifiableURL(url: shareURL)
+            }
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: "eye")

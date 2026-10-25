@@ -191,6 +191,10 @@ struct DayTimelineView: View {
                 )
                 .onAppear { scrollToAnchor(proxy, animated: false) }
                 .onChange(of: dayStart) { _, _ in scrollToAnchor(proxy, animated: true) }
+                // 둘러보기: 예시 일정이 화면이 뜬 뒤에 들어오면 첫 일정으로 한 번 맞춘다
+                .onChange(of: timedEvents.isEmpty) { wasEmpty, isEmpty in
+                    if BrowseGate.isOn, wasEmpty, !isEmpty { scrollToAnchor(proxy, animated: false) }
+                }
                 .onGeometryChange(for: CGFloat.self) { $0.frame(in: .named(Self.contentSpace)).minY } action: {
                     timelineTopInContent = $0
                 }
@@ -955,7 +959,10 @@ struct DayTimelineView: View {
     /// 오늘이면 현재 시각 한 시간 전, 아니면 첫 일정 한 시간 전, 일정이 없으면 8시.
     private func scrollToAnchor(_ proxy: ScrollViewProxy, animated: Bool) {
         var hour = 8
-        if calendar.isDateInToday(date) {
+        // 둘러보기(예시 데이터)는 지금 시각 대신 그날 첫 일정부터 — 하루가 차 있는 모습이 먼저 보이게 (개선-47)
+        if BrowseGate.isOn, let first = timedEvents.map({ max($0.startAt, dayStart) }).min() {
+            hour = calendar.component(.hour, from: first) - 1
+        } else if calendar.isDateInToday(date) {
             hour = calendar.component(.hour, from: Date()) - 1
         } else if let first = timedEvents.map({ max($0.startAt, dayStart) }).min() {
             hour = calendar.component(.hour, from: first) - 1

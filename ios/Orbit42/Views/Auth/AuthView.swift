@@ -31,13 +31,15 @@ struct AuthView: View {
 
     @State private var errorMessage: String?
     @State private var isSubmitting = false
+    /// 작은 화면(iPhone SE 등) — 머리와 간격을 줄여 '가입 없이 둘러보기'까지 스크롤 없이 보이게 (개선-47)
+    @State private var compact = false
 
     var body: some View {
         ZStack {
             Theme.background.ignoresSafeArea()
 
             ScrollView {
-                VStack(spacing: 24) {
+                VStack(spacing: compact ? 14 : 24) {
                     header
 
                     Picker("모드", selection: $mode) {
@@ -66,15 +68,17 @@ struct AuthView: View {
                     divider
                     appleButton
                     googleButton
-                    consentNotice
                     browseButton
+                    consentNotice
                 }
-                .padding(24)
+                .padding(.horizontal, 24)
+                .padding(.vertical, compact ? 12 : 24)
                 .frame(maxWidth: 440)
             }
             .readableWidth()
             .scrollDismissesKeyboard(.interactively)
         }
+        .onGeometryChange(for: Bool.self) { $0.size.height < 700 } action: { compact = $0 }
         .onChange(of: mode) {
             errorMessage = nil
         }
@@ -101,10 +105,12 @@ struct AuthView: View {
     // MARK: - 헤더
 
     private var header: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "circle.dotted.circle")
-                .font(.system(size: 40, weight: .light))
-                .foregroundStyle(Theme.accent)
+        VStack(spacing: compact ? 4 : 8) {
+            if !compact {
+                Image(systemName: "circle.dotted.circle")
+                    .font(.system(size: 40, weight: .light))
+                    .foregroundStyle(Theme.accent)
+            }
             Text("orbit42")
                 .font(.largeTitle.weight(.bold))
                 .foregroundStyle(Theme.primaryText)
@@ -112,7 +118,7 @@ struct AuthView: View {
                 .font(.subheadline)
                 .foregroundStyle(Theme.secondaryText)
         }
-        .padding(.top, 32)
+        .padding(.top, compact ? 4 : 32)
     }
 
     // MARK: - 폼

@@ -156,6 +156,24 @@ struct BrowseSignupSheet: View {
     }
 }
 
+/// 둘러보기에서 손님 화면을 보여 줄 때 위에 붙는 한 줄
+struct GuestPreviewHint: View {
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "person.crop.circle.badge.checkmark")
+            Text("손님에게 이렇게 보여요 — 내 링크를 받은 사람이 보는 화면이에요")
+                .lineLimit(2)
+        }
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(Theme.accent)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(Theme.accent.opacity(0.1))
+        .accessibilityIdentifier("guestPreviewHint")
+    }
+}
+
 /// 둘러보는 동안 화면 위에 늘 있는 띠
 struct BrowseBanner: View {
     var body: some View {

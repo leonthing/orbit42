@@ -17,7 +17,7 @@ struct PersonProfileView: View {
             Theme.background.ignoresSafeArea()
             content
         }
-        .navigationTitle("@\(viewModel.username)")
+        .navigationTitle("@\(viewModel.data?.user.username ?? viewModel.username)")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if let data = viewModel.data, !data.isMe {

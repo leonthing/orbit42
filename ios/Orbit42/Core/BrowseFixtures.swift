@@ -5,6 +5,8 @@ import Foundation
 /// 날짜는 실행한 날 기준: @D(일수,HH:mm) = 그날 그 시각, @DATE(일수) = yyyy-MM-dd, @WEEK(주) = 이번 주 월요일 0시에서 그만큼.
 enum BrowseFixtures {
     static let username = "example.user"
+    /// '손님에게 이렇게 보여요' — 같은 예시 사용자를 남의 눈으로(isMe·isMine false) 보는 별칭
+    static let guestPreviewUsername = "example.user.guest"
 
     /// 둘러보기용 예시 사용자
     static var user: User? {
@@ -249,6 +251,9 @@ enum BrowseFixtures {
     }
 
     private static func profile(_ username: String) -> String? {
+        if username == Self.guestPreviewUsername {
+            return #"{"user":{"username":"example.user","displayName":"예시 사용자","avatarUrl":null,"bio":"브랜드 디자이너 · 커피챗과 포트폴리오 멘토링을 해요","interests":["디자인","브랜딩"],"socialLinks":{},"education":[],"experience":[]},"orbiters":12,"orbiting":8,"isFollowing":false,"isMe":false,"isBlocked":false,"rating":null,"slots":["# + mySlots.joined(separator: ",") + "]}"
+        }
         if username == Self.username {
             return #"{"user":{"username":"example.user","displayName":"예시 사용자","avatarUrl":null,"bio":"브랜드 디자이너 · 커피챗과 포트폴리오 멘토링을 해요","interests":["디자인","브랜딩"],"socialLinks":{},"education":[],"experience":[]},"orbiters":12,"orbiting":8,"isFollowing":false,"isMe":true,"isBlocked":false,"rating":null,"slots":["# + mySlots.joined(separator: ",") + "]}"
         }
@@ -272,7 +277,8 @@ enum BrowseFixtures {
     }
 
     private static func slotBooking(username: String, slug: String) -> String? {
-        let owner = username.removingPercentEncoding ?? username
+        var owner = username.removingPercentEncoding ?? username
+        if owner == Self.guestPreviewUsername { owner = Self.username }
         let slug = slug.removingPercentEncoding ?? slug
         let catalog: [(owner: String, slug: String, title: String, desc: String, minutes: Int, price: Int, host: String)] = [
             ("example.user", "coffee-chat-30", "커피챗 30분", "커피 한 잔 하며 편하게 이야기해요.", 30, 0, "예시 사용자"),
@@ -292,7 +298,7 @@ enum BrowseFixtures {
         return """
         {"slot":{"id":"browse-\(s.slug)","slug":"\(s.slug)","title":"\(s.title)","description":"\(s.desc)","durationMin":\(s.minutes),"priceCents":\(s.price * 100),
         "pricingModel":"fixed","capacity":1,"slotType":"1on1","locations":["성수","Google Meet"],"autoApprove":\(s.price == 0),"imageUrls":[],"hostUsername":"\(s.owner)",
-        "hostName":"\(s.host)","isMine":\(s.owner == Self.username),"paymentMethod":"\("offline")"},"menus":[],"options":[\(options.joined(separator: ","))]}
+        "hostName":"\(s.host)","isMine":false,"paymentMethod":"\("offline")"},"menus":[],"options":[\(options.joined(separator: ","))]}
         """
     }
 

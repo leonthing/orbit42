@@ -16,8 +16,15 @@ final class BrowseUITests: XCTestCase {
         loginLink.tap()
         let browse = app.buttons["browseStart"]
         XCTAssertTrue(browse.waitForExistence(timeout: 10), "둘러보기 버튼 없음")
-        for _ in 0..<3 where !browse.isHittable { app.swipeUp() }
+        sleep(1)
         shot("0-login")
+        // 스크롤 없이 보이는지 (iPhone SE 확인용)
+        let visible = app.windows.firstMatch.frame.contains(browse.frame)
+        print("BROWSE_BUTTON_VISIBLE=\(visible)")
+        if let dir = ProcessInfo.processInfo.environment["SHOT_DIR"] {
+            try? "\(visible)".write(toFile: "\(dir)/button_visible", atomically: true, encoding: .utf8)
+        }
+        for _ in 0..<3 where !browse.isHittable { app.swipeUp() }
         mark("BROWSE_BEGIN")
         browse.tap()
 
@@ -41,6 +48,7 @@ final class BrowseUITests: XCTestCase {
             if coffee.waitForExistence(timeout: 5) {
                 coffee.tap()
                 sleep(2)
+                XCTAssertTrue(app.otherElements["guestPreviewHint"].exists || app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "손님에게 이렇게 보여요")).firstMatch.exists, "손님 화면 안내 없음")
                 shot("2c-preview")
                 app.navigationBars.buttons.element(boundBy: 0).tap()
                 sleep(1)
@@ -57,6 +65,15 @@ final class BrowseUITests: XCTestCase {
         app.tabBars.buttons["프로필"].tap()
         sleep(2)
         shot("3b-profile")
+        // 프로필 → 내 공개 페이지 보기 → 손님 화면
+        let publicPage = app.staticTexts["내 공개 페이지 보기"].firstMatch
+        if publicPage.waitForExistence(timeout: 5) {
+            publicPage.tap()
+            sleep(2)
+            shot("3c-guest-profile")
+            app.navigationBars.buttons.element(boundBy: 0).tap()
+            sleep(1)
+        }
 
         // 저장하는 동작 — 캘린더에서 새 일정 저장 → 가입 안내
         app.tabBars.buttons["캘린더"].tap()

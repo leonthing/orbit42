@@ -17,6 +17,8 @@ struct MySlotView: View {
         Group {
             if let username = auth.user?.username {
                 SlotBookingView(username: username, slug: route.slug, title: route.title)
+                    // 둘러보기에선 손님 화면으로 보여 준다 (개선-47)
+                    .safeAreaInset(edge: .top, spacing: 0) { if BrowseGate.isOn { GuestPreviewHint() } }
             } else {
                 ProgressView().tint(Theme.accent)
             }
