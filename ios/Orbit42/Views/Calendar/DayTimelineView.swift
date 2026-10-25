@@ -302,7 +302,8 @@ struct DayTimelineView: View {
                         )
                         .zIndex(isLifted || ratingPromptId == block.id ? 1 : 0)
                         // 다른 날로 넘어간 동안엔 부모의 유령 블록(날짜·시각 표시)이 손가락을 따라간다 — 이 블록은 제스처를 붙들고만 있다
-                        .opacity(isLifted && crossDayActive && !allDayHover ? 0.01 : 1)
+                        // 다른 날로 넘어간 동안(유령 블록)·종일 칸 위(띠가 제목을 보여 줌)에선 이 블록은 제스처만 붙든다
+                        .opacity(isLifted && (allDayHover || crossDayActive) ? 0.01 : 1)
                         .simultaneousGesture(
                             dragGesture(block, mode: .move, proxy: proxy),
                             including: movable ? .all : .subviews
@@ -724,16 +725,32 @@ struct DayTimelineView: View {
         return nil
     }
 
+    /// 띠 위에 오면 끌던 블록 대신 종일 줄 모양으로 제목을 보여 준다 (블록이 띠를 가려 제목이 안 보이던 것)
+    @ViewBuilder
     private var allDayDropBand: some View {
+        let hovering = allDayHover
+        let event = draggedBlock?.event
         HStack(spacing: 6) {
             Image(systemName: "sun.max")
-            Text(allDayHover ? "놓으면 종일 일정이 돼요" : "여기에 놓으면 종일 일정")
+            if hovering, let event {
+                Text(event.title)
+                    .lineLimit(1)
+                Spacer(minLength: 4)
+                Text("종일로")
+                    .font(.caption2.weight(.bold))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(.black.opacity(0.25), in: Capsule())
+            } else {
+                Text("여기에 놓으면 종일 일정")
+            }
         }
         .font(.caption.weight(.semibold))
-        .foregroundStyle(allDayHover ? Color.white : Theme.accent)
-        .frame(maxWidth: .infinity)
+        .foregroundStyle(hovering ? Color.white : Theme.accent)
+        .padding(.horizontal, hovering ? 10 : 0)
+        .frame(maxWidth: .infinity, alignment: hovering ? .leading : .center)
         .frame(height: allDayDropHeight - 8)
-        .background(allDayHover ? Theme.accent : Theme.background, in: RoundedRectangle(cornerRadius: 8))
+        .background(hovering ? (event.map(blockColor) ?? Theme.accent) : Theme.background, in: RoundedRectangle(cornerRadius: 8))
         .overlay(
             RoundedRectangle(cornerRadius: 8)
                 .strokeBorder(Theme.accent.opacity(0.7), style: StrokeStyle(lineWidth: 1.2, dash: allDayHover ? [] : [5, 4]))
