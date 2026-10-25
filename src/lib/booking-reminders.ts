@@ -43,12 +43,31 @@ export async function runBookingReminders(
   onlyIds?: string[],
 ): Promise<Record<Kind, number> | null> {
   const result: Record<Kind, number> = { day: 0, hour: 0 };
+  // 운영 스위치 — app_flags.reminders_paused 가 켜져 있으면 보내지 않는다(배포 없이 멈춤)
+  if (await remindersPaused()) {
+    console.info("[reminder] paused by app_flags.reminders_paused");
+    return result;
+  }
   for (const kind of ["hour", "day"] as Kind[]) {
     const r = await runKind(kind, now, onlyIds);
     if (r === null) return null;
     result[kind] = r;
   }
   return result;
+}
+
+async function remindersPaused(): Promise<boolean> {
+  const { data, error } = await getAdminClient()
+    .from("app_flags")
+    .select("enabled")
+    .eq("key", "reminders_paused")
+    .maybeSingle();
+  if (error) {
+    // 스위치를 못 읽으면 평소대로 보낸다(테이블이 없을 때 등) — 기록만 남긴다
+    console.error("[reminder] app_flags read", error.message);
+    return false;
+  }
+  return data?.enabled === true;
 }
 
 async function runKind(kind: Kind, now: Date, onlyIds?: string[]): Promise<number | null> {
@@ -128,7 +147,7 @@ async function sendOne(kind: Kind, b: DueBooking, now: Date) {
 
   try {
     if (host?.email && (await emailAllowed(b.host_id, cfg.pref))) {
-      await sendBookingReminderEmail(host.email as string, {
+      const r = await sendBookingReminderEmail(host.email as string, {
         kind,
         lead,
         role: "host",
@@ -139,10 +158,11 @@ async function sendOne(kind: Kind, b: DueBooking, now: Date) {
         manageUrl: `/${host.username}/bookings`,
         hasAccount: true,
       });
+      logSend(kind, "host", b, r.ok);
     }
     const guestEmail = b.guest_email ?? (guest?.email as string | null) ?? null;
     if (guestEmail && (await emailAllowed(b.guest_id, cfg.pref))) {
-      await sendBookingReminderEmail(guestEmail, {
+      const r = await sendBookingReminderEmail(guestEmail, {
         kind,
         lead,
         role: "guest",
@@ -154,6 +174,7 @@ async function sendOne(kind: Kind, b: DueBooking, now: Date) {
         manageUrl: await ensureManagePath(b.id),
         hasAccount: !!b.guest_id,
       });
+      logSend(kind, b.guest_id ? "guest" : "guest-no-account", b, r.ok);
     }
   } catch (err) {
     console.error("reminders cron email", kind, err);
@@ -183,4 +204,11 @@ async function sendOne(kind: Kind, b: DueBooking, now: Date) {
   } catch (err) {
     console.error("reminders cron notification", kind, err);
   }
+}
+
+/** 발송 기록 한 줄 — Vercel 런타임 로그에서 '[reminder] sent' 로 찾는다. 메일 주소는 남기지 않는다. */
+function logSend(kind: Kind, to: string, b: DueBooking, ok: boolean) {
+  console.info(
+    `[reminder] sent kind=${kind === "hour" ? "1h" : "day"} to=${to} ok=${ok} booking=${b.id} start=${b.scheduled_at}`,
+  );
 }
