@@ -9,6 +9,8 @@ struct AssetView: View {
     @State private var showingSettingsSheet = false
     @State private var showingGoalsSheet = false
     @State private var showingBucketMapSheet = false
+    /// 기본 4장 아래 나머지 카드 펼침 (개선-37)
+    @State private var showingMore = false
 
     var body: some View {
         NavigationStack {
@@ -51,13 +53,8 @@ struct AssetView: View {
     @ViewBuilder
     private var content: some View {
         if let summary = viewModel.summary {
-            // freelance 는 실효 시급이 아직 없어도(수입 시간 부족) 본문을 보여주고
-            // 헤더에서만 안내한다 — 온보딩은 급여 유형 자체가 미설정일 때만.
-            if summary.hourlyValueKrw == nil, summary.incomeType != "freelance" {
-                onboarding
-            } else {
-                loaded(summary)
-            }
+            // 급여를 넣기 전에도 번 돈·판매 현황부터 보여 준다 — 급여 입력은 아래 선택 카드 (개선-37)
+            loaded(summary)
         } else if viewModel.isLoading {
             ProgressView().tint(Theme.accent)
         } else if let message = viewModel.errorMessage {
@@ -85,86 +82,107 @@ struct AssetView: View {
         .padding(32)
     }
 
-    // MARK: - 온보딩 (시급 미설정)
-
-    private var onboarding: some View {
-        VStack(spacing: 20) {
-            Spacer()
-            Image(systemName: "wonsign.circle.fill")
-                .font(.system(size: 56))
-                .foregroundStyle(Theme.accent)
-            Text("내 시간의 가치를 알아보세요")
-                .font(.title3.weight(.bold))
-                .foregroundStyle(Theme.primaryText)
-            Text("월급이나 시급을 입력하면 내 1시간이 얼마인지,\n시간을 어디에 쓰는지 돈으로 환산해 보여드려요.")
-                .font(.subheadline)
-                .foregroundStyle(Theme.secondaryText)
-                .multilineTextAlignment(.center)
-            Button {
-                showingSettingsSheet = true
-            } label: {
-                Text("시작하기")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(Theme.accent)
-            .padding(.horizontal, 32)
-            Spacer()
-            Spacer()
-        }
-        .padding(24)
-    }
-
     // MARK: - 본문
 
     private func loaded(_ summary: TimeAssetSummary) -> some View {
         ScrollView {
             VStack(spacing: 16) {
+                // 기본 4장 — 이번 달 번 돈 · 판매 현황 · 지난주 리포트 · 별점 (개선-37)
                 if let business = summary.business {
                     businessCard(business)
                     if let funnel = business.funnel {
                         funnelCard(funnel)
                     }
                 }
-                if summary.incomeType == "freelance" {
-                    freelanceHeader(summary)
-                } else if let hourly = summary.hourlyValueKrw {
-                    headerCard(
-                        title: "내 1시간",
-                        hourly: hourly,
-                        caption: nil,
-                        conversions: summary.conversions
-                    )
-                }
-                if !viewModel.goals.isEmpty {
-                    goalsCard(viewModel.goals)
-                }
-                if let yearRemaining = summary.yearRemaining {
-                    yearRemainingCard(yearRemaining)
-                }
                 if let report = summary.report {
                     reportCard(report)
                 }
-                goalsCard(summary.goals)
                 // 완료 후 별점 모아 보기 (1.5.0 A, 나만 봄)
                 RatingsCard()
-                weekUsageCard(summary)
-                if let actions = summary.actions, !actions.isEmpty {
-                    actionsCard(actions)
+
+                // 나머지는 '더 보기'로
+                Button {
+                    withAnimation { showingMore.toggle() }
+                } label: {
+                    HStack {
+                        Text(showingMore ? "접기" : "더 보기")
+                            .font(.subheadline.weight(.semibold))
+                        Image(systemName: showingMore ? "chevron.up" : "chevron.down")
+                            .font(.caption.weight(.semibold))
+                    }
+                    .foregroundStyle(Theme.accent)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
                 }
-                if summary.trend.count > 1 {
-                    trendCard(summary.trend)
+                .accessibilityIdentifier("reportMore")
+
+                if showingMore {
+                    if summary.incomeType == "freelance" {
+                        freelanceHeader(summary)
+                    } else if let hourly = summary.hourlyValueKrw {
+                        headerCard(
+                            title: "내 1시간",
+                            hourly: hourly,
+                            caption: nil,
+                            conversions: summary.conversions
+                        )
+                    }
+                    if let yearRemaining = summary.yearRemaining {
+                        yearRemainingCard(yearRemaining)
+                    }
+                    // '목표'(캘린더 목표)와 '주간 목표'를 한 카드로
+                    goalsCard(summary.goals, calendarGoals: viewModel.goals)
+                    weekUsageCard(summary)
+                    if let actions = summary.actions, !actions.isEmpty {
+                        actionsCard(actions)
+                    }
+                    if summary.trend.count > 1 {
+                        trendCard(summary.trend)
+                    }
+                    tradedCard(summary.traded)
+                    if !summary.messages.isEmpty {
+                        insightsCard(summary.messages)
+                    }
                 }
-                tradedCard(summary.traded)
-                if !summary.messages.isEmpty {
-                    insightsCard(summary.messages)
+
+                // 급여 입력은 선택 — 아직 안 넣었으면 맨 아래에
+                if summary.hourlyValueKrw == nil, summary.incomeType != "freelance" {
+                    payInputCard
                 }
             }
             .padding(16)
         }
         .refreshable { await viewModel.load(force: true) }
+    }
+
+    /// 급여(월급·시급) 입력 — 넣으면 내 1시간의 가치·시간 사용을 돈으로 환산해 보여 준다 (선택)
+    private var payInputCard: some View {
+        Button {
+            showingSettingsSheet = true
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "wonsign.circle")
+                    .font(.title2)
+                    .foregroundStyle(Theme.accent)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("내 1시간의 가치 알아보기")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.primaryText)
+                    Text("월급이나 시급을 넣으면 시간 사용을 돈으로 환산해 보여 드려요 · 선택")
+                        .font(.caption)
+                        .foregroundStyle(Theme.secondaryText)
+                        .multilineTextAlignment(.leading)
+                }
+                Spacer(minLength: 4)
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.secondaryText)
+            }
+            .padding(16)
+            .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("payInputCard")
     }
 
     private func card<Content: View>(
@@ -502,12 +520,8 @@ struct AssetView: View {
 
     // MARK: 1.4 목표 캘린더 진행
 
-    private func goalsCard(_ goals: [CalendarGoal]) -> some View {
+    private func calendarGoalsList(_ goals: [CalendarGoal]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("목표")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(Theme.secondaryText)
-
             ForEach(goals) { goal in
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 6) {
@@ -588,9 +602,6 @@ struct AssetView: View {
                 .background(Theme.fill(0.04), in: RoundedRectangle(cornerRadius: 12))
             }
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16))
     }
 
     /// 페이스 안내 — 남은 기한 안에 목표를 채우려면 주당 몇 시간이 필요한지.
@@ -728,10 +739,11 @@ struct AssetView: View {
     // MARK: 1.7 주간 목표
 
     @ViewBuilder
-    private func goalsCard(_ goals: TimeAssetGoals?) -> some View {
+    /// 목표 — 이번 주 수입·투자 시간 목표 + 캘린더 목표(목표 시간)를 한 카드에 (개선-37)
+    private func goalsCard(_ goals: TimeAssetGoals?, calendarGoals: [CalendarGoal]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("주간 목표")
+                Text("목표")
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(Theme.secondaryText)
                 Spacer()
@@ -759,10 +771,13 @@ struct AssetView: View {
                         ratio: min(1, goals.progressInvestHours / target)
                     )
                 }
-            } else {
+            } else if calendarGoals.isEmpty {
                 Text("이번 주 수입·투자 시간 목표를 정하면 진행률이 여기 표시돼요.")
                     .font(.footnote)
                     .foregroundStyle(Theme.secondaryText)
+            }
+            if !calendarGoals.isEmpty {
+                calendarGoalsList(calendarGoals)
             }
         }
         .padding(16)
