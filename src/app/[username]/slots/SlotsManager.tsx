@@ -11,6 +11,8 @@ import {
   createSlot,
   createSlotFromPreset,
   deleteSlot,
+  archiveSlot,
+  countSlotBookings,
   cloneSlot,
   addAvailability,
   removeAvailability,
@@ -1168,16 +1170,45 @@ function SlotCard({
       router.refresh();
     });
 
+  // 예약 기록이 있는 링크는 지우지 않고 보관만 한다 — 예약 데이터는 어떤 경우에도 지우지 않는다(CEO 10/26)
   const remove = async () => {
+    const bookingCount = await countSlotBookings(row.slot.id);
+    if (bookingCount === null) {
+      toast.error("예약 링크를 확인하지 못했어요. 잠시 후 다시 시도해 주세요.");
+      return;
+    }
+    if (bookingCount > 0) {
+      const ok = await confirm({
+        title: "예약 링크를 보관할까요?",
+        body: `"${row.slot.title}"에 예약 기록 ${bookingCount}건이 있어 지울 수 없고 보관만 돼요. 보관하면 공개 페이지에서 내려가고 새 예약을 받지 않아요. 받은 예약과 입금 상태는 그대로 남아요.`,
+        confirmLabel: "보관",
+      });
+      if (!ok) return;
+      startTransition(async () => {
+        const res = await archiveSlot(row.slot.id);
+        if ("error" in res && res.error) {
+          toast.error(res.error);
+          return;
+        }
+        toast.success("예약 링크를 보관했어요.");
+        router.refresh();
+      });
+      return;
+    }
     const ok = await confirm({
       title: "예약 링크를 삭제할까요?",
-      body: `"${row.slot.title}" 예약 링크와 관련된 가용 시간이 모두 사라져요.`,
+      body: `"${row.slot.title}" 예약 링크와 열어 둔 시간이 모두 사라져요. 이 링크로 받은 예약은 없어요.`,
       confirmLabel: "삭제",
       danger: true,
     });
     if (!ok) return;
     startTransition(async () => {
-      await deleteSlot(row.slot.id);
+      const res = await deleteSlot(row.slot.id);
+      if ("error" in res && res.error) {
+        toast.error(res.error);
+        router.refresh();
+        return;
+      }
       toast.success("예약 링크를 삭제했어요.");
       router.refresh();
     });
@@ -1416,7 +1447,8 @@ function SlotCard({
                     type="button"
                     onClick={() =>
                       startTransition(async () => {
-                        await removeAvailability(a.id);
+                        const res = await removeAvailability(a.id);
+                        if ("error" in res && res.error) toast.error(res.error);
                         router.refresh();
                       })
                     }

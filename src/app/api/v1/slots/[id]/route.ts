@@ -1,6 +1,8 @@
 import { apiSession } from "@/lib/api-auth";
 import { toApiSlotDetail, sanitizeWorkingHours } from "@/lib/api-slots";
 import {
+  countSlotBookings,
+  deleteSlot,
   listMySlots,
   updateSlot,
   type SlotInput,
@@ -31,7 +33,31 @@ export async function GET(
   const menus = await listMenusForSlot(slot.id);
   return Response.json({
     slot: toApiSlotDetail(slot, session.username, menus.map((m) => m.id)),
+    // 예약 기록 수(지난·취소 포함) — 0이면 삭제, 있으면 보관만 (개선-45)
+    bookingCount: (await countSlotBookings(slot.id)) ?? null,
   });
+}
+
+// DELETE — 예약 기록이 없는 링크만 지운다. 있으면 409 + bookingCount (예약 데이터는 지우지 않는다, CEO 10/26)
+export async function DELETE(
+  request: Request,
+  { params }: { params: { id: string } },
+) {
+  const session = await apiSession(request);
+  if (!session) {
+    return Response.json({ error: "로그인이 필요해요." }, { status: 401 });
+  }
+  if (!(await findMySlot(params.id))) {
+    return Response.json({ error: "예약 링크를 찾을 수 없어요." }, { status: 404 });
+  }
+  const result = await deleteSlot(params.id);
+  if ("code" in result && result.code === "has_bookings") {
+    return Response.json({ error: result.error, code: result.code, bookingCount: result.bookingCount }, { status: 409 });
+  }
+  if ("error" in result && result.error) {
+    return Response.json({ error: result.error }, { status: 400 });
+  }
+  return Response.json({ ok: true });
 }
 
 const SLOT_TYPES: SlotType[] = ["1on1", "companion", "group"];
