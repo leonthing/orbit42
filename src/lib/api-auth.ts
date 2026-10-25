@@ -71,13 +71,15 @@ export type ApiUser = {
   email: string | null;
   avatarUrl: string | null;
   emailVerified: boolean;
+  /** 가입 시각(ISO) — 앱 '다음에 할 일' 카드가 가입 14일 안에만 뜨게 (개선-35) */
+  createdAt: string | null;
 };
 
 export async function loadApiUser(username: string): Promise<ApiUser | null> {
   const db = getAdminClient();
   const { data } = await db
     .from("users")
-    .select("username, display_name, email, avatar_url, email_verified")
+    .select("username, display_name, email, avatar_url, email_verified, created_at")
     .eq("username", username)
     .single();
   if (!data) return null;
@@ -87,6 +89,7 @@ export async function loadApiUser(username: string): Promise<ApiUser | null> {
     email: (data.email as string | null) ?? null,
     avatarUrl: (data.avatar_url as string | null) ?? null,
     emailVerified: Boolean(data.email_verified),
+    createdAt: (data.created_at as string | null) ?? null,
   };
 }
 

@@ -32,6 +32,8 @@ struct User: Codable, Equatable, Sendable {
     let linkTheme: String?
     /// 계좌이체 안내 — 있으면 유료 슬롯 예약이 '입금 대기'로 들어온다
     let paymentInstructions: String?
+    /// 가입 시각(ISO) — '다음에 할 일' 카드 대상(가입 14일 안) 판단. 옛 서버엔 없다 (개선-35)
+    let createdAt: String?
 
     init(
         username: String,
@@ -49,7 +51,8 @@ struct User: Codable, Equatable, Sendable {
         appleLinked: Bool? = nil,
         shareImageUrl: String? = nil,
         linkTheme: String? = nil,
-        paymentInstructions: String? = nil
+        paymentInstructions: String? = nil,
+        createdAt: String? = nil
     ) {
         self.username = username
         self.displayName = displayName
@@ -67,6 +70,7 @@ struct User: Codable, Equatable, Sendable {
         self.shareImageUrl = shareImageUrl
         self.linkTheme = linkTheme
         self.paymentInstructions = paymentInstructions
+        self.createdAt = createdAt
     }
 
     /// 화면에 표시할 이름 (displayName 이 없으면 username)

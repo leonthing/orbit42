@@ -79,7 +79,7 @@ struct CalendarView: View {
                 await observeEventsForGettingStarted()
             }
             .task(id: auth.user?.username) {
-                gettingStarted.bind(username: auth.user?.username)
+                gettingStarted.bind(username: auth.user?.username, createdAt: auth.user?.createdAt)
                 await observeEventsForGettingStarted()
                 await gettingStarted.refresh()
             }
@@ -126,6 +126,15 @@ struct CalendarView: View {
                 applyEventRequest(router.calendarEventRequest)
                 applyDateRequest(router.calendarDateRequest)
                 // 예약 탭에서 링크를 만들고 돌아오면 그 항목을 지운다
+                gettingStarted.reloadFlags()
+                Task { await gettingStarted.refresh() }
+            }
+            // 예약 탭 빈 화면에서 '다음에 할 일 다시 보기' — 월 보기로 열고 카드를 다시 띄운다 (개선-35)
+            .onChange(of: router.gettingStartedRequest) { _, requested in
+                guard requested else { return }
+                router.gettingStartedRequest = false
+                scheduleViewMode = .month
+                gettingStarted.reloadFlags()
                 Task { await gettingStarted.refresh() }
             }
             // 홈 화면 위젯에서 누른 날짜.
@@ -157,7 +166,7 @@ struct CalendarView: View {
         for date in neighbors { await viewModel.prefetchMonth(containing: date) }
         let any = neighbors.contains { viewModel.monthHasEvents(containing: $0) == true }
         gettingStarted.observeEvents(any: any)
-        if gettingStarted.phase == "new" { await gettingStarted.refresh() }
+        if gettingStarted.eligible { await gettingStarted.refresh() }
     }
 
     /// 위젯 딥링크 — 그 날짜의 하루 보기로 연다.

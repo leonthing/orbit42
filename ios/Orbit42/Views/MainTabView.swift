@@ -24,6 +24,15 @@ final class TabRouter {
     /// 예약 링크 구역에서 '새 예약 링크' 화면을 바로 연다 — 다음에 할 일 카드·받은 예약 빈 화면, 소비 후 false
     var newBookingLinkRequest = false
 
+    /// 닫았던 '다음에 할 일' 카드를 다시 연다 — 캘린더 탭(월 보기)으로 (개선-35), 소비 후 false
+    var gettingStartedRequest = false
+
+    func reopenGettingStarted(username: String) {
+        GettingStartedState.reopen(username: username)
+        selection = .calendar
+        gettingStartedRequest = true
+    }
+
     /// 예약 탭 > 예약 링크 > 새 예약 링크
     func openNewBookingLink() {
         selection = .bookings

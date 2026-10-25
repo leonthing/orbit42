@@ -35,6 +35,12 @@ final class AuthViewModel {
         let args = ProcessInfo.processInfo.arguments
         // UI 테스트: 로그아웃 상태로 시작 (둘러보기 확인용)
         if ProcessInfo.processInfo.environment["DEMO_LOGGED_OUT"] == "1" { KeychainStore.deleteToken() }
+        // UI 테스트: '다음에 할 일' 카드 기기 값 초기화 (개선-35)
+        if ProcessInfo.processInfo.environment["RESET_GETTING_STARTED"] == "1" {
+            for key in UserDefaults.standard.dictionaryRepresentation().keys where key.hasPrefix("gettingStarted.") {
+                UserDefaults.standard.removeObject(forKey: key)
+            }
+        }
         if let idx = args.firstIndex(of: "-demoToken"), idx + 1 < args.count {
             KeychainStore.saveToken(args[idx + 1])
         } else if let envToken = ProcessInfo.processInfo.environment["DEMO_TOKEN"],

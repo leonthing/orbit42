@@ -20,6 +20,7 @@ struct BookingsView: View {
     @State private var acceptRequestTarget: ReceivedTimeRequest?
     @State private var declineRequestTarget: ReceivedTimeRequest?
     @Environment(TabRouter.self) private var router
+    @Environment(AuthViewModel.self) private var auth
 
     /// 프로필에서 push 할 때는 자체 NavigationStack 없이 쓴다 (중첩 방지).
     var embedded = false
@@ -214,7 +215,13 @@ struct BookingsView: View {
                         icon: "tray",
                         title: "받은 예약이 없어요",
                         message: "예약 링크를 공유하면 받은 예약이 이곳에 모여요",
-                        action: ("예약 링크 만들기", { router.openNewBookingLink() })
+                        action: ("예약 링크 만들기", { router.openNewBookingLink() }),
+                        // 닫았던 '다음에 할 일'을 여기서 다시 연다 (개선-35)
+                        secondary: GettingStartedState.wasDismissed(username: auth.user?.username)
+                            ? ("다음에 할 일 다시 보기", {
+                                if let username = auth.user?.username { router.reopenGettingStarted(username: username) }
+                            })
+                            : nil
                     )
                 } else {
                     hostList(data.host, timeRequests: data.receivedTimeRequests)
@@ -277,7 +284,8 @@ struct BookingsView: View {
         icon: String,
         title: String,
         message: String,
-        action: (title: String, run: () -> Void)? = nil
+        action: (title: String, run: () -> Void)? = nil,
+        secondary: (title: String, run: () -> Void)? = nil
     ) -> some View {
         ScrollView {
             VStack(spacing: 12) {
@@ -301,6 +309,15 @@ struct BookingsView: View {
                     .buttonStyle(.borderedProminent)
                     .buttonBorderShape(.capsule)
                     .padding(.top, 8)
+                }
+                if let secondary {
+                    Button(action: secondary.run) {
+                        Text(secondary.title)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(Theme.accent)
+                    }
+                    .accessibilityIdentifier("reopenGettingStarted")
+                    .padding(.top, 2)
                 }
             }
             .frame(maxWidth: .infinity)
