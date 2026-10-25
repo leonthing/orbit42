@@ -4,6 +4,7 @@ import { cookies, headers } from "next/headers";
 import { getAdminClient } from "@/lib/supabase";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
 import { signSession, verifySession } from "@/lib/session";
+import { isReservedUsername } from "@/lib/reserved-usernames";
 
 const COOKIE_NAME = "orbit42_session";
 
@@ -54,6 +55,10 @@ export async function signup(
   }
   if (username.length < 2 || !/^[a-z0-9_-]+$/.test(username)) {
     return { error: "아이디는 2자 이상, 영문 소문자/숫자/하이픈만 가능합니다." };
+  }
+  // 앱 예시 화면에 찍힌 아이디는 쓸 수 없다 — 이미 사용 중인 아이디와 같은 안내
+  if (isReservedUsername(username)) {
+    return { error: "이미 사용 중인 아이디입니다." };
   }
   if (password.length < 6) {
     return { error: "비밀번호는 6자 이상이어야 합니다." };
@@ -182,14 +187,14 @@ async function oauthLoginOrSignup(profile: {
     .split("@")[0]
     .replace(/[^a-z0-9_-]/g, "")
     .slice(0, 20) || "user";
-  let username = base;
+  let username = isReservedUsername(base) ? `${base}${Math.floor(Math.random() * 9000 + 1000)}` : base;
   for (let i = 0; i < 8; i++) {
     const { data: taken } = await db
       .from("users")
       .select("id")
       .eq("username", username)
       .maybeSingle();
-    if (!taken) break;
+    if (!taken && !isReservedUsername(username)) break;
     username = `${base}${Math.floor(Math.random() * 9000 + 1000)}`;
   }
 
