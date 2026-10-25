@@ -28,6 +28,8 @@ struct CalendarView: View {
     @State private var stripFrames: [Date: CGRect] = [:]
     /// 날짜별 하루 보기 스크롤 위치 — 화면을 다시 그리지 않도록 참조로 둔다
     @State private var dayScrollRegistry = DayScrollRegistry()
+    /// 아침 요약 묻는 카드를 이번에 닫음 — 저장은 AppSettings 가 한다
+    @State private var morningAskDismissed = false
     /// 탭 다시 누름 — 하루 보기를 지금 시각 근처로 다시 스크롤 (개선-49)
     @State private var todayScrollTick = 0
     /// 다른 날로 옮긴 뒤 아래에 잠깐 뜨는 안내 ("10월 23일 (금)로 옮겼어요 · 보기")
@@ -224,8 +226,22 @@ struct CalendarView: View {
         }
     }
 
+    /// 업데이트로 들어온 사용자에게 아침 요약을 한 번만 묻는다 (1.6.0 ③). 둘러보기·로그아웃 상태에선 안 보인다.
+    private var showsMorningAsk: Bool {
+        !morningAskDismissed && !AppSettings.shared.morningSummaryAsked && !BrowseMode.shared.active && auth.user != nil
+    }
+
     private var scheduleContent: some View {
         VStack(spacing: 0) {
+            if showsMorningAsk {
+                MorningSummaryAskCard { accepted in
+                    withAnimation(.easeOut(duration: 0.2)) { morningAskDismissed = true }
+                    Task { await MorningSummaryAskCard.apply(accepted: accepted) }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .transition(.opacity)
+            }
             switch scheduleViewMode {
             case .year:
                 yearView
@@ -1400,5 +1416,57 @@ private struct StripFramesKey: PreferenceKey {
     static var defaultValue: [Date: CGRect] = [:]
     static func reduce(value: inout [Date: CGRect], nextValue: () -> [Date: CGRect]) {
         value.merge(nextValue()) { $1 }
+    }
+}
+
+
+/// "아침 8시에 오늘 일정을 알려 드릴까요?" — 업데이트 뒤 캘린더에서 한 번만 (1.6.0 ③)
+struct MorningSummaryAskCard: View {
+    let onChoose: (Bool) -> Void
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "sun.max")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Theme.accent)
+            Text("아침 8시에 오늘 일정을 알려 드릴까요?")
+                .font(.footnote.weight(.medium))
+                .foregroundStyle(Theme.primaryText)
+                .lineLimit(2)
+                .minimumScaleFactor(0.9)
+            Spacer(minLength: 4)
+            Button("괜찮아요") { onChoose(false) }
+                .font(.footnote)
+                .foregroundStyle(Theme.secondaryText)
+                .accessibilityIdentifier("morningAskNo")
+            Button("받기") { onChoose(true) }
+                .font(.footnote.weight(.bold))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Theme.accent, in: Capsule())
+                .foregroundStyle(.white)
+                .accessibilityIdentifier("morningAskYes")
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("morningAskCard")
+    }
+
+    /// 받기 — 알림 권한을 받아야 켠다(거절하면 꺼진 채). 어느 쪽이든 다시 묻지 않는다.
+    @MainActor
+    static func apply(accepted: Bool) async {
+        let settings = AppSettings.shared
+        settings.markMorningSummaryAsked()
+        guard accepted else {
+            settings.setMorningSummary(false)
+            return
+        }
+        settings.setMorningSummary(true)
+        let granted = await EventReminders.shared.requestAuthorizationIfNeeded()
+        if !granted { settings.setMorningSummary(false) }
+        EventReminders.shared.refreshSoon()
     }
 }

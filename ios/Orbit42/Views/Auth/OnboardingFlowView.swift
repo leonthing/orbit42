@@ -594,6 +594,8 @@ private struct CalendarStep: View {
 private struct NotificationPermissionStep: View {
     let onNext: () -> Void
     @State private var isRequesting = false
+    /// 아침 8시에 오늘 일정 요약 받기 (1.6.0 ③) — 기본 체크, 권한을 받아야 켜진다
+    @State private var morningSummary = true
 
     var body: some View {
         VStack(spacing: 0) {
@@ -610,12 +612,37 @@ private struct NotificationPermissionStep: View {
             }
             .padding(.horizontal, 24)
 
+            Button {
+                morningSummary.toggle()
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: morningSummary ? "checkmark.square.fill" : "square")
+                        .font(.title3)
+                        .foregroundStyle(morningSummary ? Theme.accent : Theme.secondaryText)
+                    Text("아침 8시에 오늘 일정 요약 받기")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.primaryText)
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 26)
+                .padding(.top, 14)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("onboardingMorningSummary")
+            .accessibilityValue(morningSummary ? "선택됨" : "선택 안 됨")
+
             Spacer()
 
             primaryButton("알림 허용", busy: isRequesting) {
                 requestPermission()
             }
-            skipButton { onNext() }
+            skipButton {
+                // 건너뛰면 알림 권한이 없으니 아침 요약도 끈 채로
+                AppSettings.shared.setMorningSummary(false)
+                AppSettings.shared.markMorningSummaryAsked()
+                onNext()
+            }
         }
     }
 
@@ -637,9 +664,13 @@ private struct NotificationPermissionStep: View {
     private func requestPermission() {
         isRequesting = true
         Task {
-            _ = try? await UNUserNotificationCenter.current().requestAuthorization(
+            let granted = (try? await UNUserNotificationCenter.current().requestAuthorization(
                 options: [.alert, .badge, .sound]
-            )
+            )) ?? false
+            // 권한을 거절하면 아침 요약은 꺼진 채로
+            AppSettings.shared.setMorningSummary(granted && morningSummary)
+            AppSettings.shared.markMorningSummaryAsked()
+            if granted { EventReminders.shared.refreshSoon() }
             isRequesting = false
             onNext()
         }

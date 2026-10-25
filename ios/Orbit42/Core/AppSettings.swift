@@ -93,6 +93,7 @@ final class AppSettings {
     private static let defaultReminderKey = "defaultReminderMinutes"
     private static let morningSummaryKey = "morningSummaryEnabled"
     private static let morningSummaryMinutesKey = "morningSummaryMinutes"
+    private static let morningSummaryAskedKey = "morningSummaryAsked"
 
     /// 캘린더 주 시작 요일 — 기본값은 기기 설정 따름.
     /// 쓰기는 `setWeekStart(_:)` 로만 한다(파생 `calendar` 를 함께 갱신해야 해서).
@@ -113,8 +114,11 @@ final class AppSettings {
     private(set) var notifyGoogleEvents: Bool
     /// 일정마다 따로 고르지 않았을 때의 알림 시점 — 기본 10분 전
     private(set) var defaultReminder: ReminderOption
-    /// 아침 일정 요약 (1.6.0 ③) — 기본 켬, 일정이 있는 날만 그 시각에 한 번
+    /// 아침 일정 요약 (1.6.0 ③) — 기본 끔. 새 가입자는 온보딩 알림 단계에서, 기존 사용자는 캘린더의 한 번 묻는 카드에서 고른다.
+    /// 켜면 일정이 있는 날만 그 시각에 한 번.
     private(set) var morningSummary: Bool
+    /// 아침 요약을 물어봤는지 (온보딩 또는 캘린더 카드) — 한 번 고르면 다시 묻지 않는다
+    private(set) var morningSummaryAsked: Bool
     /// 아침 요약 시각 — 0시부터 분, 기본 오전 8시
     private(set) var morningSummaryMinutes: Int
 
@@ -134,7 +138,15 @@ final class AppSettings {
         notifyGoogleEvents = UserDefaults.standard.object(forKey: Self.notifyGoogleKey) as? Bool ?? false
         defaultReminder = (UserDefaults.standard.object(forKey: Self.defaultReminderKey) as? Int)
             .flatMap(ReminderOption.init(rawValue:)) ?? .min10
-        morningSummary = UserDefaults.standard.object(forKey: Self.morningSummaryKey) as? Bool ?? true
+        morningSummary = UserDefaults.standard.object(forKey: Self.morningSummaryKey) as? Bool ?? false
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["RESET_MORNING_ASKED"] == "1" {
+            UserDefaults.standard.removeObject(forKey: Self.morningSummaryAskedKey)
+            UserDefaults.standard.removeObject(forKey: Self.morningSummaryKey)
+            morningSummary = false
+        }
+        #endif
+        morningSummaryAsked = UserDefaults.standard.bool(forKey: Self.morningSummaryAskedKey)
         morningSummaryMinutes = UserDefaults.standard.object(forKey: Self.morningSummaryMinutesKey) as? Int ?? 8 * 60
 
         // `.system` 인 동안 사용자가 기기 설정을 바꾸고 돌아올 수 있다.
@@ -194,6 +206,11 @@ final class AppSettings {
     func setMorningSummary(_ value: Bool) {
         morningSummary = value
         UserDefaults.standard.set(value, forKey: Self.morningSummaryKey)
+    }
+
+    func markMorningSummaryAsked() {
+        morningSummaryAsked = true
+        UserDefaults.standard.set(true, forKey: Self.morningSummaryAskedKey)
     }
 
     func setMorningSummaryMinutes(_ value: Int) {
