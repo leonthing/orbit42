@@ -42,6 +42,16 @@ export function rateLimit(
   return { ok: true, retryAfter: 0 };
 }
 
+/** 세지 않고 지금 한도를 넘었는지만 본다 — '실패만 세는' 제한에 쓴다 (예약 관리 링크의 잘못된 토큰) */
+export function rateLimitExceeded(key: string, limit: number): { exceeded: boolean; retryAfter: number } {
+  const now = Date.now();
+  const existing = store.get(key);
+  if (!existing || existing.resetAt < now) return { exceeded: false, retryAfter: 0 };
+  return existing.count >= limit
+    ? { exceeded: true, retryAfter: Math.ceil((existing.resetAt - now) / 1000) }
+    : { exceeded: false, retryAfter: 0 };
+}
+
 // Opportunistic cleanup so the map doesn't grow without bound.
 setInterval(() => {
   const now = Date.now();

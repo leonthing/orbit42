@@ -109,7 +109,7 @@ export default function BookingsInbox({
     if (!ok) return;
     startTransition(async () => {
       const res = await cancelMyBooking(id);
-      if (res.error) toast.error(res.error);
+      if ("error" in res) toast.error(res.error);
       else toast.success("예약을 취소했어요.");
       router.refresh();
     });

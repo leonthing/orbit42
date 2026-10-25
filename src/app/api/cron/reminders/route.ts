@@ -116,7 +116,8 @@ export async function GET(request: NextRequest) {
           when: b.scheduled_at as string,
           otherLabel: hostLabel,
           location,
-          manageUrl: `/bookings`,
+          // 게스트에게만 관리 링크 — 로그인 없이 보기·취소·시간 변경 제안 (개선-40)
+          manageUrl: await (await import("@/lib/guest-manage")).ensureManagePath(b.id as string),
         });
       }
     } catch (err) {

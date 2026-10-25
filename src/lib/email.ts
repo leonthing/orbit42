@@ -129,9 +129,21 @@ export async function sendBookingReceivedToHost(
   return send(to, `[Orbit42] 새 예약: ${args.slotTitle}`, html);
 }
 
+/** 게스트 메일 하단 한 줄 — 담담하게, 광고 문구 없이 (1.6.0 ②) */
+function ownLinkNote() {
+  return mutedNote(
+    `나도 이런 예약 링크를 만들 수 있어요 · <a href="${siteUrl("/signup")}" target="_blank" style="color:inherit">Orbit42에서 만들기</a>`,
+  );
+}
+
+/** 예약 관리 링크가 있으면 그쪽으로(로그인 없이 조회·취소·시간 변경 제안), 없으면 내 예약 목록 */
+function manageHref(managePath?: string) {
+  return siteUrl(managePath ?? "/bookings");
+}
+
 export async function sendBookingConfirmedToGuest(
   to: string,
-  args: { slotTitle: string; when: string; hostLabel: string; location: string | null },
+  args: { slotTitle: string; when: string; hostLabel: string; location: string | null; managePath?: string },
 ) {
   const html = renderEmail({
     eyebrow: "예약 확정",
@@ -144,8 +156,13 @@ export async function sendBookingConfirmedToGuest(
         { label: "일시", value: fmtWhen(args.when) },
         { label: "장소", value: args.location ? escapeHtml(args.location) : "" },
       ]) +
-      emailButton("내 예약 보기", siteUrl("/bookings")) +
-      mutedNote("시간을 바꿔야 하면 호스트에게 미리 알려 주세요."),
+      emailButton(args.managePath ? "예약 확인·변경" : "내 예약 보기", manageHref(args.managePath)) +
+      mutedNote(
+        args.managePath
+          ? "위 버튼에서 로그인 없이 예약을 보고, 취소하거나 다른 시간으로 바꿀 수 있어요."
+          : "시간을 바꿔야 하면 호스트에게 미리 알려 주세요.",
+      ) +
+      ownLinkNote(),
   });
   return send(to, `[Orbit42] 예약 확정: ${args.slotTitle}`, html);
 }
@@ -160,6 +177,7 @@ export async function sendPaymentInstructionsToGuest(
     amountCents: number;
     instructions: string;
     dueAt: string;
+    managePath?: string;
   },
 ) {
   const amount = `${Math.round(args.amountCents / 100).toLocaleString("ko-KR")}원`;
@@ -175,6 +193,7 @@ export async function sendPaymentInstructionsToGuest(
         { label: "입금 기한", value: fmtWhen(args.dueAt) },
       ]) +
       quoteBlock(escapeHtml(args.instructions)) +
+      (args.managePath ? emailButton("예약 확인·변경", manageHref(args.managePath)) : "") +
       mutedNote("기한까지 입금이 확인되지 않으면 예약은 자동으로 취소돼요."),
   });
   return send(to, `[Orbit42] 입금 안내: ${args.slotTitle}`, html);
@@ -242,6 +261,8 @@ export async function sendBookingRescheduleProposal(
     proposerLabel: string;
     note?: string | null;
     decided: boolean;
+    /** 받는 사람이 그 예약의 게스트일 때만 — 로그인 없이 보는 관리 링크 (개선-40) */
+    managePath?: string;
   },
 ) {
   const html = renderEmail({
@@ -263,7 +284,7 @@ export async function sendBookingRescheduleProposal(
       ]) +
       emailButton(
         args.decided ? "예약 확인하기" : "수락 여부 결정하기",
-        siteUrl("/bookings"),
+        manageHref(args.managePath),
       ) +
       (args.decided
         ? ""

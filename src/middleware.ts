@@ -13,6 +13,7 @@ const PUBLIC_PATHS = [
   "/terms",
   "/privacy",
   "/forbidden",
+  "/b", // 게스트 예약 관리 (개선-40) — 로그인 없이, 토큰은 '#' 뒤
 ];
 
 // Sub-paths under /[username] that require the visitor to be the owner.

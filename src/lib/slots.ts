@@ -1066,6 +1066,7 @@ export async function bookSlot(args: {
         amountCents: (slot.price_cents as number) ?? 0,
         instructions: paymentInstructions as string,
         dueAt: paymentDueAt.toISOString(),
+        managePath: await (await import("@/lib/guest-manage")).ensureManagePath(booking.id as string),
       });
     } catch (err) {
       console.error("guest payment instructions email", err);
@@ -1085,6 +1086,7 @@ export async function bookSlot(args: {
           location:
             (bookingLocation as string | null) ??
             ((slot.location_detail as string | null) ?? null),
+          managePath: await (await import("@/lib/guest-manage")).ensureManagePath(booking.id as string),
         });
       }
     } catch (err) {
@@ -1583,6 +1585,7 @@ export async function updateBookingStatus(
             when: booking.scheduled_at as string,
             hostLabel: (host?.display_name || host?.username || "Host") as string,
             location: slotInfo?.location_detail ?? null,
+            managePath: await (await import("@/lib/guest-manage")).ensureManagePath(id),
           });
         } else if (status === "canceled") {
           const { sendBookingCanceledToGuest } = await import("@/lib/email");
@@ -1750,16 +1753,30 @@ export async function rescheduleMyBooking(
   pick: { startAt?: string; availabilityId?: string },
 ) {
   const userId = await requireUserId();
+  return rescheduleBookingAsGuest(bookingId, { userId }, pick);
+}
+
+/**
+ * 게스트 쪽 즉시 시간 변경 — 로그인한 게스트(rescheduleMyBooking)와 예약 관리 링크(개선-40, 계정 없는 게스트 포함)가 함께 쓴다.
+ * 같은 예약 행에서 시간만 옮긴다(moveBookingTo): 새 시간이 잡혀야 바뀌고, 실패하면 기존 예약 그대로.
+ * 호스트에게는 '예약 시간 변경' 알림·메일 한 번. actor.userId 가 null 이면 호출한 쪽(관리 링크)이 권한을 확인했다.
+ */
+export async function rescheduleBookingAsGuest(
+  bookingId: string,
+  actor: { userId: string | null },
+  pick: { startAt?: string; availabilityId?: string },
+): Promise<{ success: true; status: string } | { error: string }> {
+  const userId = actor.userId;
   const db = getAdminClient();
 
-  const { data: booking } = await db
+  let query = db
     .from("bookings")
     .select(
-      "id, guest_id, host_id, slot_id, availability_id, scheduled_at, status, google_event_id",
+      "id, guest_id, guest_name, guest_email, host_id, slot_id, availability_id, scheduled_at, status, google_event_id",
     )
-    .eq("id", bookingId)
-    .eq("guest_id", userId)
-    .maybeSingle();
+    .eq("id", bookingId);
+  if (userId) query = query.eq("guest_id", userId);
+  const { data: booking } = await query.maybeSingle();
   if (!booking) return { error: "예약을 찾을 수 없어요." };
   if (booking.status === "canceled" || booking.status === "completed") {
     return { error: "이미 종료된 예약이에요." };
@@ -1806,7 +1823,7 @@ export async function rescheduleMyBooking(
   const newStatus = autoApprove ? "confirmed" : "pending";
 
   const moved = await moveBookingTo({
-    booking,
+    booking: booking as never,
     slot,
     newStart,
     newEnd,
@@ -1823,14 +1840,17 @@ export async function rescheduleMyBooking(
         .select("email, username, display_name")
         .eq("id", booking.host_id)
         .single(),
-      db
-        .from("users")
-        .select("email, username, display_name")
-        .eq("id", userId)
-        .single(),
+      booking.guest_id
+        ? db
+            .from("users")
+            .select("email, username, display_name")
+            .eq("id", booking.guest_id)
+            .single()
+        : Promise.resolve({ data: null }),
     ]);
     const guestLabel = (guest?.display_name ||
       guest?.username ||
+      booking.guest_name ||
       "게스트") as string;
     const whenLabel = newStart.toLocaleString("ko-KR", {
       timeZone: "Asia/Seoul",
@@ -1846,7 +1866,7 @@ export async function rescheduleMyBooking(
       title: `예약 시간 변경: ${slot.title}`,
       body: `${guestLabel} · ${whenLabel}`,
       link: `/${host?.username}/bookings`,
-      actorId: userId,
+      actorId: (booking.guest_id as string | null) ?? null,
     });
     const { emailAllowed } = await import("@/lib/notification-prefs");
     if (
@@ -1858,7 +1878,7 @@ export async function rescheduleMyBooking(
         slotTitle: slot.title as string,
         when: newStart.toISOString(),
         guestLabel,
-        guestEmail: (guest?.email as string | null) ?? null,
+        guestEmail: ((guest?.email ?? booking.guest_email) as string | null) ?? null,
         message: "게스트가 예약 시간을 변경했어요.",
         autoApprove,
         manageUrl: `/${host?.username}/bookings`,
@@ -2314,6 +2334,7 @@ export async function respondToReschedule(
       (await emailAllowed(proposerId, "booking_confirmed"))
     ) {
       const { sendBookingRescheduleProposal } = await import("@/lib/email");
+      const { ensureManagePath } = await import("@/lib/guest-manage");
       await sendBookingRescheduleProposal(proposer.email as string, {
         slotTitle: slot.title as string,
         previousWhen: booking.scheduled_at as string,
@@ -2321,6 +2342,8 @@ export async function respondToReschedule(
         proposerLabel: responderLabel,
         note: null,
         decided: true,
+        // 제안한 쪽이 게스트일 때만 관리 링크 (개선-40)
+        managePath: booking.guest_id === proposerId ? await ensureManagePath(bookingId) : undefined,
       });
     }
   } catch (err) {
@@ -2411,15 +2434,27 @@ export async function withdrawReschedule(
 /** Guest cancels their own booking. Emails the host. */
 export async function cancelMyBooking(bookingId: string) {
   const userId = await requireUserId();
+  return cancelBookingAsGuest(bookingId, { userId });
+}
+
+/**
+ * 게스트 쪽 취소 — 로그인한 게스트(cancelMyBooking)와 예약 관리 링크(개선-40, 계정 없는 게스트 포함)가 함께 쓴다.
+ * actor.userId 가 있으면 그 사람이 이 예약의 게스트여야 하고, null 이면 호출한 쪽(관리 링크)이 이미 권한을 확인했다.
+ * 호스트에게 가는 알림·메일은 어느 쪽이든 같다.
+ */
+export async function cancelBookingAsGuest(
+  bookingId: string,
+  actor: { userId: string | null },
+): Promise<{ success: true } | { error: string }> {
   const db = getAdminClient();
-  const { data: booking } = await db
+  let query = db
     .from("bookings")
     .select(
-      "id, guest_id, host_id, scheduled_at, scheduled_end_at, status, slot:time_slots!bookings_slot_id_fkey(title, location_detail)",
+      "id, guest_id, guest_name, guest_email, host_id, scheduled_at, scheduled_end_at, status, slot:time_slots!bookings_slot_id_fkey(title, location_detail)",
     )
-    .eq("id", bookingId)
-    .eq("guest_id", userId)
-    .maybeSingle();
+    .eq("id", bookingId);
+  if (actor.userId) query = query.eq("guest_id", actor.userId);
+  const { data: booking } = await query.maybeSingle();
   if (!booking) return { error: "예약을 찾을 수 없어요." };
   if (booking.status === "canceled" || booking.status === "completed") {
     return { error: "이미 종료된 예약이에요." };
@@ -2428,8 +2463,7 @@ export async function cancelMyBooking(bookingId: string) {
   const { error } = await db
     .from("bookings")
     .update({ status: "canceled", updated_at: new Date().toISOString() })
-    .eq("id", bookingId)
-    .eq("guest_id", userId);
+    .eq("id", bookingId);
   if (error) return { error: "취소에 실패했어요." };
 
   await removeBookingCalendarEvent(bookingId);
@@ -2446,12 +2480,14 @@ export async function cancelMyBooking(bookingId: string) {
       .select("email, display_name, username")
       .eq("id", booking.host_id)
       .single();
-    const { data: guest } = await db
-      .from("users")
-      .select("email, display_name, username")
-      .eq("id", userId)
-      .single();
-    const guestLabel = (guest?.display_name || guest?.username || "게스트") as string;
+    const { data: guest } = booking.guest_id
+      ? await db
+          .from("users")
+          .select("email, display_name, username")
+          .eq("id", booking.guest_id)
+          .single()
+      : { data: null };
+    const guestLabel = (guest?.display_name || guest?.username || booking.guest_name || "게스트") as string;
     try {
       const { createNotification } = await import("@/lib/notifications");
       await createNotification({
@@ -2460,7 +2496,7 @@ export async function cancelMyBooking(bookingId: string) {
         title: `예약 취소: ${slotInfo?.title ?? "예약"}`,
         body: `${guestLabel}님이 예약을 취소했어요.`,
         link: `/${host?.username}/bookings`,
-        actorId: userId,
+        actorId: (booking.guest_id as string | null) ?? null,
       });
     } catch (err) {
       console.error("cancelMyBooking notification", err);
@@ -2472,7 +2508,7 @@ export async function cancelMyBooking(bookingId: string) {
         slotTitle: slotInfo?.title ?? "예약",
         when: booking.scheduled_at as string,
         guestLabel,
-        guestEmail: (guest?.email as string | null) ?? null,
+        guestEmail: ((guest?.email ?? booking.guest_email) as string | null) ?? null,
         message: "게스트가 예약을 취소했어요.",
         autoApprove: true,
         manageUrl: `/${host.username}/bookings`,

@@ -22,6 +22,15 @@ const nextConfig = {
           },
         ],
       },
+      // 게스트 예약 관리 (개선-40) — 다른 사이트로 주소가 새지 않게, 검색에도 안 나오게
+      {
+        source: "/b",
+        headers: [
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+          { key: "Cache-Control", value: "no-store" },
+        ],
+      },
     ];
   },
 };
