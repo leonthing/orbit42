@@ -18,6 +18,8 @@ type Booking = {
   ended: boolean;
   canCancel: boolean;
   canPropose: boolean;
+  remindersOn: boolean;
+  canToggleReminders: boolean;
 };
 
 const fmt = (iso: string, opts: Intl.DateTimeFormatOptions = {}) =>
@@ -233,6 +235,29 @@ export default function GuestBookingClient() {
             </button>
           )}
         </div>
+      )}
+
+      {booking.canToggleReminders && (
+        <section className="rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] p-4" data-testid="reminder-pref">
+          <p className="text-sm font-semibold text-charcoal-100">알림 메일</p>
+          <p className="mt-1 text-xs text-charcoal-500">
+            {booking.remindersOn
+              ? "예약 전날과 1시간 전쯤 알림 메일을 보내 드려요."
+              : "이 예약의 알림 메일은 보내지 않아요. 예약 확정·변경·취소 안내는 그대로 보내 드려요."}
+          </p>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() =>
+              booking.remindersOn
+                ? run("reminders", { on: false }, "알림 메일을 보내지 않을게요. 언제든 다시 켤 수 있어요.")
+                : run("reminders", { on: true }, "알림 메일을 다시 보내 드릴게요. 남은 알림부터 받으실 수 있어요.")
+            }
+            className="mt-3 w-full rounded-lg border border-charcoal-700 px-4 py-2.5 text-sm font-semibold text-charcoal-100 hover:border-charcoal-500 disabled:opacity-50"
+          >
+            {booking.remindersOn ? "이 예약의 알림 메일 받지 않기" : "알림 메일 다시 받기"}
+          </button>
+        </section>
       )}
 
       {proposing && (

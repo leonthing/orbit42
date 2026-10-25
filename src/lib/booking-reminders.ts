@@ -12,6 +12,9 @@ import { ensureManagePath } from "@/lib/guest-manage";
  * - 1시간 전(`booking_reminder_1h`, reminder_1h_sent_at): 15분~70분 뒤 확정 예약.
  *   시작 2시간 안쪽에 만든 예약은 건너뛴다(확인 메일이 곧 리마인더다).
  *
+ * 게스트가 관리 링크에서 리마인더를 끈 예약(guest_reminders_off_at)은 게스트 메일만 건너뛴다(호스트·앱 알림은 그대로).
+ * 끈 동안 지난 회차는 보낸 것으로 적혀 다시 켜면 남은 회차부터 간다.
+ *
  * 지난·취소된 예약은 status/scheduled_at 조건으로 빠지고, 보낸 시각을 먼저 적어
  * 다시 돌아도 두 번 가지 않는다. 시간이 바뀌면 moveBookingTo 가 두 칸을 다시 정한다.
  */
@@ -34,6 +37,7 @@ type DueBooking = {
   scheduled_at: string;
   created_at: string;
   selected_location: string | null;
+  guest_reminders_off_at: string | null;
   slot: { title: string; location_detail: string | null } | null;
 };
 
@@ -79,7 +83,7 @@ async function runKind(kind: Kind, now: Date, onlyIds?: string[]): Promise<numbe
   let query = db
     .from("bookings")
     .select(
-      "id, host_id, guest_id, guest_name, guest_email, scheduled_at, created_at, selected_location, slot:time_slots!bookings_slot_id_fkey(title, location_detail)",
+      "id, host_id, guest_id, guest_name, guest_email, scheduled_at, created_at, selected_location, guest_reminders_off_at, slot:time_slots!bookings_slot_id_fkey(title, location_detail)",
     )
     .eq("status", "confirmed")
     .is(cfg.column, null)
@@ -161,7 +165,10 @@ async function sendOne(kind: Kind, b: DueBooking, now: Date) {
       logSend(kind, "host", b, r.ok);
     }
     const guestEmail = b.guest_email ?? (guest?.email as string | null) ?? null;
-    if (guestEmail && (await emailAllowed(b.guest_id, cfg.pref))) {
+    if (guestEmail && b.guest_reminders_off_at) {
+      // 게스트가 관리 링크에서 이 예약의 리마인더를 껐다
+      logSkip(kind, b.guest_id ? "guest" : "guest-no-account", b, "guest_off");
+    } else if (guestEmail && (await emailAllowed(b.guest_id, cfg.pref))) {
       const r = await sendBookingReminderEmail(guestEmail, {
         kind,
         lead,
@@ -210,5 +217,12 @@ async function sendOne(kind: Kind, b: DueBooking, now: Date) {
 function logSend(kind: Kind, to: string, b: DueBooking, ok: boolean) {
   console.info(
     `[reminder] sent kind=${kind === "hour" ? "1h" : "day"} to=${to} ok=${ok} booking=${b.id} start=${b.scheduled_at}`,
+  );
+}
+
+/** 건너뛴 기록 한 줄 — '[reminder] skipped' 로 찾는다. */
+function logSkip(kind: Kind, to: string, b: DueBooking, reason: string) {
+  console.info(
+    `[reminder] skipped kind=${kind === "hour" ? "1h" : "day"} to=${to} reason=${reason} booking=${b.id} start=${b.scheduled_at}`,
   );
 }
