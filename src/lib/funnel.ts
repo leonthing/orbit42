@@ -5,7 +5,7 @@ import { getAdminClient } from "@/lib/supabase";
  * 예약 링크 방문 흐름 익명 집계 (개선-32).
  * 단계: profile_view(링크 페이지) → slot_view(예약 링크 페이지) → time_picked(시간 고름) → booked(예약 성공).
  * 날짜·호스트·예약 링크·단계·출처별 '횟수'만 +1 한다. 사람을 알아볼 값은 저장하지 않는다.
- * 봇·프리뷰 배포·호스트 본인 열람은 세지 않는다.
+ * 봇·프리뷰 배포·호스트 본인 열람·로컬 개발 서버(FUNNEL_DEV=1 없을 때)는 세지 않는다.
  * 기록은 응답 뒤로 미룬다(waitUntil) — 실패해도 페이지는 영향 없다.
  */
 export type FunnelStep = "profile_view" | "slot_view" | "time_picked" | "booked";
@@ -44,6 +44,9 @@ export function recordFunnel(args: {
 }) {
   if (!args.hostId) return;
   if (process.env.VERCEL_ENV === "preview") return;
+  // 로컬 개발 서버도 운영 DB 를 쓴다 — 시뮬레이터·로컬 웹으로 외부 호스트 링크를 열면 운영 집계에 섞이므로
+  // 플래그(FUNNEL_DEV=1)를 켠 시험 때만 기록한다 (1.8.0, booking_funnel_daily·booking_funnel_via_daily 모두)
+  if (process.env.NODE_ENV !== "production" && process.env.FUNNEL_DEV !== "1") return;
   if (args.viewerId && args.viewerId === args.hostId) return;
   // 앱(iOS)은 자기 UA를 보내므로 봇 판정은 웹에서만
   if (args.source === "web" && isBotUserAgent(args.userAgent)) return;
