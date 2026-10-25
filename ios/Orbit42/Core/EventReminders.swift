@@ -14,6 +14,9 @@ final class EventReminders {
     static let identifierPrefix = "orbit42.event."
     /// 다시 알림 (1.5.0 B) — 일정 알림과 따로 지우고 넣는다
     static let remindPrefix = "orbit42.remind."
+    /// 아침 일정 요약 (1.6.0 ③)
+    static let morningPrefix = "orbit42.morning."
+    nonisolated static let morningDays = 7
     static let horizonDays = 14
     nonisolated static let maxPending = 64
 
@@ -81,8 +84,25 @@ final class EventReminders {
         let now = Date()
         let chosen = Set(justChosen.filter { now.timeIntervalSince($0.value) < 600 }.keys)
         justChosen.removeAll()
-        let plans = Self.plan(events: events, rules: Rules(settings), now: now, limit: Self.maxPending - remindPlans.count, justChosen: chosen)
+        let mornings = settings.morningSummary
+            ? Self.morningPlans(events: events, now: now, minutes: settings.morningSummaryMinutes)
+            : []
+        let plans = Self.plan(events: events, rules: Rules(settings), now: now,
+                              limit: Self.maxPending - remindPlans.count - mornings.count, justChosen: chosen)
         await removeOurs()
+        for morning in mornings {
+            let content = UNMutableNotificationContent()
+            content.title = morning.title
+            content.body = morning.body
+            content.sound = .default
+            content.userInfo = ["morningDate": morning.day.timeIntervalSince1970]
+            let parts = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: morning.fireDate)
+            try? await center.add(UNNotificationRequest(
+                identifier: Self.morningPrefix + Self.dayKey(morning.day),
+                content: content,
+                trigger: UNCalendarNotificationTrigger(dateMatching: parts, repeats: false)
+            ))
+        }
         for reminder in remindPlans {
             let content = UNMutableNotificationContent()
             content.title = "다시 알림 · \(reminder.title ?? "일정")"
@@ -116,6 +136,14 @@ final class EventReminders {
             )
             try? await center.add(request)
         }
+        #if DEBUG
+        // 확인용 — 예약된 알림을 로그로 (UI 테스트가 log stream 으로 읽는다)
+        if ProcessInfo.processInfo.environment["DUMP_PENDING"] == "1" {
+            for (id, date) in await pendingSummary() {
+                NSLog("O42PENDING %@ %@", id, date.map { "\($0)" } ?? "-")
+            }
+        }
+        #endif
     }
 
     struct Plan {
@@ -193,6 +221,49 @@ final class EventReminders {
         return Array(plans.sorted { $0.fireDate < $1.fireDate }.prefix(max(0, limit)))
     }
 
+    // MARK: 아침 일정 요약 (1.6.0 ③)
+
+    struct MorningPlan {
+        let day: Date
+        let fireDate: Date
+        let title: String
+        let body: String
+    }
+
+    /// 앞 며칠 동안 일정이 있는 날마다 그 날 `minutes`(0시부터 분)에 한 번 — 순수 계산.
+    /// 완료·보관·초대 대기 일정과, 요약 시각 전에 이미 끝난 일정은 세지 않는다. 남는 일정이 없는 날은 건너뛴다.
+    nonisolated static func morningPlans(events: [CalendarEvent], now: Date, minutes: Int,
+                                         days: Int = morningDays, calendar: Calendar = .current) -> [MorningPlan] {
+        let live = events.filter { !$0.completed && !$0.archived && !$0.isInvite }
+        var out: [MorningPlan] = []
+        let today = calendar.startOfDay(for: now)
+        for offset in 0..<days {
+            guard let day = calendar.date(byAdding: .day, value: offset, to: today),
+                  let fire = calendar.date(byAdding: .minute, value: minutes, to: day),
+                  fire > now else { continue }
+            let allDay = live.filter { e in
+                e.allDay && calendar.startOfDay(for: e.startAt) <= day
+                    && day <= calendar.startOfDay(for: e.effectiveEnd(calendar: calendar))
+            }
+            let timed = live.filter { e in
+                !e.allDay && calendar.isDate(e.startAt, inSameDayAs: day) && e.endAt > fire
+            }.sorted { $0.startAt < $1.startAt }
+            let count = allDay.count + timed.count
+            guard count > 0 else { continue }
+            var parts = timed.prefix(3).map { "\(timeFormatter.string(from: $0.startAt)) \($0.title)" }
+            if parts.count < 3 { parts += allDay.prefix(3 - parts.count).map { "종일 \($0.title)" } }
+            var body = parts.joined(separator: "\n")
+            if count > parts.count { body += "\n외 \(count - parts.count)개" }
+            out.append(MorningPlan(day: day, fireDate: fire, title: "오늘 일정 \(count)개", body: body))
+        }
+        return out
+    }
+
+    nonisolated static func dayKey(_ day: Date) -> String {
+        let c = Calendar.current.dateComponents([.year, .month, .day], from: day)
+        return String(format: "%04d-%02d-%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)
+    }
+
     nonisolated private static let timeFormatter: DateFormatter = {
         let f = DateFormatter()
         f.locale = Locale(identifier: "ko_KR")
@@ -248,14 +319,14 @@ final class EventReminders {
     private func removeOurs() async {
         let ids = await center.pendingNotificationRequests()
             .map(\.identifier)
-            .filter { $0.hasPrefix(Self.identifierPrefix) || $0.hasPrefix(Self.remindPrefix) }
+            .filter { $0.hasPrefix(Self.identifierPrefix) || $0.hasPrefix(Self.remindPrefix) || $0.hasPrefix(Self.morningPrefix) }
         center.removePendingNotificationRequests(withIdentifiers: ids)
     }
 
     /// 확인용 — 지금 예약된 우리 알림 (식별자, 울릴 시각)
     func pendingSummary() async -> [(String, Date?)] {
         await center.pendingNotificationRequests()
-            .filter { $0.identifier.hasPrefix(Self.identifierPrefix) || $0.identifier.hasPrefix(Self.remindPrefix) }
+            .filter { $0.identifier.hasPrefix(Self.identifierPrefix) || $0.identifier.hasPrefix(Self.remindPrefix) || $0.identifier.hasPrefix(Self.morningPrefix) }
             .map { ($0.identifier, ($0.trigger as? UNCalendarNotificationTrigger)?.nextTriggerDate()) }
     }
 }
@@ -275,8 +346,16 @@ final class NotificationTapHandler: NSObject, UNUserNotificationCenterDelegate {
         UNUserNotificationCenter.current().delegate = self
     }
 
+    private var waitingDay: Date?
+
     private func flush() {
-        guard let router, let request = waiting else { return }
+        guard let router else { return }
+        if let day = waitingDay {
+            waitingDay = nil
+            router.selection = .calendar
+            router.calendarDateRequest = day
+        }
+        guard let request = waiting else { return }
         waiting = nil
         router.selection = .calendar
         router.calendarEventRequest = request
@@ -292,9 +371,14 @@ final class NotificationTapHandler: NSObject, UNUserNotificationCenterDelegate {
         let info = response.notification.request.content.userInfo
         let eventId = info["eventId"] as? String
         let start = (info["start"] as? Double).map(Date.init(timeIntervalSince1970:)) ?? Date()
+        let morningDay = (info["morningDate"] as? Double).map(Date.init(timeIntervalSince1970:))
         DispatchQueue.main.async {
             MainActor.assumeIsolated {
-                if let eventId {
+                if let morningDay {
+                    // 아침 요약 — 그날 하루 보기로
+                    self.waitingDay = morningDay
+                    self.flush()
+                } else if let eventId {
                     self.waiting = CalendarEventRequest(eventId: eventId, date: start)
                     self.flush()
                 }

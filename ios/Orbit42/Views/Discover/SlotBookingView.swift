@@ -67,6 +67,11 @@ struct SlotBookingView: View {
         }
         .task {
             await viewModel.load()
+            #if DEBUG
+            if let status = ProcessInfo.processInfo.environment["DEMO_BOOKED_STATUS"], viewModel.data != nil {
+                viewModel.debugMarkBooked(status)
+            }
+            #endif
             // 방문 흐름 ② 예약 링크 열람 — 내 링크는 세지 않는다 (개선-32)
             if let slot = viewModel.data?.slot, !slot.isMine { Funnel.slotViewed(slotId: slot.id) }
         }

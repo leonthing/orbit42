@@ -364,7 +364,7 @@ enum BrowseFixtures {
 
     private static let notificationPrefs = #"""
     {"prefs":[{"type":"booking_received","label":"예약 요청/확정","inApp":true,"email":true},{"type":"booking_confirmed","label":"예약 확정","inApp":true,"email":true},
-    {"type":"booking_canceled","label":"예약 취소","inApp":true,"email":true},{"type":"booking_reminder","label":"예약 리마인더 (24시간 전)","inApp":true,"email":true},
+    {"type":"booking_canceled","label":"예약 취소","inApp":true,"email":true},{"type":"booking_reminder","label":"예약 리마인더 (하루 전)","inApp":true,"email":true},{"type":"booking_reminder_1h","label":"예약 리마인더 (1시간 전)","inApp":true,"email":true},
     {"type":"event_invite","label":"일정 초대","inApp":true,"email":true},{"type":"new_follower","label":"새 팔로워","inApp":true,"email":true}]}
     """#
 }

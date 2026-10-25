@@ -305,10 +305,29 @@ struct ReminderSettingsSection: View {
             )) {
                 ForEach(ReminderOption.allCases) { Text($0.label).tag($0) }
             }
+            Toggle("아침 일정 요약", isOn: Binding(
+                get: { settings.morningSummary },
+                set: { on in settings.setMorningSummary(on); changed(turnedOn: on) }
+            ))
+            .tint(Theme.accent)
+            .accessibilityIdentifier("morningSummaryToggle")
+            if settings.morningSummary {
+                DatePicker("요약 받을 시각", selection: Binding(
+                    get: {
+                        Calendar.current.date(byAdding: .minute, value: settings.morningSummaryMinutes,
+                                              to: Calendar.current.startOfDay(for: Date())) ?? Date()
+                    },
+                    set: { date in
+                        let c = Calendar.current.dateComponents([.hour, .minute], from: date)
+                        settings.setMorningSummaryMinutes((c.hour ?? 8) * 60 + (c.minute ?? 0))
+                        EventReminders.shared.refreshSoon()
+                    }
+                ), displayedComponents: .hourAndMinute)
+            }
         } header: {
             Text("알림").foregroundStyle(Theme.secondaryText)
         } footer: {
-            Text("'중요함' 일정은 30분 전과 10분 전에, 일정마다 고른 알림은 그 시점에 늘 울려요(구글 일정도). 위 두 스위치는 그 밖의 일정을 기본 알림 시점에 울릴지 정해요 — 구글 일정은 구글 캘린더 앱에서도 울릴 수 있어 기본으로 꺼 두었어요. 종일·완료·보관한 일정은 알리지 않고, 앱을 14일 넘게 열지 않으면 알림이 끊길 수 있어요.")
+            Text("'중요함' 일정은 30분 전과 10분 전에, 일정마다 고른 알림은 그 시점에 늘 울려요(구글 일정도). 위 두 스위치는 그 밖의 일정을 기본 알림 시점에 울릴지 정해요 — 구글 일정은 구글 캘린더 앱에서도 울릴 수 있어 기본으로 꺼 두었어요. 종일·완료·보관한 일정은 알리지 않아요. 아침 일정 요약은 일정이 있는 날만 고른 시각에 오늘 일정을 한 번 알려 드려요. 앱을 14일 넘게 열지 않으면 알림이 끊길 수 있어요.")
                 .foregroundStyle(Theme.secondaryText)
         }
         .listRowBackground(Theme.surface)

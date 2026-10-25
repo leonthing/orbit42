@@ -41,7 +41,12 @@ async function send(to: string, subject: string, html: string) {
     return { ok: true, dev: true };
   }
   try {
-    await r.emails.send({ from: FROM, to, subject, html });
+    // Resend SDK 는 실패를 던지지 않고 error 로 돌려준다 — 보지 않으면 실패도 성공처럼 보인다
+    const { error } = await r.emails.send({ from: FROM, to, subject, html });
+    if (error) {
+      console.error("resend send", error);
+      return { ok: false };
+    }
     return { ok: true };
   } catch (err) {
     console.error("resend send", err);

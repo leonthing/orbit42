@@ -91,6 +91,8 @@ final class AppSettings {
     private static let notifyOrbitKey = "notifyOrbitEvents"
     private static let notifyGoogleKey = "notifyGoogleEvents"
     private static let defaultReminderKey = "defaultReminderMinutes"
+    private static let morningSummaryKey = "morningSummaryEnabled"
+    private static let morningSummaryMinutesKey = "morningSummaryMinutes"
 
     /// 캘린더 주 시작 요일 — 기본값은 기기 설정 따름.
     /// 쓰기는 `setWeekStart(_:)` 로만 한다(파생 `calendar` 를 함께 갱신해야 해서).
@@ -111,6 +113,10 @@ final class AppSettings {
     private(set) var notifyGoogleEvents: Bool
     /// 일정마다 따로 고르지 않았을 때의 알림 시점 — 기본 10분 전
     private(set) var defaultReminder: ReminderOption
+    /// 아침 일정 요약 (1.6.0 ③) — 기본 켬, 일정이 있는 날만 그 시각에 한 번
+    private(set) var morningSummary: Bool
+    /// 아침 요약 시각 — 0시부터 분, 기본 오전 8시
+    private(set) var morningSummaryMinutes: Int
 
     @ObservationIgnored private var foregroundObserver: NSObjectProtocol?
 
@@ -128,6 +134,8 @@ final class AppSettings {
         notifyGoogleEvents = UserDefaults.standard.object(forKey: Self.notifyGoogleKey) as? Bool ?? false
         defaultReminder = (UserDefaults.standard.object(forKey: Self.defaultReminderKey) as? Int)
             .flatMap(ReminderOption.init(rawValue:)) ?? .min10
+        morningSummary = UserDefaults.standard.object(forKey: Self.morningSummaryKey) as? Bool ?? true
+        morningSummaryMinutes = UserDefaults.standard.object(forKey: Self.morningSummaryMinutesKey) as? Int ?? 8 * 60
 
         // `.system` 인 동안 사용자가 기기 설정을 바꾸고 돌아올 수 있다.
         foregroundObserver = NotificationCenter.default.addObserver(
@@ -181,6 +189,16 @@ final class AppSettings {
     func setNotifyOrbitEvents(_ value: Bool) {
         notifyOrbitEvents = value
         UserDefaults.standard.set(value, forKey: Self.notifyOrbitKey)
+    }
+
+    func setMorningSummary(_ value: Bool) {
+        morningSummary = value
+        UserDefaults.standard.set(value, forKey: Self.morningSummaryKey)
+    }
+
+    func setMorningSummaryMinutes(_ value: Int) {
+        morningSummaryMinutes = max(0, min(24 * 60 - 1, value))
+        UserDefaults.standard.set(morningSummaryMinutes, forKey: Self.morningSummaryMinutesKey)
     }
 
     func setNotifyGoogleEvents(_ value: Bool) {
