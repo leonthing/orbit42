@@ -8,9 +8,13 @@ enum APIError: LocalizedError {
     /// 401 — 세션 만료/무효
     case unauthorized(message: String)
     case invalidResponse
+    /// 가입 없이 둘러보기 중 — 서버로 보내지 않았다(개선-47). 화면은 따로 알리지 않는다(가입 안내 시트가 뜬다).
+    case browsing
 
     var errorDescription: String? {
         switch self {
+        case .browsing:
+            return nil
         case .server(let message, _):
             return message
         case .unauthorized(let message):
@@ -100,6 +104,7 @@ final class APIClient {
 
     /// 응답을 기다리지도 읽지도 않는 POST — 방문 흐름 기록처럼 실패해도 상관없는 것 (개선-32)
     func fireAndForget<Body: Encodable>(_ path: String, body: Body) {
+        if BrowseGate.isOn { return }
         var request = request(path: path, method: "POST")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try? JSONEncoder().encode(body)
@@ -174,6 +179,7 @@ final class APIClient {
     }
 
     private func perform<Response: Decodable>(_ request: URLRequest) async throws -> Response {
+        if BrowseGate.isOn { return try browseResponse(request) }
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else {
             throw APIError.invalidResponse
@@ -195,5 +201,39 @@ final class APIClient {
         } catch {
             throw APIError.invalidResponse
         }
+    }
+
+    /// 둘러보기 중의 응답 (개선-47) — 서버에 묻지 않는다.
+    /// 읽기는 앱 안의 예시 JSON, 쓰기(와 구글 연결 같은 시작 동작)는 가입 안내 시트를 띄우고 멈춘다.
+    private func browseResponse<Response: Decodable>(_ request: URLRequest) throws -> Response {
+        let path = request.url?.path ?? ""
+        let query = request.url?.query.map { "?" + $0 } ?? ""
+        let startsAction = path.hasPrefix("/api/v1/google/connect-url")
+        guard request.httpMethod == "GET", !startsAction else {
+            // 화면이 열릴 때 저절로 보내는 것(사용자가 누른 게 아님)은 시트 없이 건너뛴다
+            if !Self.browseBackgroundWrites.contains(path) { Self.promptSignup() }
+            throw APIError.browsing
+        }
+        guard let data = BrowseFixtures.json(for: path + query) else {
+            #if DEBUG
+            NSLog("BROWSE_MISS %@%@", path, query)
+            #endif
+            throw APIError.browsing
+        }
+        do {
+            return try JSONDecoder().decode(Response.self, from: data)
+        } catch {
+            #if DEBUG
+            NSLog("BROWSE_DECODE %@ %@", path, String(describing: error))
+            #endif
+            throw APIError.browsing
+        }
+    }
+
+    /// 둘러보기 중 저절로 나가는 쓰기 — 가입 안내 없이 막기만 한다
+    private static let browseBackgroundWrites: Set<String> = ["/api/v1/people/sync"]
+
+    static func promptSignup() {
+        Task { @MainActor in BrowseMode.shared.promptSignup() }
     }
 }

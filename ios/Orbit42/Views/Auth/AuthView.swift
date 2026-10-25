@@ -67,6 +67,7 @@ struct AuthView: View {
                     appleButton
                     googleButton
                     consentNotice
+                    browseButton
                 }
                 .padding(24)
                 .frame(maxWidth: 440)
@@ -77,6 +78,24 @@ struct AuthView: View {
         .onChange(of: mode) {
             errorMessage = nil
         }
+    }
+
+    /// 가입 없이 둘러보기 (개선-47) — 기기 안 예시 데이터로 탭을 돌아본다
+    private var browseButton: some View {
+        Button {
+            auth.startBrowsing()
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "eye")
+                Text("가입 없이 둘러보기")
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(Theme.accent)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.accent.opacity(0.4)))
+        }
+        .accessibilityIdentifier("browseStart")
     }
 
     // MARK: - 헤더

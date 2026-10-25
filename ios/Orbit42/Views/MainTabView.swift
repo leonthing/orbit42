@@ -92,8 +92,19 @@ struct MainTabView: View {
     }
 
     var body: some View {
+        // 가입 없이 둘러보는 중이면 위에 늘 띠 (개선-47) — 탭 위에 쌓아야 각 탭의 상단 버튼을 가리지 않는다
+        VStack(spacing: 0) {
+            if BrowseMode.shared.active {
+                BrowseBanner()
+                    .background(Theme.accent.ignoresSafeArea(edges: .top))
+            }
+            tabs
+        }
+    }
+
+    private var tabs: some View {
         @Bindable var router = router
-        TabView(selection: $router.selection) {
+        return TabView(selection: $router.selection) {
             CalendarView()
                 .tabItem { Label("캘린더", systemImage: "calendar") }
                 .tag(Tab.calendar)

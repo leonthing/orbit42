@@ -58,7 +58,8 @@ final class PeopleStore {
         let _: OkResponse? = try? await api.post("/api/v1/people/sync", body: PeopleSyncRequest(force: false))
         await reload()
 
-        if importEnabled, DeviceCalendarImporter.isAuthorized, DeviceCalendarImporter.isStale {
+        // 둘러보기(예시 데이터) 중엔 기기 캘린더를 읽지 않는다 (개선-47)
+        if importEnabled, !BrowseGate.isOn, DeviceCalendarImporter.isAuthorized, DeviceCalendarImporter.isStale {
             if (try? await DeviceCalendarImporter.run()) != nil {
                 await reload()
             }

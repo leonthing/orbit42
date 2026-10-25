@@ -48,6 +48,7 @@ struct RootView: View {
                 }
             } else if let authIntent {
                 AuthView(initialMode: authIntent == .signup ? .signup : .login)
+                    .id(authIntent)
             } else {
                 IntroView { intent in
                     self.authIntent = intent
@@ -58,8 +59,17 @@ struct RootView: View {
         .onChange(of: auth.isAuthenticated) { wasAuthenticated, isAuthenticated in
             if wasAuthenticated && !isAuthenticated {
                 // 로그아웃 직후엔 인트로를 다시 보여줄 필요 없이 로그인 폼으로.
-                authIntent = .login
+                // 둘러보기에서 나왔으면 고른 폼(가입/로그인)으로 (개선-47)
+                if let toSignup = BrowseMode.shared.takeExitIntent() {
+                    authIntent = toSignup ? .signup : .login
+                } else {
+                    authIntent = .login
+                }
             }
+        }
+        // 둘러보기에서 '가입하기'·'로그인' — 예시 상태를 지운다 (개선-47)
+        .onReceive(NotificationCenter.default.publisher(for: BrowseMode.didLeave)) { _ in
+            auth.stopBrowsing()
         }
         .task {
             await auth.restoreSession()

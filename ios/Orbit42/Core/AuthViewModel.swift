@@ -33,6 +33,8 @@ final class AuthViewModel {
         // `-demoToken <token>` 런치 아규먼트 또는 DEMO_TOKEN 환경변수
         // (simctl launch 는 SIMCTL_CHILD_DEMO_TOKEN=... 으로 전달)
         let args = ProcessInfo.processInfo.arguments
+        // UI 테스트: 로그아웃 상태로 시작 (둘러보기 확인용)
+        if ProcessInfo.processInfo.environment["DEMO_LOGGED_OUT"] == "1" { KeychainStore.deleteToken() }
         if let idx = args.firstIndex(of: "-demoToken"), idx + 1 < args.count {
             KeychainStore.saveToken(args[idx + 1])
         } else if let envToken = ProcessInfo.processInfo.environment["DEMO_TOKEN"],
@@ -146,7 +148,27 @@ final class AuthViewModel {
         }
     }
 
+    // MARK: - 가입 없이 둘러보기 (개선-47)
+
+    /// 예시 사용자로 탭을 연다 — 토큰 없음, 서버 요청 없음(APIClient 가 예시 데이터로 답한다)
+    func startBrowsing() {
+        guard let demo = BrowseFixtures.user else { return }
+        BrowseMode.shared.start()
+        needsOnboarding = false
+        onboardingStep = nil
+        user = demo
+    }
+
+    /// 둘러보기에서 나감 — 예시 상태를 지우고 로그인 화면으로 (BrowseMode.leave 가 부른다)
+    func stopBrowsing() {
+        guard user?.username == BrowseFixtures.username else { return }
+        user = nil
+        needsOnboarding = false
+        onboardingStep = nil
+    }
+
     func logout() {
+        if BrowseMode.shared.active { BrowseMode.shared.end(toSignup: nil) }
         KeychainStore.deleteToken()
         WidgetBridge.reload()
         user = nil
@@ -173,6 +195,7 @@ final class AuthViewModel {
     private static func onboardingKey(_ username: String) -> String { "onboarding.step.\(username)" }
 
     private func startOnboarding(for user: User) {
+        BrowseMode.shared.noteNewAccount()
         needsOnboarding = true
         onboardingStep = UserDefaults.standard.string(forKey: Self.onboardingKey(user.username)) ?? "consent"
         UserDefaults.standard.set(onboardingStep, forKey: Self.onboardingKey(user.username))

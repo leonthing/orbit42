@@ -10,6 +10,10 @@ private struct PutServerErrorBody: Decodable {
 /// Bearer 토큰 자동 첨부, 4xx/5xx 의 `{"error":"한국어"}` → `APIError.server/unauthorized`.
 extension APIClient {
     func put<Body: Encodable, Response: Decodable>(_ path: String, body: Body) async throws -> Response {
+        if BrowseGate.isOn {
+            APIClient.promptSignup()
+            throw APIError.browsing
+        }
         var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)!
         components.path = path
         var request = URLRequest(url: components.url!)
