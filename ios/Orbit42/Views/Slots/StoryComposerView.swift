@@ -633,6 +633,7 @@ struct StoryComposerView: View {
         // 스토리 편집 화면에서 링크 스티커에 붙여넣게 안내한다.
         if let url = URL(string: content.url) {
             UIPasteboard.general.url = url
+            LinkShareRecorder.record(username: auth.user?.username)
         }
         showToast("링크를 복사했어요 — 인스타 스토리에서 링크 스티커에 붙여넣으세요")
         Task {

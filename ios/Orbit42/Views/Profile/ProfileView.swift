@@ -315,7 +315,9 @@ private struct MyProfileContent: View {
 
             if let shareURL {
                 Menu {
-                    ShareLink(item: shareURL) {
+                    Button {
+                        ShareSheet.shareMyLink(shareURL, username: auth.user?.username)
+                    } label: {
                         Label("링크 공유", systemImage: "link")
                     }
                     Button {
