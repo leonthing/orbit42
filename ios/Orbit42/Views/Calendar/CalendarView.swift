@@ -664,65 +664,105 @@ struct CalendarView: View {
             )
     }
 
-    @ViewBuilder
     private var dayTimeline: some View {
-        if viewModel.currentMonthData == nil {
-            eventListSection
-        } else {
-            DayPager(
-                selectedDate: viewModel.selectedDate,
+        // 그 달을 아직 못 받았어도 시간표 페이지는 그대로 둔다 — 앞뒤 이동이 막히지 않게 (1.6.0 빌드 41)
+        dayPager
+            .overlay(alignment: .top) { monthLoadStatus }
+    }
+
+    private var dayPager: some View {
+        DayPager(
+            selectedDate: viewModel.selectedDate,
+            calendar: calendar,
+            onSettle: { day in viewModel.select(date: day) }
+        ) { day in
+            DayTimelineView(
+                date: day,
+                events: viewModel.events(on: day),
+                calendars: viewModel.calendars,
                 calendar: calendar,
-                onSettle: { day in viewModel.select(date: day) }
-            ) { day in
-                DayTimelineView(
-                    date: day,
-                    events: viewModel.events(on: day),
-                    calendars: viewModel.calendars,
-                    calendar: calendar,
-                    onOpen: { selectedEvent = $0 },
-                    onToggleCompletion: { toggleCompletion($0) },
-                    onAddAt: { start in
-                        addRequest = AddRequest(start: start)
-                    },
-                    canMove: canMove,
-                    onRetime: { event, newStart, newEnd in
-                        requestMove(PendingMove(event: event, newStart: newStart, newEnd: newEnd))
-                    },
-                    isDragging: $isDraggingEvent,
-                    onRate: { event, rating in
-                        Task { try? await viewModel.setRating(event, rating) }
-                    },
-                    onDayOffset: { offset in
-                        // 끄는 동안엔 페이지를 넘기지 않는다 — 넘기면 원래 페이지가 내려가 끄는 제스처가 끊긴다(버그-4)
-                        let target = offset == 0 ? nil : calendar.date(byAdding: .day, value: offset, to: day)
-                        withAnimation(.easeInOut(duration: 0.2)) { dragPreviewDay = target }
-                        if let target, !viewModel.hasMonthData(for: target) {
-                            Task { await viewModel.prefetchMonth(containing: target) }
+                onOpen: { selectedEvent = $0 },
+                onToggleCompletion: { toggleCompletion($0) },
+                onAddAt: { start in
+                    addRequest = AddRequest(start: start)
+                },
+                canMove: canMove,
+                onRetime: { event, newStart, newEnd in
+                    requestMove(PendingMove(event: event, newStart: newStart, newEnd: newEnd))
+                },
+                isDragging: $isDraggingEvent,
+                onRate: { event, rating in
+                    Task { try? await viewModel.setRating(event, rating) }
+                },
+                onDayOffset: { offset in
+                    // 끄는 동안엔 페이지를 넘기지 않는다 — 넘기면 원래 페이지가 내려가 끄는 제스처가 끊긴다(버그-4)
+                    let target = offset == 0 ? nil : calendar.date(byAdding: .day, value: offset, to: day)
+                    withAnimation(.easeInOut(duration: 0.2)) { dragPreviewDay = target }
+                    if let target, !viewModel.hasMonthData(for: target) {
+                        Task { await viewModel.prefetchMonth(containing: target) }
+                    }
+                },
+                eventsForDay: { viewModel.events(on: $0) },
+                onSettleDay: { target in
+                    withAnimation(.easeInOut(duration: 0.25)) { viewModel.select(date: target) }
+                },
+                onCrossDayDrag: { crossDrag = $0 },
+                scrollYForOffset: { offset in
+                    calendar.date(byAdding: .day, value: offset, to: day)
+                        .flatMap { dayScrollRegistry.y[calendar.startOfDay(for: $0)] }
+                },
+                onScrollY: { date, y in dayScrollRegistry.y[date] = y },
+                stripFrames: stripFrames,
+                onConvert: { event, toAllDay, start, end in
+                    requestMove(PendingMove(event: event, newStart: start, newEnd: end, toAllDay: toAllDay))
+                },
+                onNotice: { showNotice($0) },
+                scrollAnchorTick: todayScrollTick
+            )
+            // 달 경계 너머 날짜는 미리 받아 둔다
+            .task(id: day) {
+                if !viewModel.hasMonthData(for: day) { await viewModel.prefetchMonth(containing: day) }
+            }
+        }
+        .scrollDisabled(isDraggingEvent)
+    }
+
+    /// 하루 보기 위의 작은 상태 줄 — 그 달을 받는 중이면 표시, 실패하면 다시 시도.
+    /// 받는 중도 실패도 아닌데 데이터가 없으면(예전 멈춤 상태) 여기서 다시 불러온다.
+    @ViewBuilder
+    private var monthLoadStatus: some View {
+        if viewModel.currentMonthData == nil {
+            Group {
+                if let message = viewModel.errorMessage {
+                    HStack(spacing: 8) {
+                        Image(systemName: "wifi.exclamationmark")
+                        Text(message).lineLimit(2)
+                        Button("다시 시도") {
+                            Task { await viewModel.loadDisplayedMonth(force: true) }
                         }
-                    },
-                    eventsForDay: { viewModel.events(on: $0) },
-                    onSettleDay: { target in
-                        withAnimation(.easeInOut(duration: 0.25)) { viewModel.select(date: target) }
-                    },
-                    onCrossDayDrag: { crossDrag = $0 },
-                    scrollYForOffset: { offset in
-                        calendar.date(byAdding: .day, value: offset, to: day)
-                            .flatMap { dayScrollRegistry.y[calendar.startOfDay(for: $0)] }
-                    },
-                    onScrollY: { date, y in dayScrollRegistry.y[date] = y },
-                    stripFrames: stripFrames,
-                    onConvert: { event, toAllDay, start, end in
-                        requestMove(PendingMove(event: event, newStart: start, newEnd: end, toAllDay: toAllDay))
-                    },
-                    onNotice: { showNotice($0) },
-                    scrollAnchorTick: todayScrollTick
-                )
-                // 달 경계 너머 날짜는 미리 받아 둔다
-                .task(id: day) {
-                    if !viewModel.hasMonthData(for: day) { await viewModel.prefetchMonth(containing: day) }
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Theme.accent)
+                        .accessibilityIdentifier("monthLoadRetry")
+                    }
+                } else {
+                    HStack(spacing: 8) {
+                        ProgressView().controlSize(.small).tint(Theme.accent)
+                        Text("일정을 불러오는 중이에요")
+                    }
+                    .task(id: viewModel.currentMonthKey) {
+                        if !viewModel.isLoading { await viewModel.loadDisplayedMonth() }
+                    }
                 }
             }
-            .scrollDisabled(isDraggingEvent)
+            .font(.caption)
+            .foregroundStyle(Theme.secondaryText)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(Theme.surface, in: Capsule())
+            .shadow(color: .black.opacity(0.08), radius: 6, y: 2)
+            .padding(.top, 8)
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("monthLoadStatus")
         }
     }
 
@@ -974,7 +1014,14 @@ struct CalendarView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.horizontal, 32)
             } else {
-                Spacer()
+                // 받는 중도 실패도 아닌데 비어 있으면 다시 불러온다 (빈칸으로 멈추지 않게, 1.6.0 빌드 41)
+                VStack {
+                    Spacer()
+                    ProgressView().tint(Theme.accent)
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity)
+                .task(id: viewModel.currentMonthKey) { await viewModel.loadDisplayedMonth() }
             }
         } else {
             eventList

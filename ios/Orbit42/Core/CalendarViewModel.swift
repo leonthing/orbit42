@@ -27,8 +27,18 @@ final class CalendarViewModel {
     private(set) var isLoading = false
     private(set) var errorMessage: String?
 
-    private var cache: [MonthKey: MonthData] = [:]
+    private var cache: [MonthKey: MonthData] = [:] {
+        didSet {
+            // 캘린더 색·목록은 마지막으로 받은 것을 기억 — 그 달을 아직 못 받아도 점 색이 기본색으로 바뀌지 않게
+            if let current = cache[currentMonthKey] { lastCalendars = current.calendars }
+            else if let any = cache.values.first(where: { !$0.calendars.isEmpty }), lastCalendars.isEmpty { lastCalendars = any.calendars }
+        }
+    }
+    /// 표시 달 불러오기(loadDisplayedMonth)가 진행 중인 달
     private var inFlight: Set<MonthKey> = []
+    /// 옆 달 미리 받기(prefetchMonth)가 진행 중인 달 — 표시 달 불러오기는 이걸 보고 건너뛰지 않는다 (1.6.0 빌드 41)
+    private var prefetching: Set<MonthKey> = []
+    private var lastCalendars: [CalendarInfo] = []
     private let api: APIClient
 
     init(api: APIClient = .shared) {
@@ -49,7 +59,7 @@ final class CalendarViewModel {
         cache[Self.key(for: date)].map { !$0.events.isEmpty }
     }
 
-    var calendars: [CalendarInfo] { currentMonthData?.calendars ?? [] }
+    var calendars: [CalendarInfo] { currentMonthData?.calendars ?? lastCalendars }
 
     // MARK: - 표시 캘린더 필터
 
@@ -192,6 +202,15 @@ final class CalendarViewModel {
 
     // MARK: - 로딩
 
+    /// 재현·테스트용(DEBUG, DEMO_MONTH_DELAY=초) — 한 달 응답이 느린 계정(구글 일정 많음)을 흉내 낸다
+    private func debugMonthDelay() async {
+        #if DEBUG
+        if let s = ProcessInfo.processInfo.environment["DEMO_MONTH_DELAY"], let sec = Double(s) {
+            try? await Task.sleep(nanoseconds: UInt64(sec * 1_000_000_000))
+        }
+        #endif
+    }
+
     /// 표시 중인 달의 이벤트를 불러온다. 캐시가 있으면 `force` 가 아닌 한 네트워크를 타지 않는다.
     func loadDisplayedMonth(force: Bool = false) async {
         let key = currentMonthKey
@@ -209,6 +228,8 @@ final class CalendarViewModel {
         }
 
         do {
+            await debugMonthDelay()
+            try Task.checkCancellation()
             let response: CalendarEventsResponse = try await api.get(
                 "/api/v1/calendar/events?year=\(key.year)&month=\(key.month)"
             )
@@ -231,14 +252,20 @@ final class CalendarViewModel {
     }
 
     /// 하루 보기에서 달 경계 너머 날짜를 미리 받아 둔다 (표시 달·에러 표시는 건드리지 않음).
+    /// 미리 받기는 부른 화면(하루 보기 옆 페이지 등)이 사라져도 끝까지 받는다 — 화면 교체로 취소되면
+    /// 표시 달이 '받는 중도 실패도 아닌 빈 상태'로 남아 하루 보기가 멈췄다 (1.6.0 빌드 40, 1.5.1부터).
     func prefetchMonth(containing date: Date) async {
         let key = Self.key(for: date)
-        guard cache[key] == nil, !inFlight.contains(key) else { return }
-        inFlight.insert(key)
-        defer { inFlight.remove(key) }
-        if let response: CalendarEventsResponse = try? await api.get(
-            "/api/v1/calendar/events?year=\(key.year)&month=\(key.month)"
-        ) {
+        guard cache[key] == nil, !inFlight.contains(key), !prefetching.contains(key) else { return }
+        prefetching.insert(key)
+        let api = self.api
+        let task = Task { @MainActor [weak self] () -> CalendarEventsResponse? in
+            await self?.debugMonthDelay()
+            return try? await api.get("/api/v1/calendar/events?year=\(key.year)&month=\(key.month)")
+        }
+        let response = await task.value
+        prefetching.remove(key)
+        if let response, cache[key] == nil {
             cache[key] = MonthData(events: response.events, calendars: response.calendars)
         }
     }
