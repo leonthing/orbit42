@@ -54,7 +54,7 @@ final class StoreShotsUITests: XCTestCase {
             // iPad 는 키보드가 자동으로 뜬다 — 내리고 찍는다
             if app.keyboards.firstMatch.exists {
                 let hide = app.keyboards.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@ OR label CONTAINS %@", "keyboard", "키보드")).firstMatch
-                if hide.exists { hide.tap() }
+                if hide.exists { hide.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap() }
                 sleep(1)
             }
             shot("newslot")

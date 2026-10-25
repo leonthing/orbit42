@@ -142,6 +142,23 @@ def widgets_screen():
         d.line([(0, y), (half, y)], fill=w.getpixel((half + 40, y)))
     glyphs = status_glyphs(day, 150, day.getpixel((660, 20))).crop((0, 0, half, 150))
     w.paste(glyphs, (0, 0), glyphs)
+    # 배경화면(보라→분홍)을 한 계열 보라로 — 위젯 카드·아이콘은 그대로, 배경화면 픽셀만 바꾼다
+    px = w.load()
+    W2, H2 = w.size
+    top, bot = (110, 112, 240), (64, 52, 190)
+    for y in range(H2):
+        ref = w.getpixel((6, y)) if y >= 150 else None
+        t = y / (H2 - 1)
+        new = tuple(int(top[i] + (bot[i] - top[i]) * t) for i in range(3))
+        for x in range(W2):
+            r, g, b = px[x, y]
+            if ref is None:
+                # 상태바 줄 — 글자·아이콘(어두운 픽셀·초록 배터리)은 남긴다
+                if r + g + b > 300 and not (g > r + 40):
+                    px[x, y] = new
+                continue
+            if abs(r - ref[0]) + abs(g - ref[1]) + abs(b - ref[2]) < 40:
+                px[x, y] = new
     return w
 
 
