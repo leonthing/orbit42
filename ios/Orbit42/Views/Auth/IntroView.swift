@@ -10,8 +10,12 @@ enum AuthIntent {
 /// "시작하기" → 가입 폼, 우상단 "로그인" → 로그인 폼으로 넘어간다.
 struct IntroView: View {
     let onFinish: (AuthIntent) -> Void
+    /// 마지막 장의 '가입 없이 둘러보기' (개선-47·48)
+    var onBrowse: () -> Void = {}
 
     @State private var page = 0
+    /// 작은 화면(iPhone SE 등) — 이미지를 줄여 글이 잘리지 않게
+    @State private var compact = false
 
     /// 기능을 글이 아니라 실제 화면으로 보여준다 (스토어 스크린샷과 같은 화면, Assets 의 Intro*).
     private struct IntroPage {
@@ -20,26 +24,33 @@ struct IntroView: View {
         let message: String
     }
 
+    /// 다섯 장 — 캘린더 · 위젯 · 내 링크 페이지 · 예약·시간 판매 · 오르빗 (개선-48).
+    /// 이미지는 둘러보기 예시 데이터·임시 예시 계정으로 찍었다(실명·실계정 없음).
     private let pages: [IntroPage] = [
         IntroPage(
-            image: "IntroBookings",
-            title: "예약은 링크로",
-            message: "카톡·DM으로 오가던 일정 조율 대신\n링크 하나로 상대가 직접 시간을 골라요."
-        ),
-        IntroPage(
-            image: "IntroNewLink",
-            title: "30초 만에 만들기",
-            message: "무엇을 · 얼마나 · 언제만 정하면\n내 예약 링크가 열려요."
-        ),
-        IntroPage(
-            image: "IntroPayment",
-            title: "입금 확인 후 확정",
-            message: "유료 세션은 계좌 안내가 자동으로 가고,\n입금을 확인하면 예약이 확정돼요."
-        ),
-        IntroPage(
             image: "IntroCalendar",
-            title: "캘린더와 한 화면",
-            message: "구글 캘린더와 예약을 한곳에서 —\n일정마다 내 시간의 가치(₩)도 보여줘요."
+            title: "할 일처럼 체크하는 캘린더",
+            message: "구글 캘린더와 함께, 끝낸 일정은 체크.\n중요한 건 ☆, 끝난 뒤엔 만족도까지."
+        ),
+        IntroPage(
+            image: "IntroWidget",
+            title: "홈 화면에서 오늘을 한눈에",
+            message: "오늘 일정과 답할 일을 위젯으로.\n앱을 열지 않아도 바로 보여요."
+        ),
+        IntroPage(
+            image: "IntroLinkPage",
+            title: "인스타·유튜브에 거는 내 페이지",
+            message: "소개·SNS·예약 버튼을 한 페이지에.\n테마를 골라 바이오에 붙여요."
+        ),
+        IntroPage(
+            image: "IntroBookings",
+            title: "링크로 예약받고, 시간을 팔아요",
+            message: "DM 대신 상대가 직접 시간을 골라요.\n유료는 입금 확인 후 확정돼요."
+        ),
+        IntroPage(
+            image: "IntroOrbit",
+            title: "가까운 사람이 가까이",
+            message: "자주 만나는 사람이 궤도 가까이에.\n팔로우한 사람의 새 링크도 보여요."
         ),
     ]
 
@@ -69,7 +80,7 @@ struct IntroView: View {
                             Image(intro.image)
                                 .resizable()
                                 .scaledToFill()
-                                .frame(width: 270, height: 400, alignment: .top)
+                                .frame(width: compact ? 200 : 270, height: compact ? 304 : 400, alignment: .top)
                                 .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                                 .shadow(color: .black.opacity(0.12), radius: 18, y: 8)
                                 .accessibilityHidden(true)
@@ -78,7 +89,7 @@ struct IntroView: View {
                                     .font(.title2.weight(.bold))
                                     .foregroundStyle(Theme.primaryText)
                                 Text(intro.message)
-                                    .font(.callout)
+                                    .font(compact ? .subheadline : .callout)
                                     .foregroundStyle(Theme.secondaryText)
                                     .multilineTextAlignment(.center)
                                     .lineSpacing(3)
@@ -88,7 +99,7 @@ struct IntroView: View {
                         }
                         .padding(.horizontal, 24)
                         .padding(.bottom, 8)
-                        .padding(.horizontal, 36)
+                        .padding(.horizontal, compact ? 4 : 36)
                         .tag(index)
                     }
                 }
@@ -103,7 +114,7 @@ struct IntroView: View {
                             .animation(.spring(duration: 0.3), value: page)
                     }
                 }
-                .padding(.bottom, 28)
+                .padding(.bottom, compact ? 16 : 28)
 
                 Button {
                     if page < pages.count - 1 {
@@ -120,10 +131,26 @@ struct IntroView: View {
                 .buttonStyle(.borderedProminent)
                 .tint(Theme.accent)
                 .padding(.horizontal, 24)
-                .padding(.bottom, 36)
+                .padding(.bottom, page == pages.count - 1 ? 8 : (compact ? 20 : 36))
+
+                // 마지막 장 — 가입 없이 둘러보기 (개선-47로 이어짐)
+                if page == pages.count - 1 {
+                    Button(action: onBrowse) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "eye")
+                            Text("가입 없이 둘러보기")
+                        }
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.accent)
+                        .padding(.vertical, 8)
+                    }
+                    .accessibilityIdentifier("introBrowse")
+                    .padding(.bottom, compact ? 8 : 20)
+                }
             }
             .readableWidth()
         }
+        .onGeometryChange(for: Bool.self) { $0.size.height < 700 } action: { compact = $0 }
     }
 }
 

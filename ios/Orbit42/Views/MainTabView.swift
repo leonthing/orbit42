@@ -94,7 +94,7 @@ struct MainTabView: View {
     var body: some View {
         // 가입 없이 둘러보는 중이면 위에 늘 띠 (개선-47) — 탭 위에 쌓아야 각 탭의 상단 버튼을 가리지 않는다
         VStack(spacing: 0) {
-            if BrowseMode.shared.active {
+            if BrowseMode.shared.active && !BrowseMode.hideBannerForCapture {
                 BrowseBanner()
                     .background(Theme.accent.ignoresSafeArea(edges: .top))
             }

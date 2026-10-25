@@ -50,9 +50,11 @@ struct RootView: View {
                 AuthView(initialMode: authIntent == .signup ? .signup : .login)
                     .id(authIntent)
             } else {
-                IntroView { intent in
+                IntroView(onFinish: { intent in
                     self.authIntent = intent
-                }
+                }, onBrowse: {
+                    auth.startBrowsing()
+                })
             }
         }
         .animation(.default, value: auth.isAuthenticated)

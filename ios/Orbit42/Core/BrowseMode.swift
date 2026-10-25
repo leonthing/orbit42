@@ -98,6 +98,15 @@ final class BrowseMode {
 
     static let didLeave = Notification.Name("orbit42.browse.didLeave")
 
+    /// 인트로 이미지 촬영용(DEBUG) — 둘러보기 띠를 숨긴다
+    static var hideBannerForCapture: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.environment["BROWSE_HIDE_BANNER"] == "1"
+        #else
+        false
+        #endif
+    }
+
     private func dismissPrompt(animated: Bool) {
         promptController?.dismiss(animated: animated)
         promptController = nil

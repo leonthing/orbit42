@@ -152,7 +152,7 @@ enum BrowseFixtures {
         let list = [
             event("browse-e1", "디자인 스터디", "@D(-2,10:00)", "@D(-2,12:00)", cal: "browse-cal-life", completed: true, rating: 5),
             event("browse-e2", "주간 회고", "@D(-1,15:00)", "@D(-1,16:00)", completed: true, rating: 4),
-            event("browse-e3", "아침 운동", "@D(0,07:30)", "@D(0,08:30)", cal: "browse-cal-life"),
+            event("browse-e3", "아침 운동", "@D(0,07:30)", "@D(0,08:30)", cal: "browse-cal-life", completed: true, rating: 5),
             event("browse-e4", "커피챗 30분 — 예시 게스트", "@D(0,11:00)", "@D(0,11:30)", booking: true, location: "성수"),
             event("browse-e5", "브랜드 시안 작업", "@D(0,14:00)", "@D(0,16:00)", importance: "high"),
             event("browse-e6", "마감: 로고 최종본", "@DATE(1)", "@DATE(1)", allDay: true),
@@ -199,18 +199,19 @@ enum BrowseFixtures {
 
     private static var slots: String { #"{"slots":["# + mySlots.joined(separator: ",") + "]}" }
 
-    private static func booking(_ id: String, _ start: String, _ end: String, status: String, guest: String, title: String, slug: String, price: Int, location: String?) -> String {
+    private static func booking(_ id: String, _ start: String, _ end: String, status: String, guest: String, title: String, slug: String, price: Int, location: String?, payment: String? = nil) -> String {
         """
         {"id":"\(id)","scheduledAt":"\(start)","scheduledEndAt":"\(end)","status":"\(status)","message":"잘 부탁드려요!","guestName":"\(guest)","guestUsername":null,
-        "guestEmail":null,"priceCents":\(price * 100),"payment":null,"slotTitle":"\(title)","slotSlug":"\(slug)","locationDetail":\(location.map { "\"\($0)\"" } ?? "null"),"menus":[],"reschedule":null}
+        "guestEmail":null,"priceCents":\(price * 100),"payment":\(payment.map { "{\"status\":\"\($0)\",\"dueAt\":\"@D(1,23:00)\",\"instructions\":null}" } ?? "null"),"slotTitle":"\(title)","slotSlug":"\(slug)","locationDetail":\(location.map { "\"\($0)\"" } ?? "null"),"menus":[],"reschedule":null}
         """
     }
 
     private static var bookings: String {
         let host = [
             booking("browse-b1", "@D(2,15:00)", "@D(2,15:30)", status: "pending", guest: "예시 게스트 C", title: "커피챗 30분", slug: "coffee-chat-30", price: 0, location: "성수"),
+            booking("browse-b5", "@D(3,10:00)", "@D(3,11:00)", status: "pending", guest: "예시 게스트 E", title: "포트폴리오 멘토링 60분", slug: "mentoring-60", price: 50000, location: "Google Meet", payment: "awaiting"),
             booking("browse-b-browse-e4", "@D(0,11:00)", "@D(0,11:30)", status: "confirmed", guest: "예시 게스트 A", title: "커피챗 30분", slug: "coffee-chat-30", price: 0, location: "성수"),
-            booking("browse-b-browse-e7", "@D(1,10:00)", "@D(1,11:00)", status: "confirmed", guest: "예시 게스트 B", title: "포트폴리오 멘토링 60분", slug: "mentoring-60", price: 50000, location: "Google Meet"),
+            booking("browse-b-browse-e7", "@D(1,10:00)", "@D(1,11:00)", status: "confirmed", guest: "예시 게스트 B", title: "포트폴리오 멘토링 60분", slug: "mentoring-60", price: 50000, location: "Google Meet", payment: "paid"),
             booking("browse-b4", "@D(-6,14:00)", "@D(-6,15:00)", status: "completed", guest: "예시 게스트 D", title: "포트폴리오 멘토링 60분", slug: "mentoring-60", price: 50000, location: "Google Meet"),
         ]
         return #"{"host":["# + host.joined(separator: ",") + #"],"guest":[],"pendingTimeRequests":0,"timeRequests":[]}"#
