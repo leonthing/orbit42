@@ -10,8 +10,8 @@ final class PaymentInlineUITests: XCTestCase {
         app.launch()
         let dir = env["SHOT_DIR"] ?? NSTemporaryDirectory()
         func shot(_ n: String) { try? app.screenshot().pngRepresentation.write(to: URL(fileURLWithPath: dir).appendingPathComponent("\(mode)-\(n).png")) }
-        XCTAssertTrue(app.tabBars.buttons["예약"].waitForExistence(timeout: 30))
-        app.tabBars.buttons["예약"].tap()
+        XCTAssertTrue(app.tabBars.buttons["예약"].firstMatch.waitForExistence(timeout: 30))
+        app.tabBars.buttons["예약"].firstMatch.tap()
         if mode == "create" {
             let received = app.segmentedControls.buttons["받은 예약"]
             if received.waitForExistence(timeout: 5) { received.tap() }
@@ -27,7 +27,7 @@ final class PaymentInlineUITests: XCTestCase {
             XCTAssertTrue(app.textFields["paymentInline"].waitForExistence(timeout: 3) || app.textViews["paymentInline"].exists, "결제 안내 칸 없음")
             shot("1-field")
             app.buttons["만들기"].tap()
-            let alert = app.alerts["입금 확인 없이 바로 확정돼요"]
+            let alert = app.alerts["결제 안내가 비어 있어요"]
             XCTAssertTrue(alert.waitForExistence(timeout: 5), "확인 창 없음")
             shot("2-confirm")
             alert.buttons["결제 안내 적기"].tap()   // 만들지 않는다

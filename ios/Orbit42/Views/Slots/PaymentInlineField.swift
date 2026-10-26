@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// 유료 예약 링크의 가격 칸 바로 아래 결제 안내 (개선-38).
-/// 결제 안내는 계정 하나에 하나(설정 > 결제 안내와 같은 값) — 비어 있으면 유료 예약도 입금 확인 없이 바로 확정된다(서버 동작 그대로).
+/// 결제 안내는 계정 하나에 하나(설정 > 결제 안내와 같은 값) — 비어 있으면 서버가 유료 예약을 자동 확정 대신 승인 대기로 받는다(1.8.0 서버, 개선-38).
 struct PaymentInlineField: View {
     @Binding var text: String
 
@@ -15,9 +15,17 @@ struct PaymentInlineField: View {
 
 /// 결제 안내가 비어 있을 때 한 번 묻는 문구
 enum PaymentConfirmCopy {
-    static let title = "입금 확인 없이 바로 확정돼요"
-    static let message = "결제 안내가 비어 있으면 유료 예약도 돈을 받기 전에 바로 확정돼요. 계좌나 송금 링크를 적어 두면 입금을 확인한 뒤 확정할 수 있어요."
+    static let title = "결제 안내가 비어 있어요"
+    static let message = "결제 안내가 없으면 유료 예약은 자동으로 확정되지 않고 승인 대기로 들어와요. 게스트에게 입금 방법을 직접 안내한 뒤 수락해야 해요. 계좌나 송금 링크를 적어 두면 예약한 분께 입금 안내가 자동으로 가요."
     static let footer = "적어 두면 예약한 분께 안내가 가고, 입금을 확인한 뒤 확정돼요. 모든 유료 예약 링크에 같이 쓰여요."
+
+    /// '예약을 바로 확정' 아래 한 줄 — 유료인데 결제 안내가 비면 켜 둬도 승인 대기로 들어온다
+    static func autoApproveHint(_ autoApprove: Bool, paidWithoutPayment: Bool) -> String {
+        if !autoApprove { return "예약이 들어오면 내가 수락해야 확정돼요." }
+        return paidWithoutPayment
+            ? "결제 안내가 비어 있어 유료 예약은 승인 대기로 들어와요."
+            : "예약이 들어오면 바로 확정돼요."
+    }
 }
 
 private struct PaymentInstructionsUpdate: Encodable {

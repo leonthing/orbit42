@@ -99,7 +99,7 @@ struct SimpleSlotSheet: View {
                 Section {
                     DisclosureGroup("고급", isExpanded: $showingAdvanced) {
                         Toggle("예약을 바로 확정", isOn: $autoApprove)
-                        Text(autoApprove ? "예약이 들어오면 바로 확정돼요." : "예약이 들어오면 내가 수락해야 확정돼요.")
+                        Text(PaymentConfirmCopy.autoApproveHint(autoApprove, paidWithoutPayment: priceWon > 0 && paymentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty))
                             .font(.caption)
                             .foregroundStyle(Theme.secondaryText)
                     }
@@ -150,7 +150,7 @@ struct SimpleSlotSheet: View {
         .buttonStyle(.borderless)
     }
 
-    /// 유료인데 결제 안내가 비어 있으면 한 번 묻는다 (서버 동작은 그대로 — 바로 확정)
+    /// 유료인데 결제 안내가 비어 있으면 한 번 묻는다 (서버는 승인 대기로 받는다 — 개선-38)
     private func attemptSave() {
         if priceWon > 0, paymentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             confirmingNoPayment = true
