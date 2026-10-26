@@ -7,6 +7,7 @@ import { Avatar } from "@/components/Avatar";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
 import { SITE } from "@/lib/constants";
 import { EmptyState } from "@/components/EmptyState";
+import { withoutDemo } from "@/lib/demo-visibility";
 
 export const dynamic = "force-dynamic";
 
@@ -31,10 +32,12 @@ export default async function FollowersPage({
   const profile = await getProfile(params.username);
   if (!profile) notFound();
 
-  const [followers, session] = await Promise.all([
+  const [rows, session] = await Promise.all([
     listFollowers(params.username),
     getSession(),
   ]);
+  // 데모 계정은 내부 계정에게만 보인다 (개선-33)
+  const followers = withoutDemo(rows, (p) => p.username, session?.username);
   const isOwner = session?.username === params.username;
 
   return (

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getProfile } from "@/lib/auth";
+import { getProfile, getSession } from "@/lib/auth";
+import { withoutDemo } from "@/lib/demo-visibility";
 import { listFollowing } from "@/lib/follows";
 import { Avatar } from "@/components/Avatar";
 import { EmptyState } from "@/components/EmptyState";
@@ -29,7 +30,9 @@ export default async function FollowingPage({
   const profile = await getProfile(params.username);
   if (!profile) notFound();
 
-  const people = await listFollowing(params.username);
+  const [rows, session] = await Promise.all([listFollowing(params.username), getSession()]);
+  // 데모 계정은 내부 계정에게만 보인다 (개선-33) — 위 숫자도 이 목록 기준
+  const people = withoutDemo(rows, (p) => p.username, session?.username);
 
   return (
     <div className="space-y-6">

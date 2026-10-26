@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getAdminClient } from "@/lib/supabase";
 import { getSession } from "@/lib/auth";
+import { DEMO_USERNAMES, hidesDemoFor } from "@/lib/demo-visibility";
 
 async function getUserIdByUsername(username: string): Promise<string | null> {
   const db = getAdminClient();
@@ -14,21 +15,39 @@ async function getUserIdByUsername(username: string): Promise<string | null> {
   return data?.id ?? null;
 }
 
-export async function getFollowStats(username: string) {
+/**
+ * 팔로워·팔로잉 수.
+ * forViewer 이면 지금 보는 사람 기준으로 센다 — 내부 계정이 아니면 데모 계정(appreview)과의 팔로우는 빼서
+ * 웹 팔로잉·팔로워 목록(데모 숨김, 개선-33)과 숫자를 맞춘다. 팔로우 행 자체는 그대로 둔다.
+ */
+export async function getFollowStats(username: string, opts?: { forViewer?: boolean }) {
   const db = getAdminClient();
   const userId = await getUserIdByUsername(username);
   if (!userId) return { followers: 0, following: 0 };
 
-  const [{ count: followers }, { count: following }] = await Promise.all([
-    db
-      .from("follows")
-      .select("id", { count: "exact", head: true })
-      .eq("following_id", userId),
-    db
-      .from("follows")
-      .select("id", { count: "exact", head: true })
-      .eq("follower_id", userId),
-  ]);
+  let demoIds: string[] = [];
+  if (opts?.forViewer) {
+    const session = await getSession();
+    if (hidesDemoFor(session?.username)) {
+      const { data } = await db.from("users").select("id").in("username", Array.from(DEMO_USERNAMES));
+      demoIds = (data ?? []).map((u) => u.id as string).filter((id) => id !== userId);
+    }
+  }
+  const notIn = `(${demoIds.join(",")})`;
+
+  let followersQ = db
+    .from("follows")
+    .select("id", { count: "exact", head: true })
+    .eq("following_id", userId);
+  let followingQ = db
+    .from("follows")
+    .select("id", { count: "exact", head: true })
+    .eq("follower_id", userId);
+  if (demoIds.length > 0) {
+    followersQ = followersQ.not("follower_id", "in", notIn);
+    followingQ = followingQ.not("following_id", "in", notIn);
+  }
+  const [{ count: followers }, { count: following }] = await Promise.all([followersQ, followingQ]);
 
   return { followers: followers ?? 0, following: following ?? 0 };
 }
