@@ -48,7 +48,7 @@ export default async function Image({
 
   const [stats, slots] = profile
     ? await Promise.all([
-        getFollowStats(username, { forViewer: true }).catch(() => ({ followers: 0, following: 0 })),
+        getFollowStats(username, { viewer: null }).catch(() => ({ followers: 0, following: 0 })),
         listPublicSlotsByUsername(username).catch(() => []),
       ])
     : [{ followers: 0, following: 0 }, [] as unknown[]];

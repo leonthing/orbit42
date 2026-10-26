@@ -88,7 +88,7 @@ export default async function PublicProfile({
   const [session, stats, viewerFollowing, slots, value, viewerBlocked] =
     await Promise.all([
       getSession(),
-      getFollowStats(params.username, { forViewer: true }),
+      getSession().then((s) => getFollowStats(params.username, { viewer: s?.username ?? null })),
       isFollowing(params.username),
       listPublicSlotsByUsername(params.username),
       getValueStats(params.username),

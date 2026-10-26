@@ -7,7 +7,7 @@ import { Avatar } from "@/components/Avatar";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
 import { SITE } from "@/lib/constants";
 import { EmptyState } from "@/components/EmptyState";
-import { withoutDemo } from "@/lib/demo-visibility";
+import { visibleConnections } from "@/lib/demo-visibility";
 
 export const dynamic = "force-dynamic";
 
@@ -36,8 +36,8 @@ export default async function FollowersPage({
     listFollowers(params.username),
     getSession(),
   ]);
-  // 데모 계정은 내부 계정에게만 보인다 (개선-33)
-  const followers = withoutDemo(rows, (p) => p.username, session?.username);
+  // 남이 볼 때는 비공개 사용자·데모 계정(내부 계정 제외, 개선-33)을 뺀다 — 위 숫자도 이 목록 기준
+  const followers = visibleConnections(rows, params.username, session?.username);
   const isOwner = session?.username === params.username;
 
   return (

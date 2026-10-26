@@ -2,6 +2,7 @@ import { apiSession, apiUserId } from "@/lib/api-auth";
 import { getAdminClient } from "@/lib/supabase";
 import { listFollowers, listFollowing } from "@/lib/follows";
 import { isBlockedEitherWay } from "@/lib/blocks";
+import { withoutDemo } from "@/lib/demo-visibility";
 
 export const dynamic = "force-dynamic";
 
@@ -42,10 +43,12 @@ export async function GET(
     }
   }
 
-  const rows =
+  const allRows =
     type === "orbiters"
       ? await listFollowers(target.username as string)
       : await listFollowing(target.username as string);
+  // 남의 목록에서는 데모 계정을 내부 계정에게만 보인다 (개선-33, 웹과 같은 규칙). 본인 목록은 그대로.
+  const rows = isMe ? allRows : withoutDemo(allRows, (r) => r.username, session.username);
 
   // 목록 안의 비공개 사용자는 타인에게 숨기고, 관심사 태그를 함께 조회한다.
   const ids = rows.map((r) => (r as { id: string }).id);

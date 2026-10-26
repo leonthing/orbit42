@@ -51,7 +51,7 @@ export async function GET(
   }
 
   const [stats, following, rating, slots] = await Promise.all([
-    getFollowStats(user.username as string),
+    getFollowStats(user.username as string, { viewer: session.username }),
     blockedByMe ? Promise.resolve(false) : isFollowing(user.username as string),
     getHostRating(user.id as string),
     blockedByMe

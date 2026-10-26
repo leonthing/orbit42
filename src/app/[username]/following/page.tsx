@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProfile, getSession } from "@/lib/auth";
-import { withoutDemo } from "@/lib/demo-visibility";
+import { visibleConnections } from "@/lib/demo-visibility";
 import { listFollowing } from "@/lib/follows";
 import { Avatar } from "@/components/Avatar";
 import { EmptyState } from "@/components/EmptyState";
@@ -31,8 +31,8 @@ export default async function FollowingPage({
   if (!profile) notFound();
 
   const [rows, session] = await Promise.all([listFollowing(params.username), getSession()]);
-  // 데모 계정은 내부 계정에게만 보인다 (개선-33) — 위 숫자도 이 목록 기준
-  const people = withoutDemo(rows, (p) => p.username, session?.username);
+  // 남이 볼 때는 비공개 사용자·데모 계정(내부 계정 제외, 개선-33)을 뺀다 — 위 숫자도 이 목록 기준
+  const people = visibleConnections(rows, params.username, session?.username);
 
   return (
     <div className="space-y-6">

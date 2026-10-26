@@ -12,6 +12,28 @@ export function hidesDemoFor(viewerUsername: string | null | undefined): boolean
   return !viewerUsername || !INTERNAL_VIEWERS.has(viewerUsername);
 }
 
+/**
+ * 팔로잉·팔로워 목록을 보는 사람 기준으로 거른다 (웹·앱 API 공통).
+ * 본인이 자기 목록을 볼 때는 그대로, 남이 볼 때는 비공개 사용자와(내부 계정이 아니면) 데모 계정을 뺀다.
+ */
+export function visibleConnections<T extends { username: string; is_private?: boolean | null }>(
+  rows: T[],
+  ownerUsername: string,
+  viewerUsername: string | null | undefined,
+): T[] {
+  if (viewerUsername === ownerUsername) return rows;
+  return withoutDemo(
+    rows.filter((r) => !r.is_private),
+    (r) => r.username,
+    viewerUsername,
+  );
+}
+
+/** 보는 사람 기준 팔로우 숫자에서 데모 계정을 빼야 하는지 (본인이 볼 때는 빼지 않는다) */
+export function hidesDemoInCounts(ownerUsername: string, viewerUsername: string | null | undefined): boolean {
+  return viewerUsername !== ownerUsername && hidesDemoFor(viewerUsername);
+}
+
 /** 목록에서 데모 계정 행을 뺀다 */
 export function withoutDemo<T>(
   rows: T[],
