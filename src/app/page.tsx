@@ -145,7 +145,7 @@ export default async function LandingPage() {
           <div className="mt-8 grid gap-6 md:grid-cols-2 md:items-start">
             <div className="space-y-4">
               <ValueCard
-                title="캘린더가 곧 Todo"
+                title="캘린더가 곧 할 일 목록"
                 body="별도 할 일 앱 안 열어도 돼요. 예정된 일정이 체크 가능한 할 일로 바로 바뀌어요."
                 icon={
                   <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -200,21 +200,21 @@ export default async function LandingPage() {
         {/* Feature 4: Orbits (community) */}
         <section className="mt-20 md:mt-28">
           <FeatureHeader
-            eyebrow="Orbit"
+            eyebrow="오르빗"
             title="다양한 궤도의 사람들과 만나요"
-            body="팔로워가 아니라 'orbiters' — 내 주변을 도는 사람들. 창업가, 디자이너, 개발자, 크리에이터 — 서로 다른 궤도가 교차할 때 재밌는 일이 생겨요."
+            body="내 주변을 도는 사람들 — 창업가, 디자이너, 개발자, 크리에이터 — 서로 다른 궤도가 교차할 때 재밌는 일이 생겨요."
           />
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
             <ValueCard
-              title="Explore"
+              title="둘러보기"
               body="지금 활동 중인 사람들을 둘러보고, 관심 있는 사람의 시간을 예약해요."
             />
             <ValueCard
-              title="Feed"
+              title="피드"
               body="내가 팔로우하는 사람들이 오늘 무엇을 하는지 타임라인으로 흐르듯 보여요."
             />
             <ValueCard
-              title="Messages"
+              title="메시지"
               body="예약 전에 1:1로 가볍게 이야기를 먼저 나눠볼 수 있어요."
             />
           </div>
@@ -321,7 +321,7 @@ type DemoItem =
 const DEMO_ITEMS: DemoItem[] = [
   { kind: "event", title: "팀 스탠드업 (Google Calendar)", time: "월 10:00", color: "#60a5fa" },
   { kind: "slot", title: "프로덕트 멘토링", time: "화 14:00", price: "₩50,000" },
-  { kind: "slot", title: "1:1 커피챗", time: "금 11:00", price: "FREE" },
+  { kind: "slot", title: "1:1 커피챗", time: "금 11:00", price: "무료" },
   { kind: "slot", title: "주말 점심식사", time: "토 12:00", price: "₩32,000", auction: true },
   { kind: "event", title: "디자인 싱크 (Google Calendar)", time: "목 14:00", color: "#a78bfa" },
 ];
@@ -459,7 +459,7 @@ function DemoTodoDay() {
       <div className="flex items-center justify-between border-b border-charcoal-800/50 px-5 py-3">
         <div>
           <p className="text-2xs font-semibold uppercase tracking-[0.18em] text-charcoal-500">
-            Today
+            오늘
           </p>
           <p className="mt-0.5 text-sm font-semibold text-charcoal-200">
             오늘의 일정 (예시)
@@ -510,7 +510,7 @@ function DemoTodoDay() {
             </span>
             {it.now && (
               <span className="shrink-0 rounded-full bg-navy-400/15 px-2 py-0.5 text-2xs font-semibold text-navy-400">
-                NOW
+                지금
               </span>
             )}
           </li>
@@ -529,7 +529,7 @@ function DemoCalendar() {
       <div className="flex items-center justify-between border-b border-charcoal-800/50 px-4 py-3 sm:px-5">
         <div>
           <p className="text-2xs font-semibold uppercase tracking-[0.18em] text-charcoal-500">
-            This week
+            이번 주
           </p>
           <p className="mt-0.5 text-sm font-semibold text-charcoal-200">
             내 캘린더 (예시)

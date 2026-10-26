@@ -16,8 +16,8 @@ export async function generateMetadata({
   const profile = await getProfile(params.username);
   return {
     title: profile
-      ? `${profile.display_name || profile.username} · Orbiting`
-      : "Orbiting",
+      ? `${profile.display_name || profile.username} · 팔로잉`
+      : "팔로잉",
   };
 }
 
@@ -40,7 +40,7 @@ export default async function FollowingPage({
         >
           ← {profile.display_name || profile.username}
         </Link>
-        <h1 className="mt-1 text-2xl font-bold text-charcoal-100">Orbiting</h1>
+        <h1 className="mt-1 text-2xl font-bold text-charcoal-100">팔로잉</h1>
         <p className="mt-1 text-sm text-charcoal-500">
           팔로우하는 사람들 · {people.length}명
         </p>

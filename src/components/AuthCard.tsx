@@ -250,7 +250,7 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
                   .replace(/[^a-z0-9_-]/g, ""),
               )
             }
-            placeholder="추천인 @username (선택)"
+            placeholder="추천인 아이디 (선택)"
             className={input}
             maxLength={32}
           />

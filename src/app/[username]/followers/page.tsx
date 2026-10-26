@@ -18,8 +18,8 @@ export async function generateMetadata({
   const profile = await getProfile(params.username);
   return {
     title: profile
-      ? `${profile.display_name || profile.username} · Orbiters`
-      : "Orbiters",
+      ? `${profile.display_name || profile.username} · 팔로워`
+      : "팔로워",
   };
 }
 
@@ -41,7 +41,7 @@ export default async function FollowersPage({
     <PeopleList
       username={params.username}
       displayName={profile.display_name || profile.username}
-      title="Orbiters"
+      title="팔로워"
       hint="내 궤도를 따르는 사람들"
       people={followers}
       emptyBody={

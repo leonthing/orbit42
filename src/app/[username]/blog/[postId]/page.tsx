@@ -23,7 +23,7 @@ export async function generateMetadata({
   params: { username: string; postId: string };
 }): Promise<Metadata> {
   const data = await getPublicPostBySlug(params.username, params.postId);
-  if (!data) return { title: "Not found" };
+  if (!data) return { title: "찾을 수 없음" };
   return {
     title: data.post.title,
     description: data.post.excerpt ?? undefined,

@@ -55,7 +55,7 @@ export default async function Image({
 
   const statChips: { label: string; value: string }[] = [];
   if (stats.followers > 0)
-    statChips.push({ label: "orbiters", value: String(stats.followers) });
+    statChips.push({ label: "팔로워", value: String(stats.followers) });
   if (slots.length > 0)
     statChips.push({ label: "예약 링크", value: String(slots.length) });
 

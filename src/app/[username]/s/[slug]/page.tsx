@@ -37,7 +37,7 @@ export async function generateMetadata({
   params: { username: string; slug: string };
 }): Promise<Metadata> {
   const data = await getSlotBySlug(params.username, params.slug);
-  if (!data) return { title: "Not found" };
+  if (!data) return { title: "찾을 수 없음" };
   const { slot, host } = data;
   const hostName = host.display_name || host.username;
   const title = `${slot.title} · ${hostName}`;

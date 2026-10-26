@@ -52,7 +52,7 @@ export async function generateMetadata({
   params: { username: string };
 }): Promise<Metadata> {
   const profile = await getProfile(params.username);
-  if (!profile) return { title: "Not found" };
+  if (!profile) return { title: "찾을 수 없음" };
   const name = profile.display_name || profile.username;
   const title = name;
   const description = profile.bio || `${name}'s orbit on Orbit42`;
@@ -270,14 +270,14 @@ export default async function PublicProfile({
                 className="hover:text-charcoal-200"
               >
                 <strong className="text-charcoal-100">{stats.followers}</strong>{" "}
-                <span className="text-charcoal-500">orbiters</span>
+                <span className="text-charcoal-500">팔로워</span>
               </Link>
               <Link
                 href={`/${params.username}/following`}
                 className="hover:text-charcoal-200"
               >
                 <strong className="text-charcoal-100">{stats.following}</strong>{" "}
-                <span className="text-charcoal-500">orbiting</span>
+                <span className="text-charcoal-500">팔로잉</span>
               </Link>
               {totalSlotWindows > 0 && (
                 <span>
