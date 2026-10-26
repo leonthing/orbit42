@@ -5,6 +5,12 @@
  */
 const RESERVED = new Set<string>([
   "intro-example", // 개선-48 인트로 '내 링크 페이지' 이미지
+  // 1.6.0·1.7.0 스토어 스크린샷(링크 페이지·공유 카드 QR)과 둘러보기 예시 아이디.
+  // 마침표가 있어 지금은 가입할 수 없지만, 규칙이 느슨해질 때와 마침표 뺀 비슷한 아이디(사칭)까지 막는다.
+  "harin.design", "harindesign",
+  "example.user", "exampleuser",
+  "coach.example", "coachexample",
+  "designer.example", "designerexample",
 ]);
 
 export function isReservedUsername(username: string): boolean {
