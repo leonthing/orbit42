@@ -103,6 +103,9 @@ export async function sendBookingReceivedToHost(
     guestEmail: string | null;
     message: string | null;
     autoApprove: boolean;
+    /** 유료 링크인데 결제 안내가 비어 승인 대기로 받은 경우 (개선-38) */
+    paymentInstructionsMissing?: boolean;
+    settingsUrl?: string;
     manageUrl: string;
   },
 ) {
@@ -126,9 +129,15 @@ export async function sendBookingReceivedToHost(
       (args.message ? quoteBlock(escapeHtml(args.message)) : "") +
       emailButton("예약 관리하기", url) +
       mutedNote(
-        args.autoApprove
-          ? "자동으로 확정된 예약이에요. 캘린더에서 확인하실 수 있어요."
-          : "내 확인을 기다리는 예약이에요. 수락하거나 거절해 주세요.",
+        args.paymentInstructionsMissing
+          ? `유료 예약 링크인데 결제 안내가 비어 있어 자동 확정 대신 승인 대기로 받았어요. 게스트에게 입금 방법을 안내하신 뒤 수락해 주세요.${
+              args.settingsUrl
+                ? ` 결제 안내(계좌·송금 링크)를 <a href="${siteUrl(args.settingsUrl)}" target="_blank" style="color:inherit">설정</a>에 적어 두시면 다음부터는 게스트에게 입금 안내가 자동으로 가요.`
+                : ""
+            }`
+          : args.autoApprove
+            ? "자동으로 확정된 예약이에요. 캘린더에서 확인하실 수 있어요."
+            : "내 확인을 기다리는 예약이에요. 수락하거나 거절해 주세요.",
       ),
   });
   return send(to, `[Orbit42] 새 예약: ${args.slotTitle}`, html);

@@ -997,6 +997,7 @@ export async function bookSlot(args: {
 
   // 유료 슬롯이고 호스트가 결제 안내(계좌·송금 링크)를 적어 두었으면 계좌이체 흐름:
   // 입금 확인 전까지는 '입금 대기'(pending)로 두고, 기한이 지나면 cron 이 취소한다.
+  // 결제 안내가 비어 있으면 자동 승인이어도 '승인 대기'로 받는다 — 돈을 받기 전에 확정되지 않게 (개선-38)
   const { data: hostPay } = await db
     .from("users")
     .select("payment_instructions")
@@ -1004,16 +1005,17 @@ export async function bookSlot(args: {
     .single();
   const paymentInstructions =
     ((hostPay as { payment_instructions: string | null } | null)?.payment_instructions ?? "").trim() || null;
-  const awaitingPayment =
-    !!paymentInstructions &&
-    ((slot.price_cents as number | null) ?? 0) > 0 &&
-    slot.pricing_model !== "auction";
+  const { decideBookingStatus } = await import("@/lib/booking-status");
+  const { awaitingPayment, paymentInstructionsMissing, autoApprove, status: initialStatus } = decideBookingStatus({
+    priceCents: slot.price_cents as number | null,
+    pricingModel: slot.pricing_model as string | null,
+    paymentInstructions,
+    autoApprove: slot.auto_approve as boolean | null,
+  });
   const paymentDueAt = awaitingPayment
     ? new Date(Math.min(Date.now() + PAYMENT_WINDOW_MS, startAt.getTime()))
     : null;
 
-  const autoApprove = (slot.auto_approve as boolean | null) !== false && !awaitingPayment;
-  const initialStatus = autoApprove ? "confirmed" : "pending";
 
   // Create the booking row first so we never lose it on a Google API failure.
   const bookingLocation =
@@ -1093,7 +1095,9 @@ export async function bookSlot(args: {
         : autoApprove
           ? `새 예약: ${slot.title}`
           : `예약 요청: ${slot.title}`,
-      body: `${guestLabel} · ${whenLabel}`,
+      body: paymentInstructionsMissing
+        ? `${guestLabel} · ${whenLabel} — 결제 안내가 비어 있어 승인 대기로 받았어요. 설정에서 결제 안내를 적어 주세요.`
+        : `${guestLabel} · ${whenLabel}`,
       link: `/${host?.username}/bookings`,
       actorId: guestId,
     });
@@ -1113,6 +1117,8 @@ export async function bookSlot(args: {
         guestEmail: guestEmail ?? null,
         message: args.message ?? null,
         autoApprove,
+        paymentInstructionsMissing,
+        settingsUrl: `/${host?.username}/settings#payment`,
         manageUrl: `/${host?.username}/bookings`,
       });
     }
@@ -1881,7 +1887,8 @@ export async function rescheduleBookingAsGuest(
     newStart.getTime() + (slot.duration_min as number) * 60_000,
   );
   const autoApprove = (slot.auto_approve as boolean | null) ?? true;
-  const newStatus = autoApprove ? "confirmed" : "pending";
+  // 아직 확정 전(승인 대기·입금 대기)인 예약은 게스트가 시간을 옮겨도 확정되지 않는다 (개선-38)
+  const newStatus = booking.status === "pending" ? "pending" : autoApprove ? "confirmed" : "pending";
 
   const moved = await moveBookingTo({
     booking: booking as never,
