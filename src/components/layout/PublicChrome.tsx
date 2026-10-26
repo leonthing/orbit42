@@ -27,7 +27,7 @@ export function PublicChrome({
           <span aria-hidden>·</span>
           {viewerUsername ? (
             <Link href={`/${viewerUsername}`} className="hover:text-charcoal-300">
-              내 orbit
+              내 프로필
             </Link>
           ) : (
             <AppStoreAwareLink href="/?mode=signin#auth" iosLabel="앱 받기" className="hover:text-charcoal-300">
@@ -59,7 +59,7 @@ export function PublicChrome({
             href="/explore"
             className="rounded-lg px-3 py-1.5 text-sm text-charcoal-300 hover:text-charcoal-100"
           >
-            Explore
+            둘러보기
           </Link>
           {viewerUsername ? (
             <>
@@ -67,13 +67,13 @@ export function PublicChrome({
                 href="/feed"
                 className="rounded-lg px-3 py-1.5 text-sm text-charcoal-300 hover:text-charcoal-100"
               >
-                Feed
+                피드
               </Link>
               <Link
                 href={`/${viewerUsername}`}
                 className="rounded-lg bg-navy-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-navy-400"
               >
-                My Orbit
+                내 프로필
               </Link>
             </>
           ) : (
@@ -82,13 +82,13 @@ export function PublicChrome({
                 href="/?mode=signin#auth"
                 className="rounded-lg px-3 py-1.5 text-sm text-charcoal-300 hover:text-charcoal-100"
               >
-                Sign in
+                로그인
               </Link>
               <Link
                 href="/?mode=signup#auth"
                 className="rounded-lg bg-navy-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-navy-400"
               >
-                Get started
+                시작하기
               </Link>
             </>
           )}

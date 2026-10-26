@@ -84,30 +84,30 @@ export default async function ExplorePage() {
 
   // Active people: anyone who posted or opened a slot in the last 30 days,
   // plus the most recently joined users as a fallback.
-  const [recentPostUsers, recentSlotUsers, latestUsers, openSlots, liveAuctions] = await Promise.all([
+  const [recentPostUsers, recentSlotUsers, latestUsers, openSlots, liveAuctions, activeSlotHosts] = await Promise.all([
     db
       .from("blog_posts")
-      .select("user_id, published_at, user:users!blog_posts_user_id_fkey(username, display_name, bio, avatar_url)")
+      .select("user_id, published_at, user:users!blog_posts_user_id_fkey(username, display_name, bio, avatar_url, is_private)")
       .eq("published", true)
       .gte("published_at", recentSince)
       .order("published_at", { ascending: false })
       .limit(30),
     db
       .from("time_slots")
-      .select("host_id, created_at, host:users!time_slots_host_id_fkey(username, display_name, bio, avatar_url)")
+      .select("host_id, created_at, host:users!time_slots_host_id_fkey(username, display_name, bio, avatar_url, is_private)")
       .eq("active", true)
       .gte("created_at", recentSince)
       .order("created_at", { ascending: false })
       .limit(30),
     db
       .from("users")
-      .select("username, display_name, bio, avatar_url, created_at")
+      .select("username, display_name, bio, avatar_url, created_at, is_private")
       .order("created_at", { ascending: false })
       .limit(20),
     db
       .from("time_slots")
       .select(
-        "id, slug, title, duration_min, price_cents, slot_type, location_detail, created_at, host:users!time_slots_host_id_fkey(username, display_name)",
+        "id, slug, title, duration_min, price_cents, slot_type, location_detail, created_at, host:users!time_slots_host_id_fkey(username, display_name, is_private)",
       )
       .eq("active", true)
       .order("created_at", { ascending: false })
@@ -115,13 +115,20 @@ export default async function ExplorePage() {
     db
       .from("time_slots")
       .select(
-        "id, slug, title, duration_min, reserve_price_cents, current_high_bid_cents, auction_ends_at, host:users!time_slots_host_id_fkey(username, display_name)",
+        "id, slug, title, duration_min, reserve_price_cents, current_high_bid_cents, auction_ends_at, host:users!time_slots_host_id_fkey(username, display_name, is_private)",
       )
       .eq("active", true)
       .eq("pricing_model", "auction")
       .gt("auction_ends_at", new Date().toISOString())
       .order("auction_ends_at", { ascending: true })
       .limit(6),
+    // 사람 카드에 '열린 예약 링크 n개'를 붙이고, 링크가 열린 사람을 위로 올리기 위한 집계 (개선-53)
+    db
+      .from("time_slots")
+      .select("created_at, host:users!time_slots_host_id_fkey(username, display_name, bio, avatar_url, is_private)")
+      .eq("active", true)
+      .order("created_at", { ascending: false })
+      .limit(500),
   ]);
 
   // Aggregate active users
@@ -131,19 +138,39 @@ export default async function ExplorePage() {
     bio: string | null;
     avatar_url: string | null;
     last_active: string;
-    activity: "글" | "예약 링크" | "신규";
+  };
+  type HostRow = {
+    username: string;
+    display_name: string | null;
+    bio: string | null;
+    avatar_url: string | null;
+    is_private: boolean | null;
   };
   const peopleMap = new Map<string, ActiveUser>();
+  // 비공개 프로필은 둘러보기에 보이지 않는다 (앱 설정 안내와 같게)
+  const hidden = (u: { username?: string; is_private?: boolean | null } | null | undefined) =>
+    !u || !u.username || !!u.is_private || (!!session && u.username === session.username);
+
+  // 열린 예약 링크 수 — 사람 카드 한 줄과 정렬에 쓴다
+  const openLinkCount = new Map<string, number>();
+  for (const s of activeSlotHosts.data ?? []) {
+    const u = s.host as unknown as HostRow | null;
+    if (hidden(u)) continue;
+    openLinkCount.set(u!.username, (openLinkCount.get(u!.username) ?? 0) + 1);
+    if (!peopleMap.has(u!.username)) {
+      peopleMap.set(u!.username, {
+        username: u!.username,
+        display_name: u!.display_name,
+        bio: u!.bio,
+        avatar_url: u!.avatar_url,
+        last_active: s.created_at as string,
+      });
+    }
+  }
 
   for (const p of recentPostUsers.data ?? []) {
-    const u = p.user as unknown as {
-      username: string;
-      display_name: string | null;
-      bio: string | null;
-      avatar_url: string | null;
-    };
-    if (!u || !u.username) continue;
-    if (session && u.username === session.username) continue;
+    const u = p.user as unknown as HostRow;
+    if (hidden(u)) continue;
     if (!peopleMap.has(u.username)) {
       peopleMap.set(u.username, {
         username: u.username,
@@ -151,19 +178,12 @@ export default async function ExplorePage() {
         bio: u.bio,
         avatar_url: u.avatar_url,
         last_active: p.published_at as string,
-        activity: "글",
       });
     }
   }
   for (const s of recentSlotUsers.data ?? []) {
-    const u = s.host as unknown as {
-      username: string;
-      display_name: string | null;
-      bio: string | null;
-      avatar_url: string | null;
-    };
-    if (!u || !u.username) continue;
-    if (session && u.username === session.username) continue;
+    const u = s.host as unknown as HostRow;
+    if (hidden(u)) continue;
     if (!peopleMap.has(u.username)) {
       peopleMap.set(u.username, {
         username: u.username,
@@ -171,12 +191,11 @@ export default async function ExplorePage() {
         bio: u.bio,
         avatar_url: u.avatar_url,
         last_active: s.created_at as string,
-        activity: "예약 링크",
       });
     }
   }
   for (const u of latestUsers.data ?? []) {
-    if (session && u.username === session.username) continue;
+    if (hidden(u as HostRow)) continue;
     if (!peopleMap.has(u.username as string)) {
       peopleMap.set(u.username as string, {
         username: u.username as string,
@@ -184,17 +203,19 @@ export default async function ExplorePage() {
         bio: (u.bio as string | null) ?? null,
         avatar_url: (u.avatar_url as string | null) ?? null,
         last_active: u.created_at as string,
-        activity: "신규",
       });
     }
   }
 
+  // 예약하러 온 사람 기준: 열린 예약 링크가 있는 사람이 먼저, 그다음 최근 활동순 (개선-53)
   const activePeople = withoutDemo(Array.from(peopleMap.values()), (p) => p.username, viewer).sort(
-    (a, b) => new Date(b.last_active).getTime() - new Date(a.last_active).getTime(),
+    (a, b) =>
+      Number((openLinkCount.get(b.username) ?? 0) > 0) - Number((openLinkCount.get(a.username) ?? 0) > 0) ||
+      new Date(b.last_active).getTime() - new Date(a.last_active).getTime(),
   );
 
   const slots = withoutDemo(
-    openSlots.data ?? [],
+    (openSlots.data ?? []).filter((s) => !(s.host as unknown as HostRow | null)?.is_private),
     (s) => (s.host as unknown as { username?: string } | null)?.username,
     viewer,
   ).map((s) => ({
@@ -209,7 +230,7 @@ export default async function ExplorePage() {
   }));
 
   const liveAuctionList = withoutDemo(
-    liveAuctions.data ?? [],
+    (liveAuctions.data ?? []).filter((a) => !(a.host as unknown as HostRow | null)?.is_private),
     (a) => (a.host as unknown as { username?: string } | null)?.username,
     viewer,
   );
@@ -219,17 +240,80 @@ export default async function ExplorePage() {
     slots.map((s) => s.id),
   );
 
+  const renderSlot = (s: (typeof slots)[number]) => (
+    <div
+      key={s.id}
+      className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5"
+    >
+      <div className="flex min-w-0 items-center gap-2 text-xs text-charcoal-500">
+        <Link
+          href={`/${s.host.username}`}
+          className="min-w-0 truncate font-medium text-charcoal-300 hover:text-charcoal-100"
+        >
+          {s.host.display_name || s.host.username}
+        </Link>
+        <span className="shrink-0">·</span>
+        <span className="min-w-0 truncate">@{s.host.username}</span>
+      </div>
+      <Link
+        href={`/${s.host.username}/s/${s.slug}`}
+        className="mt-2 block"
+      >
+        <p className="text-sm font-semibold text-charcoal-100 hover:text-navy-300">
+          {s.title}
+        </p>
+        <p className="mt-1 text-xs text-charcoal-500">
+          {s.duration_min}분 · {slotTypeLabel(s.slot_type)}{" "}
+          {s.location_detail && `· ${s.location_detail}`}{" "}
+          ·{" "}
+          {s.price_cents === 0
+            ? "무료"
+            : `${(s.price_cents / 100).toLocaleString("ko-KR")}원`}
+        </p>
+      </Link>
+      <div className="mt-3">
+        <ReactionStrip
+          target_type="slot"
+          target_id={s.id}
+          initial={slotReactions.get(s.id) ?? []}
+          loggedIn={!!session}
+          size="sm"
+        />
+      </div>
+    </div>
+  );
+
   return (
     <>
       <header className="mb-8 space-y-4">
         <div>
           <h1 className="max-md:hidden text-2xl font-bold text-charcoal-100">탐색</h1>
           <p className="mt-1 text-sm text-charcoal-500">
-            새로운 궤도를 발견해보세요.
+            지금 예약할 수 있는 시간과 사람들을 둘러보세요.
           </p>
         </div>
         <ExploreSearchBar />
       </header>
+
+      {/* 예약하러 온 사람이 스크롤 없이 바로 볼 수 있게 맨 위에 — 처음 3개, 나머지는 펼쳐 보기 (개선-53) */}
+      <section className="mb-10">
+        <SectionTitle title="지금 예약할 수 있는 시간" hint="열린 예약 링크" />
+        {slots.length === 0 ? (
+          <EmptyState title="열린 예약 링크가 아직 없어요." />
+        ) : (
+          <>
+            <div className="grid gap-3 sm:grid-cols-2">{slots.slice(0, 3).map(renderSlot)}</div>
+            {slots.length > 3 && (
+              <details className="group/more mt-3">
+                <summary className="flex cursor-pointer list-none items-center justify-center rounded-xl border border-charcoal-800/60 py-2.5 text-sm font-medium text-charcoal-300 hover:text-charcoal-100 group-open/more:hidden">
+                  예약 링크 {slots.length - 3}개 더 보기
+                </summary>
+                <div className="grid gap-3 sm:grid-cols-2">{slots.slice(3).map(renderSlot)}</div>
+              </details>
+            )}
+          </>
+        )}
+      </section>
 
       {liveAuctionList.length > 0 && (
         <section className="mb-10">
@@ -254,7 +338,7 @@ export default async function ExplorePage() {
                   className="rounded-xl border border-navy-400/30 bg-navy-400/5 p-5 transition-colors hover:border-navy-400/60"
                 >
                   <div className="flex items-center justify-between gap-2 text-2xs font-semibold uppercase tracking-wider">
-                    <span className="text-navy-400">Auction</span>
+                    <span className="text-navy-400">경매</span>
                     <span className="text-charcoal-500">
                       {hoursLeft >= 48
                         ? `${Math.round(hoursLeft / 24)}일 남음`
@@ -294,6 +378,7 @@ export default async function ExplorePage() {
                 bio={p.bio}
                 avatarUrl={p.avatar_url}
                 badge={`함께 아는 사람 ${p.mutuals}명`}
+                openLinks={openLinkCount.get(p.username) ?? 0}
                 isFollowing={false}
                 loggedIn={!!session}
               />
@@ -303,7 +388,7 @@ export default async function ExplorePage() {
       )}
 
       <section className="mb-10">
-        <SectionTitle title="궤도에 올릴 만한 사람" hint="최근 활동한 사람들" />
+        <SectionTitle title="궤도에 올릴 만한 사람" hint="예약 링크가 열린 사람 먼저" />
         {activePeople.length === 0 ? (
           <EmptyState title="아직 활동한 사람이 없어요." />
         ) : (
@@ -315,7 +400,7 @@ export default async function ExplorePage() {
                 displayName={p.display_name}
                 bio={p.bio}
                 avatarUrl={p.avatar_url}
-                badge={p.activity}
+                openLinks={openLinkCount.get(p.username) ?? 0}
                 isFollowing={followingUsernames.has(p.username)}
                 loggedIn={!!session}
               />
@@ -324,57 +409,6 @@ export default async function ExplorePage() {
         )}
       </section>
 
-      <section>
-        <SectionTitle title="열린 예약 링크" hint="지금 열려 있는 시간들" />
-        {slots.length === 0 ? (
-          <EmptyState title="열린 예약 링크가 아직 없어요." />
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {slots.map((s) => (
-              <div
-                key={s.id}
-                className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5"
-              >
-                <div className="flex min-w-0 items-center gap-2 text-xs text-charcoal-500">
-                  <Link
-                    href={`/${s.host.username}`}
-                    className="min-w-0 truncate font-medium text-charcoal-300 hover:text-charcoal-100"
-                  >
-                    {s.host.display_name || s.host.username}
-                  </Link>
-                  <span className="shrink-0">·</span>
-                  <span className="min-w-0 truncate">@{s.host.username}</span>
-                </div>
-                <Link
-                  href={`/${s.host.username}/s/${s.slug}`}
-                  className="mt-2 block"
-                >
-                  <p className="text-sm font-semibold text-charcoal-100 hover:text-navy-300">
-                    {s.title}
-                  </p>
-                  <p className="mt-1 text-xs text-charcoal-500">
-                    {s.duration_min}분 · {slotTypeLabel(s.slot_type)}{" "}
-                    {s.location_detail && `· ${s.location_detail}`}{" "}
-                    ·{" "}
-                    {s.price_cents === 0
-                      ? "무료"
-                      : `${(s.price_cents / 100).toLocaleString("ko-KR")}원`}
-                  </p>
-                </Link>
-                <div className="mt-3">
-                  <ReactionStrip
-                    target_type="slot"
-                    target_id={s.id}
-                    initial={slotReactions.get(s.id) ?? []}
-                    loggedIn={!!session}
-                    size="sm"
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
     </>
   );
 }
@@ -395,6 +429,7 @@ function PersonCard({
   bio,
   avatarUrl,
   badge,
+  openLinks,
   isFollowing,
   loggedIn,
 }: {
@@ -402,7 +437,9 @@ function PersonCard({
   displayName: string | null;
   bio: string | null;
   avatarUrl: string | null;
-  badge: string;
+  badge?: string;
+  /** 열린 예약 링크 수 — 0이면 줄을 그리지 않는다 */
+  openLinks: number;
   isFollowing: boolean;
   loggedIn: boolean;
 }) {
@@ -430,9 +467,20 @@ function PersonCard({
           {bio && (
             <p className="mt-2 line-clamp-2 text-xs text-charcoal-400">{bio}</p>
           )}
-          <span className="mt-2 inline-block rounded-full bg-charcoal-800/60 px-2 py-0.5 text-2xs font-semibold text-charcoal-700 dark:text-charcoal-300">
-            {badge}
-          </span>
+          {openLinks > 0 && (
+            <Link
+              href={`/${username}`}
+              className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-navy-600 hover:text-navy-500 dark:text-navy-300"
+            >
+              <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              열린 예약 링크 {openLinks}개 · 예약하기 →
+            </Link>
+          )}
+          {badge && (
+            <span className="mt-2 inline-block rounded-full bg-charcoal-800/60 px-2 py-0.5 text-2xs font-semibold text-charcoal-700 dark:text-charcoal-300">
+              {badge}
+            </span>
+          )}
         </div>
       </div>
     </div>

@@ -27,7 +27,7 @@ export function FollowButton({
   if (!loggedIn) {
     return (
       <a href="/login" className={buttonClasses({ variant: "primary", size })}>
-        {compact ? "Orbit" : "Sign in to orbit"}
+        {compact ? "팔로우" : "로그인하고 팔로우"}
       </a>
     );
   }
@@ -53,7 +53,7 @@ export function FollowButton({
       disabled={pending}
       className={buttonClasses({ variant: following ? "secondary" : "primary", size })}
     >
-      {following ? "Orbiting" : "Orbit"}
+      {following ? "팔로잉" : "팔로우"}
     </button>
   );
 }

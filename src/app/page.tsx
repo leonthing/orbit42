@@ -74,8 +74,12 @@ export default async function LandingPage() {
                 내 예약 링크 만들기 — 무료
                 <span className="transition-transform group-hover:translate-x-0.5">→</span>
               </a>
-              <Link href="/explore" className="text-sm text-charcoal-500 hover:text-charcoal-300">
-                다른 사람들 페이지 보기
+              {/* 예약하러 온 사람의 입구 — 가입 버튼보다 한 단계 낮은 보조 버튼 (개선-53) */}
+              <Link
+                href="/explore"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-navy-400/40 bg-navy-500/5 px-6 py-3 text-sm font-semibold text-navy-600 transition-colors hover:border-navy-400/70 hover:bg-navy-500/10 dark:text-navy-300 sm:w-auto"
+              >
+                예약할 수 있는 사람 둘러보기
               </Link>
             </div>
 
