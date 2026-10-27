@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { BookingChat } from "@/components/BookingChat";
 
 type Booking = {
   title: string;
@@ -190,6 +191,22 @@ export default function GuestBookingClient() {
               {fmt(booking.payment.dueAt, { weekday: undefined })}까지 입금해 주세요. 호스트가 확인하면 확정 메일을 보내드려요.
             </p>
           )}
+        </section>
+      )}
+
+      {/* 예약 대화 (1.8.0) — 가입 없이 호스트와 이야기 */}
+      {token && (
+        <section className="rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] p-5" data-testid="booking-chat">
+          <p className="text-sm font-semibold text-charcoal-100">{booking.hostName}님과 대화</p>
+          <p className="mt-1 text-xs text-charcoal-500">장소·준비물 같은 것을 여기서 주고받을 수 있어요. 새 메시지는 메일로 알려드려요.</p>
+          <BookingChat source={{ kind: "guest", token }} otherLabel={booking.hostName} />
+          <p className="mt-3 text-2xs text-charcoal-500">
+            대화 삭제를 원하시면{" "}
+            <a href="mailto:orbit42@nthing.net" className="underline">
+              orbit42@nthing.net
+            </a>
+            으로 알려 주세요.
+          </p>
         </section>
       )}
 

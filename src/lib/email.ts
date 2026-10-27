@@ -343,29 +343,28 @@ export async function sendBookingRescheduleProposal(
   );
 }
 
-/** 예약 대화 새 메시지 묶음 메일 (1.8.0). 미리보기의 링크 주소는 '(링크)'로 바꿔 누를 수 없게 한다. */
+/**
+ * 예약 대화 새 메시지 알림 메일 (1.8.0). 보낸 사람 이름·메시지 본문은 넣지 않는다 —
+ * 앱 푸시와 같은 기준, 외부(메일 발송 업체)로 가는 정보 최소화(CEO 10/27). 예약 이름·일시와 열기 버튼만.
+ */
 export async function sendBookingChatEmail(
   to: string,
-  args: { fromLabel: string; slotTitle: string; when: string; previews: string[]; more: number; replyUrl: string; guestNote?: boolean },
+  args: { slotTitle: string; when: string; replyUrl: string; guestNote?: boolean },
 ) {
-  const strip = (t: string) => (t.length > 300 ? `${t.slice(0, 300)}…` : t).replace(/\b(?:https?:\/\/|www\.)\S+/gi, "(링크)");
-  const quotes = args.previews.map((p) => quoteBlock(escapeHtml(strip(p)).replace(/\n/g, "<br>"))).join("");
   const html = renderEmail({
     eyebrow: "예약 대화",
-    heading: `${escapeHtml(args.fromLabel)}님이 메시지를 보냈어요`,
+    heading: "새 메시지가 있어요",
     preheader: `${args.slotTitle} · ${fmtWhen(args.when)}`,
     bodyHtml:
       detailCard(escapeHtml(args.slotTitle), [{ label: "일시", value: fmtWhen(args.when) }]) +
-      quotes +
-      (args.more > 0 ? mutedNote(`이전 메시지 ${args.more}개가 더 있어요.`) : "") +
-      emailButton("답장하기", args.replyUrl) +
+      emailButton("메시지 열기", args.replyUrl) +
       mutedNote(
         args.guestNote
-          ? "가입 없이 위 버튼에서 바로 답장할 수 있어요. 새 메시지는 몰아서 알려드려요."
+          ? "가입 없이 위 버튼에서 바로 읽고 답장할 수 있어요. 새 메시지는 몰아서 알려드려요."
           : "새 메시지는 몰아서 알려드려요. 알림 설정에서 끌 수 있어요.",
       ),
   });
-  return send(to, `[Orbit42] ${args.fromLabel}님의 메시지 · ${args.slotTitle}`, html);
+  return send(to, `[Orbit42] 새 메시지가 있어요 · ${args.slotTitle}`, html);
 }
 
 export async function sendNewMessageEmail(

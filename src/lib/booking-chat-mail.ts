@@ -1,5 +1,5 @@
 import { getAdminClient } from "@/lib/supabase";
-import { guestLabelOf, hostLabelOf, type ChatBooking, type ChatRole, type ChatThreadRow } from "@/lib/booking-chat";
+import { type ChatBooking, type ChatRole, type ChatThreadRow } from "@/lib/booking-chat";
 
 /**
  * 예약 대화 메일 묶음 (1.8.0) — 5분마다 cron.
@@ -8,6 +8,7 @@ import { guestLabelOf, hostLabelOf, type ChatBooking, type ChatRole, type ChatTh
  *   단, 계정 없는 게스트에게 가는 호스트의 첫 메일은 기다리지 않는다(장소 안내가 첫 글인 경우가 많아서, PO 10/27).
  * - 같은 대화의 마지막 메일에서 10분이 지났을 것, 마지막 메일 뒤에 새 메시지가 있을 것.
  * - 같은 대화에 하루(한국 날짜) 6통까지.
+ * - 메일에는 보낸 사람·본문 없이 "새 메시지가 있어요"와 열기 버튼만(CEO 10/27).
  * - 계정이 있는 사람은 알림 설정(booking_message 메일)을 따른다. 앱 푸시를 받을 기기가 있으면 메일은 보내지 않는다(2단계).
  */
 const WAIT_MS = 3 * 60_000;
@@ -108,14 +109,11 @@ async function emailOne(b: ChatBooking, t: ChatThreadRow, recipient: ChatRole, n
     replyPath = `/${b.guest?.username}/bookings?tab=guest&chat=${b.id}`;
   }
 
-  const previews = unread.slice(-3).map((m) => m.body);
+  // 메일에는 보낸 사람·본문을 넣지 않는다(CEO 10/27) — 예약 이름·일시와 열기 버튼만
   const { sendBookingChatEmail, siteUrl } = await import("@/lib/email");
   const res = await sendBookingChatEmail(to, {
-    fromLabel: recipient === "host" ? guestLabelOf(b) : hostLabelOf(b),
     slotTitle: b.slot?.title ?? "예약",
     when: b.scheduled_at,
-    previews,
-    more: Math.max(0, unread.length - previews.length),
     replyUrl: siteUrl(replyPath),
     guestNote: recipient === "guest" && !b.guest_id,
   });

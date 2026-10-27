@@ -391,3 +391,27 @@ export async function unreadChatCounts(userId: string): Promise<Record<string, n
   }
   return out;
 }
+
+/** 안 읽은 대화가 있는 예약 수 — 메뉴 '예약' 배지용, 쿼리 두 번 (1.8.0) */
+export async function unreadChatThreadCount(userId: string): Promise<number> {
+  const db = getAdminClient();
+  const { data: mine } = await db
+    .from("bookings")
+    .select("id, host_id")
+    .or(`host_id.eq.${userId},guest_id.eq.${userId}`)
+    .order("scheduled_at", { ascending: false })
+    .limit(300);
+  const roleById = new Map(((mine ?? []) as Array<{ id: string; host_id: string }>).map((r) => [r.id, r.host_id === userId ? "host" : "guest"] as const));
+  if (roleById.size === 0) return 0;
+  const { data: threads } = await db
+    .from("booking_threads")
+    .select("booking_id, last_message_at, host_last_read_at, guest_last_read_at")
+    .in("booking_id", Array.from(roleById.keys()))
+    .not("last_message_at", "is", null);
+  let n = 0;
+  for (const t of (threads ?? []) as Array<Pick<ChatThreadRow, "booking_id" | "last_message_at" | "host_last_read_at" | "guest_last_read_at">>) {
+    const readAt = roleById.get(t.booking_id) === "host" ? t.host_last_read_at : t.guest_last_read_at;
+    if (!readAt || (t.last_message_at && t.last_message_at > readAt)) n++;
+  }
+  return n;
+}
