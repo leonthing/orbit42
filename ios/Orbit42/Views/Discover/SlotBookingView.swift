@@ -83,6 +83,8 @@ struct SlotBookingView: View {
     private var content: some View {
         if let status = viewModel.bookedStatus {
             successView(confirmed: status == "confirmed")
+                // 예약이 생겼을 때 앱 알림 권한을 묻는다(호스트가 대화를 남기면 알려 드리려고, 1.8.0)
+                .task { await PushNotifications.shared.askIfNeeded() }
         } else if let data = viewModel.data {
             loaded(data)
         } else if viewModel.isLoading {

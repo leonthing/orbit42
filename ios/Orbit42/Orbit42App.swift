@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct Orbit42App: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var auth = AuthViewModel()
     @State private var router = TabRouter()
     /// 화면 모드 — "system"(기본) | "light" | "dark"
@@ -75,6 +76,8 @@ struct RootView: View {
         }
         .task {
             await auth.restoreSession()
+            // 이미 알림을 허용한 경우에만 기기 토큰을 새로 받는다 — 앱을 켤 때 권한을 묻지 않는다(1.8.0)
+            await PushNotifications.shared.refreshIfAuthorized()
         }
     }
 

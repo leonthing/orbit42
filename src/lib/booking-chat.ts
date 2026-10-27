@@ -44,6 +44,9 @@ export type ChatThreadRow = {
   host_email_count: number;
   guest_email_day: string | null;
   guest_email_count: number;
+  /** 앱 푸시 간격(같은 대화 60초) */
+  host_pushed_at: string | null;
+  guest_pushed_at: string | null;
   closed_at: string | null;
   closed_by: string | null;
 };
@@ -243,13 +246,19 @@ export async function sendChatMessage(args: {
     })
     .eq("booking_id", b.id);
 
-  // 상대에게 앱 안 알림(계정이 있을 때). 메일은 cron 이 묶어서 보낸다. 앱 푸시는 2단계.
+  // 상대에게 앱 안 알림(계정이 있을 때) + 푸시 대상이면 앱 푸시. 그 밖은 cron 이 메일로 묶어서 보낸다.
   const recipient: ChatRole = args.role === "host" ? "guest" : "host";
   const fromLabel = args.role === "host" ? hostLabelOf(b) : guestLabelOf(b);
   try {
     await upsertChatNotification(b, recipient, fromLabel, args.senderId);
   } catch (err) {
     console.error("[chat] notify", err);
+  }
+  try {
+    const { pushChatMessage } = await import("@/lib/booking-chat-push");
+    await pushChatMessage(b, recipient);
+  } catch (err) {
+    console.error("[chat] push", err);
   }
 
   return { ok: true, message: { id: msg.id as string, role: args.role, mine: true, body: text, createdAt: at } };

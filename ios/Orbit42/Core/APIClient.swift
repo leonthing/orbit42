@@ -112,6 +112,15 @@ final class APIClient {
         session.dataTask(with: request).resume()
     }
 
+    /// 본문이 있는 DELETE를 기다리지 않고 보낸다 — 로그아웃 때 기기 토큰 지우기(로그인 토큰을 지우기 전에 요청을 만든다)
+    func fireAndForgetDelete<Body: Encodable>(_ path: String, body: Body) {
+        if BrowseGate.isOn { return }
+        var request = request(path: path, method: "DELETE")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try? JSONEncoder().encode(body)
+        session.dataTask(with: request).resume()
+    }
+
     func patch<Body: Encodable, Response: Decodable>(_ path: String, body: Body) async throws -> Response {
         var request = request(path: path, method: "PATCH")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")

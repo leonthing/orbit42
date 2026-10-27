@@ -65,7 +65,8 @@ final class NotificationPrefsViewModel {
                 type: pref.type,
                 label: pref.label,
                 inApp: channel == "inApp" ? enabled : pref.inApp,
-                email: channel == "email" ? enabled : pref.email
+                email: channel == "email" ? enabled : pref.email,
+                push: channel == "push" ? enabled : pref.push
             )
         }
 

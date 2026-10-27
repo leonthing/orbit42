@@ -24,7 +24,7 @@ export async function getMyPrefs(): Promise<Record<string, NotificationPref>> {
   const db = getAdminClient();
   const { data } = await db
     .from("notification_prefs")
-    .select("type, in_app, email")
+    .select("type, in_app, email, push")
     .eq("user_id", me);
   const out: Record<string, NotificationPref> = {};
   for (const r of data ?? []) {
@@ -32,6 +32,7 @@ export async function getMyPrefs(): Promise<Record<string, NotificationPref>> {
       type: r.type as string,
       in_app: (r.in_app as boolean) ?? true,
       email: (r.email as boolean) ?? true,
+      push: (r.push as boolean) ?? true,
     };
   }
   return out;
@@ -45,7 +46,7 @@ export async function getPrefFor(
   const db = getAdminClient();
   const { data } = await db
     .from("notification_prefs")
-    .select("in_app, email")
+    .select("in_app, email, push")
     .eq("user_id", userId)
     .eq("type", type)
     .maybeSingle();
@@ -53,6 +54,7 @@ export async function getPrefFor(
     type,
     in_app: (data?.in_app as boolean | undefined) ?? true,
     email: (data?.email as boolean | undefined) ?? true,
+    push: (data?.push as boolean | undefined) ?? true,
   };
 }
 
@@ -69,9 +71,15 @@ export async function emailAllowed(
   return pref.email;
 }
 
+/** 이 유형의 앱 푸시를 보내도 되는지 (행이 없으면 켜짐) */
+export async function pushAllowed(userId: string, type: string): Promise<boolean> {
+  const pref = await getPrefFor(userId, type);
+  return pref.push;
+}
+
 export async function setPref(
   type: string,
-  channel: "in_app" | "email",
+  channel: "in_app" | "email" | "push",
   enabled: boolean,
 ) {
   const me = await currentUserId();

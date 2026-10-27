@@ -63,7 +63,11 @@ struct BookingChatView: View {
         }
         .alert("신고했어요", isPresented: $reportedToast) { Button("확인", role: .cancel) {} } message: { Text("확인 후 조치할게요.") }
         .task {
-            // 보고 있는 동안 20초마다 새 글 확인 (푸시 전)
+            // 대화 화면을 처음 열 때 앱 알림 권한을 묻는다(이미 정했으면 묻지 않음, 1.8.0)
+            await PushNotifications.shared.askIfNeeded()
+        }
+        .task {
+            // 보고 있는 동안 20초마다 새 글 확인
             while !Task.isCancelled {
                 await load()
                 try? await Task.sleep(for: .seconds(20))

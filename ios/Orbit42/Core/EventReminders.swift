@@ -347,9 +347,15 @@ final class NotificationTapHandler: NSObject, UNUserNotificationCenterDelegate {
     }
 
     private var waitingDay: Date?
+    /// 예약 대화 푸시를 눌렀을 때 열 예약 (1.8.0)
+    private var waitingChat: (id: String, role: BookingRole)?
 
     private func flush() {
         guard let router else { return }
+        if let chat = waitingChat {
+            waitingChat = nil
+            router.openBookingChat(id: chat.id, role: chat.role)
+        }
         if let day = waitingDay {
             waitingDay = nil
             router.selection = .calendar
@@ -372,9 +378,15 @@ final class NotificationTapHandler: NSObject, UNUserNotificationCenterDelegate {
         let eventId = info["eventId"] as? String
         let start = (info["start"] as? Double).map(Date.init(timeIntervalSince1970:)) ?? Date()
         let morningDay = (info["morningDate"] as? Double).map(Date.init(timeIntervalSince1970:))
+        // 예약 대화 앱 푸시: { kind: "booking_message", bookingId, role: 받는 사람 "host"|"guest" }
+        let chatId = (info["kind"] as? String) == "booking_message" ? info["bookingId"] as? String : nil
+        let chatIsGuest = (info["role"] as? String) == "guest"
         DispatchQueue.main.async {
             MainActor.assumeIsolated {
-                if let morningDay {
+                if let chatId {
+                    self.waitingChat = (chatId, chatIsGuest ? .guest : .host)
+                    self.flush()
+                } else if let morningDay {
                     // 아침 요약 — 그날 하루 보기로
                     self.waitingDay = morningDay
                     self.flush()

@@ -9,7 +9,7 @@ import { type ChatBooking, type ChatRole, type ChatThreadRow } from "@/lib/booki
  * - 같은 대화의 마지막 메일에서 10분이 지났을 것, 마지막 메일 뒤에 새 메시지가 있을 것.
  * - 같은 대화에 하루(한국 날짜) 6통까지.
  * - 메일에는 보낸 사람·본문 없이 "새 메시지가 있어요"와 열기 버튼만(CEO 10/27).
- * - 계정이 있는 사람은 알림 설정(booking_message 메일)을 따른다. 앱 푸시를 받을 기기가 있으면 메일은 보내지 않는다(2단계).
+ * - 계정이 있는 사람은 알림 설정(booking_message 메일)을 따른다. 앱 푸시 대상(키·기기·푸시 켜짐)이면 메일은 보내지 않는다.
  */
 const WAIT_MS = 3 * 60_000;
 const GAP_MS = 10 * 60_000;
@@ -44,14 +44,13 @@ export function shouldEmail(args: {
   return true;
 }
 
-export async function runChatMailDigest(now = Date.now()) {
+export async function runChatMailDigest(now = Date.now(), opts: { onlyBookingId?: string } = {}) {
   const db = getAdminClient();
   const since = new Date(now - LOOKBACK_MS).toISOString();
-  const { data: threads } = await db
-    .from("booking_threads")
-    .select("*")
-    .gte("last_message_at", since)
-    .limit(500);
+  let q = db.from("booking_threads").select("*").gte("last_message_at", since);
+  // 시험용: 데모 예약 하나만 본다(다른 대화의 메일 기록을 건드리지 않게)
+  if (opts.onlyBookingId) q = q.eq("booking_id", opts.onlyBookingId);
+  const { data: threads } = await q.limit(500);
   let sent = 0;
   for (const t of (threads ?? []) as ChatThreadRow[]) {
     const { loadChatBooking } = await import("@/lib/booking-chat");
@@ -94,8 +93,9 @@ async function emailOne(b: ChatBooking, t: ChatThreadRow, recipient: ChatRole, n
   if (userId) {
     const { emailAllowed } = await import("@/lib/notification-prefs");
     if (!(await emailAllowed(userId, "booking_message"))) return false;
-    const { count } = await db.from("push_devices").select("id", { count: "exact", head: true }).eq("user_id", userId);
-    if ((count ?? 0) > 0) return false; // 앱 푸시로 알린다(2단계)
+    // 앱 푸시로 알리는 사람(키 있음·기기 있음·푸시 켜짐)은 메일을 보내지 않는다. 키가 없으면 지금처럼 메일.
+    const { chatPushTarget } = await import("@/lib/booking-chat-push");
+    if (await chatPushTarget(userId)) return false;
   }
 
   // 답장 링크: 계정 없는 게스트는 관리 링크, 계정이 있으면 예약 화면의 대화
