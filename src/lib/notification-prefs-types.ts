@@ -1,5 +1,6 @@
 export const NOTIFICATION_TYPES = [
   { key: "new_message", label: "새 메시지" },
+  { key: "booking_message", label: "예약 대화" },
   { key: "booking_received", label: "예약 요청/확정" },
   { key: "booking_confirmed", label: "예약 확정" },
   { key: "booking_canceled", label: "예약 취소" },

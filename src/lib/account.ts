@@ -183,6 +183,14 @@ export async function deleteMyAccount() {
     await notifyGuestsBeforeHostLeaves(user.id as string);
   }
 
+  // 예약 대화: 내가 호스트·게스트인 예약의 대화를 지운다(처리방침: 탈퇴 시 지체 없이 삭제, 1.8.0)
+  try {
+    const { deleteChatsForUser } = await import("@/lib/booking-chat");
+    await deleteChatsForUser(user.id as string);
+  } catch (err) {
+    console.error("delete account chats", err);
+  }
+
   const { error } = await db.from("users").delete().eq("id", user.id);
   if (error) {
     console.error("delete account", error);
