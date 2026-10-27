@@ -1,3 +1,5 @@
+import { RENAMED_USERNAMES } from "@/lib/renamed-usernames";
+
 /**
  * 가입·자동 아이디 생성에서 쓸 수 없는 아이디.
  * 앱 화면(인트로 이미지 등)에 예시로 찍힌 아이디 — 나중에 누군가 가입하면 그 사람 페이지처럼 보이므로 막아 둔다.
@@ -14,5 +16,7 @@ const RESERVED = new Set<string>([
 ]);
 
 export function isReservedUsername(username: string): boolean {
-  return RESERVED.has(username.trim().toLowerCase());
+  const u = username.trim().toLowerCase();
+  // 아이디를 바꾼 계정의 옛 아이디도 막는다 — 옛 주소·추천 링크를 다른 사람이 가져가지 못하게
+  return RESERVED.has(u) || u in RENAMED_USERNAMES;
 }

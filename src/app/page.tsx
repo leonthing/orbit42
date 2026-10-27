@@ -352,7 +352,7 @@ function DemoBookingPage() {
           </span>
         </div>
         <p className="mt-1 text-xs text-charcoal-500">
-          60분 · @leokim5854
+          60분 · @leokim
         </p>
       </div>
 

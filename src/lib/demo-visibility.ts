@@ -5,7 +5,7 @@
  * 내부 계정 목록은 scripts/metrics-daily.ts 의 INTERNAL 과 같다.
  */
 export const DEMO_USERNAMES = new Set(["appreview"]);
-const INTERNAL_VIEWERS = new Set(["leokim5854", "appreview", "leotaurus13"]);
+const INTERNAL_VIEWERS = new Set(["leokim", "appreview", "leotaurus13"]);
 
 /** 이 사람이 보는 목록에서 데모 계정을 빼야 하는지 (로그인 안 한 방문자도 뺀다) */
 export function hidesDemoFor(viewerUsername: string | null | undefined): boolean {
