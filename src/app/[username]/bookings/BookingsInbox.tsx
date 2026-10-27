@@ -472,7 +472,8 @@ function HostSection({
                   muted ? "opacity-70" : ""
                 }`}
               >
-                <div className="flex items-start gap-4">
+                {/* 좁은 폭에서는 버튼을 아래 줄로 — 정보 칸이 넓게 (1.8.0 손질) */}
+                <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-4 gap-y-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
                   <DateStamp iso={b.scheduled_at} />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
@@ -540,7 +541,7 @@ function HostSection({
                       />
                     )}
                   </div>
-                  <div className="flex shrink-0 flex-col gap-1">
+                  <div className="col-span-2 flex flex-wrap gap-1 empty:hidden sm:col-span-1 sm:flex-col">
                     {b.status === "pending" && end > new Date() && (
                       <button
                         onClick={() => update(b.id, "confirmed")}
@@ -652,7 +653,8 @@ function GuestSection({
                   muted ? "opacity-70" : ""
                 }`}
               >
-                <div className="flex items-start gap-4">
+                {/* 좁은 폭에서는 버튼을 아래 줄로 — 정보 칸이 넓게 (1.8.0 손질) */}
+                <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-4 gap-y-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
                   <DateStamp iso={b.scheduled_at} />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
@@ -696,7 +698,7 @@ function GuestSection({
                       </p>
                     )}
                   </div>
-                  <div className="flex shrink-0 flex-col gap-1">
+                  <div className="col-span-2 flex flex-wrap gap-1 empty:hidden sm:col-span-1 sm:flex-col">
                     {b.host && (
                       <Link
                         href={`/${b.host.username}/s/${b.slot.slug}`}
