@@ -1,6 +1,7 @@
 "use server";
 
 import { getAdminClient } from "@/lib/supabase";
+import { currentUsername } from "@/lib/renamed-usernames";
 
 /** Normalize user-entered refs: "@leo ", "Leo" → "leo". Empty → null. */
 function normalizeRef(raw: string | null | undefined): string | null {
@@ -23,8 +24,9 @@ export type ReferrerPreview = {
 export async function getReferrerByUsername(
   raw: string,
 ): Promise<ReferrerPreview | null> {
-  const username = normalizeRef(raw);
-  if (!username) return null;
+  const ref = normalizeRef(raw);
+  if (!ref) return null;
+  const username = currentUsername(ref); // 옛 아이디로 퍼진 추천 링크도 새 아이디로
   const db = getAdminClient();
   const { data } = await db
     .from("users")
@@ -78,7 +80,8 @@ export async function applyReferralIfPresent(
   newUserId: string,
   rawRef: string | null | undefined,
 ): Promise<{ username: string; display_name: string | null } | null> {
-  const username = normalizeRef(rawRef);
+  const ref = normalizeRef(rawRef);
+  const username = ref ? currentUsername(ref) : ref; // 옛 아이디 추천 링크도 새 아이디로
   if (!username) return null;
 
   const db = getAdminClient();

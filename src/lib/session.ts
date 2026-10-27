@@ -15,6 +15,8 @@
  * production to rotate independently of the Supabase key.
  */
 
+import { currentUsername } from "@/lib/renamed-usernames";
+
 const encoder = new TextEncoder();
 
 function b64urlEncode(bytes: Uint8Array): string {
@@ -103,7 +105,8 @@ export async function verifySession(
       const purpose = (data as SessionData).purpose;
       const pat = (data as SessionData).pat;
       return {
-        username: (data as SessionData).username,
+        // 아이디를 바꾼 계정은 옛 아이디가 든 토큰도 새 아이디로 읽는다 (renamed-usernames)
+        username: currentUsername((data as SessionData).username),
         ...(typeof purpose === "string" ? { purpose } : {}),
         ...(typeof pat === "string" ? { pat } : {}),
       };

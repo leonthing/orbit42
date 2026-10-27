@@ -22,7 +22,7 @@ const TEMPLATES: Record<
       username: "leon",
       displayName: "Leon",
       inviterLabel: "Leo Kim",
-      inviterUsername: "leokim5854",
+      inviterUsername: "leokim",
     };
     return {
       label: "Welcome (가입 직후)",
@@ -60,7 +60,7 @@ const TEMPLATES: Record<
       when: "8월 12일 화 오후 4:00",
       location: "성수동 카페 어니언 2층",
       memo: "지난번 정리한 로드맵 초안 리뷰합니다.\n노트북 챙겨오세요.",
-      refUsername: "leokim5854",
+      refUsername: "leokim",
     };
     return {
       label: "Event invite (미가입 이메일)",

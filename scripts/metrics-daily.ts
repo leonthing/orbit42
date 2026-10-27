@@ -5,7 +5,7 @@
  */
 import { getAdminClient } from "@/lib/supabase";
 
-const INTERNAL = ["leokim5854", "appreview", "leotaurus13"]; // Leo 본인·심사 데모·leotaurus13(10/25 Leo 테스트 구글 계정으로 재가입). 시드 데모 5명은 10/22 삭제
+const INTERNAL = ["leokim", "appreview", "leotaurus13"]; // Leo 본인·심사 데모·leotaurus13(10/25 Leo 테스트 구글 계정으로 재가입). 시드 데모 5명은 10/22 삭제
 
 (async () => {
   const db = getAdminClient();

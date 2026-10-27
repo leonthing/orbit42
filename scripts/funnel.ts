@@ -8,7 +8,7 @@
 import { getAdminClient } from "@/lib/supabase";
 
 // scripts/metrics-daily.ts 와 같은 내부 계정 목록 (지표기록.md 기준)
-const INTERNAL = ["leokim5854", "appreview", "leotaurus13"]; // leotaurus13: 10/25 Leo 테스트 구글 계정으로 재가입
+const INTERNAL = ["leokim", "appreview", "leotaurus13"]; // leotaurus13: 10/25 Leo 테스트 구글 계정으로 재가입
 const STEPS = ["profile_view", "slot_view", "time_picked", "booked"] as const;
 const LABEL: Record<(typeof STEPS)[number], string> = {
   profile_view: "① 링크(프로필) 열람",

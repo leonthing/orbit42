@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { verifySession } from "@/lib/session";
 import { PAT_PURPOSE, patAllows } from "@/lib/pat-scope";
+import { RENAMED_USERNAMES } from "@/lib/renamed-usernames";
 
 const PUBLIC_PATHS = [
   "/",
@@ -51,6 +52,13 @@ export async function middleware(request: NextRequest) {
   }
 
   const parts = pathname.split("/").filter(Boolean);
+  // 아이디를 바꾼 계정의 옛 주소 → 새 주소 (뒤 경로·쿼리 유지, 308)
+  const renamedTo = parts[0] ? RENAMED_USERNAMES[parts[0].toLowerCase()] : undefined;
+  if (renamedTo) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/" + [renamedTo, ...parts.slice(1)].join("/");
+    return NextResponse.redirect(url, 308);
+  }
   const urlUsername = parts[0];
   const subSegment = parts[1];
 
