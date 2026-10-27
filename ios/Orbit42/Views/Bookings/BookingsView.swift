@@ -737,6 +737,7 @@ private struct HostBookingRow: View {
                         .foregroundStyle(Theme.secondaryText)
                 }
                 Spacer(minLength: 0)
+                ChatUnreadBadge(bookingId: booking.id)
                 StatusBadge(text: booking.badgeText, color: booking.badgeColor)
                 Image(systemName: "chevron.right")
                     .font(.caption2.weight(.semibold))
@@ -1022,6 +1023,7 @@ private struct GuestBookingRow: View {
                         .foregroundStyle(Theme.secondaryText)
                 }
                 Spacer(minLength: 0)
+                ChatUnreadBadge(bookingId: booking.id)
                 StatusBadge(text: booking.badgeText, color: booking.badgeColor)
                 Image(systemName: "chevron.right")
                     .font(.caption2.weight(.semibold))
@@ -1115,6 +1117,22 @@ struct PaymentPill: View {
 }
 
 // MARK: - 상태 뱃지
+
+/// 예약 행의 안 읽은 대화 표시 (1.8.0)
+private struct ChatUnreadBadge: View {
+    let bookingId: String
+    var body: some View {
+        let n = BookingChatUnread.shared.count(for: bookingId)
+        if n > 0 {
+            Label("\(n)", systemImage: "bubble.left.fill")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 6).padding(.vertical, 2)
+                .background(.red, in: Capsule())
+                .accessibilityLabel("안 읽은 대화 \(n)개")
+        }
+    }
+}
 
 private struct StatusBadge: View {
     let text: String

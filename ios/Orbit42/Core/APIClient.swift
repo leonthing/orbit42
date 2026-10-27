@@ -74,7 +74,8 @@ final class APIClient {
 
     #if DEBUG
     #if targetEnvironment(simulator)
-    let baseURL = URL(string: "http://localhost:3000")!
+    // UI 테스트에서 다른 포트의 로컬 서버를 쓸 때: API_BASE=http://localhost:3008 (3000을 다른 프로젝트가 쓰는 경우)
+    let baseURL = URL(string: ProcessInfo.processInfo.environment["API_BASE"] ?? "http://localhost:3000")!
     #else
     // 실기기 DEBUG: 프로덕션 직결 (v1 API 배포 완료).
     // 로컬 서버 테스트가 필요하면 Cloudflare 터널 URL로 임시 교체:
