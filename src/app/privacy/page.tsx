@@ -40,6 +40,8 @@ export default function PrivacyPage() {
               <li>회사는 호스트와 게스트 사이의 결제를 중개하지 않아, 전자상거래법상 거래 기록을 따로 보관한다는 문장을 지웁니다.</li>
               <li>예약 기록은 호스트가 관리하는 기록으로, 호스트가 탈퇴하면 함께 파기되고 진행 전 예약의 게스트에게 취소 안내 메일을 보내 드린다는 내용을 더합니다.</li>
               <li>접속 기록(IP·기기 정보·접속 시각)은 서비스 데이터베이스에 저장하지 않고 호스팅 업체 기록에 최대 7일 남는다는 사실대로 고칩니다.</li>
+              <li>예약 대화와 앱 푸시 알림을 도입하며, 수집 항목(대화 메시지, 앱 푸시용 기기 토큰)과 이용 목적, 보유 기간을 더합니다.</li>
+              <li>처리 위탁 표의 업체 법인명과 국가를 실제 설정에 맞게 바로잡고, 개인정보의 국외 이전 항목을 새로 둡니다.</li>
             </ul>
             <p className="mt-2 text-xs text-charcoal-400">시행일 전까지는 아래 지금의 방침이 적용됩니다.</p>
           </div>
@@ -70,6 +72,15 @@ export default function PrivacyPage() {
                 이용자가 생성한 콘텐츠: 캘린더 이벤트, 타임슬롯, 서비스 메뉴,
                 피드 글, 예약·입찰 내역
               </li>
+              {effective && (
+                <>
+                  <li>
+                    예약 대화를 쓰는 경우: 예약 대화 메시지(내용·작성 시각). 계정 없이
+                    예약한 분은 예약할 때 적은 이름과 함께 저장됩니다.
+                  </li>
+                  <li>앱 알림을 허용한 경우: 앱 푸시용 기기 토큰, 앱 버전.</li>
+                </>
+              )}
             </List>
             <SubHead>다. 외부 서비스 연동 시</SubHead>
             <List>
@@ -95,6 +106,9 @@ export default function PrivacyPage() {
               <li>회원 식별, 계정 관리, 로그인 유지</li>
               <li>서비스 제공: 캘린더 공유, 타임슬롯 등록·예약, 피드, 경매, 이용자 본인의 관계 기록(오르빗)</li>
               <li>서비스 개선 및 통계 분석(개인 식별 불가능한 형태로)</li>
+              {effective && (
+                <li>예약 당사자(호스트와 게스트) 사이의 연락, 새 메시지·예약 알림 발송</li>
+              )}
               <li>약관 위반 대응, 고객 문의 응대, 공지 발송</li>
               <li>법령상 의무 이행</li>
             </List>
@@ -122,6 +136,25 @@ export default function PrivacyPage() {
                     회사가 직접 받는 유료 결제: 현재는 없습니다. 도입하게 되면 관련
                     법령(전자상거래법 등)에 따른 결제 기록 보관 기간을 이 방침에 추가하고,
                     시행 7일 전에 알려 드립니다.
+                  </li>
+                  <li>
+                    예약 대화: 예약이 끝난 날로부터 1년 동안 보관한 뒤 파기합니다. 회원이
+                    탈퇴하면 그 회원이 호스트나 게스트인 예약의 대화를 즉시 파기합니다.
+                    계정 없이 예약한 분이 대화 삭제를 요청하시면 지체 없이
+                    파기합니다(요청:{" "}
+                    <a href="mailto:orbit42@nthing.net" className="text-navy-400 hover:underline">
+                      orbit42@nthing.net
+                    </a>
+                    ).
+                  </li>
+                  <li>
+                    신고 처리 기록: 신고된 메시지와 그 앞뒤 대화 중 신고 처리에 필요한
+                    부분은 신고 처리 기록으로 남습니다. 삭제를 요청하셔도 신고 처리 기록은
+                    처리일로부터 1년 보관한 뒤 삭제합니다.
+                  </li>
+                  <li>
+                    앱 푸시 기기 토큰: 로그아웃하거나 앱을 삭제하면(전달 실패가 확인될 때),
+                    또는 회원 탈퇴 시 즉시 삭제합니다.
                   </li>
                 </>
               ) : (
@@ -153,10 +186,19 @@ export default function PrivacyPage() {
                 이용자가 공개로 설정한 프로필, 타임슬롯, 피드 글, 캘린더 이벤트는
                 다른 이용자에게 노출됩니다.
               </li>
-              <li>
-                예약 발생 시 호스트와 게스트 간 상호 식별에 필요한 최소한의
-                정보(이름, 메시지 등)가 상대에게 전달됩니다.
-              </li>
+              {effective ? (
+                <li>
+                  예약 발생 시 호스트와 게스트 간 상호 식별에 필요한 최소한의
+                  정보(이름, 예약 메모 등)가 상대에게 전달됩니다. 예약 대화는 그 예약의
+                  호스트와 게스트만 볼 수 있으며, 회사는 신고 처리를 위해 필요한 경우에만
+                  확인합니다.
+                </li>
+              ) : (
+                <li>
+                  예약 발생 시 호스트와 게스트 간 상호 식별에 필요한 최소한의
+                  정보(이름, 메시지 등)가 상대에게 전달됩니다.
+                </li>
+              )}
               <li>법령에 근거한 수사기관의 요청이 있는 경우</li>
             </List>
           </Section>
@@ -177,31 +219,13 @@ export default function PrivacyPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-charcoal-800/40 text-charcoal-300">
-                  <tr>
-                    <Td>Supabase, Inc.</Td>
-                    <Td>데이터베이스·인증·스토리지 호스팅</Td>
-                    <Td>미국 / 싱가포르</Td>
-                  </tr>
-                  <tr>
-                    <Td>Vercel Inc.</Td>
-                    <Td>웹 호스팅 및 전송</Td>
-                    <Td>미국</Td>
-                  </tr>
-                  <tr>
-                    <Td>Resend, Inc.</Td>
-                    <Td>이메일 발송(확인, 재설정 등)</Td>
-                    <Td>미국</Td>
-                  </tr>
-                  <tr>
-                    <Td>Google LLC</Td>
-                    <Td>OAuth 로그인, Calendar API 연동</Td>
-                    <Td>미국</Td>
-                  </tr>
-                  <tr>
-                    <Td>Apple Inc.</Td>
-                    <Td>Apple 계정 로그인(Sign in with Apple)</Td>
-                    <Td>미국</Td>
-                  </tr>
+                  {(effective ? PROCESSORS_NEW : PROCESSORS_OLD).map(([who, work, country]) => (
+                    <tr key={who}>
+                      <Td>{who}</Td>
+                      <Td>{work}</Td>
+                      <Td>{country}</Td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -211,6 +235,60 @@ export default function PrivacyPage() {
               있습니다.
             </p>
           </Section>
+
+          {effective && (
+            <Section title="5-1. 개인정보의 국외 이전">
+              <p>
+                회사는 서비스 제공을 위해 아래와 같이 개인정보를 국외로 이전합니다. 이전은
+                모두 암호화된 네트워크(HTTPS/TLS)로 이루어집니다.
+              </p>
+              <div className="mt-3 overflow-x-auto">
+                <table className="w-full min-w-[640px] text-xs">
+                  <thead>
+                    <tr className="border-b border-charcoal-800/60 text-charcoal-400">
+                      <Th>이전받는 자 (연락처)</Th>
+                      <Th>이전 국가</Th>
+                      <Th>이전 항목</Th>
+                      <Th>이전 시점</Th>
+                      <Th>이용 목적</Th>
+                      <Th>보유 기간</Th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-charcoal-800/40 align-top text-charcoal-300">
+                    {TRANSFERS.map((row) => (
+                      <tr key={row[0]}>
+                        {row.map((cell, i) => (
+                          <Td key={i}>{cell}</Td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <SubHead>국외 이전을 거부하는 방법과 그 결과</SubHead>
+              <List>
+                <li>
+                  Supabase·Vercel: 서비스 운영에 꼭 필요한 이전입니다. 거부하시려면 가입하지
+                  않거나 탈퇴하셔야 하며, 이 경우 서비스를 이용할 수 없습니다.
+                </li>
+                <li>
+                  Resend: 메일 발송에 필요합니다. 거부하시면 가입 확인·비밀번호 재설정·예약과
+                  메시지 메일 알림을 받으실 수 없습니다.
+                </li>
+                <li>
+                  Google: Google 로그인과 캘린더 연동을 쓰지 않으시면 됩니다(이메일로 가입
+                  가능, 연동은 언제든 해제 가능). 이 경우 캘린더 동기화와 Google 캘린더 일정
+                  등록을 쓰실 수 없습니다. 게스트로 예약하시는 경우 호스트의 Google 캘린더에
+                  이름·이메일이 참석자로 들어가는 것을 원하지 않으시면 예약 전에 호스트에게
+                  알려 주세요.
+                </li>
+                <li>
+                  Apple: 앱 알림을 끄시면(앱 또는 기기 설정) 이전되지 않으며, 새 메시지는
+                  메일로 알려 드립니다. Apple 로그인 대신 다른 로그인 방법을 쓰실 수 있습니다.
+                </li>
+              </List>
+            </Section>
+          )}
 
           <Section title="6. 이용자의 권리">
             <List>
@@ -441,10 +519,9 @@ export default function PrivacyPage() {
               </li>
               {effective && LEGAL_EFFECTIVE_DATE && (
                 <li>
-                  {LEGAL_EFFECTIVE_DATE}: 보유 기간 정리 — 회사가 결제를 중개하지 않으므로
-                  전자상거래법상 거래 기록 분리 보관 문장을 지우고, 예약 기록의 파기 시점과
-                  호스트 탈퇴 시 게스트 취소 안내, 접속 기록의 실제 보관(호스팅 업체 기록 최대
-                  7일)을 추가
+                  {LEGAL_EFFECTIVE_DATE}: 보유 기간(접속 기록·예약 기록) 정비, 예약 대화·앱
+                  푸시 알림 도입에 따른 수집 항목·이용 목적·보유 기간 추가, 처리 위탁 표
+                  정정(법인명·국가), 개인정보 국외 이전 항목 신설
                 </li>
               )}
             </List>
@@ -454,6 +531,66 @@ export default function PrivacyPage() {
     </div>
   );
 }
+
+// 5절 처리 위탁 표: 시행일 전(옛 문장) / 시행일부터(2026-11-05 개정)
+const PROCESSORS_OLD: [string, string, string][] = [
+  ["Supabase, Inc.", "데이터베이스·인증·스토리지 호스팅", "미국 / 싱가포르"],
+  ["Vercel Inc.", "웹 호스팅 및 전송", "미국"],
+  ["Resend, Inc.", "이메일 발송(확인, 재설정 등)", "미국"],
+  ["Google LLC", "OAuth 로그인, Calendar API 연동", "미국"],
+  ["Apple Inc.", "Apple 계정 로그인(Sign in with Apple)", "미국"],
+];
+const PROCESSORS_NEW: [string, string, string][] = [
+  ["Supabase Pte. Ltd.", "데이터베이스·스토리지 호스팅", "대한민국(서울 리전 저장), 운영 법인 싱가포르"],
+  ["Vercel Inc.", "웹 호스팅 및 전송", "미국·대한민국"],
+  ["Plus Five Five, Inc. (Resend)", "이메일 발송(확인, 재설정, 예약·메시지 알림)", "일본(발송)·미국(기록)"],
+  ["Google LLC", "OAuth 로그인, Calendar API 연동", "미국"],
+  ["Apple Inc.", "Apple 계정 로그인(Sign in with Apple), 앱 푸시 알림 전달(APNs)", "미국"],
+];
+
+// 5-1. 개인정보의 국외 이전 (2026-11-05 시행)
+const TRANSFERS: [string, string, string, string, string, string][] = [
+  [
+    "Supabase Pte. Ltd. (privacy@supabase.com)",
+    "대한민국(서울 리전 저장), 운영·지원 목적의 원격 접근은 싱가포르·미국",
+    "회원 정보, 예약·일정 기록, 예약 대화, 앱 푸시 기기 토큰, 프로필 사진 등 서비스에 저장되는 정보 전부",
+    "서비스 이용 시 수시로",
+    "데이터베이스·파일 저장",
+    "이 방침 3절의 기간. 업체의 기록·백업은 최대 7일",
+  ],
+  [
+    "Vercel Inc. (privacy@vercel.com)",
+    "미국, 대한민국",
+    "접속 IP, 브라우저·기기 정보, 쿠키, 요청 내용",
+    "서비스에 접속할 때마다",
+    "웹 서비스 제공",
+    "접속 기록 1일 뒤 자동 삭제",
+  ],
+  [
+    "Plus Five Five, Inc. (Resend, support@resend.com)",
+    "일본(발송), 미국(발송 기록)",
+    "받는 사람 이메일, 메일 제목·내용(예약 정보, 상대 이름 등. 새 메시지 알림 메일에는 메시지 내용을 담지 않음)",
+    "메일을 보낼 때마다",
+    "이메일 발송",
+    "30일 뒤 삭제",
+  ],
+  [
+    "Google LLC (Google 개인정보 문의 창구)",
+    "미국 등 Google 서버 소재 국가",
+    "Google 로그인·캘린더 연동 시: 이메일, 일정 정보. 예약 시 호스트의 Google 캘린더 일정에 들어가는 게스트 이름·이메일",
+    "Google 로그인·캘린더 연동, 일정 조회·변경, 예약 확정 시",
+    "로그인, 캘린더 연동",
+    "Google 정책에 따름. 예약으로 만든 일정은 호스트의 캘린더에 남음",
+  ],
+  [
+    "Apple Inc. (privacyoffice_korea@apple.com)",
+    "미국",
+    "앱 푸시 기기 토큰, 알림 문구(“새 메시지가 있어요” — 보낸 사람·메시지 내용은 담지 않음)",
+    "알림을 보낼 때마다",
+    "앱 푸시 알림 전달",
+    "전달 목적을 달성할 때까지(Apple 정책)",
+  ],
+];
 
 function Section({
   title,
