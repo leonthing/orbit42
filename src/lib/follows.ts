@@ -18,7 +18,7 @@ async function getUserIdByUsername(username: string): Promise<string | null> {
 /**
  * 팔로워·팔로잉 수.
  * opts.viewer 를 주면 그 사람이 보는 기준으로 센다(null = 로그인 안 한 방문자) — 본인이 아니고 내부 계정도 아니면
- * 데모 계정(appreview)과의 팔로우는 빼서 팔로잉·팔로워 목록(데모 숨김, 개선-33)과 숫자를 맞춘다.
+ * 데모·시험 계정(appreview·leotaurus13)과의 팔로우는 빼서 팔로잉·팔로워 목록(데모 숨김, 개선-33)과 숫자를 맞춘다.
  * 웹은 쿠키 세션, 앱 API 는 토큰 세션의 아이디를 넘긴다. 팔로우 행 자체는 그대로 둔다.
  */
 export async function getFollowStats(username: string, opts?: { viewer: string | null }) {
