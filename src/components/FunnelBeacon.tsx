@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { rememberFunnelVia } from "@/lib/funnel-client";
+import { funnelRef, rememberFunnelVia } from "@/lib/funnel-client";
 
 /**
  * 같은 탭에서 이미 보낸 단계인지 — 처음이면 표시해 두고 false.
@@ -33,11 +33,11 @@ export function FunnelBeacon(props: { step: "profile_view"; hostUsername: string
     let body: Record<string, unknown>;
     let key: string;
     if (props.step === "profile_view") {
-      body = { step: "profile_view", hostUsername: props.hostUsername, source: "web" };
+      body = { step: "profile_view", hostUsername: props.hostUsername, source: "web", ref: funnelRef() };
       key = `profile_view:${props.hostUsername.toLowerCase()}`;
     } else {
       // 출처(?via)는 중복이어도 먼저 기억해 둔다 — 시간 고름·예약 단계에서 쓴다
-      body = { step: "slot_view", slotId: props.slotId, source: "web", via: rememberFunnelVia(props.slotId) };
+      body = { step: "slot_view", slotId: props.slotId, source: "web", via: rememberFunnelVia(props.slotId), ref: funnelRef() };
       key = `slot_view:${props.slotId}`;
     }
     if (alreadySentInTab(key)) return;
