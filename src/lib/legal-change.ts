@@ -4,8 +4,8 @@
  * - 안내일 ~ 시행일 전날: 페이지 위에 "변경 안내 — 시행일" + 요약, 본문은 옛 문장.
  * - 시행일부터: 새 문장. 페이지는 1시간마다 다시 그려져(revalidate) 배포 없이 바뀐다.
  */
-export const LEGAL_NOTICE_DATE: string | null = "2026-10-29"; // 1.7.0 + 1.8.0 통합 개정 안내(CEO 10/27)
-export const LEGAL_EFFECTIVE_DATE: string | null = "2026-11-05";
+export const LEGAL_NOTICE_DATE: string | null = "2026-10-30"; // 1.7.0 + 1.8.0 통합 개정 안내(10/29 배포가 빠져 10/30으로, 시행은 7일 뒤)
+export const LEGAL_EFFECTIVE_DATE: string | null = "2026-11-06";
 
 function kstToday(now: Date): string {
   return now.toLocaleDateString("en-CA", { timeZone: "Asia/Seoul" });

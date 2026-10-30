@@ -532,7 +532,7 @@ export default function PrivacyPage() {
   );
 }
 
-// 5절 처리 위탁 표: 시행일 전(옛 문장) / 시행일부터(2026-11-05 개정)
+// 5절 처리 위탁 표: 시행일 전(옛 문장) / 시행일부터(LEGAL_EFFECTIVE_DATE 개정)
 const PROCESSORS_OLD: [string, string, string][] = [
   ["Supabase, Inc.", "데이터베이스·인증·스토리지 호스팅", "미국 / 싱가포르"],
   ["Vercel Inc.", "웹 호스팅 및 전송", "미국"],
@@ -548,7 +548,7 @@ const PROCESSORS_NEW: [string, string, string][] = [
   ["Apple Inc.", "Apple 계정 로그인(Sign in with Apple), 앱 푸시 알림 전달(APNs)", "미국"],
 ];
 
-// 5-1. 개인정보의 국외 이전 (2026-11-05 시행)
+// 5-1. 개인정보의 국외 이전 (LEGAL_EFFECTIVE_DATE부터)
 const TRANSFERS: [string, string, string, string, string, string][] = [
   [
     "Supabase Pte. Ltd. (privacy@supabase.com)",
