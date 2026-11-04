@@ -83,7 +83,8 @@ export function TimeAssetDashboard({
   username: string;
 }) {
   const business = summary.business;
-  const maxEarn = Math.max(1, ...business.earnTrend.map((e) => e.krw));
+  const monthStat = business.periods.month;
+  const maxEarn = Math.max(1, ...monthStat.trend.map((e) => e.krw));
   const funnel = business.funnel;
   const soldRatio =
     funnel && funnel.openHours + funnel.bookedHours > 0
@@ -94,32 +95,64 @@ export function TimeAssetDashboard({
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      {/* 이번 달 시간으로 번 돈 */}
+      {/* 이번 달 시간으로 번 돈 — 앱 리포트와 같은 세 갈래·합계 (1.8.0) */}
       <Card title="이번 달 시간으로 번 돈">
         <p className="text-3xl font-bold tracking-tight text-charcoal-100">
-          {won(business.monthTotalKrw)}
+          {won(monthStat.totalKrw)}
         </p>
-        <p className="mt-1 text-xs text-charcoal-500">
-          {business.monthTotalKrw > 0
-            ? `예약 링크 거래 ${won(business.monthBookedKrw)} · 직접 기록 ${won(business.monthManualKrw)}`
-            : "예약 링크 판매와 일정 수익 기록이 여기에 쌓여요."}
-        </p>
-        <div className="mt-4 flex h-16 items-end gap-2">
-          {business.earnTrend.map((entry) => (
-            <div key={entry.month} className="flex flex-1 flex-col items-center gap-1">
-              <div
-                className={`w-full rounded-sm ${
-                  entry.month === business.monthLabel
-                    ? "bg-navy-500"
-                    : "bg-charcoal-800/70"
-                }`}
-                style={{ height: `${Math.max(4, (entry.krw / maxEarn) * 44)}px` }}
-              />
-              <span className="text-3xs text-charcoal-600">
-                {Number(entry.month.split("-")[1])}월
-              </span>
+        <dl className="mt-2 space-y-1 text-xs text-charcoal-500">
+          {[
+            { label: "Orbit 예약으로 번 돈", krw: monthStat.bookedKrw, dot: "bg-navy-500" },
+            { label: "일정에 기록한 돈", krw: monthStat.manualKrw, dot: "bg-amber-500" },
+          ].map((row) => (
+            <div key={row.label} className="flex items-center gap-1.5">
+              <span className={`h-1.5 w-1.5 rounded-full ${row.dot}`} />
+              <dt>{row.label}</dt>
+              <dd className="ml-auto tabular-nums text-charcoal-200">{won(row.krw)}</dd>
             </div>
           ))}
+          <div className="flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-slate-500" />
+            <dt>급여로 쌓인 돈</dt>
+            <dd className="ml-auto tabular-nums text-charcoal-200">
+              {business.salary?.monthlyKrw != null ? (
+                won(monthStat.salaryKrw)
+              ) : (
+                <span className="text-charcoal-500">앱에서 급여를 설정하면 자동으로 쌓여요</span>
+              )}
+            </dd>
+          </div>
+        </dl>
+        <div className="mt-4 flex h-16 items-end gap-2">
+          {monthStat.trend.map((entry) => {
+            const height = entry.krw > 0 ? Math.max(12, (entry.krw / maxEarn) * 44) : 3;
+            const parts = [
+              { krw: entry.bookedKrw, cls: "bg-navy-500" },
+              { krw: entry.manualKrw, cls: "bg-amber-500" },
+              { krw: entry.salaryKrw, cls: "bg-slate-500" },
+            ].filter((p) => p.krw > 0);
+            return (
+              <div key={entry.key} className="flex flex-1 flex-col items-center gap-1">
+                <div
+                  className={`flex w-full flex-col justify-end gap-px overflow-hidden rounded-sm ${
+                    entry.key === monthStat.current ? "" : "opacity-50"
+                  } ${parts.length === 0 ? "bg-charcoal-800/70" : ""}`}
+                  style={{ height: `${height}px` }}
+                >
+                  {parts.map((p) => (
+                    <div
+                      key={p.cls}
+                      className={p.cls}
+                      style={{ height: `${Math.max(2, (p.krw / entry.krw) * height)}px` }}
+                    />
+                  ))}
+                </div>
+                <span className="text-3xs text-charcoal-600">
+                  {Number(entry.key.split("-")[1])}월
+                </span>
+              </div>
+            );
+          })}
         </div>
       </Card>
 

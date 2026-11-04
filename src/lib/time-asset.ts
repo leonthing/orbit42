@@ -430,6 +430,13 @@ export type TimeAssetSummary = {
     monthTotalKrw: number;
     /** 과거 → 현재 6개월 실수입 */
     earnTrend: Array<{ month: string; krw: number }>;
+    /**
+     * 주·월·년 보기 (1.8.0) — 옛 앱은 이 칸을 모르고 위 month* 칸만 읽는다.
+     * key: 주 "YYYY-MM-DD"(월요일, KST) · 월 "YYYY-MM" · 년 "YYYY". trend 는 막대(과거 → 현재,
+     * 년은 1~12월), current 는 그중 이번 기간 key.
+     */
+    periods: Record<EarnPeriod, EarnPeriodStat>;
+    salary: SalaryAccrual;
     /** 활성 슬롯이 없으면 null */
     funnel: {
       openHours: number;
@@ -465,6 +472,29 @@ export type TimeAssetSummary = {
     earnHours: number;
     effectiveHourlyKrw: number | null;
   } | null;
+};
+
+export type EarnPeriod = "week" | "month" | "year";
+export type EarnPeriodStat = {
+  current: string;
+  /** ① Orbit 예약으로 번 돈 */
+  bookedKrw: number;
+  /** ② 일정에 기록한 돈 */
+  manualKrw: number;
+  /** ③ 급여로 쌓인 돈 — 이번 기간은 asOf 시각까지 */
+  salaryKrw: number;
+  /** ①+②+③ */
+  totalKrw: number;
+  trend: Array<{ key: string; krw: number; bookedKrw: number; manualKrw: number; salaryKrw: number }>;
+};
+
+/** 급여 적립 — 월 급여 ÷ 그 달 전체 시간(일수×24)으로 24시간 내내 쌓인다 (Leo 11/5 '달력 시간 기준') */
+export type SalaryAccrual = {
+  /** monthly: 그 금액 · hourly: 시급×209 · freelance/미설정: null */
+  monthlyKrw: number | null;
+  status: "monthly" | "hourly" | "freelance" | "none";
+  /** 이번 기간 금액을 센 시각 — 앱은 여기서부터 실시간으로 더한다 */
+  asOf: string;
 };
 
 function emptyBuckets(): Record<BucketKey, number> {
@@ -771,10 +801,25 @@ export async function getTimeAssetSummary(
       : null;
 
   // ── 시간 비즈니스: 실제 번 돈 + 이번 주 판매 퍼널 ──
-  const monthKeyOf = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-  const sixMonthsAgo = new Date(anchor.getFullYear(), anchor.getMonth() - 5, 1);
-  const nextMonth = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1);
+  // 달·주·년 경계는 한국 시간(KST)으로 자른다 — 서버(UTC)의 1일 0~9시 일정이 전달로 가지 않게
+  const KST_MS = 9 * 3_600_000;
+  const kst = (d: Date) => new Date(d.getTime() + KST_MS);
+  const monthKeyOf = (d: Date) => kst(d).toISOString().slice(0, 7);
+  const weekKeyOf = (d: Date) => kst(weekStartMonday(d)).toISOString().slice(0, 10);
+  const kstMonthStart = (y: number, m: number) => new Date(Date.UTC(y, m, 1) - KST_MS);
+  const anchorY = kst(anchor).getUTCFullYear();
+  const anchorM = kst(anchor).getUTCMonth();
+  const sixMonthsAgo = kstMonthStart(anchorY, anchorM - 5);
+  const yearStartKst = kstMonthStart(anchorY, 0);
+  const yearEndKst = kstMonthStart(anchorY + 1, 0);
+  const WEEK_MS = 7 * 24 * 3_600_000;
+  const EARN_WEEKS = 8;
+  const earnWeeksStart = new Date(weekStart.getTime() - (EARN_WEEKS - 1) * WEEK_MS);
+  // 막대 범위를 다 덮게 — 6개월 · 올해 1~12월 · 최근 8주 중 가장 이른 날부터 올해 끝(또는 이번 주 끝)까지
+  const bookingFrom = new Date(
+    Math.min(sixMonthsAgo.getTime(), yearStartKst.getTime(), earnWeeksStart.getTime()),
+  );
+  const bookingTo = new Date(Math.max(yearEndKst.getTime(), weekStart.getTime() + WEEK_MS));
 
   const [bookingRowsRes, slotRowsRes, earningRowsRes] = await Promise.all([
     db
@@ -782,8 +827,8 @@ export async function getTimeAssetSummary(
       .select("slot_id, status, scheduled_at, scheduled_end_at")
       .eq("host_id", userId)
       .in("status", ["confirmed", "completed"])
-      .gte("scheduled_at", sixMonthsAgo.toISOString())
-      .lt("scheduled_at", nextMonth.toISOString()),
+      .gte("scheduled_at", bookingFrom.toISOString())
+      .lt("scheduled_at", bookingTo.toISOString()),
     db
       .from("time_slots")
       .select("*")
@@ -812,16 +857,21 @@ export async function getTimeAssetSummary(
     return Math.round(cents / 100);
   };
 
+  const add = (m: Map<string, number>, key: string, krw: number) =>
+    m.set(key, (m.get(key) ?? 0) + krw);
   const bookedByMonth = new Map<string, number>();
+  const bookedByWeek = new Map<string, number>();
   for (const b of bookingRowsRes.data ?? []) {
     const date = new Date(b.scheduled_at as string);
     if (Number.isNaN(date.getTime())) continue;
-    const key = monthKeyOf(date);
-    bookedByMonth.set(key, (bookedByMonth.get(key) ?? 0) + priceOf(b.slot_id as string));
+    const krw = priceOf(b.slot_id as string);
+    add(bookedByMonth, monthKeyOf(date), krw);
+    add(bookedByWeek, weekKeyOf(date), krw);
   }
 
   // 수동 수익 기록 — 로컬 이벤트는 시작일 기준, 구글 이벤트는 기록 시점 기준 달로 귀속.
   const manualByMonth = new Map<string, number>();
+  const manualByWeek = new Map<string, number>();
   const localEarningKeys = (earningRowsRes.data ?? [])
     .map((r) => r.event_key as string)
     .filter((k) => !k.startsWith("gcal_"));
@@ -847,20 +897,134 @@ export async function getTimeAssetSummary(
     if (!eventKey.startsWith("gcal_") && !localStartById.has(eventKey)) continue;
     const date = localStartById.get(eventKey) ?? new Date(r.updated_at as string);
     if (Number.isNaN(date.getTime())) continue;
-    const key = monthKeyOf(date);
-    manualByMonth.set(key, (manualByMonth.get(key) ?? 0) + Number(r.amount_krw));
+    add(manualByMonth, monthKeyOf(date), Number(r.amount_krw));
+    add(manualByWeek, weekKeyOf(date), Number(r.amount_krw));
   }
 
   const monthLabel = monthKeyOf(anchor);
   const earnTrend: Array<{ month: string; krw: number }> = [];
   for (let i = 5; i >= 0; i--) {
-    const d = new Date(anchor.getFullYear(), anchor.getMonth() - i, 1);
-    const key = monthKeyOf(d);
+    const key = monthKeyOf(kstMonthStart(anchorY, anchorM - i));
     earnTrend.push({
       month: key,
       krw: (bookedByMonth.get(key) ?? 0) + (manualByMonth.get(key) ?? 0),
     });
   }
+
+  // ③ 급여 적립 — 과거 기간도 지금 설정 금액으로 센다(급여 변경 이력 없음, 알려진 한계)
+  const salary: SalaryAccrual = {
+    monthlyKrw:
+      income.amount != null && income.amount > 0
+        ? income.incomeType === "monthly"
+          ? Math.round(income.amount)
+          : income.incomeType === "hourly"
+            ? Math.round(income.amount * MONTHLY_WORK_HOURS)
+            : null
+        : null,
+    status:
+      income.incomeType === "freelance"
+        ? "freelance"
+        : income.amount != null && income.amount > 0 && income.incomeType
+          ? income.incomeType
+          : "none",
+    asOf: anchor.toISOString(),
+  };
+  /** [from, to) 중 지금(anchor)까지 쌓인 급여 — 달마다 그 달 길이로 나눠 더한다 */
+  const accrued = (from: Date, to: Date): number => {
+    if (salary.monthlyKrw == null) return 0;
+    const end = Math.min(to.getTime(), anchor.getTime());
+    let total = 0;
+    let y = kst(from).getUTCFullYear();
+    let m = kst(from).getUTCMonth();
+    for (;;) {
+      const ms = kstMonthStart(y, m).getTime();
+      const me = kstMonthStart(y, m + 1).getTime();
+      if (ms >= end) break;
+      const overlap = Math.min(me, end) - Math.max(ms, from.getTime());
+      if (overlap > 0) total += (salary.monthlyKrw * overlap) / (me - ms);
+      m += 1;
+      if (m > 11) {
+        m = 0;
+        y += 1;
+      }
+    }
+    return Math.round(total);
+  };
+  const monthRange = (key: string): [Date, Date] => {
+    const [ky, km] = key.split("-").map(Number);
+    return [kstMonthStart(ky, km - 1), kstMonthStart(ky, km)];
+  };
+  const weekRange = (key: string): [Date, Date] => {
+    const start = new Date(Date.parse(`${key}T00:00:00Z`) - KST_MS);
+    return [start, new Date(start.getTime() + WEEK_MS)];
+  };
+
+  // 주·월·년 보기 (1.8.0) — 같은 기록을 기간만 바꿔 묶는다
+  type Getter = (k: string) => number;
+  const bar = (key: string, booked: Getter, manual: Getter, range: (k: string) => [Date, Date]) => {
+    const b = booked(key);
+    const mn = manual(key);
+    const sal = accrued(...range(key));
+    return { key, krw: b + mn + sal, bookedKrw: b, manualKrw: mn, salaryKrw: sal };
+  };
+  const periodStat = (
+    current: string,
+    keys: string[],
+    booked: Getter,
+    manual: Getter,
+    range: (k: string) => [Date, Date],
+  ): EarnPeriodStat => {
+    const now = bar(current, booked, manual, range);
+    return {
+      current,
+      bookedKrw: now.bookedKrw,
+      manualKrw: now.manualKrw,
+      salaryKrw: now.salaryKrw,
+      totalKrw: now.krw,
+      trend: keys.map((key) => bar(key, booked, manual, range)),
+    };
+  };
+  const sumYear = (m: Map<string, number>) => (y: string) => {
+    let total = 0;
+    m.forEach((v, k) => {
+      if (k.startsWith(`${y}-`)) total += v;
+    });
+    return total;
+  };
+  const yearKey = String(anchorY);
+  const bookedM: Getter = (k) => bookedByMonth.get(k) ?? 0;
+  const manualM: Getter = (k) => manualByMonth.get(k) ?? 0;
+  const yearStat = periodStat(
+    yearKey,
+    [],
+    sumYear(bookedByMonth),
+    sumYear(manualByMonth),
+    () => [yearStartKst, yearEndKst],
+  );
+  const periods: TimeAssetSummary["business"]["periods"] = {
+    week: periodStat(
+      weekKeyOf(anchor),
+      Array.from({ length: EARN_WEEKS }, (_, i) =>
+        weekKeyOf(new Date(weekStart.getTime() - (EARN_WEEKS - 1 - i) * WEEK_MS)),
+      ),
+      (k) => bookedByWeek.get(k) ?? 0,
+      (k) => manualByWeek.get(k) ?? 0,
+      weekRange,
+    ),
+    month: periodStat(
+      monthLabel,
+      earnTrend.map((e) => e.month),
+      bookedM,
+      manualM,
+      monthRange,
+    ),
+    year: {
+      ...yearStat,
+      trend: Array.from({ length: 12 }, (_, m) =>
+        bar(`${yearKey}-${String(m + 1).padStart(2, "0")}`, bookedM, manualM, monthRange),
+      ),
+    },
+  };
 
   // 이번 주 판매 퍼널 — 활성 슬롯의 남은 예약 옵션(지금~일요일) 근사치.
   let funnel: TimeAssetSummary["business"]["funnel"] = null;
@@ -914,6 +1078,8 @@ export async function getTimeAssetSummary(
     monthTotalKrw:
       (bookedByMonth.get(monthLabel) ?? 0) + (manualByMonth.get(monthLabel) ?? 0),
     earnTrend,
+    periods,
+    salary,
     funnel,
   };
 
