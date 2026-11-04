@@ -159,8 +159,6 @@ struct EventDetailSheet: View {
         selectedBucket != nil || earningKrw != nil || (post?.imageUrls.isEmpty == false)
     }
 
-    private var isPastEvent: Bool { event.endAt < Date() }
-
     var body: some View {
         NavigationStack {
             List {
@@ -342,10 +340,8 @@ struct EventDetailSheet: View {
                     }
                     .listRowBackground(Theme.surface)
 
-                    // 수익 기록은 지난 일정에만 (이미 적어 둔 값이 있으면 그대로 보인다)
-                    if isPastEvent || earningKrw != nil {
-                        earningSection
-                    }
+                    // 수익 기록 — 앞으로 있을 일정에도 (일정 추가·수정의 '금액'과 같은 값)
+                    earningSection
 
                     timelogSection
                 } else {
@@ -359,7 +355,7 @@ struct EventDetailSheet: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("기록 더하기")
                                         .foregroundStyle(Theme.primaryText)
-                                    Text(isPastEvent ? "자산 분류 · 수익 · 사진" : "자산 분류 · 사진")
+                                    Text("자산 분류 · 수익 · 사진")
                                         .font(.caption)
                                         .foregroundStyle(Theme.secondaryText)
                                 }

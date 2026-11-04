@@ -233,13 +233,22 @@ struct DayTimelineView: View {
                     HStack(spacing: 0) {
                         checkbox(event, size: 14)
                         Button { open(event) } label: {
-                            Text(titleText(event))
-                                .font(.caption.weight(.semibold))
-                                .strikethrough(event.completed)
-                                .lineLimit(1)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.vertical, 4)
-                                .contentShape(Rectangle())
+                            HStack(spacing: 6) {
+                                Text(titleText(event))
+                                    .font(.caption.weight(.semibold))
+                                    .strikethrough(event.completed)
+                                    .lineLimit(1)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                // 번 돈 — 제목이 줄고 금액은 자르지 않는다
+                                if let amount = event.earningKrw {
+                                    Text(EarningField.won(amount))
+                                        .font(.caption2.weight(.semibold))
+                                        .fixedSize()
+                                        .accessibilityIdentifier("blockEarning")
+                                }
+                            }
+                            .padding(.vertical, 4)
+                            .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                     }
@@ -385,17 +394,31 @@ struct DayTimelineView: View {
                         .font(.caption.weight(.semibold))
                         .strikethrough(event.completed)
                         .lineLimit(block.height > 44 ? 2 : 1)
-                    if block.height > 30, let location = event.location, !location.isEmpty {
+                    let hasLocation = !(event.location ?? "").isEmpty
+                    if block.height > 30, hasLocation, let location = event.location {
                         Text(location)
                             .font(.caption2)
                             .lineLimit(1)
                     }
                     if block.height > 44 {
                         // 참석자가 있으면 시간 옆에 👤n (공간 될 때만)
-                        Text(timeText(event) + (event.attendees.count > 1 ? "  👤\(event.attendees.count)" : ""))
-                            .font(.caption2)
-                            .lineLimit(1)
-                            .opacity(0.9)
+                        let time = Text(timeText(event) + (event.attendees.count > 1 ? "  👤\(event.attendees.count)" : ""))
+                        // 시간과 금액이 다 들어가면 함께, 아니면 시간만 (금액은 자르지 않고 생략)
+                        ViewThatFits(in: .horizontal) {
+                            HStack(spacing: 6) {
+                                time.lineLimit(1).fixedSize().opacity(0.9)
+                                earningLabel(event)
+                            }
+                            time.lineLimit(1).opacity(0.9)
+                        }
+                        .font(.caption2)
+                    } else if block.height > 30, !hasLocation {
+                        // 시간 줄이 없는 짧은 블록 — 장소 자리가 비면 금액만 (안 들어가면 생략)
+                        ViewThatFits(in: .horizontal) {
+                            earningLabel(event)
+                            Color.clear.frame(width: 0, height: 0)
+                        }
+                        .font(.caption2)
                     }
                     Spacer(minLength: 0)
                 }
@@ -922,6 +945,18 @@ struct DayTimelineView: View {
             }
             .allowsHitTesting(false)
             .accessibilityIdentifier("allDayDragGhost")
+        }
+    }
+
+    /// 번 돈 "₩30,000" — 자르지 않는다(자리가 없으면 위에서 아예 안 그린다)
+    @ViewBuilder
+    private func earningLabel(_ event: CalendarEvent) -> some View {
+        if let amount = event.earningKrw {
+            Text(EarningField.won(amount))
+                .fontWeight(.semibold)
+                .lineLimit(1)
+                .fixedSize()
+                .accessibilityIdentifier("blockEarning")
         }
     }
 
