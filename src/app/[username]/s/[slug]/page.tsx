@@ -260,7 +260,7 @@ export default async function SlotPage({
         {attachedMenus.length > 0 && (
           <div className="mt-4 space-y-1.5 border-t border-charcoal-800/40 pt-4">
             <p className="text-2xs font-semibold uppercase tracking-wider text-charcoal-500">
-              포함되는 서비스
+              함께 고를 수 있는 서비스
             </p>
             <ul className="space-y-1">
               {attachedMenus.map((m) => (
