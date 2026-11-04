@@ -86,6 +86,16 @@ final class EventEarningUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", title)).firstMatch.exists)
     }
 
+    /// 하루 보기 캡처 — EARN_DATE 에 금액 일정을 미리 넣어 두고 블록이 화면에 나온 모습을 찍는다
+    func testDayShot() throws {
+        guard let token = env["DEMO_TOKEN"], let date = env["EARN_DATE"] else { throw XCTSkip("DEMO_TOKEN·EARN_DATE 필요") }
+        shotPrefix = env["SHOT_PREFIX"] ?? "day"
+        launch(token: token, date: date)
+        XCTAssertTrue(app.staticTexts.matching(identifier: "blockEarning").firstMatch.waitForExistence(timeout: 20), "블록 금액 없음")
+        sleep(2)
+        shot("day")
+    }
+
     /// 리포트 '이번 달 시간으로 번 돈' 캡처 — 금액 넣기 전·후 (SHOT_PREFIX 로 구분)
     func testReportShot() throws {
         guard let token = env["DEMO_TOKEN"] else { throw XCTSkip("DEMO_TOKEN 필요") }

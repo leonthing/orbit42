@@ -390,10 +390,23 @@ struct DayTimelineView: View {
             checkbox(event, size: block.height > 22 ? 15 : 12)
             Button { open(event) } label: {
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(titleText(event))
-                        .font(.caption.weight(.semibold))
-                        .strikethrough(event.completed)
-                        .lineLimit(block.height > 44 ? 2 : 1)
+                    if block.height > 44 || event.earningKrw == nil {
+                        Text(titleText(event))
+                            .font(.caption.weight(.semibold))
+                            .strikethrough(event.completed)
+                            .lineLimit(block.height > 44 ? 2 : 1)
+                    } else {
+                        // 시간 줄이 없는 짧은 블록 — 제목 줄 오른쪽에 금액(제목이 줄고, 금액은 자르지 않음)
+                        HStack(spacing: 6) {
+                            Text(titleText(event))
+                                .font(.caption.weight(.semibold))
+                                .strikethrough(event.completed)
+                                .lineLimit(1)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            earningLabel(event)
+                                .font(.caption2)
+                        }
+                    }
                     let hasLocation = !(event.location ?? "").isEmpty
                     if block.height > 30, hasLocation, let location = event.location {
                         Text(location)
@@ -410,13 +423,6 @@ struct DayTimelineView: View {
                                 earningLabel(event)
                             }
                             time.lineLimit(1).opacity(0.9)
-                        }
-                        .font(.caption2)
-                    } else if block.height > 30, !hasLocation {
-                        // 시간 줄이 없는 짧은 블록 — 장소 자리가 비면 금액만 (안 들어가면 생략)
-                        ViewThatFits(in: .horizontal) {
-                            earningLabel(event)
-                            Color.clear.frame(width: 0, height: 0)
                         }
                         .font(.caption2)
                     }
