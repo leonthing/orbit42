@@ -11,6 +11,7 @@
  * 참석자 알림(sendUpdates=all)은 앱 확인 창을 거친 notifyAttendees=true 일 때만.
  */
 import { getAdminClient } from "@/lib/supabase";
+import { deleteEarningsForEvents } from "@/lib/event-earnings-cleanup";
 import {
   parseRRule,
   parseOccurrenceId,
@@ -148,6 +149,7 @@ export async function deleteNativeOccurrence(userId: string, occId: string) {
     { onConflict: "event_id,original_start" },
   );
   if (error) throw new Error("이 회차를 지우지 못했어요.");
+  await deleteEarningsForEvents(userId, { keys: [occId] });
 }
 
 /**
@@ -211,6 +213,7 @@ export async function deleteNativeSeries(userId: string, seriesId: string) {
   await loadSeries(userId, seriesId);
   const { error } = await getAdminClient().from("events").delete().eq("id", seriesId);
   if (error) throw new Error("반복 일정을 지우지 못했어요.");
+  await deleteEarningsForEvents(userId, { seriesId });
 }
 
 /** 원래 규칙을 그 회차 전까지로 자른다 — COUNT 는 UNTIL 로 바꾼다. 남는 회차가 없으면 null. */
@@ -316,6 +319,7 @@ export async function deleteNativeFollowing(userId: string, occId: string) {
   const cut = truncateRule(series, occ.originalStart);
   if (!cut) {
     await db.from("events").delete().eq("id", series.id);
+    await deleteEarningsForEvents(userId, { seriesId: series.id });
     return;
   }
   await db.from("events").update({
@@ -324,6 +328,7 @@ export async function deleteNativeFollowing(userId: string, occId: string) {
     updated_at: new Date().toISOString(),
   }).eq("id", series.id);
   await db.from("event_recurrence_exceptions").delete().eq("event_id", series.id).gte("original_start", occ.originalStart.toISOString());
+  await deleteEarningsForEvents(userId, { seriesId: series.id, from: occ.originalStart, includeSeriesKey: false });
 }
 
 /** 시리즈 정보 — 수정 화면의 반복 선택값 */
@@ -421,9 +426,11 @@ export async function patchGoogleSeries(
 }
 
 /** 구글 '모두' 지우기 — master 삭제(sendUpdates 없음: 지금 삭제와 같은 규칙) */
-export async function deleteGoogleSeries(cal: GCal, gcalId: string, instanceOrMasterId: string) {
+export async function deleteGoogleSeries(cal: GCal, gcalId: string, instanceOrMasterId: string): Promise<string> {
   const inst = await googleInstance(cal, gcalId, instanceOrMasterId);
-  await cal.events.delete({ calendarId: gcalId, eventId: inst.master ?? instanceOrMasterId });
+  const masterId = inst.master ?? instanceOrMasterId;
+  await cal.events.delete({ calendarId: gcalId, eventId: masterId });
+  return masterId;
 }
 
 /** 구글 시리즈 정보 — master 의 RRULE */

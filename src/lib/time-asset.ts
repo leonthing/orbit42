@@ -841,8 +841,11 @@ export async function getTimeAssetSummary(
     }
   }
   for (const r of earningRowsRes.data ?? []) {
-    const date =
-      localStartById.get(r.event_key as string) ?? new Date(r.updated_at as string);
+    const eventKey = r.event_key as string;
+    // Orbit42 일정인데 일정이 이미 없으면(지운 일정의 남은 기록) 빼고 센다 (1.8.0).
+    // 구글 일정은 날짜를 저장하지 않아 기록한 달로 센다(처리방침).
+    if (!eventKey.startsWith("gcal_") && !localStartById.has(eventKey)) continue;
+    const date = localStartById.get(eventKey) ?? new Date(r.updated_at as string);
     if (Number.isNaN(date.getTime())) continue;
     const key = monthKeyOf(date);
     manualByMonth.set(key, (manualByMonth.get(key) ?? 0) + Number(r.amount_krw));

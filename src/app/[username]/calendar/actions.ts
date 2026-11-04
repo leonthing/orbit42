@@ -3,6 +3,7 @@
 import { inclusiveAllDayEndToGoogle } from "@/lib/calendar-events";
 
 import { getAdminClient } from "@/lib/supabase";
+import { deleteEarningsForEvents } from "@/lib/event-earnings-cleanup";
 import { requireUserId } from "@/lib/db";
 import {
   getAuthenticatedCalendar,
@@ -214,6 +215,8 @@ export async function deleteEvent(id: string): Promise<void> {
     .eq("id", id)
     .eq("user_id", userId);
   if (error) throw new Error(error.message);
+  // 지운 일정(반복이면 모든 회차)의 수익 기록도 같이 — 리포트에 남지 않게
+  await deleteEarningsForEvents(userId, { seriesId: id });
 }
 
 /**
@@ -297,6 +300,7 @@ export async function deleteGoogleEvent(
   if (!calendar) return { error: "Google 캘린더 연결이 필요해요." };
   try {
     await calendar.events.delete({ calendarId: gcalId, eventId });
+    await deleteEarningsForEvents(userId, { keys: [`gcal_${eventId}`] });
     return { ok: true };
   } catch (err) {
     console.error("deleteGoogleEvent", err);
