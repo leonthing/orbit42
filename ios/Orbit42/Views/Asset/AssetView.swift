@@ -500,6 +500,14 @@ struct AssetView: View {
             }
             .frame(height: 62)
             .padding(.top, 4)
+
+            // 점선 막대가 있을 때만 범례 한 줄
+            if hasPeriods, stat.trend.contains(where: { $0.salaryExpectedKrw != nil && $0.expectedKrw > $0.krw }) {
+                Text(period == .week ? "점선: 이번 주 끝까지 쌓일 급여" : "점선: 이번 달 끝까지 쌓일 급여")
+                    .font(.caption2)
+                    .foregroundStyle(Theme.secondaryText)
+                    .accessibilityIdentifier("expectedLegend")
+            }
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
