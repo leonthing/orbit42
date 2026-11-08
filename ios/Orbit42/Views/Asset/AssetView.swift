@@ -470,13 +470,23 @@ struct AssetView: View {
             }
 
             // 미니 바 차트 — 세 갈래를 쌓는다. 0은 얇은 선, 0이 아니면 최소 높이로 작은 금액도 보이게
-            let maxKrw = max(stat.trend.map(\.krw).max() ?? 0, 1)
+            // 진행 중인 기간은 '예상 한 달(주)치' 외곽선까지 같은 눈금에 들어가게
+            let maxKrw = max(stat.trend.map(\.expectedKrw).max() ?? 0, 1)
             HStack(alignment: .bottom, spacing: stat.trend.count > 8 ? 4 : 8) {
                 ForEach(stat.trend) { bar in
                     let isCurrent = bar.key == stat.current || (period == .year && bar.key == business.monthLabel)
                     VStack(spacing: 4) {
                         stackedBar(bar, height: Self.barHeight(bar.krw, max: maxKrw), stacked: hasPeriods)
                             .opacity(isCurrent ? 1 : 0.45)
+                            .frame(height: Self.barHeight(bar.expectedKrw, max: maxKrw), alignment: .bottom)
+                            .overlay {
+                                // 진행 중: 기간이 끝나면 쌓일 급여까지 흐린 점선 외곽선 (숫자는 쌓인 만큼만)
+                                if hasPeriods, bar.salaryExpectedKrw != nil, bar.expectedKrw > bar.krw {
+                                    RoundedRectangle(cornerRadius: 3)
+                                        .strokeBorder(Self.salaryColor.opacity(0.7), style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
+                                        .accessibilityIdentifier("expectedOutline")
+                                }
+                            }
                         Text(period.barLabel(bar.key))
                             .font(.system(size: 9, weight: isCurrent ? .semibold : .regular))
                             .foregroundStyle(isCurrent ? Theme.primaryText : Theme.secondaryText)

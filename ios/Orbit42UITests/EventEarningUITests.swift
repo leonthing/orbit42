@@ -86,6 +86,73 @@ final class EventEarningUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", title)).firstMatch.exists)
     }
 
+    /// 빠른 입력·비우기→다시 넣기 3번·붙여넣기 (1.8.0 써보기 메모 1). 사람보다 훨씬 빠르게 한 번에 보낸다.
+    func testEarningFastTyping() throws {
+        guard let token = env["DEMO_TOKEN"], let date = env["EARN_DATE"], let title = env["EARN_TITLE"] else {
+            throw XCTSkip("DEMO_TOKEN·EARN_DATE·EARN_TITLE 필요")
+        }
+        shotPrefix = env["SHOT_PREFIX"] ?? "fast"
+        launch(token: token, date: date)
+        app.buttons["일정 추가"].tap()
+        let titleField = app.textFields["제목"]
+        XCTAssertTrue(titleField.waitForExistence(timeout: 10))
+        titleField.tap()
+        titleField.typeText(title)
+        let field = app.textFields["earningField"]
+        for _ in 0..<4 where !field.isHittable { app.swipeUp() }
+        field.tap()
+        field.typeText("50000")
+        XCTAssertEqual(field.value as? String, "50,000", "빠른 입력")
+        // 비우기 → 다시 넣기 3번 — 지우기도 한 번에 몰아서 보낸다
+        for round in 1...3 {
+            field.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.5)).tap()
+            field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 8))
+            XCTAssertEqual((field.value as? String).map { $0 == "없음" ? "" : $0 } ?? "", "", "\(round)회차 비우기")
+            field.typeText("50000")
+            XCTAssertEqual(field.value as? String, "50,000", "\(round)회차 다시 넣기")
+        }
+        // 붙여넣기 "50,000원" → 50,000
+        field.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.5)).tap()
+        field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 8))
+        UIPasteboard.general.string = "50,000원"
+        field.press(forDuration: 1.0)
+        let paste = app.menuItems["붙여넣기"].exists ? app.menuItems["붙여넣기"] : app.menuItems["Paste"]
+        XCTAssertTrue(paste.waitForExistence(timeout: 5), "붙여넣기 메뉴 없음")
+        paste.tap()
+        let allow = app.alerts.buttons["붙여넣기 허용"]
+        if allow.waitForExistence(timeout: 2) { allow.tap() }
+        XCTAssertEqual(field.value as? String, "50,000", "붙여넣기 50,000원")
+        app.navigationBars.buttons["저장"].tap()
+        XCTAssertTrue(blockEarning("₩50,000").waitForExistence(timeout: 20), "저장한 금액이 ₩50,000 아님")
+        // 수정 화면에서도 같은 칸 — 비우기 → 다시 넣기
+        openBlock(title)
+        app.buttons["수정"].firstMatch.tap()
+        let edit = app.textFields["earningField"]
+        for _ in 0..<6 where !edit.isHittable { app.swipeUp() }
+        XCTAssertEqual(edit.value as? String, "50,000")
+        edit.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.5)).tap()
+        edit.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 8) + "70000")
+        XCTAssertEqual(edit.value as? String, "70,000", "수정 화면 빠른 입력")
+        app.navigationBars.buttons["저장"].tap()
+        XCTAssertTrue(blockEarning("₩70,000").waitForExistence(timeout: 20), "수정한 금액이 ₩70,000 아님")
+        // 상세 금액 칸(알림 입력) — 기존 값 쉼표, 빠른 입력
+        openBlock(title)
+        let row = app.staticTexts["₩70,000"].firstMatch
+        for _ in 0..<4 where !row.isHittable { app.swipeUp() }
+        sleep(1)
+        shot("detail-amount")
+        row.tap()
+        let input = app.alerts.textFields.firstMatch
+        XCTAssertTrue(input.waitForExistence(timeout: 5))
+        // 알림 안 입력 칸은 SwiftUI 라 쉼표 표시가 늦을 수 있다 — 숫자 값과 저장 결과로 본다
+        XCTAssertEqual((input.value as? String)?.filter(\.isNumber), "70000")
+        input.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.5)).tap()
+        input.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 8) + "90000")
+        XCTAssertEqual((input.value as? String)?.filter(\.isNumber), "90000", "상세 입력")
+        app.alerts.buttons["저장"].tap()
+        XCTAssertTrue(app.staticTexts["₩90,000"].waitForExistence(timeout: 10), "상세 저장 ₩90,000 아님")
+    }
+
     /// 하루 보기 캡처 — EARN_DATE 에 금액 일정을 미리 넣어 두고 블록이 화면에 나온 모습을 찍는다
     func testDayShot() throws {
         guard let token = env["DEMO_TOKEN"], let date = env["EARN_DATE"] else { throw XCTSkip("DEMO_TOKEN·EARN_DATE 필요") }

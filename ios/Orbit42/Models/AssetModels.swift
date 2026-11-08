@@ -229,7 +229,14 @@ struct TimeAssetBusiness: Decodable {
             let bookedKrw: Int
             let manualKrw: Int
             let salaryKrw: Int
+            /// 진행 중인 기간만 — 기간이 끝날 때 쌓일 급여 전체
+            var salaryExpectedKrw: Int? = nil
             var id: String { key }
+            /// 막대 외곽선 높이에 쓸 금액 — 예약·기록 + 예상 급여 전체 (진행 중이 아니면 지금 금액)
+            var expectedKrw: Int {
+                guard let salaryExpectedKrw else { return krw }
+                return bookedKrw + manualKrw + max(salaryExpectedKrw, salaryKrw)
+            }
         }
     }
 

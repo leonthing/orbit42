@@ -355,7 +355,7 @@ struct EventDetailSheet: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("기록 더하기")
                                         .foregroundStyle(Theme.primaryText)
-                                    Text("자산 분류 · 수익 · 사진")
+                                    Text("자산 분류 · 금액 · 사진")
                                         .font(.caption)
                                         .foregroundStyle(Theme.secondaryText)
                                 }
@@ -826,11 +826,11 @@ struct EventDetailSheet: View {
     private var earningSection: some View {
         Section {
             Button {
-                earningInputText = earningKrw.map(String.init) ?? ""
+                earningInputText = EarningField.text(for: earningKrw)
                 showingEarningInput = true
             } label: {
                 HStack {
-                    Text("수익 기록")
+                    Text("금액")
                         .foregroundStyle(Theme.primaryText)
                     Spacer()
                     if isSavingEarning {
@@ -845,8 +845,9 @@ struct EventDetailSheet: View {
             }
             .disabled(isSavingEarning || isDeleting)
             .alert("이 일정으로 번 금액", isPresented: $showingEarningInput) {
-                TextField("금액 (원)", text: $earningInputText)
+                TextField("금액 (원)", text: EarningField.displayBinding($earningInputText))
                     .keyboardType(.numberPad)
+                    .accessibilityIdentifier("detailEarningInput")
                 Button("저장") { saveEarning() }
                 if earningKrw != nil {
                     Button("기록 해제", role: .destructive) { setEarning(nil) }
@@ -861,7 +862,11 @@ struct EventDetailSheet: View {
                 Text(earningErrorMessage ?? "")
             }
         } footer: {
-            Text("수입으로 분류된 일정은 시급×시간으로 자동 계산돼요. 실제 금액이 다르면 직접 기록해 주세요.")
+            if earningKrw != nil {
+                Text("리포트 '일정에 기록한 돈'에 더해져요. 나만 볼 수 있어요.")
+            } else if isEarnBucketEvent {
+                Text("수입으로 분류된 일정은 시급×시간으로 자동 계산돼요. 실제 금액이 다르면 직접 기록해 주세요.")
+            }
         }
         .listRowBackground(Theme.surface)
     }
@@ -891,10 +896,15 @@ struct EventDetailSheet: View {
         return "자동 (시급 기준)"
     }
 
+    /// 수입 분류 일정 — 직접 고른 분류가 수입이거나, 기본(캘린더 용도)이 업무·수익인 캘린더
+    /// (기본 용도→분류 표와 같음. 사용자가 표를 바꿨으면 리포트 설정과 다를 수 있다)
+    private var isEarnBucketEvent: Bool {
+        if let selectedBucket { return selectedBucket == "earn" }
+        return ["work", "income"].contains(calendarInfo?.purpose ?? "")
+    }
+
     private func saveEarning() {
-        let cleaned = earningInputText.replacingOccurrences(of: ",", with: "")
-            .trimmingCharacters(in: .whitespaces)
-        guard let amount = Int(cleaned), amount >= 0 else {
+        guard let amount = EarningField.parse(earningInputText), amount >= 0 else {
             earningErrorMessage = "숫자만 입력해 주세요."
             return
         }

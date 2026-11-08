@@ -485,7 +485,15 @@ export type EarnPeriodStat = {
   salaryKrw: number;
   /** ①+②+③ */
   totalKrw: number;
-  trend: Array<{ key: string; krw: number; bookedKrw: number; manualKrw: number; salaryKrw: number }>;
+  trend: Array<{
+    key: string;
+    krw: number;
+    bookedKrw: number;
+    manualKrw: number;
+    salaryKrw: number;
+    /** 진행 중인 기간만 — 그 기간이 끝날 때 쌓일 급여 전체(막대의 '예상' 외곽선용) */
+    salaryExpectedKrw?: number;
+  }>;
 };
 
 /** 급여 적립 — 월 급여 ÷ 그 달 전체 시간(일수×24)으로 24시간 내내 쌓인다 (Leo 11/5 '달력 시간 기준') */
@@ -930,9 +938,9 @@ export async function getTimeAssetSummary(
     asOf: anchor.toISOString(),
   };
   /** [from, to) 중 지금(anchor)까지 쌓인 급여 — 달마다 그 달 길이로 나눠 더한다 */
-  const accrued = (from: Date, to: Date): number => {
+  const accrued = (from: Date, to: Date, untilNow = true): number => {
     if (salary.monthlyKrw == null) return 0;
-    const end = Math.min(to.getTime(), anchor.getTime());
+    const end = untilNow ? Math.min(to.getTime(), anchor.getTime()) : to.getTime();
     let total = 0;
     let y = kst(from).getUTCFullYear();
     let m = kst(from).getUTCMonth();
@@ -964,8 +972,19 @@ export async function getTimeAssetSummary(
   const bar = (key: string, booked: Getter, manual: Getter, range: (k: string) => [Date, Date]) => {
     const b = booked(key);
     const mn = manual(key);
-    const sal = accrued(...range(key));
-    return { key, krw: b + mn + sal, bookedKrw: b, manualKrw: mn, salaryKrw: sal };
+    const [from, to] = range(key);
+    const sal = accrued(from, to);
+    const inProgress = from.getTime() <= anchor.getTime() && anchor.getTime() < to.getTime();
+    return {
+      key,
+      krw: b + mn + sal,
+      bookedKrw: b,
+      manualKrw: mn,
+      salaryKrw: sal,
+      ...(inProgress && salary.monthlyKrw != null
+        ? { salaryExpectedKrw: accrued(from, to, false) }
+        : {}),
+    };
   };
   const periodStat = (
     current: string,
