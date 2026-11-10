@@ -103,6 +103,9 @@ export async function sendBookingReceivedToHost(
     guestEmail: string | null;
     message: string | null;
     autoApprove: boolean;
+    /** 유료 링크인데 결제 안내가 비어 승인 대기로 받은 경우 (개선-38) */
+    paymentInstructionsMissing?: boolean;
+    settingsUrl?: string;
     manageUrl: string;
   },
 ) {
@@ -126,9 +129,15 @@ export async function sendBookingReceivedToHost(
       (args.message ? quoteBlock(escapeHtml(args.message)) : "") +
       emailButton("예약 관리하기", url) +
       mutedNote(
-        args.autoApprove
-          ? "자동으로 확정된 예약이에요. 캘린더에서 확인하실 수 있어요."
-          : "내 확인을 기다리는 예약이에요. 수락하거나 거절해 주세요.",
+        args.paymentInstructionsMissing
+          ? `유료 예약 링크인데 결제 안내가 비어 있어 자동 확정 대신 승인 대기로 받았어요. 게스트에게 입금 방법을 안내하신 뒤 수락해 주세요.${
+              args.settingsUrl
+                ? ` 결제 안내(계좌·송금 링크)를 <a href="${siteUrl(args.settingsUrl)}" target="_blank" style="color:inherit">설정</a>에 적어 두시면 다음부터는 게스트에게 입금 안내가 자동으로 가요.`
+                : ""
+            }`
+          : args.autoApprove
+            ? "자동으로 확정된 예약이에요. 캘린더에서 확인하실 수 있어요."
+            : "내 확인을 기다리는 예약이에요. 수락하거나 거절해 주세요.",
       ),
   });
   return send(to, `[Orbit42] 새 예약: ${args.slotTitle}`, html);
@@ -332,6 +341,30 @@ export async function sendBookingRescheduleProposal(
       : `[Orbit42] 시간 변경 제안: ${args.slotTitle}`,
     html,
   );
+}
+
+/**
+ * 예약 대화 새 메시지 알림 메일 (1.8.0). 보낸 사람 이름·메시지 본문은 넣지 않는다 —
+ * 앱 푸시와 같은 기준, 외부(메일 발송 업체)로 가는 정보 최소화(CEO 10/27). 예약 이름·일시와 열기 버튼만.
+ */
+export async function sendBookingChatEmail(
+  to: string,
+  args: { slotTitle: string; when: string; replyUrl: string; guestNote?: boolean },
+) {
+  const html = renderEmail({
+    eyebrow: "예약 대화",
+    heading: "새 메시지가 있어요",
+    preheader: `${args.slotTitle} · ${fmtWhen(args.when)}`,
+    bodyHtml:
+      detailCard(escapeHtml(args.slotTitle), [{ label: "일시", value: fmtWhen(args.when) }]) +
+      emailButton("메시지 열기", args.replyUrl) +
+      mutedNote(
+        args.guestNote
+          ? "가입 없이 위 버튼에서 바로 읽고 답장할 수 있어요. 새 메시지는 몰아서 알려드려요."
+          : "새 메시지는 몰아서 알려드려요. 알림 설정에서 끌 수 있어요.",
+      ),
+  });
+  return send(to, `[Orbit42] 새 메시지가 있어요 · ${args.slotTitle}`, html);
 }
 
 export async function sendNewMessageEmail(

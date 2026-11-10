@@ -20,8 +20,8 @@ export async function generateMetadata({
   params: { username: string };
 }): Promise<Metadata> {
   const profile = await getProfile(params.username);
-  if (!profile) return { title: "Calendar" };
-  return { title: `${profile.display_name || profile.username}'s calendar` };
+  if (!profile) return { title: "캘린더" };
+  return { title: `${profile.display_name || profile.username}의 캘린더` };
 }
 
 export default async function PublicCalendarPage({

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getAdminClient } from "@/lib/supabase";
 import { getSession } from "@/lib/auth";
+import { DEMO_USERNAMES, hidesDemoInCounts } from "@/lib/demo-visibility";
 
 async function getUserIdByUsername(username: string): Promise<string | null> {
   const db = getAdminClient();
@@ -14,21 +15,37 @@ async function getUserIdByUsername(username: string): Promise<string | null> {
   return data?.id ?? null;
 }
 
-export async function getFollowStats(username: string) {
+/**
+ * 팔로워·팔로잉 수.
+ * opts.viewer 를 주면 그 사람이 보는 기준으로 센다(null = 로그인 안 한 방문자) — 본인이 아니고 내부 계정도 아니면
+ * 데모·시험 계정(appreview·leotaurus13)과의 팔로우는 빼서 팔로잉·팔로워 목록(데모 숨김, 개선-33)과 숫자를 맞춘다.
+ * 웹은 쿠키 세션, 앱 API 는 토큰 세션의 아이디를 넘긴다. 팔로우 행 자체는 그대로 둔다.
+ */
+export async function getFollowStats(username: string, opts?: { viewer: string | null }) {
   const db = getAdminClient();
   const userId = await getUserIdByUsername(username);
   if (!userId) return { followers: 0, following: 0 };
 
-  const [{ count: followers }, { count: following }] = await Promise.all([
-    db
-      .from("follows")
-      .select("id", { count: "exact", head: true })
-      .eq("following_id", userId),
-    db
-      .from("follows")
-      .select("id", { count: "exact", head: true })
-      .eq("follower_id", userId),
-  ]);
+  let demoIds: string[] = [];
+  if (opts && hidesDemoInCounts(username, opts.viewer)) {
+    const { data } = await db.from("users").select("id").in("username", Array.from(DEMO_USERNAMES));
+    demoIds = (data ?? []).map((u) => u.id as string).filter((id) => id !== userId);
+  }
+  const notIn = `(${demoIds.join(",")})`;
+
+  let followersQ = db
+    .from("follows")
+    .select("id", { count: "exact", head: true })
+    .eq("following_id", userId);
+  let followingQ = db
+    .from("follows")
+    .select("id", { count: "exact", head: true })
+    .eq("follower_id", userId);
+  if (demoIds.length > 0) {
+    followersQ = followersQ.not("follower_id", "in", notIn);
+    followingQ = followingQ.not("following_id", "in", notIn);
+  }
+  const [{ count: followers }, { count: following }] = await Promise.all([followersQ, followingQ]);
 
   return { followers: followers ?? 0, following: following ?? 0 };
 }
@@ -125,6 +142,7 @@ type PersonRow = {
   username: string;
   display_name: string | null;
   avatar_url: string | null;
+  is_private: boolean | null;
 };
 
 export async function listFollowing(username: string) {
@@ -135,7 +153,7 @@ export async function listFollowing(username: string) {
   const { data } = await db
     .from("follows")
     .select(
-      "following:users!follows_following_id_fkey(id, username, display_name, avatar_url)",
+      "following:users!follows_following_id_fkey(id, username, display_name, avatar_url, is_private)",
     )
     .eq("follower_id", userId);
 
@@ -150,7 +168,7 @@ export async function listFollowers(username: string) {
   const { data } = await db
     .from("follows")
     .select(
-      "follower:users!follows_follower_id_fkey(id, username, display_name, avatar_url)",
+      "follower:users!follows_follower_id_fkey(id, username, display_name, avatar_url, is_private)",
     )
     .eq("following_id", userId);
 

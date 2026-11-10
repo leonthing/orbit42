@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getProfile } from "@/lib/auth";
+import { getProfile, getSession } from "@/lib/auth";
+import { visibleConnections } from "@/lib/demo-visibility";
 import { listFollowing } from "@/lib/follows";
 import { Avatar } from "@/components/Avatar";
 import { EmptyState } from "@/components/EmptyState";
@@ -16,8 +17,8 @@ export async function generateMetadata({
   const profile = await getProfile(params.username);
   return {
     title: profile
-      ? `${profile.display_name || profile.username} · Orbiting`
-      : "Orbiting",
+      ? `${profile.display_name || profile.username} · 팔로잉`
+      : "팔로잉",
   };
 }
 
@@ -29,7 +30,9 @@ export default async function FollowingPage({
   const profile = await getProfile(params.username);
   if (!profile) notFound();
 
-  const people = await listFollowing(params.username);
+  const [rows, session] = await Promise.all([listFollowing(params.username), getSession()]);
+  // 남이 볼 때는 비공개 사용자·데모 계정(내부 계정 제외, 개선-33)을 뺀다 — 위 숫자도 이 목록 기준
+  const people = visibleConnections(rows, params.username, session?.username);
 
   return (
     <div className="space-y-6">
@@ -40,7 +43,7 @@ export default async function FollowingPage({
         >
           ← {profile.display_name || profile.username}
         </Link>
-        <h1 className="mt-1 text-2xl font-bold text-charcoal-100">Orbiting</h1>
+        <h1 className="mt-1 text-2xl font-bold text-charcoal-100">팔로잉</h1>
         <p className="mt-1 text-sm text-charcoal-500">
           팔로우하는 사람들 · {people.length}명
         </p>

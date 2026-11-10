@@ -29,6 +29,9 @@ struct BookingDetailView: View {
     @State private var copiedToast: String?
     @State private var showingArchiveConfirm = false
     @State private var showingDeleteConfirm = false
+    /// 예약 대화 화면 (1.8.0)
+    @State private var showingChat = false
+    @Environment(TabRouter.self) private var router
 
     private var hostBooking: HostBooking? {
         guard role == .host else { return nil }
@@ -74,6 +77,9 @@ struct BookingDetailView: View {
                             paymentCard(payment, detail: detail)
                         }
                         counterpartCard(detail)
+                        if !BrowseMode.shared.active {
+                            chatCard(detail)
+                        }
                         if role == .host, let email = detail.guestEmail, !email.isEmpty {
                             contactCard(email: email)
                         }
@@ -109,6 +115,16 @@ struct BookingDetailView: View {
         }
         .navigationTitle("예약 상세")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(isPresented: $showingChat) {
+            BookingChatView(bookingId: bookingId, otherName: detail?.counterpartName ?? "상대")
+        }
+        .task {
+            // 알림(?chat=)에서 들어오면 대화까지 바로 연다
+            if router.bookingChatRequest == bookingId {
+                router.bookingChatRequest = nil
+                showingChat = true
+            }
+        }
         // 밀기·꾹 누르기로만 되던 보관·삭제를 보이는 곳에도 (개선-26)
         .toolbar {
             if let detail, isFinished(detail) {
@@ -305,6 +321,45 @@ struct BookingDetailView: View {
             RoundedRectangle(cornerRadius: 14)
                 .strokeBorder(Theme.accent.opacity(0.35), lineWidth: 1)
         )
+    }
+
+    /// 예약 대화 칸 — 누르면 대화 화면, 안 읽은 메시지 수 표시 (1.8.0)
+    private func chatCard(_ detail: Detail) -> some View {
+        let unread = BookingChatUnread.shared.count(for: bookingId)
+        return Button {
+            showingChat = true
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "bubble.left.and.bubble.right")
+                    .font(.title3)
+                    .foregroundStyle(Theme.accent)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("대화")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Theme.primaryText)
+                    Text(role == .host ? "장소·준비물을 \(detail.counterpartName)님에게 알려 주세요" : "호스트에게 궁금한 점을 물어보세요")
+                        .font(.caption)
+                        .foregroundStyle(Theme.secondaryText)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 8)
+                if unread > 0 {
+                    Text("\(unread)")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 7).padding(.vertical, 2)
+                        .background(.red, in: Capsule())
+                        .accessibilityLabel("안 읽은 메시지 \(unread)개")
+                }
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Theme.secondaryText)
+            }
+            .padding(14)
+            .background(Theme.surface, in: RoundedRectangle(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("bookingChatCard")
     }
 
     @ViewBuilder

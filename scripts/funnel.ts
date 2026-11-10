@@ -4,6 +4,7 @@
  * 호스트 이름은 출력하지 않고 H1~Hn(기간 합계 많은 순)으로만 보인다. 기본은 내부 계정 제외.
  * 저장된 값은 날짜·호스트·예약 링크·단계·출처별 횟수뿐 — 사람을 알아볼 값은 없다.
  * 공유 카드(?via=card)로 들어온 방문은 booking_funnel_via_daily 에 따로 센다(위 합계에 포함된 일부, 1.7.0).
+ * 웹 방문의 출처 범주(인스타·카카오·검색 등)는 booking_funnel_ref_daily(1.8.0, 범주 도입 뒤부터).
  */
 import { getAdminClient } from "@/lib/supabase";
 
@@ -94,5 +95,46 @@ function summarize(title: string, rows: Row[], byHost: boolean) {
     }
   }
 
+  // 출처 범주별 (1.8.0, 웹 방문만) — 리퍼러 도메인·앱 안 브라우저로 정한 범주의 횟수뿐
+  {
+    const { data: refRows, error: refErr } = await db
+      .from("booking_funnel_ref_daily")
+      .select("day, host_id, step, ref, count")
+      .gte("day", since);
+    if (refErr) {
+      console.log(`\n■ 출처 범주별: 읽지 못함(${refErr.message})`);
+    } else {
+      let rr = (refRows ?? []) as Array<{ day: string; host_id: string; step: string; ref: string; count: number }>;
+      if (!includeInternal) {
+        const { data: internal } = await db.from("users").select("id").in("username", INTERNAL);
+        const ids = new Set((internal ?? []).map((r) => r.id as string));
+        rr = rr.filter((r) => !ids.has(r.host_id));
+      }
+      const REFS = ["instagram", "kakao", "threads", "x", "youtube", "search", "orbit42", "direct", "other"];
+      const NAME: Record<string, string> = { instagram: "인스타", kakao: "카카오", threads: "스레드", x: "X", youtube: "유튜브", search: "검색", orbit42: "오르빗 안", direct: "직접", other: "그 밖" };
+      const n = (ref: string, step: string, from: string) =>
+        rr.filter((r) => r.ref === ref && r.step === step && r.day >= from).reduce((x, r) => x + r.count, 0);
+      for (const [title, from] of [["7일", kstDay(6)], ["30일", since]] as const) {
+        console.log(`\n■ 출처별 ${title} (웹, ① 링크 열람 · ② 예약 링크 열람 · ③ 시간 고름 · ④ 예약)`);
+        for (const ref of REFS) {
+          const c = STEPS.map((st) => n(ref, st, from));
+          if (c.every((x) => x === 0)) continue;
+          console.log(`  ${NAME[ref].padEnd(6)} ${c.join(" → ")}`);
+        }
+        if (REFS.every((ref) => STEPS.every((st) => n(ref, st, from) === 0))) console.log("  (아직 없음)");
+      }
+    }
+  }
+
   console.log(`\n■ 앱 둘러보기  7일: 시작 ${b("start", kstDay(6))} → 가입 ${b("signup", kstDay(6))} · 30일: 시작 ${b("start", since)} → 가입 ${b("signup", since)}`);
+  // 둘러보기 안 단계 (1.8.0) — 7일 합계. 탭은 한 둘러보기에서 첫 진입만, 시트는 연 동작별·고른 것별
+  {
+    const { data: steps } = await db.from("app_browse_step_daily").select("day, step, count").gte("day", kstDay(6));
+    const st = (k: string) => (steps ?? []).filter((r) => r.step === k).reduce((x, r) => x + (r.count as number), 0);
+    console.log(
+      `  둘러보기 안(7일): 탭 캘린더 ${st("tab_calendar")}·예약 ${st("tab_bookings")}·오르빗 ${st("tab_orbit")}·리포트 ${st("tab_asset")}·프로필 ${st("tab_profile")}` +
+        ` | 가입 시트 열림 일정 ${st("prompt_event")}·링크 ${st("prompt_link")}·예약 ${st("prompt_booking")}·그 밖 ${st("prompt_other")}` +
+        ` → 가입 ${st("sheet_signup")}·로그인 ${st("sheet_login")}·닫음 ${st("sheet_close")} | 띠의 가입하기 ${st("banner_signup")}`,
+    );
+  }
 })();

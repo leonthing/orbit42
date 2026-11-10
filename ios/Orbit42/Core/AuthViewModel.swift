@@ -181,6 +181,8 @@ final class AuthViewModel {
 
     func logout() {
         if BrowseMode.shared.active { BrowseMode.shared.end(toSignup: nil) }
+        // 앱 푸시 기기 토큰을 서버에서 먼저 지운다(로그인 토큰이 아직 있을 때)
+        PushNotifications.shared.unregisterBeforeLogout()
         KeychainStore.deleteToken()
         WidgetBridge.reload()
         user = nil

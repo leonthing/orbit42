@@ -11,7 +11,7 @@ private struct PutServerErrorBody: Decodable {
 extension APIClient {
     func put<Body: Encodable, Response: Decodable>(_ path: String, body: Body) async throws -> Response {
         if BrowseGate.isOn {
-            APIClient.promptSignup()
+            APIClient.promptSignup(trigger: APIClient.browseTrigger(path: path, method: "PUT"))
             throw APIError.browsing
         }
         var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)!

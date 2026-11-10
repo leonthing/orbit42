@@ -74,7 +74,8 @@ final class APIClient {
 
     #if DEBUG
     #if targetEnvironment(simulator)
-    let baseURL = URL(string: "http://localhost:3000")!
+    // UI 테스트에서 다른 포트의 로컬 서버를 쓸 때: API_BASE=http://localhost:3008 (3000을 다른 프로젝트가 쓰는 경우)
+    let baseURL = URL(string: ProcessInfo.processInfo.environment["API_BASE"] ?? "http://localhost:3000")!
     #else
     // 실기기 DEBUG: 프로덕션 직결 (v1 API 배포 완료).
     // 로컬 서버 테스트가 필요하면 Cloudflare 터널 URL로 임시 교체:
@@ -106,6 +107,15 @@ final class APIClient {
     func fireAndForget<Body: Encodable>(_ path: String, body: Body) {
         if BrowseGate.isOn { return }
         var request = request(path: path, method: "POST")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try? JSONEncoder().encode(body)
+        session.dataTask(with: request).resume()
+    }
+
+    /// 본문이 있는 DELETE를 기다리지 않고 보낸다 — 로그아웃 때 기기 토큰 지우기(로그인 토큰을 지우기 전에 요청을 만든다)
+    func fireAndForgetDelete<Body: Encodable>(_ path: String, body: Body) {
+        if BrowseGate.isOn { return }
+        var request = request(path: path, method: "DELETE")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try? JSONEncoder().encode(body)
         session.dataTask(with: request).resume()
@@ -211,7 +221,7 @@ final class APIClient {
         let startsAction = path.hasPrefix("/api/v1/google/connect-url")
         guard request.httpMethod == "GET", !startsAction else {
             // 화면이 열릴 때 저절로 보내는 것(사용자가 누른 게 아님)은 시트 없이 건너뛴다
-            if !Self.browseBackgroundWrites.contains(path) { Self.promptSignup() }
+            if !Self.browseBackgroundWrites.contains(path) { Self.promptSignup(trigger: Self.browseTrigger(path: path, method: request.httpMethod ?? "")) }
             throw APIError.browsing
         }
         guard let data = BrowseFixtures.json(for: path + query) else {
@@ -233,7 +243,16 @@ final class APIClient {
     /// 둘러보기 중 저절로 나가는 쓰기 — 가입 안내 없이 막기만 한다
     private static let browseBackgroundWrites: Set<String> = ["/api/v1/people/sync"]
 
-    static func promptSignup() {
-        Task { @MainActor in BrowseMode.shared.promptSignup() }
+    static func promptSignup(trigger: String = "other") {
+        Task { @MainActor in BrowseMode.shared.promptSignup(trigger: trigger) }
+    }
+
+    /// 가입 시트를 연 동작 분류 (1.8.0 집계) — 일정 저장·끌기 / 예약 링크 / 예약하기 / 그 밖
+    static func browseTrigger(path: String, method: String) -> String {
+        if path.hasPrefix("/api/v1/calendar/events") || path.hasPrefix("/api/v1/events") { return "event" }
+        if path.hasPrefix("/api/v1/users/"), path.contains("/slots/"), method == "POST" { return "booking" }
+        if path.hasPrefix("/api/v1/bookings") { return "booking" }
+        if path.hasPrefix("/api/v1/slots") { return "link" }
+        return "other"
     }
 }

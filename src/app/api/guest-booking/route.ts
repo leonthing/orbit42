@@ -19,11 +19,13 @@ export const dynamic = "force-dynamic";
  * - 잘못된 토큰은 IP당 15분에 20번까지(넘으면 429), 전체 요청은 IP당 15분에 120번까지.
  * - 만료(예약 끝 + 7일)·취소·완료된 예약은 조회만.
  * - 입금 대기 예약은 결제 안내까지만 보인다(확정·입금 처리는 호스트만).
+ * - 예약 대화(1.8.0): messages(읽기 + 읽음 처리) · send_message { text } · report_message { messageId, reason? }.
+ *   토큰이 이 예약 하나의 것이라 다른 예약 대화는 볼 수 없다. 쓰기는 예약 끝 + 7일까지(만료와 같음).
  */
 const MISS_LIMIT = 20;
 const WINDOW_MS = 15 * 60_000;
 
-type Body = { token?: unknown; action?: unknown; confirm?: unknown; startAt?: unknown; availabilityId?: unknown; on?: unknown };
+type Body = { token?: unknown; action?: unknown; confirm?: unknown; startAt?: unknown; availabilityId?: unknown; on?: unknown; text?: unknown; messageId?: unknown; reason?: unknown };
 
 const json = (data: unknown, status = 200) =>
   Response.json(data, { status, headers: { "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" } });
@@ -121,6 +123,33 @@ export async function POST(request: Request) {
       return json({ error: "알림 설정을 바꾸지 못했어요. 잠시 후 다시 시도해 주세요." }, 500);
     }
     return json({ ok: true, remindersOn: body.on });
+  }
+
+  if (action === "messages" || action === "send_message" || action === "report_message") {
+    const chat = await import("@/lib/booking-chat");
+    const cb = await chat.loadChatBooking(b.id as string);
+    if (!cb) return notFound();
+    // 계정이 있는 게스트가 관리 링크로 들어와도 같은 게스트 역할(보낸 사람은 그 계정)
+    const senderId = (b.guest_id as string | null) ?? null;
+    if (action === "send_message") {
+      const res = await chat.sendChatMessage({ booking: cb, role: "guest", senderId, body: typeof body.text === "string" ? body.text : "" });
+      if ("error" in res) return json({ error: res.error }, res.status ?? 400);
+      return json({ ok: true, message: res.message });
+    }
+    if (action === "report_message") {
+      if (typeof body.messageId !== "string") return json({ error: "잘못된 요청이에요." }, 400);
+      const res = await chat.reportChatMessage({
+        booking: cb,
+        role: "guest",
+        reporterId: senderId,
+        messageId: body.messageId,
+        reason: typeof body.reason === "string" ? body.reason : null,
+      });
+      if ("error" in res) return json({ error: res.error }, 400);
+      return json({ ok: true });
+    }
+    const data = await chat.getChat(cb, "guest", { viewerUserId: senderId });
+    return json({ messages: data.messages, state: data.state, hostLabel: data.hostLabel });
   }
 
   if (action === "options") {

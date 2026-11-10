@@ -8,6 +8,8 @@ struct NotificationPref: Decodable, Identifiable, Sendable {
     let label: String
     let inApp: Bool
     let email: Bool
+    /// 앱 푸시 — 푸시를 보내는 유형(예약 대화)만 값이 있다. 없으면 스위치를 그리지 않는다.
+    var push: Bool? = nil
 
     var id: String { type }
 }
@@ -20,7 +22,7 @@ struct NotificationPrefsResponse: Decodable {
 /// `PATCH /api/v1/notification-prefs` — 토글 하나 변경.
 struct NotificationPrefPatchRequest: Encodable {
     let type: String
-    /// "inApp" | "email"
+    /// "inApp" | "email" | "push"
     let channel: String
     let enabled: Bool
 }

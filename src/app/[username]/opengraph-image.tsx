@@ -48,14 +48,14 @@ export default async function Image({
 
   const [stats, slots] = profile
     ? await Promise.all([
-        getFollowStats(username).catch(() => ({ followers: 0, following: 0 })),
+        getFollowStats(username, { viewer: null }).catch(() => ({ followers: 0, following: 0 })),
         listPublicSlotsByUsername(username).catch(() => []),
       ])
     : [{ followers: 0, following: 0 }, [] as unknown[]];
 
   const statChips: { label: string; value: string }[] = [];
   if (stats.followers > 0)
-    statChips.push({ label: "orbiters", value: String(stats.followers) });
+    statChips.push({ label: "팔로워", value: String(stats.followers) });
   if (slots.length > 0)
     statChips.push({ label: "예약 링크", value: String(slots.length) });
 

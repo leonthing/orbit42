@@ -56,6 +56,13 @@ export async function adminDeleteUser(userId: string) {
     await notifyGuestsBeforeHostLeaves(userId);
   }
 
+  // 예약 대화도 함께 지운다 (1.8.0)
+  try {
+    const { deleteChatsForUser } = await import("@/lib/booking-chat");
+    await deleteChatsForUser(userId);
+  } catch (err) {
+    console.error("admin delete chats", err);
+  }
   const { error } = await db.from("users").delete().eq("id", userId);
   if (error) {
     console.error("adminDeleteUser", error);

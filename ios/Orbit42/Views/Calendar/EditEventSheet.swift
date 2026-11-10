@@ -29,6 +29,8 @@ struct EditEventSheet: View {
     @State private var importance: EventImportance
     /// 일정별 알림 시점 — nil 은 설정의 기본값
     @State private var reminderMinutes: Int?
+    /// 이 일정으로 번 돈(원) — 비우면 기록 해제. 반복 회차는 그 회차 id 로 저장(상세와 같음).
+    @State private var earningText: String
     /// 참석자가 있는 구글 일정의 시간을 바꿀 때 — 확인을 누르면 구글이 참석자에게 변경 메일을 보낸다
     @State private var pendingNotifyBody: UpdateEventRequest?
     /// 반복(1.5.1) — 시리즈 정보를 읽어 채운다. 원래 규칙과 비교해 바뀌었을 때만 보낸다.
@@ -93,6 +95,7 @@ struct EditEventSheet: View {
         _selectedCalendarId = State(initialValue: event.calendarId)
         _importance = State(initialValue: viewModel.current(event).importance)
         _reminderMinutes = State(initialValue: viewModel.current(event).reminderMinutes)
+        _earningText = State(initialValue: EarningField.text(for: viewModel.current(event).earningKrw))
         _locationText = State(initialValue: event.location ?? "")
         _locationLat = State(initialValue: event.locationLat)
         _locationLng = State(initialValue: event.locationLng)
@@ -176,6 +179,10 @@ struct EditEventSheet: View {
                     )
                 }
                 .listRowBackground(Theme.surface)
+
+                if !event.isInvite {
+                    EarningField(text: $earningText)
+                }
 
                 if canEditRepeat {
                     RepeatSection(
@@ -447,8 +454,13 @@ struct EditEventSheet: View {
         return on ? "기본값 (\(settings.defaultReminder.label))" : "기본값 (알리지 않음)"
     }
 
+    /// 중요도·알림·금액 — 일정 수정과 따로 저장하는 값
     private var importanceChanged: Bool {
-        importance != viewModel.current(event).importance || reminderChanged
+        importance != viewModel.current(event).importance || reminderChanged || earningChanged
+    }
+
+    private var earningChanged: Bool {
+        !event.isInvite && EarningField.parse(earningText) != viewModel.current(event).earningKrw
     }
 
     private var reminderChanged: Bool {
@@ -463,6 +475,9 @@ struct EditEventSheet: View {
         if reminderChanged {
             try await viewModel.setReminder(event, minutes: reminderMinutes)
         }
+        if earningChanged {
+            try await viewModel.setEventEarning(event, amountKrw: EarningField.parse(earningText))
+        }
     }
 
     /// 중요도만 바뀐 수정 — 일정은 그대로 두고 주석만 저장한다
@@ -475,7 +490,7 @@ struct EditEventSheet: View {
                 dismiss()
                 onSaved()
             } catch {
-                errorMessage = "중요도·알림을 저장하지 못했어요. 잠시 후 다시 시도해 주세요."
+                errorMessage = "중요도·알림·금액을 저장하지 못했어요. 잠시 후 다시 시도해 주세요."
             }
         }
     }

@@ -7,6 +7,7 @@ import { Avatar } from "@/components/Avatar";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
 import { SITE } from "@/lib/constants";
 import { EmptyState } from "@/components/EmptyState";
+import { visibleConnections } from "@/lib/demo-visibility";
 
 export const dynamic = "force-dynamic";
 
@@ -18,8 +19,8 @@ export async function generateMetadata({
   const profile = await getProfile(params.username);
   return {
     title: profile
-      ? `${profile.display_name || profile.username} · Orbiters`
-      : "Orbiters",
+      ? `${profile.display_name || profile.username} · 팔로워`
+      : "팔로워",
   };
 }
 
@@ -31,17 +32,19 @@ export default async function FollowersPage({
   const profile = await getProfile(params.username);
   if (!profile) notFound();
 
-  const [followers, session] = await Promise.all([
+  const [rows, session] = await Promise.all([
     listFollowers(params.username),
     getSession(),
   ]);
+  // 남이 볼 때는 비공개 사용자·데모 계정(내부 계정 제외, 개선-33)을 뺀다 — 위 숫자도 이 목록 기준
+  const followers = visibleConnections(rows, params.username, session?.username);
   const isOwner = session?.username === params.username;
 
   return (
     <PeopleList
       username={params.username}
       displayName={profile.display_name || profile.username}
-      title="Orbiters"
+      title="팔로워"
       hint="내 궤도를 따르는 사람들"
       people={followers}
       emptyBody={

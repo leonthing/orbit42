@@ -29,11 +29,22 @@ final class BrowseMode {
     }
 
     private weak var promptController: UIViewController?
+    /// 이번 둘러보기에서 이미 센 탭 — 탭마다 첫 진입만 센다 (1.8.0)
+    private var seenTabs: Set<String> = []
+    private var promptDelegate: PromptDismissWatcher?
 
     func start() {
         BrowseGate.isOn = true
         active = true
+        seenTabs = []
         Self.report("start")
+    }
+
+    /// 탭 첫 진입 (1.8.0) — tab: calendar·bookings·orbit·asset·profile
+    func noteTab(_ tab: String) {
+        guard active, !seenTabs.contains(tab) else { return }
+        seenTabs.insert(tab)
+        Self.report("tab_\(tab)")
     }
 
     /// 둘러보기를 끝낸다 — signup: 가입 폼(true)·로그인 폼(false), nil 이면 그냥 끝냄
@@ -60,21 +71,26 @@ final class BrowseMode {
     }
 
     /// 저장하는 동작을 했을 때 — 맨 위 화면 위로 가입 안내 시트를 띄운다(열려 있는 시트 위에도 뜨게 UIKit 으로)
-    func promptSignup() {
+    func promptSignup(trigger: String = "other") {
         guard active, promptController == nil,
               let root = UIApplication.shared.connectedScenes
                 .compactMap({ ($0 as? UIWindowScene)?.keyWindow?.rootViewController }).first
         else { return }
         var top = root
         while let presented = top.presentedViewController, !presented.isBeingDismissed { top = presented }
+        Self.report("prompt_\(trigger)")
         let host = UIHostingController(rootView: BrowseSignupSheet(
-            onSignup: { [weak self] in self?.leave(toSignup: true) },
-            onLogin: { [weak self] in self?.leave(toSignup: false) },
-            onKeepBrowsing: { [weak self] in self?.dismissPrompt(animated: true) }
+            onSignup: { [weak self] in Self.report("sheet_signup"); self?.leave(toSignup: true) },
+            onLogin: { [weak self] in Self.report("sheet_login"); self?.leave(toSignup: false) },
+            onKeepBrowsing: { [weak self] in Self.report("sheet_close"); self?.dismissPrompt(animated: true) }
         ))
         if let sheet = host.sheetPresentationController {
             sheet.detents = [.medium()]
             sheet.prefersGrabberVisible = true
+            // 아래로 밀어 닫아도 '닫음'으로 센다
+            let watcher = PromptDismissWatcher { Self.report("sheet_close") }
+            promptDelegate = watcher
+            sheet.delegate = watcher
         }
         promptController = host
         top.present(host, animated: true)
@@ -112,8 +128,19 @@ final class BrowseMode {
         promptController = nil
     }
 
+    /// 집계를 보내도 되는 빌드인지 — 개발(DEBUG: 시뮬레이터·UI 테스트)과 TestFlight 는 보내지 않는다 (1.8.0).
+    /// 시뮬레이터는 로컬 서버로 보내는데 로컬 서버가 운영 DB 를 써서 테스트가 운영 집계에 섞였다(10/25 시작 15건 모두 내부).
+    static var reportsStats: Bool {
+        #if DEBUG
+        return ProcessInfo.processInfo.environment["BROWSE_STAT_TEST"] == "1"   // 집계 자체를 시험할 때만
+        #else
+        return Bundle.main.appStoreReceiptURL?.lastPathComponent != "sandboxReceipt"   // TestFlight 제외
+        #endif
+    }
+
     /// 익명 집계 — 날짜·단계별 횟수만. APIClient 를 거치지 않고(둘러보기 차단 밖) 응답도 기다리지 않는다.
-    private static func report(_ step: String) {
+    static func report(_ step: String) {
+        guard reportsStats else { return }
         var request = URLRequest(url: APIClient.shared.baseURL.appendingPathComponent("api/v1/browse-stat"))
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -196,6 +223,7 @@ struct BrowseBanner: View {
                 .opacity(0.85)
             Spacer()
             Button {
+                BrowseMode.report("banner_signup")
                 BrowseMode.shared.leave(toSignup: true)
             } label: {
                 Text("가입하기")
@@ -212,4 +240,11 @@ struct BrowseBanner: View {
         .padding(.vertical, 8)
         .background(Theme.accent)
     }
+}
+
+/// 가입 안내 시트를 아래로 밀어 닫았을 때 알림 (1.8.0 집계)
+final class PromptDismissWatcher: NSObject, UISheetPresentationControllerDelegate {
+    private let onDismiss: () -> Void
+    init(onDismiss: @escaping () -> Void) { self.onDismiss = onDismiss }
+    func presentationControllerDidDismiss(_ presentationController: UIPresentationController) { onDismiss() }
 }

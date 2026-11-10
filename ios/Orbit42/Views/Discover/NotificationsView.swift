@@ -31,6 +31,7 @@ struct AppNotification: Decodable, Identifiable, Sendable {
         case let t where t.hasPrefix("event_invite"): return "person.2"
         case "new_slot": return "clock.badge.checkmark"
         case "time_request": return "hand.raised"
+        case "booking_message": return "bubble.left.and.bubble.right"
         case let t where t.hasPrefix("booking"): return "calendar.badge.clock"
         default: return "bell"
         }
@@ -55,6 +56,12 @@ struct AppNotification: Decodable, Identifiable, Sendable {
             return .event(id: eventId, date: date)
         }
         if parts.last == "bookings", parts.count <= 2 {
+            // 예약 대화 알림(1.8.0): ?chat=<예약 id>, 내가 한 예약이면 tab=guest
+            let query = components.queryItems ?? []
+            if let chat = query.first(where: { $0.name == "chat" })?.value, !chat.isEmpty {
+                let guest = query.first(where: { $0.name == "tab" })?.value == "guest"
+                return .bookingChat(id: chat, role: guest ? .guest : .host)
+            }
             return .bookings
         }
         if parts.count == 1 {
@@ -71,6 +78,7 @@ struct AppNotification: Decodable, Identifiable, Sendable {
         case slot(username: String, slug: String)
         case event(id: String, date: Date)
         case bookings
+        case bookingChat(id: String, role: BookingRole)
     }
 
     /// 링크의 date 쿼리("2026-08-14")를 기기 시간대의 그날로 읽는다.
@@ -201,6 +209,12 @@ struct NotificationsView: View {
         case .bookings:
             NavigationLink { BookingsView(embedded: true) } label: { card }
                 .buttonStyle(.plain)
+        case .bookingChat(let id, let role):
+            // 예약 탭으로 옮겨 그 예약 상세 → 대화를 연다
+            Button {
+                router.openBookingChat(id: id, role: role)
+            } label: { card }
+            .buttonStyle(.plain)
         case .event(let id, let date):
             // 일정은 캘린더 탭에 있어서 push 가 아니라 탭 전환으로 보낸다.
             Button {

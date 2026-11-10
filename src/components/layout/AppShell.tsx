@@ -34,7 +34,15 @@ export async function AppShell({
   // 예약 메뉴 옆 숫자 — 앱 예약 탭 배지와 같은 셈 (개선-30)
   const viewerId = (wsRow as { id?: string } | null)?.id;
   const { bookingsNeedingReplyCount } = await import("@/lib/booking-badge");
-  const bookingsBadge = viewerId ? await bookingsNeedingReplyCount(viewerId).catch(() => 0) : 0;
+  // + 안 읽은 예약 대화가 있는 예약 수 (1.8.0)
+  const { unreadChatThreadCount } = await import("@/lib/booking-chat");
+  const [needReply, unreadChats] = viewerId
+    ? await Promise.all([
+        bookingsNeedingReplyCount(viewerId).catch(() => 0),
+        unreadChatThreadCount(viewerId).catch(() => 0),
+      ])
+    : [0, 0];
+  const bookingsBadge = needReply + unreadChats;
 
   return (
     <MobileMenuProvider>

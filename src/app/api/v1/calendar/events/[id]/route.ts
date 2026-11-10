@@ -1,3 +1,4 @@
+import { deleteEarningsForEvents } from "@/lib/event-earnings-cleanup";
 import { apiSession, apiUserId } from "@/lib/api-auth";
 import { getAdminClient } from "@/lib/supabase";
 import {
@@ -349,7 +350,8 @@ export async function DELETE(
         if (!cal) {
           return Response.json({ error: "Google 캘린더 연결이 필요해요." }, { status: 400 });
         }
-        await deleteGoogleSeries(cal, gcalId, params.id.slice("gcal_".length));
+        const masterId = await deleteGoogleSeries(cal, gcalId, params.id.slice("gcal_".length));
+        await deleteEarningsForEvents(userId, { googleMasterId: masterId });
         return Response.json({ ok: true });
       }
       const result = await deleteGoogleEvent(

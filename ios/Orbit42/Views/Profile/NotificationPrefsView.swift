@@ -77,6 +77,26 @@ struct NotificationPrefsView: View {
 
     private func prefList(_ prefs: [NotificationPref]) -> some View {
         List {
+            let pushPrefs = prefs.filter { $0.push != nil }
+            if !pushPrefs.isEmpty {
+                Section {
+                    ForEach(pushPrefs) { pref in
+                        Toggle(isOn: channelBinding(pref, channel: "push")) {
+                            Text("\(pref.label) 새 메시지")
+                                .font(.subheadline)
+                                .foregroundStyle(Theme.primaryText)
+                        }
+                        .tint(Theme.accent)
+                        .accessibilityIdentifier("pushToggle-\(pref.type)")
+                    }
+                } header: {
+                    Text("앱 푸시")
+                } footer: {
+                    Text("잠금 화면에는 \"새 메시지가 있어요\"만 보여요. 끄면 메일로 알려 드려요. 기기 설정에서 알림을 끄면 오지 않아요.")
+                        .foregroundStyle(Theme.secondaryText)
+                }
+                .listRowBackground(Theme.surface)
+            }
             Section {
                 ForEach(prefs) { pref in
                     prefRow(pref)
@@ -133,7 +153,11 @@ struct NotificationPrefsView: View {
         Binding(
             get: {
                 let current = viewModel.prefs?.first { $0.type == pref.type }
-                return channel == "inApp" ? (current?.inApp ?? pref.inApp) : (current?.email ?? pref.email)
+                switch channel {
+                case "inApp": return current?.inApp ?? pref.inApp
+                case "push": return current?.push ?? pref.push ?? true
+                default: return current?.email ?? pref.email
+                }
             },
             set: { newValue in
                 Task {

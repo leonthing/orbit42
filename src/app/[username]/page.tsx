@@ -28,6 +28,7 @@ import { ComingUpCard } from "./ComingUpCard";
 import { InsightsCard } from "./InsightsCard";
 import { ProfileCalendarCards } from "./ProfileCalendarCards";
 import { PublicLinkProfile } from "./PublicLinkProfile";
+import { displayCustomLinks } from "@/lib/custom-links";
 import { ProfileTabs } from "./ProfileTabs";
 import { MobileProfileLinks } from "./MobileProfileLinks";
 import { ShareMenu } from "@/components/ShareMenu";
@@ -51,7 +52,7 @@ export async function generateMetadata({
   params: { username: string };
 }): Promise<Metadata> {
   const profile = await getProfile(params.username);
-  if (!profile) return { title: "Not found" };
+  if (!profile) return { title: "찾을 수 없음" };
   const name = profile.display_name || profile.username;
   const title = name;
   const description = profile.bio || `${name}'s orbit on Orbit42`;
@@ -87,7 +88,7 @@ export default async function PublicProfile({
   const [session, stats, viewerFollowing, slots, value, viewerBlocked] =
     await Promise.all([
       getSession(),
-      getFollowStats(params.username),
+      getSession().then((s) => getFollowStats(params.username, { viewer: s?.username ?? null })),
       isFollowing(params.username),
       listPublicSlotsByUsername(params.username),
       getValueStats(params.username),
@@ -238,6 +239,7 @@ export default async function PublicProfile({
           rating={hostRating}
           totalBookings={value?.total_bookings ?? 0}
           themeKey={(profile.link_theme as string | null) ?? null}
+          customLinks={displayCustomLinks((profile as { custom_links?: unknown }).custom_links)}
         />
       </>
     );
@@ -268,14 +270,14 @@ export default async function PublicProfile({
                 className="hover:text-charcoal-200"
               >
                 <strong className="text-charcoal-100">{stats.followers}</strong>{" "}
-                <span className="text-charcoal-500">orbiters</span>
+                <span className="text-charcoal-500">팔로워</span>
               </Link>
               <Link
                 href={`/${params.username}/following`}
                 className="hover:text-charcoal-200"
               >
                 <strong className="text-charcoal-100">{stats.following}</strong>{" "}
-                <span className="text-charcoal-500">orbiting</span>
+                <span className="text-charcoal-500">팔로잉</span>
               </Link>
               {totalSlotWindows > 0 && (
                 <span>

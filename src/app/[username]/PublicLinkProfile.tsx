@@ -3,6 +3,7 @@ import { AppStoreAwareLink } from "@/components/AppStoreAwareLink";
 import { FollowButton } from "./FollowButton";
 import type { SocialLinks } from "@/lib/auth";
 import { resolveLinkTheme } from "@/lib/link-themes";
+import type { CustomLink } from "@/lib/custom-links";
 
 /**
  * 링크트리형 공개 프로필 — SNS 바이오에 걸어두는 "얼굴" 화면.
@@ -93,6 +94,7 @@ export function PublicLinkProfile({
   rating,
   totalBookings,
   themeKey,
+  customLinks = [],
 }: {
   username: string;
   displayName: string;
@@ -108,6 +110,8 @@ export function PublicLinkProfile({
   rating: { average: number; count: number } | null;
   totalBookings: number;
   themeKey: string | null;
+  /** 호스트가 고른 직접 링크 (개선-46) — 이미 http/https 만 걸러져 온다 */
+  customLinks?: CustomLink[];
 }) {
   const theme = resolveLinkTheme(themeKey);
   const socials = Object.entries(SOCIAL_META)
@@ -274,6 +278,25 @@ export function PublicLinkProfile({
             >
               아직 열어둔 시간이 없어요.
             </p>
+          )}
+
+          {/* 호스트가 고른 직접 링크 (개선-46) — 예약 링크 아래 버튼 줄, 새 탭 */}
+          {customLinks.length > 0 && (
+            <div className="space-y-2 pt-1" data-testid="custom-links">
+              {customLinks.map((l, i) => (
+                <a
+                  key={`${i}-${l.url}`}
+                  href={l.url}
+                  target="_blank"
+                  rel="noopener noreferrer nofollow"
+                  className="flex items-center justify-center gap-2 rounded-xl border px-5 py-3.5 text-sm font-semibold transition-transform hover:-translate-y-0.5"
+                  style={cardStyle}
+                >
+                  <span className="truncate">{l.title}</span>
+                  <span aria-hidden style={{ color: theme.muted }}>↗</span>
+                </a>
+              ))}
+            </div>
           )}
 
           {/* 맞는 시간이 없을 때 — 조율은 앱 안에서 */}

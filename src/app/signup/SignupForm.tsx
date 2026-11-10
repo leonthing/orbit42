@@ -135,7 +135,7 @@ export function SignupForm({ initialRef }: { initialRef: string }) {
                 .replace(/[^a-z0-9_-]/g, ""),
             )
           }
-          placeholder="추천인 @username (선택)"
+          placeholder="추천인 아이디 (선택)"
           maxLength={32}
           className={input}
         />

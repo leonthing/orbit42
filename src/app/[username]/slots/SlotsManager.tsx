@@ -284,8 +284,9 @@ function NewSlotForm({
   const [minNotice, setMinNotice] = useState(4);
   const [maxAdvance, setMaxAdvance] = useState(30);
   const [buffer, setBuffer] = useState(0);
+  const confirm = useConfirm();
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return toast.error("제목을 입력하세요.");
     if (pricingModel === "auction") {
@@ -296,6 +297,17 @@ function NewSlotForm({
       const slotTime = new Date(windows[0]);
       if (ends >= slotTime)
         return toast.error("경매 종료 시간은 예약 시간보다 앞이어야 해요.");
+    }
+    // 유료인데 결제 안내가 비어 있으면 한 번 묻는다 — 서버는 이런 예약을 '승인 대기'로 받는다 (개선-38)
+    if (pricingModel !== "auction" && price > 0 && !hasPaymentInstructions) {
+      const ok = await confirm({
+        title: "결제 안내가 비어 있어요",
+        body: "결제 안내가 없으면 유료 예약은 자동으로 확정되지 않고 승인 대기로 들어와요. 게스트에게 입금 방법을 직접 안내한 뒤 수락해야 해요. 계좌나 송금 링크를 적어 두면 예약한 분께 입금 안내가 자동으로 가요.",
+        confirmLabel: "그대로 만들기",
+        cancelLabel: "돌아가기",
+      });
+      // 돌아가면 쓰던 내용은 그대로 — 가격 칸 아래 '결제 안내 설정' 링크로 적을 수 있다
+      if (!ok) return;
     }
     const [vFrom, vUntil] = resolveValidity(validPreset, validFrom, validUntil);
     startTransition(async () => {

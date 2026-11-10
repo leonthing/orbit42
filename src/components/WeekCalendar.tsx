@@ -486,7 +486,7 @@ function ItemBlock({
   const priceLabel = isAuction
     ? `₩${(topBid / 100).toLocaleString("ko-KR")}`
     : item.price_cents === 0
-      ? "FREE"
+      ? "무료"
       : `₩${(item.price_cents / 100).toLocaleString("ko-KR")}`;
   const auctionLabel = auctionEnded
     ? "경매 종료"

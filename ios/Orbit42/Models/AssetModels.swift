@@ -177,7 +177,79 @@ struct TimeAssetBusiness: Decodable {
     let monthManualKrw: Int
     let monthTotalKrw: Int
     let earnTrend: [MonthEarn]
+    /// 주·월·년 보기 (1.8.0 서버부터) — 없으면 월 보기만
+    let periods: Periods?
+    /// 급여 적립 (1.8.0 서버부터)
+    let salary: Salary?
     let funnel: TimeAssetFunnel?
+
+    /// 월 급여 ÷ 그 달 전체 시간으로 24시간 쌓인다. monthlyKrw 가 nil 이면 미설정·프리랜서
+    struct Salary: Decodable {
+        let monthlyKrw: Int?
+        let status: String
+        let asOf: String
+
+        /// asOf 뒤로 지금까지 더 쌓인 금액(이번 기간 실시간 표시용, 한국 시간 달 길이 기준)
+        func accruedSinceAsOf(now: Date) -> Double {
+            guard let monthlyKrw, let from = AssetFormat.parseISO(asOf) else { return 0 }
+            var cal = Calendar(identifier: .gregorian)
+            cal.timeZone = TimeZone(identifier: "Asia/Seoul")!
+            let days = cal.range(of: .day, in: .month, for: now)?.count ?? 30
+            let seconds = max(0, now.timeIntervalSince(from))
+            return Double(monthlyKrw) * seconds / Double(days * 86_400)
+        }
+    }
+
+    struct Periods: Decodable {
+        let week: PeriodStat
+        let month: PeriodStat
+        let year: PeriodStat
+
+        func stat(_ period: EarnPeriod) -> PeriodStat {
+            switch period {
+            case .week: week
+            case .month: month
+            case .year: year
+            }
+        }
+    }
+
+    /// key: 주 "YYYY-MM-DD"(월요일) · 월 "YYYY-MM" · 년 "YYYY"(막대는 "YYYY-MM")
+    struct PeriodStat: Decodable {
+        let current: String
+        let bookedKrw: Int
+        let manualKrw: Int
+        let salaryKrw: Int
+        let totalKrw: Int
+        let trend: [Bar]
+
+        struct Bar: Decodable, Identifiable {
+            let key: String
+            let krw: Int
+            let bookedKrw: Int
+            let manualKrw: Int
+            let salaryKrw: Int
+            /// 진행 중인 기간만 — 기간이 끝날 때 쌓일 급여 전체
+            var salaryExpectedKrw: Int? = nil
+            var id: String { key }
+            /// 막대 외곽선 높이에 쓸 금액 — 예약·기록 + 예상 급여 전체 (진행 중이 아니면 지금 금액)
+            var expectedKrw: Int {
+                guard let salaryExpectedKrw else { return krw }
+                return bookedKrw + manualKrw + max(salaryExpectedKrw, salaryKrw)
+            }
+        }
+    }
+
+    /// 화면에 그릴 한 보기 — 서버에 periods 가 없으면(옛 서버) 월 칸으로 만든다
+    func view(_ period: EarnPeriod) -> PeriodStat {
+        if let periods { return periods.stat(period) }
+        return PeriodStat(
+            current: monthLabel, bookedKrw: monthBookedKrw, manualKrw: monthManualKrw,
+            salaryKrw: 0, totalKrw: monthTotalKrw,
+            trend: earnTrend.map {
+                PeriodStat.Bar(key: $0.month, krw: $0.krw, bookedKrw: 0, manualKrw: $0.krw, salaryKrw: 0)
+            })
+    }
 
     struct MonthEarn: Decodable, Identifiable {
         let month: String
@@ -186,6 +258,34 @@ struct TimeAssetBusiness: Decodable {
         /// "7월"
         var shortLabel: String {
             month.split(separator: "-").last.map { "\(Int($0) ?? 0)월" } ?? month
+        }
+    }
+}
+
+/// 리포트 '번 돈' 카드 보기 (1.8.0)
+enum EarnPeriod: String, CaseIterable, Identifiable {
+    case week, month, year
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .week: "주"
+        case .month: "월"
+        case .year: "년"
+        }
+    }
+    var title: String {
+        switch self {
+        case .week: "이번 주 시간으로 번 돈"
+        case .month: "이번 달 시간으로 번 돈"
+        case .year: "올해 시간으로 번 돈"
+        }
+    }
+    /// 막대 아래 글자 — 주 "10/27", 월·년 "7월"
+    func barLabel(_ key: String) -> String {
+        let parts = key.split(separator: "-").compactMap { Int($0) }
+        switch self {
+        case .week where parts.count == 3: return "\(parts[1])/\(parts[2])"
+        default: return parts.count >= 2 ? "\(parts[1])월" : key
         }
     }
 }
@@ -253,6 +353,16 @@ struct TimeAssetAction: Decodable, Identifiable {
 
 /// 자산 탭 공용 숫자 포맷 — ₩ 통화(ko_KR)와 시간 표기.
 enum AssetFormat {
+    private static let isoFractional: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+    private static let isoPlain = ISO8601DateFormatter()
+    static func parseISO(_ s: String) -> Date? {
+        isoFractional.date(from: s) ?? isoPlain.date(from: s)
+    }
+
     private static let wonFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency

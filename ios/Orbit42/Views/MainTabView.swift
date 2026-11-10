@@ -22,6 +22,13 @@ final class TabRouter {
     var calendarDateRequest: Date?
     /// 예약 탭이 열어야 할 예약 상세 — 일정 상세의 "예약에서 관리", 소비 후 nil
     var bookingDetailRequest: BookingDetailTarget?
+    /// 예약 상세가 열리면 이어서 열 대화 (예약 id) — 알림 ?chat=, 소비 후 nil (1.8.0)
+    var bookingChatRequest: String?
+    /// 알림의 예약 대화 링크 → 예약 상세 → 대화
+    func openBookingChat(id: String, role: BookingRole) {
+        bookingChatRequest = id
+        openBooking(id: id, role: role)
+    }
     /// 예약 링크 구역에서 '새 예약 링크' 화면을 바로 연다 — 다음에 할 일 카드·받은 예약 빈 화면, 소비 후 false
     var newBookingLinkRequest = false
 
@@ -160,6 +167,13 @@ struct MainTabView: View {
             NotificationTapHandler.shared.router = router
             await pendingBookings.refresh()
             await EventReminders.shared.refresh()
+        }
+        // 둘러보기 안 탭 첫 진입 (1.8.0 집계) — 처음 보이는 탭도 센다
+        .onChange(of: router.selection, initial: true) { _, tab in
+            BrowseMode.shared.noteTab(tab.rawValue)
+        }
+        .onChange(of: BrowseMode.shared.active) { _, active in
+            if active { BrowseMode.shared.noteTab(router.selection.rawValue) }
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {

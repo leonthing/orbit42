@@ -90,7 +90,7 @@ export default async function SearchPage({
                     s.pricing_model === "auction"
                       ? `경매 · 시작가 ₩${((s.reserve_price_cents ?? 0) / 100).toLocaleString("ko-KR")}`
                       : s.price_cents === 0
-                        ? "FREE"
+                        ? "무료"
                         : `₩${(s.price_cents / 100).toLocaleString("ko-KR")}`;
                   return (
                     <li key={s.id}>

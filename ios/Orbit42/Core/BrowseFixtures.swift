@@ -61,6 +61,7 @@ enum BrowseFixtures {
         case ["location-buffers"]: template = #"{"buffers":[]}"#
         case ["calendars", "goals"]: template = #"{"goals":[]}"#
         case ["blocks"]: template = #"{"users":[]}"#
+        case ["me", "links"]: template = #"{"links":[{"title":"포트폴리오","url":"https://example.com/portfolio"},{"title":"카카오 오픈채팅","url":"https://open.kakao.com/o/example"},{"title":"블로그","url":"https://blog.example.com"}]}"#
         case ["reminders"]: template = #"{"reminders":[]}"#
         case ["timeline"]: template = timeline
         default:
@@ -234,6 +235,12 @@ enum BrowseFixtures {
             contact("browse-p3", "예시 동료", color: "#22C55E", ring: 2, days: 14, meetings: 3, hours: 4, last: "주간 회고", next: nil),
             contact("browse-p4", "예시 친구", color: "#F59E0B", ring: 3, days: 40, meetings: 1, hours: 1.5, last: "저녁 약속", next: nil),
         ]
+        #if DEBUG
+        // 촬영·테스트용(BROWSE_EMPTY_ORBIT=1) — 궤도가 빈 새 계정 모습 (개선-44)
+        if ProcessInfo.processInfo.environment["BROWSE_EMPTY_ORBIT"] == "1" {
+            return #"{"people":[],"followingOnly":[],"suggestions":[],"archived":[],"nudges":[],"importEnabled":false,"googleConnected":false,"syncedAt":null}"#
+        }
+        #endif
         return #"{"people":["# + list.joined(separator: ",") + #"],"followingOnly":[],"suggestions":[],"archived":[],"nudges":[],"importEnabled":false,"googleConnected":false,"syncedAt":null}"#
     }
 
@@ -297,8 +304,13 @@ enum BrowseFixtures {
         return #"{"items":["# + items.joined(separator: ",") + "]}"
     }
 
+    /// 추천은 아직 팔로우하지 않은 사람 — 실제 서버처럼 팔로우한 사람(people)과 겹치지 않게 (개선-44)
     private static var recommendations: String {
-        let list = people.map { p in
+        let others: [(username: String, name: String, interests: String)] = [
+            ("writer.example", "예시 작가", #"["글쓰기","브랜딩"]"#),
+            ("founder.example", "예시 창업가", #"["스타트업","커리어"]"#),
+        ]
+        let list = others.map { p in
             #"{"username":""# + p.username + #"","displayName":""# + p.name + #"","avatarUrl":null,"bio":null,"interests":"# + p.interests + #","overlapCount":1}"#
         }
         return #"{"users":["# + list.joined(separator: ",") + "]}"

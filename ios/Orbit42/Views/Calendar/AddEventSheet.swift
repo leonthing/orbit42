@@ -74,6 +74,9 @@ struct AddEventSheet: View {
     @State private var importance: EventImportance = .normal
     /// 반복(1.5.1) — 안 함이면 한 번짜리
     @State private var repeatRule = RepeatRule()
+    /// 이 일정으로 번 돈(원) — 비우면 기록 없음. 일정을 만든 뒤 그 id 로 저장한다.
+    @State private var earningText = ""
+    @State private var earningSaved = false
     /// 구글 캘린더에 저장하면서 참석자를 넣을 때 — 구글 초대 메일 확인
     @State private var confirmingGoogleInvite = false
 
@@ -154,6 +157,11 @@ struct AddEventSheet: View {
                 .listRowBackground(Theme.surface)
 
                 RepeatSection(rule: $repeatRule, start: start)
+
+                // 반복 일정은 회차마다 금액이 달라 만들 때는 받지 않는다(상세·수정에서 회차별로)
+                if !repeatRule.isRepeating {
+                    EarningField(text: $earningText)
+                }
 
                 if showMore {
                     EventLocationSection(
@@ -341,6 +349,17 @@ struct AddEventSheet: View {
                     // 일정 알림 권한은 첫 실행이 아니라 처음 일정을 만들 때 묻는다(이미 정했으면 묻지 않음)
                     if AppSettings.shared.notifyOrbitEvents || AppSettings.shared.notifyGoogleEvents {
                         await EventReminders.shared.requestAuthorizationIfNeeded()
+                    }
+                }
+
+                // 금액 — 일정은 이미 만들어졌으니 실패하면 이것만 다시 시도하게 한다
+                if !earningSaved, !repeatRule.isRepeating, let amount = EarningField.parse(earningText) {
+                    do {
+                        try await viewModel.setEventEarning(event, amountKrw: amount)
+                        earningSaved = true
+                    } catch {
+                        errorMessage = "일정은 저장했지만 금액을 저장하지 못했어요. 다시 시도해 주세요."
+                        return
                     }
                 }
 

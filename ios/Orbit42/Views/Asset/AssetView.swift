@@ -12,6 +12,8 @@ struct AssetView: View {
     @State private var showingBucketMapSheet = false
     /// 기본 4장 아래 나머지 카드 펼침 (개선-37)
     @State private var showingMore = false
+    /// '번 돈' 카드 주·월·년 — 다시 열어도 유지 (1.8.0)
+    @AppStorage("assetEarnPeriod") private var earnPeriodRaw = EarnPeriod.month.rawValue
 
     var body: some View {
         NavigationStack {
@@ -408,48 +410,177 @@ struct AssetView: View {
 
     // MARK: 1.0 시간 비즈니스 — 실제 번 돈
 
+    /// 세 갈래 색 — 앱에 이미 쓰는 색(강조 · 소비 · 생활 버킷)
+    static let bookedColor = Theme.accent
+    static let manualColor = Color(hexString: "#f59e0b") ?? .orange
+    static let salaryColor = Color(hexString: "#64748b") ?? .gray
+
     private func businessCard(_ business: TimeAssetBusiness) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("이번 달 시간으로 번 돈")
+        // 옛 서버(periods 없음)는 월 보기만, 세 갈래 없이 예전 모습
+        let period = business.periods == nil ? .month : (EarnPeriod(rawValue: earnPeriodRaw) ?? .month)
+        let stat = business.view(period)
+        let hasPeriods = business.periods != nil
+        return VStack(alignment: .leading, spacing: 10) {
+            if hasPeriods {
+                Picker("기간", selection: $earnPeriodRaw) {
+                    ForEach(EarnPeriod.allCases) { p in
+                        Text(p.label).tag(p.rawValue)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .accessibilityIdentifier("earnPeriodPicker")
+            }
+
+            Text(period.title)
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(Theme.secondaryText)
 
-            Text(AssetFormat.won(business.monthTotalKrw))
-                .font(.system(size: 30, weight: .bold))
-                .foregroundStyle(Theme.primaryText)
-                .monospacedDigit()
-
-            if business.monthTotalKrw > 0 {
-                Text("예약 링크 거래 \(AssetFormat.won(business.monthBookedKrw)) · 직접 기록 \(AssetFormat.won(business.monthManualKrw))")
-                    .font(.caption)
-                    .foregroundStyle(Theme.secondaryText)
+            if hasPeriods {
+                // 급여는 화면에 있는 동안 1초마다 조금씩 올라간다
+                SwiftUI.TimelineView(.periodic(from: .now, by: 1)) { context in
+                    let live = Int((business.salary?.accruedSinceAsOf(now: context.date) ?? 0).rounded())
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(AssetFormat.won(stat.totalKrw + live))
+                            .font(.system(size: 30, weight: .bold))
+                            .foregroundStyle(Theme.primaryText)
+                            .monospacedDigit()
+                            .contentTransition(.numericText())
+                            .accessibilityIdentifier("earnTotal")
+                        VStack(alignment: .leading, spacing: 4) {
+                            earnLine(Self.bookedColor, "Orbit 예약으로 번 돈", stat.bookedKrw)
+                            earnLine(Self.manualColor, "일정에 기록한 돈", stat.manualKrw)
+                            salaryLine(business.salary, amount: stat.salaryKrw + live)
+                        }
+                    }
+                }
             } else {
-                Text("예약 링크 판매와 일정 수익 기록이 여기에 쌓여요.")
-                    .font(.caption)
-                    .foregroundStyle(Theme.secondaryText)
+                Text(AssetFormat.won(stat.totalKrw))
+                    .font(.system(size: 30, weight: .bold))
+                    .foregroundStyle(Theme.primaryText)
+                    .monospacedDigit()
+                if stat.totalKrw > 0 {
+                    Text("예약 링크 거래 \(AssetFormat.won(stat.bookedKrw)) · 직접 기록 \(AssetFormat.won(stat.manualKrw))")
+                        .font(.caption)
+                        .foregroundStyle(Theme.secondaryText)
+                } else {
+                    Text("예약 링크 판매와 일정 수익 기록이 여기에 쌓여요.")
+                        .font(.caption)
+                        .foregroundStyle(Theme.secondaryText)
+                }
             }
 
-            // 6개월 실수입 미니 바 차트
-            let maxKrw = max(business.earnTrend.map(\.krw).max() ?? 0, 1)
-            HStack(alignment: .bottom, spacing: 8) {
-                ForEach(business.earnTrend) { entry in
+            // 미니 바 차트 — 세 갈래를 쌓는다. 0은 얇은 선, 0이 아니면 최소 높이로 작은 금액도 보이게
+            // 진행 중인 기간은 '예상 한 달(주)치' 외곽선까지 같은 눈금에 들어가게
+            let maxKrw = max(stat.trend.map(\.expectedKrw).max() ?? 0, 1)
+            HStack(alignment: .bottom, spacing: stat.trend.count > 8 ? 4 : 8) {
+                ForEach(stat.trend) { bar in
+                    let isCurrent = bar.key == stat.current || (period == .year && bar.key == business.monthLabel)
                     VStack(spacing: 4) {
-                        RoundedRectangle(cornerRadius: 3)
-                            .fill(entry.month == business.monthLabel ? Theme.accent : Theme.fill(0.15))
-                            .frame(height: max(4, 44 * CGFloat(entry.krw) / CGFloat(maxKrw)))
-                        Text(entry.shortLabel)
-                            .font(.system(size: 9))
-                            .foregroundStyle(Theme.secondaryText)
+                        stackedBar(bar, height: Self.barHeight(bar.krw, max: maxKrw), stacked: hasPeriods)
+                            .opacity(isCurrent ? 1 : 0.45)
+                            .frame(height: Self.barHeight(bar.expectedKrw, max: maxKrw), alignment: .bottom)
+                            .overlay {
+                                // 진행 중: 기간이 끝나면 쌓일 급여까지 흐린 점선 외곽선 (숫자는 쌓인 만큼만)
+                                if hasPeriods, bar.salaryExpectedKrw != nil, bar.expectedKrw > bar.krw {
+                                    RoundedRectangle(cornerRadius: 3)
+                                        .strokeBorder(Self.salaryColor.opacity(0.7), style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
+                                        .accessibilityIdentifier("expectedOutline")
+                                }
+                            }
+                        Text(period.barLabel(bar.key))
+                            .font(.system(size: 9, weight: isCurrent ? .semibold : .regular))
+                            .foregroundStyle(isCurrent ? Theme.primaryText : Theme.secondaryText)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
                     }
                     .frame(maxWidth: .infinity)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("\(period.barLabel(bar.key)) \(AssetFormat.won(bar.krw))")
                 }
             }
             .frame(height: 62)
             .padding(.top, 4)
+
+            // 점선 막대가 있을 때만 범례 한 줄
+            if hasPeriods, stat.trend.contains(where: { $0.salaryExpectedKrw != nil && $0.expectedKrw > $0.krw }) {
+                Text(period == .week ? "점선: 이번 주 끝까지 쌓일 급여" : "점선: 이번 달 끝까지 쌓일 급여")
+                    .font(.caption2)
+                    .foregroundStyle(Theme.secondaryText)
+                    .accessibilityIdentifier("expectedLegend")
+            }
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func earnLine(_ color: Color, _ label: String, _ krw: Int) -> some View {
+        HStack(spacing: 6) {
+            Circle().fill(color).frame(width: 7, height: 7)
+            Text(label)
+            Spacer(minLength: 8)
+            Text(AssetFormat.won(krw))
+                .monospacedDigit()
+                .foregroundStyle(Theme.primaryText)
+        }
+        .font(.caption)
+        .foregroundStyle(Theme.secondaryText)
+    }
+
+    @ViewBuilder
+    private func salaryLine(_ salary: TimeAssetBusiness.Salary?, amount: Int) -> some View {
+        if salary?.monthlyKrw != nil {
+            earnLine(Self.salaryColor, "급여로 쌓인 돈", amount)
+                .contentTransition(.numericText())
+        } else {
+            Button {
+                showingSettingsSheet = true
+            } label: {
+                HStack(spacing: 6) {
+                    Circle().fill(Self.salaryColor).frame(width: 7, height: 7)
+                    Text("급여로 쌓인 돈")
+                    Spacer(minLength: 8)
+                    Text(salary?.status == "freelance" ? "월급·시급을 설정하면 자동으로 쌓여요" : "급여 설정하면 자동으로 쌓여요")
+                        .foregroundStyle(Theme.accent)
+                    Image(systemName: "chevron.right").font(.caption2).foregroundStyle(Theme.accent)
+                }
+                .font(.caption)
+                .foregroundStyle(Theme.secondaryText)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("salarySetup")
+        }
+    }
+
+    /// 아래부터 급여 · 일정 기록 · Orbit 예약 순으로 쌓는다 (0인 갈래는 빠짐)
+    @ViewBuilder
+    private func stackedBar(_ bar: TimeAssetBusiness.PeriodStat.Bar, height: CGFloat, stacked: Bool) -> some View {
+        if !stacked || bar.krw <= 0 {
+            RoundedRectangle(cornerRadius: 3)
+                .fill(bar.krw > 0 ? Self.bookedColor : Theme.fill(0.15))
+                .frame(height: height)
+        } else {
+            let parts: [(Int, Color)] = [
+                (bar.bookedKrw, Self.bookedColor),
+                (bar.manualKrw, Self.manualColor),
+                (bar.salaryKrw, Self.salaryColor),
+            ].filter { $0.0 > 0 }
+            VStack(spacing: 1) {
+                ForEach(parts.indices, id: \.self) { i in
+                    Rectangle()
+                        .fill(parts[i].1)
+                        .frame(height: max(2, (height - CGFloat(parts.count - 1)) * CGFloat(parts[i].0) / CGFloat(bar.krw)))
+                }
+            }
+            .frame(height: height, alignment: .bottom)
+            .clipShape(RoundedRectangle(cornerRadius: 3))
+        }
+    }
+
+    /// 0 → 3pt 선, 0보다 크면 최소 12pt (가장 큰 막대 대비 아주 작아도 0과 구분), 최대 44pt
+    static func barHeight(_ krw: Int, max maxKrw: Int) -> CGFloat {
+        guard krw > 0 else { return 3 }
+        return Swift.max(12, 44 * CGFloat(krw) / CGFloat(Swift.max(maxKrw, 1)))
     }
 
     // MARK: 1.1 이번 주 판매 현황
