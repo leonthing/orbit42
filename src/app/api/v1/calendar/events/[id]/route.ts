@@ -274,7 +274,7 @@ export async function PATCH(
         if (!cal) {
           return Response.json({ error: "Google 캘린더 연결이 필요해요." }, { status: 400 });
         }
-        await patchGoogleSeries(cal, gcalId, params.id.slice("gcal_".length), seriesPatch, body.notifyAttendees === true);
+        await patchGoogleSeries(userId, cal, gcalId, params.id.slice("gcal_".length), seriesPatch, body.notifyAttendees === true);
         return Response.json({ ok: true });
       }
       const result = await updateGoogleEvent(

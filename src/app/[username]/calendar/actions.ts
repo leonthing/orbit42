@@ -237,27 +237,7 @@ export async function updateGoogleEvent(
   if (input.title !== undefined) body.summary = input.title;
   if (input.description !== undefined) body.description = input.description ?? "";
   if (input.location !== undefined) body.location = input.location ?? "";
-  if (
-    input.location_lat !== undefined ||
-    input.location_lng !== undefined ||
-    input.travel_min !== undefined
-  ) {
-    // 좌표·이동시간은 extendedProperties 로 왕복 — 해제 시 빈 문자열로 덮는다.
-    const privateProps: Record<string, string> = {};
-    if (input.location_lat !== undefined || input.location_lng !== undefined) {
-      privateProps.orbit42Lat =
-        input.location_lat != null ? String(input.location_lat) : "";
-      privateProps.orbit42Lng =
-        input.location_lng != null ? String(input.location_lng) : "";
-    }
-    if (input.travel_min !== undefined) {
-      privateProps.orbit42TravelMin =
-        input.travel_min != null && input.travel_min > 0
-          ? String(input.travel_min)
-          : "";
-    }
-    body.extendedProperties = { private: privateProps };
-  }
+  // 좌표·이동시간은 구글에 쓰지 않고 Orbit42(event_annotations)에만 — applyGoogleEdit 가 저장하고 구글의 예전 orbit42* 를 지운다
   if (input.start_at !== undefined && input.end_at !== undefined) {
     // 종일↔시간을 바꿀 때(all_day 를 보냈을 때)는 반대쪽 칸을 null 로 비운다 — 구글 patch 는 start/end 안의
     // 칸을 합쳐서 남기므로, 안 비우면 date 와 dateTime 이 같이 남아 "Invalid start time" 으로 거절된다(개선-34 실측).
@@ -272,11 +252,15 @@ export async function updateGoogleEvent(
     }
   }
   try {
-    await calendar.events.patch({
-      calendarId: gcalId,
-      eventId,
-      requestBody: body,
-      ...(notifyAttendees && { sendUpdates: "all" }),
+    const { applyGoogleEdit, metaPatchFrom } = await import("@/lib/google-event-meta");
+    await applyGoogleEdit({
+      userId,
+      client: calendar,
+      gcalId,
+      googleEventId: eventId,
+      body,
+      meta: metaPatchFrom(input),
+      ...(notifyAttendees && { sendUpdates: "all" as const }),
     });
     // 참석자 행은 클라이언트 원형 id(`gcal_*`)로 붙어 있다.
     await syncParticipantSnapshots(

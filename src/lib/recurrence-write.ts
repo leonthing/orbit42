@@ -21,6 +21,17 @@ import {
 } from "@/lib/recurrence";
 import { inclusiveAllDayEndToGoogle, googleAllDayEndToInclusive, migrateEventKeys } from "@/lib/calendar-events";
 import type { calendar_v3 } from "googleapis";
+import {
+  clearGoogleMetaForKeys,
+  getGoogleMeta,
+  googleSeriesMetaKeys,
+  legacyClearPatch,
+  legacyMeta,
+  metaPatchFrom,
+  resolveGoogleMeta,
+  setGoogleMeta,
+  type GoogleMetaPatch,
+} from "@/lib/google-event-meta";
 
 export type Scope = "this" | "following" | "all";
 
@@ -343,8 +354,8 @@ export { occurrenceId };
 // ── 구글 일정 ────────────────────────────────────────────
 
 /**
- * 구글 기념일 — 구글에는 기념일 칸이 없어 master 의 extendedProperties.private.orbit42Anniversary 에 기준일을 둔다
- * (회차가 물려받아 목록에서 n주년을 센다). 2월 29일 매년은 구글이 평년에 건너뛰므로
+ * 구글 기념일 — 구글에는 기념일 칸이 없어 기준일을 Orbit42(event_annotations, 시리즈 키 gcal_<master>)에 둔다
+ * (회차는 시리즈 키를 보고 목록에서 n주년을 센다. 예전엔 master 의 extendedProperties 에 썼다 — 읽기만·고칠 때 지움). 2월 29일 매년은 구글이 평년에 건너뛰므로
  * "2월 마지막 날"(BYMONTH=2;BYMONTHDAY=-1)로 넣어 평년 2월 28일에 오게 한다.
  */
 const FEB_LAST = ";BYMONTH=2;BYMONTHDAY=-1";
@@ -371,12 +382,13 @@ async function googleInstance(cal: GCal, gcalId: string, instanceId: string) {
 
 /** 구글 '모두' 고치기 — master 를 patch. 시간은 고친 회차의 원래 시작 → 새 시작만큼 master 를 민다. */
 export async function patchGoogleSeries(
+  userId: string,
   cal: GCal,
   gcalId: string,
   instanceOrMasterId: string,
   patch: SeriesPatch,
   notifyAttendees: boolean,
-): Promise<void> {
+): Promise<string> {
   const inst = await googleInstance(cal, gcalId, instanceOrMasterId);
   const masterId = inst.master ?? instanceOrMasterId;
   const { data: master } = await cal.events.get({ calendarId: gcalId, eventId: masterId });
@@ -407,22 +419,41 @@ export async function patchGoogleSeries(
     }
   }
   const masterDate = (body.start?.date ?? body.start?.dateTime ?? master.start?.date ?? master.start?.dateTime ?? "").slice(0, 10);
-  const wasAnniv = !!master.extendedProperties?.private?.orbit42Anniversary;
+  // 기념일 기준일·좌표·이동시간은 Orbit42(event_annotations, 시리즈 키)에만 — 구글에는 쓰지 않는다
+  const masterKey = `gcal_${masterId}`;
+  const legacy = legacyMeta(master);
+  const current = resolveGoogleMeta(await getGoogleMeta(userId, [masterKey]), masterKey, legacy);
+  const wasAnniv = !!current.anniversaryStart;
   const anniv = patch.is_anniversary ?? wasAnniv;
+  const meta: GoogleMetaPatch = metaPatchFrom(patch);
   if (patch.rrule !== undefined || patch.is_anniversary !== undefined || (anniv && body.start)) {
-    const current = (master.recurrence ?? []).find((r) => r.toUpperCase().startsWith("RRULE:"));
-    const rr = patch.rrule !== undefined ? patch.rrule : current ? fromGoogleRRule(current.replace(/^RRULE:/i, "")) : null;
+    const currentRule = (master.recurrence ?? []).find((r) => r.toUpperCase().startsWith("RRULE:"));
+    const rr = patch.rrule !== undefined ? patch.rrule : currentRule ? fromGoogleRRule(currentRule.replace(/^RRULE:/i, "")) : null;
     body.recurrence = rr ? [`RRULE:${googleRRuleFor(rr, masterDate, anniv && /FREQ=YEARLY/.test(rr))}`] : [];
     if (anniv !== wasAnniv || (anniv && body.start)) {
-      body.extendedProperties = { private: { orbit42Anniversary: anniv && rr && /FREQ=YEARLY/.test(rr) ? masterDate : "" } };
+      meta.anniversaryStart = anniv && rr && /FREQ=YEARLY/.test(rr) ? masterDate : null;
     }
   }
-  await cal.events.patch({
-    calendarId: gcalId,
-    eventId: masterId,
-    requestBody: body,
-    ...(notifyAttendees ? { sendUpdates: "all" } : {}),
-  });
+  // 예전에 구글에 들어간 orbit42* 는 이번 수정 때 지운다(그 값은 위 legacy 로 Orbit42 에 옮겨 담음)
+  const clear = legacyClearPatch(master);
+  if (clear) body.extendedProperties = { private: clear as unknown as Record<string, string> };
+  if (Object.keys(meta).length > 0 || clear) {
+    // '모두' — 회차별로 따로 둔 좌표·이동시간 기록은 비우고 시리즈 키에 둔다
+    if (meta.travelMin !== undefined || meta.lat !== undefined) {
+      await clearGoogleMetaForKeys(userId, await googleSeriesMetaKeys(userId, masterId, false));
+    }
+    await setGoogleMeta(userId, masterKey, meta, clear ? legacy : null);
+  }
+  // 이동시간만 바꾼 경우 등 — 구글에 보낼 것이 없으면 건드리지 않는다
+  if (Object.keys(body).length > 0) {
+    await cal.events.patch({
+      calendarId: gcalId,
+      eventId: masterId,
+      requestBody: body,
+      ...(notifyAttendees ? { sendUpdates: "all" } : {}),
+    });
+  }
+  return masterId;
 }
 
 /** 구글 '모두' 지우기 — master 삭제(sendUpdates 없음: 지금 삭제와 같은 규칙) */
@@ -434,7 +465,7 @@ export async function deleteGoogleSeries(cal: GCal, gcalId: string, instanceOrMa
 }
 
 /** 구글 시리즈 정보 — master 의 RRULE */
-export async function googleSeriesInfo(cal: GCal, gcalId: string, instanceOrMasterId: string) {
+export async function googleSeriesInfo(userId: string, cal: GCal, gcalId: string, instanceOrMasterId: string) {
   const inst = await googleInstance(cal, gcalId, instanceOrMasterId);
   const masterId = inst.master ?? instanceOrMasterId;
   const { data: master } = await cal.events.get({ calendarId: gcalId, eventId: masterId });
@@ -463,7 +494,7 @@ export async function googleSeriesInfo(cal: GCal, gcalId: string, instanceOrMast
     cancelledCount,
     attendeeCount,
     rrule: rr ? fromGoogleRRule(rr.replace(/^RRULE:/i, "")) : null,
-    isAnniversary: !!master.extendedProperties?.private?.orbit42Anniversary,
+    isAnniversary: !!resolveGoogleMeta(await getGoogleMeta(userId, [`gcal_${masterId}`]), `gcal_${masterId}`, legacyMeta(master)).anniversaryStart,
     seriesStart: start,
     seriesEnd: master.end?.date ? googleAllDayEndToInclusive(master.end.date, master.start?.date ?? undefined) : master.end?.dateTime ?? null,
   };

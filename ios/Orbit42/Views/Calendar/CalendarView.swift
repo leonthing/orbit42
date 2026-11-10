@@ -1374,6 +1374,15 @@ private struct EventRow: View {
                             Text(timeText)
                                 .font(.footnote)
                                 .foregroundStyle(Theme.secondaryText)
+                            if let travel = event.travelMin, travel > 0, !event.allDay {
+                                Text("이동 \(TravelTime.text(travel))")
+                                    .font(.caption2)
+                                    .foregroundStyle(Theme.secondaryText)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(event.displayColor(in: calendars).opacity(0.12), in: Capsule())
+                                    .accessibilityIdentifier("travelChip")
+                            }
                             // 모든 일정 = 시간 = 금액 — 수동 기록은 강조, 자동 환산은 은은하게
                             if let earningText {
                                 Text(earningText)

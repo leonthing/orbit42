@@ -8,6 +8,15 @@
 
 import type { calendar_v3 } from "googleapis";
 import { getAdminClient } from "@/lib/supabase";
+import {
+  applyGoogleEdit,
+  clearGoogleMetaForKeys,
+  getGoogleMeta,
+  legacyMeta,
+  metaPatchFrom,
+  resolveGoogleMeta,
+  setGoogleMeta,
+} from "@/lib/google-event-meta";
 import { computeRecurrenceUntil } from "@/lib/recurrence";
 import {
   getAuthenticatedCalendar,
@@ -231,12 +240,6 @@ export function toApiAttendees(
   });
 }
 
-function parseCoord(raw: string | null | undefined): number | null {
-  if (!raw) return null;
-  const n = Number(raw);
-  return Number.isFinite(n) ? n : null;
-}
-
 export async function listEventsForUser(
   userId: string,
   year: number,
@@ -397,9 +400,11 @@ export async function listEventsForUser(
         calendar_id: gcalToNative.get(calId) ?? null,
         business_id: null,
         location: item.location || null,
-        location_lat: parseCoord(item.extendedProperties?.private?.orbit42Lat),
-        location_lng: parseCoord(item.extendedProperties?.private?.orbit42Lng),
-        travel_min: parseCoord(item.extendedProperties?.private?.orbit42TravelMin),
+        // 좌표·이동시간·기념일은 아래에서 Orbit42 기록(없으면 구글에 남은 예전 값)으로 채운다
+        location_lat: null as number | null,
+        location_lng: null as number | null,
+        travel_min: null as number | null,
+        legacy_meta: legacyMeta(item),
         source: "google" as const,
         tentative: item.status === "tentative",
         created_at: item.created || "",
@@ -409,12 +414,27 @@ export async function listEventsForUser(
         guests_can_modify: item.guestsCanModify === true,
         series_id: item.recurringEventId ? `gcal_${item.recurringEventId}` : null,
         original_start: item.originalStartTime?.dateTime || item.originalStartTime?.date || null,
-        is_anniversary: !!item.extendedProperties?.private?.orbit42Anniversary,
-        series_start: item.extendedProperties?.private?.orbit42Anniversary || null,
+        is_anniversary: false,
+        series_start: null as string | null,
       }));
     }
   } catch (err) {
     console.error("Google Calendar fetch error:", err);
+  }
+
+  // 구글 일정의 좌표·이동시간·기념일 — Orbit42 기록이 우선(구글에는 쓰지 않음), 없으면 예전에 구글에 들어간 값을 읽기만 한다.
+  if (googleEvents.length > 0) {
+    const records = await getGoogleMeta(userId, googleEvents.map((e) => e.id));
+    for (const e of googleEvents) {
+      const holder = e as { legacy_meta?: ReturnType<typeof legacyMeta> };
+      const m = resolveGoogleMeta(records, e.id, holder.legacy_meta ?? null);
+      delete holder.legacy_meta;
+      e.location_lat = m.lat;
+      e.location_lng = m.lng;
+      e.travel_min = m.travelMin;
+      e.is_anniversary = !!m.anniversaryStart;
+      e.series_start = m.anniversaryStart;
+    }
   }
 
   // 예약에서 생긴 구글 일정 — 호스트 예약의 google_event_id 와 맞춰 예약 id 를 붙인다.
@@ -522,21 +542,7 @@ export async function createEventForUser(
       description: input.description || undefined,
       location: input.location || undefined,
     };
-    // 구글 이벤트에는 좌표·이동시간 컬럼이 없어 extendedProperties 에 심어 왕복한다.
-    const privateProps: Record<string, string> = {};
-    if (input.location_lat != null && input.location_lng != null) {
-      privateProps.orbit42Lat = String(input.location_lat);
-      privateProps.orbit42Lng = String(input.location_lng);
-    }
-    if (input.travel_min != null && input.travel_min > 0) {
-      privateProps.orbit42TravelMin = String(input.travel_min);
-    }
-    if (input.rrule && input.is_anniversary) {
-      privateProps.orbit42Anniversary = input.start_at.slice(0, 10);
-    }
-    if (Object.keys(privateProps).length > 0) {
-      event.extendedProperties = { private: privateProps };
-    }
+    // 좌표·이동시간·기념일은 구글에 쓰지 않고 Orbit42(event_annotations)에만 둔다 — 아래 insert 뒤에 저장.
     if (input.all_day) {
       event.start = { date: input.start_at.split("T")[0] };
       event.end = { date: inclusiveAllDayEndToGoogle(input.end_at.split("T")[0]) };
@@ -552,6 +558,13 @@ export async function createEventForUser(
       calendarId: targetCal.google_calendar_id,
       requestBody: event,
     });
+    const meta = {
+      ...metaPatchFrom(input),
+      ...(input.rrule && input.is_anniversary && { anniversaryStart: input.start_at.slice(0, 10) }),
+    };
+    if (res.data.id && (meta.travelMin != null || meta.lat != null || meta.anniversaryStart)) {
+      await setGoogleMeta(userId, `gcal_${res.data.id}`, meta).catch(() => {});
+    }
     const now = new Date().toISOString();
     return {
       id: `gcal_${res.data.id}`,
@@ -718,17 +731,7 @@ function googleEventBody(input: {
     description: input.description || undefined,
     location: input.location || undefined,
   };
-  const privateProps: Record<string, string> = {};
-  if (input.location_lat != null && input.location_lng != null) {
-    privateProps.orbit42Lat = String(input.location_lat);
-    privateProps.orbit42Lng = String(input.location_lng);
-  }
-  if (input.travel_min != null && input.travel_min > 0) {
-    privateProps.orbit42TravelMin = String(input.travel_min);
-  }
-  if (Object.keys(privateProps).length > 0) {
-    body.extendedProperties = { private: privateProps };
-  }
+  // 좌표·이동시간은 구글에 쓰지 않는다 — 옮긴 뒤 Orbit42(event_annotations)에 저장(moveEventToCalendar)
   if (input.all_day) {
     body.start = { date: input.start_at.split("T")[0] };
     body.end = { date: inclusiveAllDayEndToGoogle(input.end_at.split("T")[0]) };
@@ -817,7 +820,7 @@ export async function moveEventToCalendar(
       location: (row.location as string | null) ?? null,
       location_lat: (row.location_lat as number | null) ?? null,
       location_lng: (row.location_lng as number | null) ?? null,
-      travel_min: (row.travel_min as number | null) ?? null,
+      travel_min: patch.travel_min !== undefined ? patch.travel_min : ((row.travel_min as number | null) ?? null),
     };
     let createdId: string | null | undefined;
     try {
@@ -834,6 +837,10 @@ export async function moveEventToCalendar(
     await db.from("events").delete().eq("id", eventId).eq("user_id", userId);
     const newId = `gcal_${createdId}`;
     await migrateEventKeys(userId, eventId, newId);
+    const meta = metaPatchFrom(merged);
+    if (meta.travelMin != null || meta.lat != null) {
+      await setGoogleMeta(userId, newId, meta).catch(() => {});
+    }
     return { ok: true, newId };
   }
 
@@ -870,32 +877,34 @@ export async function moveEventToCalendar(
       console.error("moveEvent google→google", err);
       return { error: "Google 캘린더 간 이동에 실패했어요." };
     }
-    if (Object.keys(patch).length > 0) {
-      // 바뀐 필드만 부분 patch (updateGoogleEvent 와 같은 매핑).
-      const patchBody: Record<string, unknown> = {};
-      if (patch.title !== undefined) patchBody.summary = patch.title;
-      if (patch.description !== undefined) {
-        patchBody.description = patch.description ?? "";
+    // 바뀐 필드만 부분 patch (updateGoogleEvent 와 같은 매핑). 좌표·이동시간은 Orbit42 에만, 구글의 예전 orbit42* 는 이때 지운다
+    const patchBody: Record<string, unknown> = {};
+    if (patch.title !== undefined) patchBody.summary = patch.title;
+    if (patch.description !== undefined) {
+      patchBody.description = patch.description ?? "";
+    }
+    if (patch.location !== undefined) patchBody.location = patch.location ?? "";
+    if (patch.start_at !== undefined && patch.end_at !== undefined) {
+      if (patch.all_day) {
+        patchBody.start = { date: patch.start_at.split("T")[0] };
+        patchBody.end = { date: inclusiveAllDayEndToGoogle(patch.end_at.split("T")[0]) };
+      } else {
+        patchBody.start = { dateTime: patch.start_at, timeZone: "Asia/Seoul" };
+        patchBody.end = { dateTime: patch.end_at, timeZone: "Asia/Seoul" };
       }
-      if (patch.start_at !== undefined && patch.end_at !== undefined) {
-        if (patch.all_day) {
-          patchBody.start = { date: patch.start_at.split("T")[0] };
-          patchBody.end = { date: inclusiveAllDayEndToGoogle(patch.end_at.split("T")[0]) };
-        } else {
-          patchBody.start = { dateTime: patch.start_at, timeZone: "Asia/Seoul" };
-          patchBody.end = { dateTime: patch.end_at, timeZone: "Asia/Seoul" };
-        }
-      }
-      try {
-        await srcClient.events.patch({
-          calendarId: target.google_calendar_id,
-          eventId: googleId,
-          requestBody: patchBody,
-          ...(notifyAttendees && patchBody.start ? { sendUpdates: "all" } : {}),
-        });
-      } catch {
-        return { error: "캘린더는 옮겼지만 내용 수정에 실패했어요. 다시 시도해 주세요." };
-      }
+    }
+    try {
+      await applyGoogleEdit({
+        userId,
+        client: srcClient,
+        gcalId: target.google_calendar_id,
+        googleEventId: googleId,
+        body: patchBody,
+        meta: metaPatchFrom(patch),
+        ...(notifyAttendees && patchBody.start ? { sendUpdates: "all" as const } : {}),
+      });
+    } catch {
+      return { error: "캘린더는 옮겼지만 내용 수정에 실패했어요. 다시 시도해 주세요." };
     }
     return { ok: true, newId: eventId };
   }
@@ -917,6 +926,8 @@ export async function moveEventToCalendar(
   // 구글 종일 끝(다음 날)을 Orbit42 규칙(그날 포함)으로
   const endIso = g.end?.dateTime || (g.end?.date ? googleAllDayEndToInclusive(g.end.date, g.start?.date ?? undefined) : startIso);
   if (!startIso) return { error: "일정 시간 정보를 읽지 못했어요." };
+  // 좌표·이동시간 — Orbit42 기록, 없으면 구글에 남은 예전 값 (구글 원본은 곧 지워진다)
+  const gMeta = resolveGoogleMeta(await getGoogleMeta(userId, [eventId]), eventId, legacyMeta(g as calendar_v3.Schema$Event));
 
   const merged = {
     title: patch.title ?? (g.summary || "(제목 없음)"),
@@ -926,18 +937,9 @@ export async function moveEventToCalendar(
     end_at: patch.end_at ?? (endIso as string),
     all_day: patch.all_day ?? allDay,
     location: ((g as { location?: string | null }).location ?? null) as string | null,
-    location_lat: parseCoord(
-      (g as { extendedProperties?: { private?: Record<string, string> } })
-        .extendedProperties?.private?.orbit42Lat,
-    ),
-    location_lng: parseCoord(
-      (g as { extendedProperties?: { private?: Record<string, string> } })
-        .extendedProperties?.private?.orbit42Lng,
-    ),
-    travel_min: parseCoord(
-      (g as { extendedProperties?: { private?: Record<string, string> } })
-        .extendedProperties?.private?.orbit42TravelMin,
-    ),
+    location_lat: gMeta.lat,
+    location_lng: gMeta.lng,
+    travel_min: gMeta.travelMin,
   };
   const { data: inserted, error: insErr } = await db
     .from("events")
@@ -969,5 +971,7 @@ export async function moveEventToCalendar(
     return { error: "Google 일정을 삭제하지 못해 이동을 취소했어요." };
   }
   await migrateEventKeys(userId, eventId, inserted.id as string);
+  // Orbit42 일정은 events 칸을 쓴다 — 따라온 구글 부가정보 기록은 비운다
+  await clearGoogleMetaForKeys(userId, [inserted.id as string]);
   return { ok: true, newId: inserted.id as string };
 }

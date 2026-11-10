@@ -2,6 +2,18 @@ import CoreLocation
 import MapKit
 import SwiftUI
 
+/// 이동시간 표기 — "30분", "1시간", "1시간 30분" (추가·수정·상세·하루 보기 공용)
+enum TravelTime {
+    static func text(_ minutes: Int) -> String {
+        if minutes >= 60 {
+            let hours = minutes / 60
+            let rest = minutes % 60
+            return rest == 0 ? "\(hours)시간" : "\(hours)시간 \(rest)분"
+        }
+        return "\(minutes)분"
+    }
+}
+
 /// 일정 위치 입력 섹션 — 자유 텍스트 + 애플 지도 주소 자동완성.
 /// 자동완성 항목을 고르면 좌표까지 채워지고("지도에 위치 지정됨"),
 /// "강남"처럼 그냥 타이핑만 하면 텍스트만 저장된다 (좌표 없음).
@@ -16,12 +28,7 @@ struct EventLocationSection: View {
 
     private static func travelLabel(_ value: Int?) -> String {
         guard let value else { return "없음" }
-        if value >= 60 {
-            let hours = value / 60
-            let minutes = value % 60
-            return minutes == 0 ? "\(hours)시간" : "\(hours)시간 \(minutes)분"
-        }
-        return "\(value)분"
+        return TravelTime.text(value)
     }
 
     @State private var search = LocationSearchModel()

@@ -293,6 +293,13 @@ struct DayTimelineView: View {
                 // offset 은 UIKit 뷰의 터치 영역을 옮기지 않아 padding 으로 자리를 잡는다
                 .padding(.leading, labelWidth)
                 .padding(.top, topInset)
+                // 이동시간 — 일정 바로 위에 같은 색을 아주 연하게(빗금). 끄는 동안엔 숨긴다
+                ForEach(shownBlocks().filter { $0.travelHeight > 0.5 && $0.id != dragId }) { block in
+                    travelBand(block)
+                        .frame(width: max(columnsWidth * block.width - 2, 10), height: block.travelHeight)
+                        .offset(x: labelWidth + columnsWidth * block.x, y: topInset + block.y - block.travelHeight)
+                        .allowsHitTesting(false)
+                }
                 ForEach(shownBlocks()) { block in
                     let isLifted = dragId == block.id
                     let movable = isMovable(block.event)
@@ -441,6 +448,45 @@ struct DayTimelineView: View {
         .background(blockColor(event), in: RoundedRectangle(cornerRadius: 6))
         .opacity(blockOpacity(event))
         .clipped()
+    }
+
+    /// 이동시간 막대 — 일정 색 아주 연하게 + 빗금, 30분 이상이면 '이동 30분'
+    private func travelBand(_ block: Block) -> some View {
+        let color = blockColor(block.event)
+        let minutes = block.event.travelMin ?? 0
+        return ZStack(alignment: .topLeading) {
+            UnevenRoundedRectangle(topLeadingRadius: 6, topTrailingRadius: 6)
+                .fill(color.opacity(0.10))
+            Canvas { context, size in
+                var path = Path()
+                let step: CGFloat = 7
+                var x: CGFloat = -size.height
+                while x < size.width {
+                    path.move(to: CGPoint(x: x, y: size.height))
+                    path.addLine(to: CGPoint(x: x + size.height, y: 0))
+                    x += step
+                }
+                context.stroke(path, with: .color(color.opacity(0.22)), lineWidth: 1)
+            }
+            .clipShape(UnevenRoundedRectangle(topLeadingRadius: 6, topTrailingRadius: 6))
+            // 일정 블록 쪽으로 이어지는 왼쪽 선
+            Rectangle()
+                .fill(color.opacity(0.45))
+                .frame(width: 2)
+                .frame(maxHeight: .infinity)
+            if minutes >= 30, block.travelHeight >= 16 {
+                Text("이동 \(TravelTime.text(minutes))")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(color)
+                    .lineLimit(1)
+                    .padding(.leading, 6)
+                    .padding(.top, 2)
+            }
+        }
+        .opacity(blockOpacity(block.event))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("이동 \(TravelTime.text(minutes))")
+        .accessibilityIdentifier("travelBand")
     }
 
     // MARK: - 끌어 옮기기
@@ -1093,6 +1139,8 @@ struct DayTimelineView: View {
         /// 열 너비 대비 비율 (0~1)
         let x: CGFloat
         let width: CGFloat
+        /// 일정 바로 위에 붙여 그리는 이동시간 높이(0 = 없음, 그날 0시에서 잘림)
+        var travelHeight: CGFloat = 0
         var id: String { event.id }
     }
 
@@ -1112,6 +1160,8 @@ struct DayTimelineView: View {
             let event: CalendarEvent
             let start: Date
             let end: Date
+            /// 이동시간까지 포함한 시작 — 겹침 묶음·열 배치는 이 값으로 해서 이동시간 막대가 앞 일정을 덮지 않는다
+            let layoutStart: Date
             var column = 0
         }
         let items: [Item] = timedEvents.compactMap { event in
@@ -1119,9 +1169,11 @@ struct DayTimelineView: View {
             var end = min(event.effectiveEnd(calendar: calendar).addingTimeInterval(1), dayEnd)
             end = max(end, start.addingTimeInterval(15 * 60))  // 너무 짧은 일정도 누를 수 있게
             guard start < dayEnd else { return nil }
-            return Item(event: event, start: start, end: end)
+            let travel = TimeInterval(max(0, event.travelMin ?? 0) * 60)
+            let layoutStart = event.startAt > dayStart ? max(dayStart, event.startAt.addingTimeInterval(-travel)) : start
+            return Item(event: event, start: start, end: end, layoutStart: layoutStart)
         }
-        .sorted { $0.start != $1.start ? $0.start < $1.start : $0.end > $1.end }
+        .sorted { $0.layoutStart != $1.layoutStart ? $0.layoutStart < $1.layoutStart : $0.end > $1.end }
 
         var blocks: [Block] = []
         var cluster: [Item] = []
@@ -1131,7 +1183,7 @@ struct DayTimelineView: View {
             guard !cluster.isEmpty else { return }
             var columnEnds: [Date] = []
             for index in cluster.indices {
-                if let free = columnEnds.firstIndex(where: { $0 <= cluster[index].start }) {
+                if let free = columnEnds.firstIndex(where: { $0 <= cluster[index].layoutStart }) {
                     cluster[index].column = free
                     columnEnds[free] = cluster[index].end
                 } else {
@@ -1143,14 +1195,16 @@ struct DayTimelineView: View {
             for item in cluster {
                 let y = CGFloat(item.start.timeIntervalSince(dayStart) / 3600) * hourHeight
                 let height = CGFloat(item.end.timeIntervalSince(item.start) / 3600) * hourHeight
+                let travelHeight = CGFloat(item.start.timeIntervalSince(item.layoutStart) / 3600) * hourHeight
                 blocks.append(Block(event: item.event, y: y, height: max(height - 1, 14),
-                                    x: CGFloat(item.column) / count, width: 1 / count))
+                                    x: CGFloat(item.column) / count, width: 1 / count,
+                                    travelHeight: travelHeight))
             }
             cluster = []
         }
 
         for item in items {
-            if item.start >= clusterEnd { flush(); clusterEnd = .distantPast }
+            if item.layoutStart >= clusterEnd { flush(); clusterEnd = .distantPast }
             cluster.append(item)
             clusterEnd = max(clusterEnd, item.end)
         }

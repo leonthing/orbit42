@@ -231,7 +231,7 @@ struct EventDetailSheet: View {
 
                         if let travel = event.travelMin, travel > 0 {
                             Label {
-                                Text("이동시간 \(travel >= 60 ? "\(travel / 60)시간\(travel % 60 == 0 ? "" : " \(travel % 60)분")" : "\(travel)분")")
+                                Text("이동 시간 \(TravelTime.text(travel))")
                                     .font(.subheadline)
                                     .foregroundStyle(Theme.secondaryText)
                             } icon: {

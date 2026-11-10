@@ -163,6 +163,49 @@ final class EventEarningUITests: XCTestCase {
         shot("day")
     }
 
+    /// 이동시간 캡처 (1.8.0) — EARN_DATE 에 이동시간 일정(30분·1시간)과 겹친 일정을 미리 넣어 두고
+    /// 하루 보기 막대 · 상세 '이동 시간' · 추가 화면 선택 칸을 찍는다(저장은 안 함)
+    func testTravelShots() throws {
+        guard let token = env["DEMO_TOKEN"], let date = env["EARN_DATE"], let title = env["EARN_TITLE"] else {
+            throw XCTSkip("DEMO_TOKEN·EARN_DATE·EARN_TITLE 필요")
+        }
+        shotPrefix = env["SHOT_PREFIX"] ?? "travel"
+        launch(token: token, date: date)
+        let band = app.descendants(matching: .any).matching(identifier: "travelBand").firstMatch
+        XCTAssertTrue(band.waitForExistence(timeout: 20), "이동시간 막대 없음")
+        // 다른 날의 하루 보기는 그날 첫 일정 한 시간 전부터 보인다 — 따로 스크롤하지 않는다
+        sleep(3)
+        shot("1-day")
+
+        openBlock(title)
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH %@", "이동 시간")).firstMatch.waitForExistence(timeout: 10), "상세에 이동 시간 없음")
+        shot("2-detail")
+        app.swipeDown(velocity: .fast)
+        sleep(1)
+
+        let add = app.buttons["일정 추가"]
+        XCTAssertTrue(add.waitForExistence(timeout: 20), "일정 추가 버튼 없음")
+        add.tap()
+        XCTAssertTrue(app.textFields["제목"].waitForExistence(timeout: 10))
+        let more = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "위치 · 참석자")).firstMatch
+        for _ in 0..<4 where !more.isHittable { app.swipeUp() }
+        if more.exists { more.tap() }
+        sleep(1)
+        let picker = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "이동시간")).firstMatch
+        for _ in 0..<4 where !picker.isHittable { app.swipeUp() }
+        XCTAssertTrue(picker.waitForExistence(timeout: 5), "추가 화면에 이동시간 칸 없음")
+        picker.tap()
+        let thirty = app.buttons["30분"].firstMatch
+        XCTAssertTrue(thirty.waitForExistence(timeout: 5), "선택지 없음")
+        shot("3-add-options")
+        thirty.tap()
+        sleep(1)
+        let chosen = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "이동시간")).firstMatch
+        for _ in 0..<4 where !chosen.isHittable { app.swipeUp() }
+        sleep(1)
+        shot("4-add")
+    }
+
     /// 리포트 '이번 달 시간으로 번 돈' 캡처 — 금액 넣기 전·후 (SHOT_PREFIX 로 구분)
     func testReportShot() throws {
         guard let token = env["DEMO_TOKEN"] else { throw XCTSkip("DEMO_TOKEN 필요") }

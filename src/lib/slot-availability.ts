@@ -84,6 +84,7 @@ export async function computeAutoAvailability(
   try {
     const calendar = await getAuthenticatedCalendar(hostId);
     if (calendar) {
+      const { getGoogleMeta, resolveGoogleMeta, legacyMeta } = await import("@/lib/google-event-meta");
       const res = await calendar.events.list({
         calendarId: "primary",
         timeMin: now.toISOString(),
@@ -92,6 +93,11 @@ export async function computeAutoAvailability(
         orderBy: "startTime",
         maxResults: 500,
       });
+      // 이동시간은 Orbit42 쪽 기록(event_annotations)이 우선 — 예전에 구글에 들어간 값은 읽기만
+      const metaRecords = await getGoogleMeta(
+        hostId,
+        (res.data.items ?? []).map((it) => `gcal_${it.id}`),
+      );
       for (const it of res.data.items ?? []) {
         if (it.status === "cancelled") continue;
         const selfAttendee = (it.attendees ?? []).find((a) => a.self);
@@ -106,9 +112,7 @@ export async function computeAutoAvailability(
         const end = new Date(endIso);
         if (end.getTime() <= start.getTime()) continue;
         // 일정에 이동시간이 설정돼 있으면 그만큼 시작 전을 함께 막는다.
-        const travelMin = Number(
-          it.extendedProperties?.private?.orbit42TravelMin ?? 0,
-        );
+        const travelMin = resolveGoogleMeta(metaRecords, `gcal_${it.id}`, legacyMeta(it)).travelMin ?? 0;
         googleBlocks.push({
           start:
             Number.isFinite(travelMin) && travelMin > 0

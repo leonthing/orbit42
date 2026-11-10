@@ -26,7 +26,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
       return Response.json({ error: "Google 캘린더 연결이 필요해요." }, { status: 400 });
     }
     const gcalId = calendarId || gcalIds.length === 1 ? gcalIds[0] : "primary";
-    const info = await googleSeriesInfo(cal, gcalId, params.id.slice("gcal_".length));
+    const info = await googleSeriesInfo(userId, cal, gcalId, params.id.slice("gcal_".length));
     return Response.json({
       rrule: info.rrule,
       isAnniversary: info.isAnniversary,
