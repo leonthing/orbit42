@@ -38,11 +38,19 @@ export async function GET(request: NextRequest) {
       .lt("created_at", new Date(Date.now() - 2 * 24 * 3600_000).toISOString());
     if (error && error.code !== "42P01" && error.code !== "PGRST205") console.error("rate_limit_hits cleanup", error.message);
   }
+  // 예약 상태 변경 기록: 예약이 끝난 날로부터 1년(보안-8)
+  let bookingEvents = 0;
+  try {
+    const { cleanupBookingEvents } = await import("@/lib/booking-events");
+    bookingEvents = await cleanupBookingEvents();
+  } catch (err) {
+    console.error("cleanupBookingEvents", err);
+  }
   if (!tokensOk) {
     return NextResponse.json(
       { error: "failed", rescheduleExpired: expired, unpaidExpired },
       { status: 500 },
     );
   }
-  return NextResponse.json({ ok: true, rescheduleExpired: expired, unpaidExpired, chats });
+  return NextResponse.json({ ok: true, rescheduleExpired: expired, unpaidExpired, chats, bookingEvents });
 }

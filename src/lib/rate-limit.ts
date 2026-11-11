@@ -62,7 +62,7 @@ setInterval(() => {
 
 /**
  * DB 로 세는 횟수 제한(보안-8) — Vercel 인스턴스가 여러 대여도 함께 센다.
- * key 는 sha256 해서 저장(아이디·IP·이메일 원문을 남기지 않음). 표가 없거나(마이그레이션 전)
+ * key 는 서버 비밀 소금과 HMAC 해서 저장(아이디·IP·이메일 원문을 남기지 않음). 표가 없거나(마이그레이션 전)
  * DB 오류면 메모리 제한으로 대신한다. 오래된 기록은 /api/cron/cleanup 이 지운다.
  */
 export async function rateLimitDb(
@@ -70,10 +70,14 @@ export async function rateLimitDb(
   limit: number,
   windowMs: number,
 ): Promise<{ ok: boolean; retryAfter: number }> {
-  const [{ createHash }, { getAdminClient }] = await Promise.all([import("crypto"), import("@/lib/supabase")]);
+  const [{ createHmac }, { getAdminClient }] = await Promise.all([import("crypto"), import("@/lib/supabase")]);
   const sep = key.indexOf(":");
   const bucket = sep > 0 ? key.slice(0, sep) : "misc";
-  const subject = createHash("sha256").update(key).digest("hex");
+  // 서버 비밀에서 파생한 소금으로 HMAC — sha256(IP) 처럼 되돌리기 쉬운 값을 남기지 않는다.
+  // 세션 키를 바꾸면 기록이 새로 세지는데, 창이 길어야 하루라 괜찮다.
+  const secret = process.env.SESSION_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  const salt = createHmac("sha256", secret).update("rate-limit:v1").digest();
+  const subject = createHmac("sha256", salt).update(key).digest("hex");
   const since = new Date(Date.now() - windowMs).toISOString();
   const db = getAdminClient();
   const { data, error } = await db

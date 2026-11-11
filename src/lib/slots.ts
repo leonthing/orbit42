@@ -1616,7 +1616,7 @@ export async function updateBookingStatus(
     .eq("id", id)
     .eq("host_id", userId);
   if (error) return { error: "변경 실패" };
-  await logBookingEvent({ bookingId: id, actorKind: "host", actorId: userId, action: "status", fromStatus: (before?.status as string | undefined) ?? null, toStatus: status });
+  await logBookingEvent({ bookingId: id, actorKind: "host", action: "status", fromStatus: (before?.status as string | undefined) ?? null, toStatus: status });
 
   // 계좌이체 예약을 확정하면 입금 확인으로 본다.
   if (status === "confirmed") {
@@ -1880,8 +1880,8 @@ function guestActorFilter<Q extends { eq: (col: string, v: string) => Q }>(query
   return null;
 }
 
-function guestActorLog(actor: GuestActor): { actorKind: "guest" | "guest_link"; actorId: string | null } {
-  return "userId" in actor ? { actorKind: "guest", actorId: actor.userId } : { actorKind: "guest_link", actorId: null };
+function guestActorLog(actor: GuestActor): { actorKind: "guest" | "guest_link" } {
+  return "userId" in actor ? { actorKind: "guest" } : { actorKind: "guest_link" };
 }
 
 export async function rescheduleMyBooking(
