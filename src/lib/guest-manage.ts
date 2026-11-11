@@ -11,8 +11,10 @@ import { getAdminClient } from "@/lib/supabase";
  */
 export const MANAGE_GRACE_MS = 7 * 24 * 60 * 60_000;
 
+// 세션 서명 키(SESSION_SECRET)와 떼어 둔다 — 세션 키를 바꿔도 이미 보낸 관리 링크와
+// DB 의 해시(guest_manage_token_hash)가 계속 맞아야 한다. 운영은 처음부터 이 값으로 만들었다.
 function secret(): string {
-  const s = process.env.SESSION_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const s = process.env.GUEST_MANAGE_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!s) throw new Error("missing secret for guest manage token");
   return s;
 }
