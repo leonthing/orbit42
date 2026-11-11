@@ -1,5 +1,4 @@
 import { createHash } from "crypto";
-import { cache } from "react";
 import { getAdminClient } from "@/lib/supabase";
 import type { SessionData } from "@/lib/session";
 
@@ -10,7 +9,12 @@ import type { SessionData } from "@/lib/session";
  */
 const LEGACY_UNTIL = Date.parse("2026-11-19T00:00:00+09:00");
 
-const currentVersion = cache(async (username: string): Promise<string | null> => {
+// 한 화면에서 getSession 이 여러 번 불려도 DB 를 한 번만 보게 아주 짧게(5초) 기억한다.
+// react cache 는 API 라우트에서 요청 단위가 아니라 옛 값이 남았다.
+const TTL_MS = 5_000;
+const memo = new Map<string, { at: number; v: Promise<string | null> }>();
+
+async function readVersion(username: string): Promise<string | null> {
   const { data } = await getAdminClient()
     .from("users")
     .select("password_hash")
@@ -18,11 +22,25 @@ const currentVersion = cache(async (username: string): Promise<string | null> =>
     .maybeSingle();
   if (!data) return null;
   return createHash("sha256").update(`pv1:${(data.password_hash as string | null) ?? ""}`).digest("hex").slice(0, 16);
-});
+}
+
+function currentVersion(username: string, fresh = false): Promise<string | null> {
+  const hit = memo.get(username);
+  if (!fresh && hit && Date.now() - hit.at < TTL_MS) return hit.v;
+  const v = readVersion(username).catch(() => null);
+  memo.set(username, { at: Date.now(), v });
+  if (memo.size > 5000) memo.clear();
+  return v;
+}
+
+/** 비밀번호를 바꾼 직후 — 기억한 값을 버린다 */
+export function forgetPasswordVersion(username: string) {
+  memo.delete(username);
+}
 
 /** 새 세션에 넣을 지문 */
 export async function passwordVersion(username: string): Promise<string | undefined> {
-  return (await currentVersion(username)) ?? undefined;
+  return (await currentVersion(username, true)) ?? undefined;
 }
 
 /** 일반 로그인 세션이 아직 유효한지 (목적 토큰·PAT 는 부르는 쪽에서 따로 본다) */

@@ -499,6 +499,7 @@ export async function changePassword(
   });
 
   if (error) return { error: "비밀번호 변경에 실패했습니다." };
+  (await import("@/lib/session-version")).forgetPasswordVersion(username);
   // 다른 기기의 옛 세션은 끊기고(지문이 바뀜), 지금 웹에서 바꿨다면 이 브라우저는 새 지문으로 이어간다.
   if (cookies().get(COOKIE_NAME)?.value) await setSessionCookie(username);
   return { success: true };
