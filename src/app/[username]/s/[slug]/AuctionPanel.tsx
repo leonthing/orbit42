@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { placeBid } from "@/lib/auctions";
+import { placeBid } from "@/lib/auctions-actions";
 import { useToast } from "@/components/Toast";
 
 type SlotInfo = {

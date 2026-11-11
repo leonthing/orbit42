@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { startConversation } from "@/lib/messages";
+import { startConversation } from "@/lib/messages-actions";
 import { useToast } from "@/components/Toast";
 import { buttonClasses } from "@/components/PendingButton";
 

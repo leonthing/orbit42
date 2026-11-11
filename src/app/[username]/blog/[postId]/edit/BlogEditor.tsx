@@ -13,7 +13,7 @@ import {
   publishBlogPost,
   unpublishBlogPost,
 } from "../../actions";
-import { uploadBlogImage } from "@/lib/blog-media";
+import { uploadBlogImage } from "@/lib/blog-media-actions";
 import { useConfirm } from "@/components/ConfirmDialog";
 
 type ToolbarAction = {

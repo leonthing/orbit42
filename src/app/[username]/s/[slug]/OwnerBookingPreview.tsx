@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { refreshBookableOptions } from "@/lib/slots";
+import { refreshBookableOptions } from "@/lib/slots-actions";
 import type { BookableOption } from "@/lib/slots";
 import { SlotDatePreview } from "@/components/SlotDatePicker";
 

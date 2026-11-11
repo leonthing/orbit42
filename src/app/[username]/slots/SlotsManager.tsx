@@ -7,17 +7,7 @@ import { StoryShareButton } from "@/components/StoryShare";
 import { slotTypeLabel } from "@/lib/constants";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import {
-  createSlot,
-  createSlotFromPreset,
-  deleteSlot,
-  archiveSlot,
-  countSlotBookings,
-  cloneSlot,
-  addAvailability,
-  removeAvailability,
-  updateSlot,
-} from "@/lib/slots";
+import { createSlot, createSlotFromPreset, deleteSlot, archiveSlot, countSlotBookings, cloneSlot, addAvailability, removeAvailability, updateSlot } from "@/lib/slots-actions";
 import type {
   TimeSlot,
   Availability,
@@ -28,7 +18,7 @@ import type {
 import type { WorkingHours } from "@/lib/slot-availability";
 import type { Calendar } from "@/lib/calendars-types";
 import type { Menu } from "@/lib/menus";
-import { setSlotMenus } from "@/lib/menus";
+import { setSlotMenus } from "@/lib/menus-actions";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { buttonClasses } from "@/components/PendingButton";

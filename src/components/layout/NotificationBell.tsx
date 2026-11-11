@@ -3,12 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { AppNotification } from "@/lib/notifications-types";
-import {
-  listNotifications,
-  markAllNotificationsRead,
-  markNotificationRead,
-  unreadNotificationCount,
-} from "@/lib/notifications";
+import { listNotifications, markAllNotificationsRead, markNotificationRead, unreadNotificationCount } from "@/lib/notifications-actions";
 import { Avatar } from "@/components/Avatar";
 
 function typeStyles(type: string): { bg: string; fg: string } {

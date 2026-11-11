@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { Menu } from "@/lib/menus";
-import { createMenu, updateMenu, deleteMenu } from "@/lib/menus";
+import { createMenu, updateMenu, deleteMenu } from "@/lib/menus-actions";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";

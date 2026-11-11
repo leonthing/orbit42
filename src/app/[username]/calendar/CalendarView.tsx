@@ -14,10 +14,7 @@ import {
   type PendingParticipant,
 } from "./EventParticipantsPanel";
 import { useState, useTransition, useCallback, useMemo, useEffect, useRef } from "react";
-import {
-  getCompletedKeys,
-  toggleEventCompletion,
-} from "@/lib/event-completions";
+import { getCompletedKeys, toggleEventCompletion } from "@/lib/event-completions-actions";
 import { normalizeEventKey, toEventKey } from "@/lib/event-key";
 import { Avatar } from "@/components/Avatar";
 import {

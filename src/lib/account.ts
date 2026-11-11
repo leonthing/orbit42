@@ -1,5 +1,4 @@
-"use server";
-
+// 일반 서버 모듈 — 서버 액션 아님(보안-6). 클라이언트용은 *-actions.ts
 import { cookies } from "next/headers";
 import { randomBytes } from "node:crypto";
 import { getAdminClient } from "@/lib/supabase";

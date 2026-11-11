@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { createTimeRequest } from "@/lib/time-requests";
+import { createTimeRequest } from "@/lib/time-requests-actions";
 import { buttonClasses } from "@/components/PendingButton";
 import { useToast } from "@/components/Toast";
 

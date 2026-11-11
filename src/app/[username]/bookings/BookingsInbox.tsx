@@ -4,20 +4,10 @@ import Link from "next/link";
 import { useEffect, useState, useTransition, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { BookingChatToggle, ChatUnreadProvider } from "@/components/BookingChat";
-import {
-  updateBookingStatus,
-  cancelMyBooking,
-  rescheduleMyBooking,
-  refreshBookableOptions,
-  proposeRescheduleAsHost,
-  proposeRescheduleAsGuest,
-  respondToReschedule,
-  withdrawReschedule,
-  changeMyBookingListState,
-} from "@/lib/slots";
+import { updateBookingStatus, cancelMyBooking, rescheduleMyBooking, refreshBookableOptions, proposeRescheduleAsHost, proposeRescheduleAsGuest, respondToReschedule, withdrawReschedule, changeMyBookingListState } from "@/lib/slots-actions";
 import type { BookingRow, GuestBookingRow, BookableOption } from "@/lib/slots";
 import { Segmented } from "@/components/Segmented";
-import { addBookingReview } from "@/lib/reviews";
+import { addBookingReview } from "@/lib/reviews-actions";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";

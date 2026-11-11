@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { usePathname } from "next/navigation";
-import { submitFeedback } from "@/lib/feedback";
+import { submitFeedback } from "@/lib/feedback-actions";
 import { PendingButton } from "@/components/PendingButton";
 
 type Props = {

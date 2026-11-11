@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { adminDeleteUser } from "@/lib/admin";
+import { adminDeleteUser } from "@/lib/admin-actions";
 import { useConfirm } from "@/components/ConfirmDialog";
 
 export function DeleteUserButton({

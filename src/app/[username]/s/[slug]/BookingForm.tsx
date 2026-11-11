@@ -2,10 +2,10 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { bookSlot, refreshBookableOptions } from "@/lib/slots";
+import { bookSlot, refreshBookableOptions } from "@/lib/slots-actions";
 import { funnelRef, funnelVia, reportFunnel } from "@/lib/funnel-client";
 import type { BookableOption } from "@/lib/slots";
-import { findMyConflicts } from "@/lib/mutual-availability";
+import { findMyConflicts } from "@/lib/mutual-availability-actions";
 import { SlotDatePicker } from "@/components/SlotDatePicker";
 import { useToast } from "@/components/Toast";
 

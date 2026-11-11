@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { logout } from "@/lib/auth";
+import { logout } from "@/lib/auth-actions";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useMobileMenu } from "./MobileMenuContext";

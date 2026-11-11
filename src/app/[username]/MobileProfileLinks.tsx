@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { logout } from "@/lib/auth";
+import { logout } from "@/lib/auth-actions";
 
 /**
  * 모바일 프로필 탭의 메뉴 목록 — iOS 프로필 화면의 행들과 같은 자리.

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { blockUser, unblockUser } from "@/lib/blocks";
+import { blockUser, unblockUser } from "@/lib/blocks-actions";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { buttonClasses } from "@/components/PendingButton";
 

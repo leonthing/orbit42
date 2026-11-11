@@ -1,5 +1,4 @@
-"use server";
-
+// 일반 서버 모듈 — 서버 액션 아님(보안-6). 클라이언트용은 *-actions.ts
 import { getAdminClient } from "@/lib/supabase";
 import { createNotification } from "@/lib/notifications";
 import type { ReactionTarget } from "@/lib/reactions-types";

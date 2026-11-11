@@ -3,7 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { createFeedPost } from "@/lib/feed-posts";
+import { createFeedPost } from "@/lib/feed-posts-actions";
 import { Avatar } from "@/components/Avatar";
 import { useToast } from "@/components/Toast";
 

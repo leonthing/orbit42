@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { disconnectExtraAccount } from "@/lib/google-accounts";
+import { disconnectExtraAccount } from "@/lib/google-accounts-actions";
 import { disconnectGoogleCalendar } from "@/app/[username]/calendar/actions";
 import { useConfirm } from "@/components/ConfirmDialog";
 

@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { toggleFeedbackResolved } from "@/lib/feedback";
+import { toggleFeedbackResolved } from "@/lib/feedback-actions";
 
 export function ResolveButton({
   id,

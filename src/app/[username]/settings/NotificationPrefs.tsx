@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { setPref } from "@/lib/notification-prefs";
+import { setPref } from "@/lib/notification-prefs-actions";
 import { NOTIFICATION_TYPES } from "@/lib/notification-prefs-types";
 import type { NotificationPref } from "@/lib/notification-prefs-types";
 

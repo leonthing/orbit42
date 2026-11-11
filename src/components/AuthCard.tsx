@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { login, signup } from "@/lib/auth";
+import { login, signup } from "@/lib/auth-actions";
 
 type Mode = "signin" | "signup";
 

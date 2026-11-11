@@ -3,7 +3,7 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { resetPassword } from "@/lib/account";
+import { resetPassword } from "@/lib/account-actions";
 import { PendingButton } from "@/components/PendingButton";
 
 export default function ResetPasswordPage() {

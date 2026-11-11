@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { changePassword } from "@/lib/auth";
+import { changePassword } from "@/lib/auth-actions";
 import { buttonClasses } from "@/components/PendingButton";
 
 const inputClass =

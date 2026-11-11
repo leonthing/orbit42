@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { shareEventToFeed } from "@/lib/feed-posts";
+import { shareEventToFeed } from "@/lib/feed-posts-actions";
 import { useToast } from "@/components/Toast";
 
 export function ShareEventButton({

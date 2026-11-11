@@ -2,7 +2,7 @@
 
 import { useTransition, useState } from "react";
 import { useRouter } from "next/navigation";
-import { follow, unfollow } from "@/lib/follows";
+import { follow, unfollow } from "@/lib/follows-actions";
 import { useToast } from "@/components/Toast";
 import { buttonClasses, type ButtonSize } from "@/components/PendingButton";
 

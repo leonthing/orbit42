@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { deleteFeedPost } from "@/lib/feed-posts";
+import { deleteFeedPost } from "@/lib/feed-posts-actions";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 

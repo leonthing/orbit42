@@ -3,12 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { CalendarGoalShare } from "./CalendarGoalShare";
-import {
-  createNativeCalendar,
-  updateCalendar,
-  deleteCalendar,
-  type Calendar,
-} from "@/lib/calendars";
+import { createNativeCalendar, updateCalendar, deleteCalendar } from "@/lib/calendars-actions";
+import type { Calendar } from "@/lib/calendars";
 import {
   PURPOSE_OPTIONS,
   CALENDAR_COLORS,

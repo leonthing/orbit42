@@ -3,9 +3,9 @@
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import type { CommentNode } from "@/lib/comments";
-import { addComment, deleteComment, listComments } from "@/lib/comments";
-import { toggleReaction } from "@/lib/reactions";
-import { getReactionsForMany } from "@/lib/reactions";
+import { addComment, deleteComment, listComments } from "@/lib/comments-actions";
+import { toggleReaction } from "@/lib/reactions-actions";
+import { getReactionsForMany } from "@/lib/reactions-actions";
 import type { ReactionSummary } from "@/lib/reactions-types";
 import { Avatar } from "@/components/Avatar";
 import { useConfirm } from "@/components/ConfirmDialog";

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { updateCalendar } from "@/lib/calendars";
+import { updateCalendar } from "@/lib/calendars-actions";
 import { useToast } from "@/components/Toast";
 import type { Calendar } from "@/lib/calendars-types";
 

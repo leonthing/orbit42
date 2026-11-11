@@ -11,7 +11,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { getSlotPanelData, type SlotPanelData } from "@/lib/slot-panel";
+import { getSlotPanelData } from "@/lib/slot-panel-actions";
+import type { SlotPanelData } from "@/lib/slot-panel";
 import BookingForm from "@/app/[username]/s/[slug]/BookingForm";
 import { reportFunnel } from "@/lib/funnel-client";
 import { SlotDatePreview } from "@/components/SlotDatePicker";

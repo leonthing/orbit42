@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Message } from "@/lib/messages-types";
-import { sendMessage, markRead } from "@/lib/messages";
+import { sendMessage, markRead } from "@/lib/messages-actions";
 import { PendingButton } from "@/components/PendingButton";
 
 function formatTime(iso: string) {

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { deleteMyAccount, resendVerificationEmail } from "@/lib/account";
+import { deleteMyAccount, resendVerificationEmail } from "@/lib/account-actions";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 

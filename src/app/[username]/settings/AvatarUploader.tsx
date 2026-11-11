@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { uploadAvatar, clearAvatar } from "@/lib/auth";
+import { uploadAvatar, clearAvatar } from "@/lib/auth-actions";
 import { Avatar } from "@/components/Avatar";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";

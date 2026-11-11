@@ -2,11 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import {
-  createLocationBuffer,
-  updateLocationBuffer,
-  deleteLocationBuffer,
-} from "@/lib/location-buffers";
+import { createLocationBuffer, updateLocationBuffer, deleteLocationBuffer } from "@/lib/location-buffers-actions";
 import type { LocationBuffer } from "@/lib/location-buffers-types";
 import { useConfirm } from "@/components/ConfirmDialog";
 

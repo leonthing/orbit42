@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { updateWorkHours } from "@/lib/insights-actions";
+import { updateWorkHours } from "@/lib/insights-actions-actions";
 import {
   WORK_DAY_LABEL,
   type WorkDay,

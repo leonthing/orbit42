@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { requestPasswordReset } from "@/lib/account";
+import { requestPasswordReset } from "@/lib/account-actions";
 import { PendingButton } from "@/components/PendingButton";
 
 export default function ForgotPasswordPage() {

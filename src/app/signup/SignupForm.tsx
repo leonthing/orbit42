@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { signup } from "@/lib/auth";
+import { signup } from "@/lib/auth-actions";
 import { PendingButton } from "@/components/PendingButton";
 
 export function SignupForm({ initialRef }: { initialRef: string }) {

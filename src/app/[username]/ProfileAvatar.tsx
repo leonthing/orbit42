@@ -3,7 +3,7 @@
 import { useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
-import { uploadAvatar } from "@/lib/auth";
+import { uploadAvatar } from "@/lib/auth-actions";
 import { useToast } from "@/components/Toast";
 import { resizeImageToJpeg } from "@/lib/image-resize";
 

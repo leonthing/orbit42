@@ -1,5 +1,4 @@
-"use server";
-
+// 일반 서버 모듈 — 서버 액션 아님(보안-6). 클라이언트용은 *-actions.ts
 import { revalidatePath } from "next/cache";
 import { getAdminClient } from "@/lib/supabase";
 import { requireUserId } from "@/lib/db";

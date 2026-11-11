@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { updateProfile } from "@/lib/auth";
+import { updateProfile } from "@/lib/auth-actions";
 import type { SocialLinks, Education, Experience } from "@/lib/auth";
 import { buttonClasses } from "@/components/PendingButton";
 

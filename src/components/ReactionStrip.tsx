@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { toggleReaction } from "@/lib/reactions";
+import { toggleReaction } from "@/lib/reactions-actions";
 import {
   REACTION_EMOJIS,
   type ReactionTarget,

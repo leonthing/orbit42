@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { TimeRequestRow } from "@/lib/time-requests";
-import { acceptTimeRequest, declineTimeRequest } from "@/lib/time-requests";
+import { acceptTimeRequest, declineTimeRequest } from "@/lib/time-requests-actions";
 import { Avatar } from "@/components/Avatar";
 import { useToast } from "@/components/Toast";
 
