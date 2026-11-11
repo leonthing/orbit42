@@ -2,7 +2,7 @@
 import { cookies, headers } from "next/headers";
 import { parseSocialLinks } from "@/lib/social-links";
 import { getAdminClient } from "@/lib/supabase";
-import { clientKey, rateLimit } from "@/lib/rate-limit";
+import { clientKey, rateLimitDb } from "@/lib/rate-limit";
 import { signSession, verifySession } from "@/lib/session";
 import { isReservedUsername } from "@/lib/reserved-usernames";
 
@@ -13,7 +13,8 @@ const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 // Sets the signed session cookie. The value is HMAC-signed (see lib/session)
 // so it cannot be forged client-side.
 async function setSessionCookie(username: string) {
-  cookies().set(COOKIE_NAME, await signSession({ username }), {
+  const { passwordVersion } = await import("@/lib/session-version");
+  cookies().set(COOKIE_NAME, await signSession({ username, pv: await passwordVersion(username) }), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -23,7 +24,7 @@ async function setSessionCookie(username: string) {
 }
 
 export async function login(username: string, password: string) {
-  const limit = rateLimit(clientKey("login", username), 8, 5 * 60_000);
+  const limit = await rateLimitDb(clientKey("login", username), 8, 5 * 60_000);
   if (!limit.ok) {
     return { error: `너무 많은 시도예요. ${limit.retryAfter}초 후 다시 시도해주세요.` };
   }
@@ -46,7 +47,7 @@ export async function signup(
   displayName?: string,
   referrerRef?: string,
 ) {
-  const limit = rateLimit(clientKey("signup"), 5, 60 * 60_000);
+  const limit = await rateLimitDb(clientKey("signup"), 5, 60 * 60_000);
   if (!limit.ok) {
     return { error: `너무 많은 시도예요. ${limit.retryAfter}초 후 다시 시도해주세요.` };
   }
@@ -302,7 +303,10 @@ export async function logout() {
 export async function getSession() {
   const fromCookie = await verifySession(cookies().get(COOKIE_NAME)?.value);
   // 쿠키 자리에 목적 토큰(연동 토큰 등)을 넣어도 웹 세션이 되지 않게.
-  if (fromCookie && !fromCookie.purpose) return fromCookie;
+  if (fromCookie && !fromCookie.purpose) {
+    const { isSessionCurrent } = await import("@/lib/session-version");
+    if (await isSessionCurrent(fromCookie)) return fromCookie;
+  }
   // 모바일 /api/v1: 쿠키 대신 같은 서명 포맷의 Bearer 토큰(lib/api-auth 발급)을
   // 허용한다. 이 폴백 덕에 requireUserId() 기반 도메인 함수를 그대로 재사용한다.
   const auth = headers().get("authorization") ?? "";
@@ -318,6 +322,10 @@ export async function getSession() {
     }
     // 단일 목적 토큰(OAuth state 등)은 세션으로 인정하지 않는다.
     if (session?.purpose) return null;
+    if (session) {
+      const { isSessionCurrent } = await import("@/lib/session-version");
+      if (!(await isSessionCurrent(session))) return null;
+    }
     return session;
   }
   return null;
@@ -491,5 +499,7 @@ export async function changePassword(
   });
 
   if (error) return { error: "비밀번호 변경에 실패했습니다." };
+  // 다른 기기의 옛 세션은 끊기고(지문이 바뀜), 지금 웹에서 바꿨다면 이 브라우저는 새 지문으로 이어간다.
+  if (cookies().get(COOKIE_NAME)?.value) await setSessionCookie(username);
   return { success: true };
 }

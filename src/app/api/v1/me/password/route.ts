@@ -38,5 +38,7 @@ export async function POST(request: Request) {
   if ("error" in result && result.error) {
     return Response.json({ error: result.error }, { status: 400 });
   }
-  return Response.json({ ok: true });
+  // 옛 토큰은 이제 끊긴다(보안-8) — 이 기기는 새 토큰으로 이어간다
+  const { issueApiToken } = await import("@/lib/api-auth");
+  return Response.json({ ok: true, token: await issueApiToken(session.username) });
 }

@@ -69,8 +69,8 @@ export async function POST(request: Request) {
   const canCancel = !expired && live && !ended;
   const canPropose = !expired && live && new Date(b.scheduled_at as string).getTime() > Date.now();
   const canToggleReminders = !expired && live && !ended;
-  // 계정이 있는 게스트면 그 계정으로, 없으면 링크 게스트로 행동한다
-  const actor = { userId: (b.guest_id as string | null) ?? null };
+  // 관리 링크로 하는 일은 링크(토큰 해시)가 주체 — 함수 안에서 다시 확인한다(보안-8)
+  const actor = { manageTokenHash: manageTokenHash(body.token) };
   const action = typeof body.action === "string" ? body.action : "view";
 
   if (action === "ics") {
@@ -172,7 +172,8 @@ export async function POST(request: Request) {
         startAt: b.reschedule_start_at as string,
         endAt: b.reschedule_end_at as string,
         note: (b.reschedule_note as string | null) ?? null,
-        byMe: Boolean(actor.userId && b.reschedule_by === actor.userId),
+        // 제안한 쪽이 이 예약의 게스트(계정)면 '내 제안'
+        byMe: Boolean(b.guest_id && b.reschedule_by === b.guest_id),
       }
     : null;
   const awaiting = b.payment_status === "awaiting";

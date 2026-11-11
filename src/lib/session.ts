@@ -58,7 +58,8 @@ async function hmacKey(): Promise<CryptoKey> {
 // `purpose` marks single-purpose tokens (e.g. mobile OAuth state) — these are
 // NOT general sessions; apiSession/getSession callers must reject them.
 // `pat` is the personal_access_tokens row id for purpose "personal_access" (revocable).
-export type SessionData = { username: string; exp?: number; purpose?: string; pat?: string };
+// `pv` 는 비밀번호 지문(lib/session-version) — 비밀번호를 바꾸면 옛 세션이 끊긴다.
+export type SessionData = { username: string; exp?: number; purpose?: string; pat?: string; pv?: string };
 
 /** Produce a signed `<payload>.<sig>` token for the given session data. */
 export async function signSession(data: SessionData): Promise<string> {

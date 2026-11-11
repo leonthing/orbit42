@@ -13,9 +13,11 @@ import { PAT_PURPOSE, patAllows } from "@/lib/pat-scope";
 const TOKEN_MAX_AGE_SEC = 60 * 60 * 24 * 90; // 90 days
 
 export async function issueApiToken(username: string): Promise<string> {
+  const { passwordVersion } = await import("@/lib/session-version");
   return signSession({
     username,
     exp: Math.floor(Date.now() / 1000) + TOKEN_MAX_AGE_SEC,
+    pv: await passwordVersion(username),
   });
 }
 
@@ -35,6 +37,10 @@ export async function apiSession(
   }
   // 단일 목적 토큰(OAuth state 등)은 API 세션으로 인정하지 않는다.
   if (session?.purpose) return null;
+  if (session) {
+    const { isSessionCurrent } = await import("@/lib/session-version");
+    if (!(await isSessionCurrent(session))) return null;
+  }
   return session;
 }
 

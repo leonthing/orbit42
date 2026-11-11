@@ -11,16 +11,26 @@ import { getAdminClient } from "@/lib/supabase";
  */
 export const MANAGE_GRACE_MS = 7 * 24 * 60 * 60_000;
 
-// 세션 서명 키(SESSION_SECRET)와 떼어 둔다 — 세션 키를 바꿔도 이미 보낸 관리 링크와
-// DB 의 해시(guest_manage_token_hash)가 계속 맞아야 한다. 운영은 처음부터 이 값으로 만들었다.
-function secret(): string {
+// 관리 링크 서명 키(보안-8). 세션 키(SESSION_SECRET)와는 따로 둔다.
+// - GUEST_MANAGE_SECRET 이 있으면 새 링크는 그 키로 만든다.
+// - 그 전부터 있던 링크(서비스 키로 만든 것)는 DB 해시가 그대로라 계속 열리고, 같은 예약 메일에는
+//   만료(예약 끝 + 7일)까지 옛 링크를 그대로 보낸다 — 이중 확인 기간. 모두 만료되면 옛 키를 뺄 수 있다.
+function primarySecret(): string {
   const s = process.env.GUEST_MANAGE_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!s) throw new Error("missing secret for guest manage token");
   return s;
 }
 
+function legacySecret(): string | null {
+  return process.env.GUEST_MANAGE_SECRET ? (process.env.SUPABASE_SERVICE_ROLE_KEY ?? null) : null;
+}
+
+function sign(secret: string, bookingId: string): string {
+  return createHmac("sha256", secret).update(`guest-manage:v1:${bookingId}`).digest("base64url");
+}
+
 export function manageTokenFor(bookingId: string): string {
-  return createHmac("sha256", secret()).update(`guest-manage:v1:${bookingId}`).digest("base64url");
+  return sign(primarySecret(), bookingId);
 }
 
 export function manageTokenHash(token: string): string {
@@ -34,11 +44,23 @@ export function isWellFormedToken(token: unknown): token is string {
 /** 게스트 메일에 넣을 관리 링크(상대 경로) — 처음이면 해시를 저장한다 */
 export async function ensureManagePath(bookingId: string): Promise<string> {
   const token = manageTokenFor(bookingId);
-  await getAdminClient()
-    .from("bookings")
-    .update({ guest_manage_token_hash: manageTokenHash(token) })
-    .eq("id", bookingId)
-    .is("guest_manage_token_hash", null);
+  const db = getAdminClient();
+  const { data } = await db.from("bookings").select("guest_manage_token_hash").eq("id", bookingId).maybeSingle();
+  const stored = (data?.guest_manage_token_hash as string | null | undefined) ?? null;
+  if (!stored) {
+    await db
+      .from("bookings")
+      .update({ guest_manage_token_hash: manageTokenHash(token) })
+      .eq("id", bookingId)
+      .is("guest_manage_token_hash", null);
+    return `/b#${token}`;
+  }
+  // 이미 옛 키로 링크를 보낸 예약이면 같은 링크를 계속 보낸다(새 링크는 해시가 달라 열리지 않는다)
+  const legacy = legacySecret();
+  if (legacy && stored !== manageTokenHash(token)) {
+    const old = sign(legacy, bookingId);
+    if (stored === manageTokenHash(old)) return `/b#${old}`;
+  }
   return `/b#${token}`;
 }
 

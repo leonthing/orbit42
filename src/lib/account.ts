@@ -4,7 +4,7 @@ import { randomBytes } from "node:crypto";
 import { getAdminClient } from "@/lib/supabase";
 import { getSession } from "@/lib/auth";
 import { sendPasswordResetEmail, sendVerifyEmail } from "@/lib/email";
-import { clientKey, rateLimit } from "@/lib/rate-limit";
+import { clientKey, rateLimitDb } from "@/lib/rate-limit";
 
 const VERIFY_TTL_HOURS = 24;
 const RESET_TTL_HOURS = 1;
@@ -38,7 +38,7 @@ export async function startEmailVerification(userId: string, email: string) {
 export async function resendVerificationEmail() {
   const session = await getSession();
   if (!session) return { error: "로그인이 필요해요." };
-  const limit = rateLimit(
+  const limit = await rateLimitDb(
     clientKey("resend-verify", session.username),
     5,
     60 * 60_000,
@@ -91,12 +91,9 @@ export async function requestPasswordReset(email: string) {
   if (!normalized) return { success: true };
   // Throttle both per-IP (prevent mass enumeration) and per-email
   // (prevent inbox-spamming a target).
-  const ipLimit = rateLimit(clientKey("pwreset-ip"), 10, 60 * 60_000);
-  const mailLimit = rateLimit(
-    clientKey("pwreset-mail", normalized),
-    3,
-    60 * 60_000,
-  );
+  const ipLimit = await rateLimitDb(clientKey("pwreset-ip"), 10, 60 * 60_000);
+  // 메일 주소 기준은 IP 를 빼고 센다 — IP 를 바꿔 가며 한 사람에게 메일을 쏟지 못하게(보안-8)
+  const mailLimit = await rateLimitDb(`pwreset-mail:${normalized}`, 3, 60 * 60_000);
   if (!ipLimit.ok || !mailLimit.ok) {
     return { success: true }; // fail quietly to avoid signal
   }

@@ -41,7 +41,8 @@ export async function getSlotPanelData(
   const session = await getSession();
   const isAuction = slot.pricing_model === "auction";
   const [options, menus] = await Promise.all([
-    isAuction ? Promise.resolve([]) : getBookableOptions(slot),
+    // 꺼 둔 링크의 빈 시간은 주인에게만(보안-8)
+    isAuction || (!slot.active && session?.username !== host.username) ? Promise.resolve([]) : getBookableOptions(slot),
     listMenusForSlot(slot.id),
   ]);
   return {

@@ -5,6 +5,7 @@ import { removeBookingCalendarEvent } from "@/lib/booking-calendar";
 import { getAdminClient } from "@/lib/supabase";
 import { getSession } from "@/lib/auth";
 import { getUserId, requireUserId } from "@/lib/db";
+import { logBookingEvent } from "@/lib/booking-events";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
 import { getAuthenticatedCalendar } from "@/lib/google";
 import { computeAutoAvailability } from "@/lib/slot-availability";
@@ -749,8 +750,13 @@ export async function refreshBookableOptions(
     .from("time_slots")
     .select("*")
     .eq("id", slotId)
-    .single();
+    .maybeSingle();
   if (!slot) return [];
+  // 꺼 둔·보관한 링크의 빈 시간은 주인에게만(보안-8) — 공개 페이지도 꺼진 링크엔 시간을 안 보여 준다
+  if (!slot.active || slot.archived_at) {
+    const me = await getUserId().catch(() => null);
+    if (me !== slot.host_id) return [];
+  }
   return getBookableOptions(slot as TimeSlot, pickedLocation);
 }
 
@@ -857,6 +863,10 @@ export async function removeAvailability(availabilityId: string) {
 /** 계좌이체 예약의 입금 기한 — 예약 후 24시간(세션 시작이 더 이르면 그때까지) */
 const PAYMENT_WINDOW_MS = 24 * 60 * 60 * 1000;
 
+/** 예약 요청 횟수 제한(보안-8) */
+const BOOKINGS_PER_EMAIL_PER_DAY = 5;
+const BOOKINGS_PER_SLOT_PER_HOUR = 20;
+
 export async function bookSlot(args: {
   slotId: string;
   /** Manual mode */
@@ -906,6 +916,30 @@ export async function bookSlot(args: {
     .eq("id", args.slotId)
     .single();
   if (!slot || !slot.active) return { error: "지금은 예약할 수 없는 링크예요." };
+  // 남의 주소로 메일 폭탄·호스트 받은편지함 도배 막기(보안-8) — DB 로 세서 서버가 여러 대여도 지켜진다
+  {
+    const email = (args.guest_email ?? "").trim().toLowerCase();
+    if (email && (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) {
+      return { error: "이메일 형식이 올바르지 않아요." };
+    }
+    if (typeof args.message === "string" && args.message.length > 2000) {
+      return { error: "메시지는 2000자까지 쓸 수 있어요." };
+    }
+    const dayAgo = new Date(Date.now() - 24 * 3600_000).toISOString();
+    const hourAgo = new Date(Date.now() - 3600_000).toISOString();
+    const [perEmail, perSlot] = await Promise.all([
+      email
+        ? db.from("bookings").select("id", { count: "exact", head: true }).ilike("guest_email", email).gte("created_at", dayAgo)
+        : Promise.resolve({ count: 0 }),
+      db.from("bookings").select("id", { count: "exact", head: true }).eq("slot_id", slot.id).gte("created_at", hourAgo),
+    ]);
+    if ((perEmail.count ?? 0) >= BOOKINGS_PER_EMAIL_PER_DAY) {
+      return { error: "이 이메일로는 오늘 더 예약할 수 없어요. 내일 다시 시도해 주세요." };
+    }
+    if ((perSlot.count ?? 0) >= BOOKINGS_PER_SLOT_PER_HOUR) {
+      return { error: "지금 이 링크에 예약이 몰려 있어요. 잠시 뒤 다시 시도해 주세요." };
+    }
+  }
   if (slot.pricing_model === "auction") {
     return { error: "경매 방식 예약 링크는 입찰로 거래돼요." };
   }
@@ -1575,12 +1609,14 @@ export async function updateBookingStatus(
     return { error: "이미 지난 예약이라 수락할 수 없어요. 목록에서 보관하거나 삭제해 주세요." };
   }
 
+  const { data: before } = await db.from("bookings").select("status").eq("id", id).maybeSingle();
   const { error } = await db
     .from("bookings")
     .update({ status, updated_at: new Date().toISOString() })
     .eq("id", id)
     .eq("host_id", userId);
   if (error) return { error: "변경 실패" };
+  await logBookingEvent({ bookingId: id, actorKind: "host", actorId: userId, action: "status", fromStatus: (before?.status as string | undefined) ?? null, toStatus: status });
 
   // 계좌이체 예약을 확정하면 입금 확인으로 본다.
   if (status === "confirmed") {
@@ -1830,6 +1866,24 @@ async function moveBookingTo(args: {
   return {};
 }
 
+/**
+ * 게스트 쪽 행동의 주체(보안-8) — 로그인한 게스트 계정, 또는 예약 관리 링크(토큰 해시).
+ * 함수 안에서 이 값으로 예약을 다시 찾으므로 부르는 쪽 확인에 기대지 않는다.
+ */
+export type GuestActor = { userId: string } | { manageTokenHash: string };
+
+function guestActorFilter<Q extends { eq: (col: string, v: string) => Q }>(query: Q, actor: GuestActor): Q | null {
+  if ("userId" in actor && typeof actor.userId === "string" && actor.userId) return query.eq("guest_id", actor.userId);
+  if ("manageTokenHash" in actor && typeof actor.manageTokenHash === "string" && /^[0-9a-f]{64}$/.test(actor.manageTokenHash)) {
+    return query.eq("guest_manage_token_hash", actor.manageTokenHash);
+  }
+  return null;
+}
+
+function guestActorLog(actor: GuestActor): { actorKind: "guest" | "guest_link"; actorId: string | null } {
+  return "userId" in actor ? { actorKind: "guest", actorId: actor.userId } : { actorKind: "guest_link", actorId: null };
+}
+
 export async function rescheduleMyBooking(
   bookingId: string,
   pick: { startAt?: string; availabilityId?: string },
@@ -1845,19 +1899,19 @@ export async function rescheduleMyBooking(
  */
 export async function rescheduleBookingAsGuest(
   bookingId: string,
-  actor: { userId: string | null },
+  actor: GuestActor,
   pick: { startAt?: string; availabilityId?: string },
 ): Promise<{ success: true; status: string } | { error: string }> {
-  const userId = actor.userId;
   const db = getAdminClient();
 
-  let query = db
+  const base = db
     .from("bookings")
     .select(
       "id, guest_id, guest_name, guest_email, host_id, slot_id, availability_id, scheduled_at, status, google_event_id",
     )
     .eq("id", bookingId);
-  if (userId) query = query.eq("guest_id", userId);
+  const query = guestActorFilter(base, actor);
+  if (!query) return { error: "예약을 찾을 수 없어요." };
   const { data: booking } = await query.maybeSingle();
   if (!booking) return { error: "예약을 찾을 수 없어요." };
   if (booking.status === "canceled" || booking.status === "completed") {
@@ -1972,6 +2026,7 @@ export async function rescheduleBookingAsGuest(
   }
 
   revalidatePath("/", "layout");
+  await logBookingEvent({ bookingId, ...guestActorLog(actor), action: "reschedule", fromStatus: booking.status as string, toStatus: newStatus });
   return { success: true as const, status: newStatus };
 }
 
@@ -2527,16 +2582,17 @@ export async function cancelMyBooking(bookingId: string) {
  */
 export async function cancelBookingAsGuest(
   bookingId: string,
-  actor: { userId: string | null },
+  actor: GuestActor,
 ): Promise<{ success: true } | { error: string }> {
   const db = getAdminClient();
-  let query = db
+  const base = db
     .from("bookings")
     .select(
       "id, guest_id, guest_name, guest_email, host_id, scheduled_at, scheduled_end_at, status, slot:time_slots!bookings_slot_id_fkey(title, location_detail)",
     )
     .eq("id", bookingId);
-  if (actor.userId) query = query.eq("guest_id", actor.userId);
+  const query = guestActorFilter(base, actor);
+  if (!query) return { error: "예약을 찾을 수 없어요." };
   const { data: booking } = await query.maybeSingle();
   if (!booking) return { error: "예약을 찾을 수 없어요." };
   if (booking.status === "canceled" || booking.status === "completed") {
@@ -2548,6 +2604,7 @@ export async function cancelBookingAsGuest(
     .update({ status: "canceled", updated_at: new Date().toISOString() })
     .eq("id", bookingId);
   if (error) return { error: "취소에 실패했어요." };
+  await logBookingEvent({ bookingId, ...guestActorLog(actor), action: "status", fromStatus: booking.status as string, toStatus: "canceled" });
 
   await removeBookingCalendarEvent(bookingId);
   await db.from("events").delete().eq("booking_id", bookingId);

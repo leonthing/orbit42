@@ -20,8 +20,8 @@ export async function generateSocialPosts(
   const userId = await requireUserId();
   const session = await getSession();
   if (!session || session.username !== username) throw new Error("권한이 없어요.");
-  const { rateLimit } = await import("@/lib/rate-limit");
-  if (!rateLimit(`social-gen:${userId}`, 20, 24 * 3600_000).ok) {
+  const { rateLimitDb } = await import("@/lib/rate-limit");
+  if (!(await rateLimitDb(`social-gen:${userId}`, 20, 24 * 3600_000)).ok) {
     throw new Error("오늘은 SNS 글 만들기를 더 할 수 없어요. 내일 다시 시도해 주세요.");
   }
   title = String(title ?? "").slice(0, 300);

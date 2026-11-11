@@ -59,3 +59,37 @@ setInterval(() => {
     if (v.resetAt < now) store.delete(k);
   });
 }, 60_000).unref?.();
+
+/**
+ * DB 로 세는 횟수 제한(보안-8) — Vercel 인스턴스가 여러 대여도 함께 센다.
+ * key 는 sha256 해서 저장(아이디·IP·이메일 원문을 남기지 않음). 표가 없거나(마이그레이션 전)
+ * DB 오류면 메모리 제한으로 대신한다. 오래된 기록은 /api/cron/cleanup 이 지운다.
+ */
+export async function rateLimitDb(
+  key: string,
+  limit: number,
+  windowMs: number,
+): Promise<{ ok: boolean; retryAfter: number }> {
+  const [{ createHash }, { getAdminClient }] = await Promise.all([import("crypto"), import("@/lib/supabase")]);
+  const sep = key.indexOf(":");
+  const bucket = sep > 0 ? key.slice(0, sep) : "misc";
+  const subject = createHash("sha256").update(key).digest("hex");
+  const since = new Date(Date.now() - windowMs).toISOString();
+  const db = getAdminClient();
+  const { data, error } = await db
+    .from("rate_limit_hits")
+    .select("created_at")
+    .eq("bucket", bucket)
+    .eq("subject", subject)
+    .gte("created_at", since)
+    .order("created_at", { ascending: true })
+    .limit(limit);
+  if (error) return rateLimit(key, limit, windowMs);
+  if ((data?.length ?? 0) >= limit) {
+    const oldest = new Date(data![0].created_at as string).getTime();
+    return { ok: false, retryAfter: Math.max(1, Math.ceil((oldest + windowMs - Date.now()) / 1000)) };
+  }
+  const ins = await db.from("rate_limit_hits").insert({ bucket, subject });
+  if (ins.error) return rateLimit(key, limit, windowMs);
+  return { ok: true, retryAfter: 0 };
+}

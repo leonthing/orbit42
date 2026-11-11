@@ -61,6 +61,11 @@ export async function notifyReaction(
   }
 
   if (!authorId || authorId === actorId) return;
+  // 차단한(된) 사이에는 반응 알림을 보내지 않는다(보안-8)
+  {
+    const { isBlockedEitherWay } = await import("@/lib/blocks");
+    if (await isBlockedEitherWay(actorId, authorId)) return;
+  }
 
   const { data: actor } = await db
     .from("users")

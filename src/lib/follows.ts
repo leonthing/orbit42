@@ -82,6 +82,9 @@ export async function follow(targetUsername: string) {
     getUserIdByUsername(targetUsername),
   ]);
   if (!followerId || !followingId) return { error: "사용자를 찾을 수 없습니다." };
+  // 차단(어느 쪽이든)이면 팔로우 못 한다 — 팔로워 공개 캘린더·알림이 다시 열리지 않게(보안-8)
+  const { isBlockedEitherWay } = await import("@/lib/blocks");
+  if (await isBlockedEitherWay(followerId, followingId)) return { error: "팔로우할 수 없는 사용자예요." };
 
   const { error } = await db
     .from("follows")

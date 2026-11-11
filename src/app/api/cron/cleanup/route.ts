@@ -30,6 +30,14 @@ export async function GET(request: NextRequest) {
   } catch (err) {
     console.error("cleanupChats", err);
   }
+  // 횟수 제한 기록(보안-8): 가장 긴 창이 하루라 이틀 지난 것은 지운다. 표가 없으면(마이그레이션 전) 조용히 넘긴다.
+  {
+    const { error } = await db
+      .from("rate_limit_hits")
+      .delete()
+      .lt("created_at", new Date(Date.now() - 2 * 24 * 3600_000).toISOString());
+    if (error && error.code !== "42P01" && error.code !== "PGRST205") console.error("rate_limit_hits cleanup", error.message);
+  }
   if (!tokensOk) {
     return NextResponse.json(
       { error: "failed", rescheduleExpired: expired, unpaidExpired },

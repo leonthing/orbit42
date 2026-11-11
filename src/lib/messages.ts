@@ -204,6 +204,12 @@ export async function sendMessage(conversationId: string, body: string) {
   if (conv.user_a !== me && conv.user_b !== me) {
     return { error: "이 대화에 참여할 수 없습니다." };
   }
+  // 대화를 연 뒤에 차단했어도 더 보내지 못한다(보안-8). startConversation 에만 있던 확인
+  {
+    const { isBlockedEitherWay } = await import("@/lib/blocks");
+    const other = (conv.user_a === me ? conv.user_b : conv.user_a) as string;
+    if (await isBlockedEitherWay(me, other)) return { error: "메시지를 보낼 수 없는 상대예요." };
+  }
 
   const { error: insErr } = await db
     .from("messages")
