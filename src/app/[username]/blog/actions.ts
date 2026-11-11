@@ -1,5 +1,6 @@
 "use server";
 
+import { pickKeys } from "@/lib/pick-keys";
 import { getAdminClient } from "@/lib/supabase";
 import { requireUserId, getUserId } from "@/lib/db";
 
@@ -171,6 +172,10 @@ export async function updateBlogPost(
   >
 ) {
   const userId = await requireUserId();
+  // 서버 액션은 아무 JSON 이나 받는다 — 허용 칸만(보안-7). user_id·published 등은 못 바꾼다.
+  data = pickKeys<BlogPost, "title" | "content" | "excerpt" | "slug" | "tags" | "cover_image">(data, [
+    "title", "content", "excerpt", "slug", "tags", "cover_image",
+  ]);
   const db = getAdminClient();
 
   // Renaming the slug? Remember the old one so existing links 301 to
@@ -255,10 +260,17 @@ export async function saveSocialTexts(
 ) {
   const userId = await requireUserId();
   const db = getAdminClient();
+  // 허용 칸만, 문자열만(보안-7)
+  const patch: Record<string, string> = {};
+  for (const k of ["social_x", "social_facebook", "social_linkedin"] as const) {
+    const v = (data as Record<string, unknown>)?.[k];
+    if (typeof v === "string") patch[k] = v.slice(0, 5000);
+  }
+  if (Object.keys(patch).length === 0) return;
 
   const { error } = await db
     .from("blog_posts")
-    .update(data)
+    .update(patch)
     .eq("id", id)
     .eq("user_id", userId);
 

@@ -1,5 +1,7 @@
 // 일반 서버 모듈 — 서버 액션 아님(보안-6). 클라이언트용은 *-actions.ts
 import { revalidatePath } from "next/cache";
+import { pickKeys } from "@/lib/pick-keys";
+import { CALENDAR_VISIBILITIES, HEX_COLOR } from "@/lib/api-calendars";
 import { getAdminClient } from "@/lib/supabase";
 import { requireUserId, getUserId } from "@/lib/db";
 import {
@@ -131,6 +133,11 @@ export async function createGoogleLinkedCalendar(args: {
   return { success: true };
 }
 
+const CALENDAR_PATCH_KEYS = [
+  "name", "purpose", "color", "visibility", "hourly_rate_krw",
+  "goal_title", "goal_target_hours", "goal_deadline", "goal_started_at", "archived_at",
+] as const;
+
 export async function updateCalendar(
   id: string,
   patch: Partial<
@@ -143,6 +150,15 @@ export async function updateCalendar(
   >,
 ) {
   const userId = await requireUserId();
+  // 서버 액션은 아무 JSON 이나 받는다 — 허용 칸만(보안-7). user_id·source·google_calendar_id·is_default 는 못 바꾼다.
+  patch = pickKeys<Calendar, (typeof CALENDAR_PATCH_KEYS)[number]>(patch, CALENDAR_PATCH_KEYS);
+  if (patch.visibility !== undefined && !(CALENDAR_VISIBILITIES as readonly string[]).includes(patch.visibility as string)) {
+    return { error: "공개 범위가 올바르지 않아요." };
+  }
+  if (patch.color !== undefined && !HEX_COLOR.test(String(patch.color))) {
+    return { error: "색상이 올바르지 않아요." };
+  }
+  if (Object.keys(patch).length === 0) return { error: "변경할 내용이 없어요." };
   const db = getAdminClient();
   const { error } = await db
     .from("calendars")

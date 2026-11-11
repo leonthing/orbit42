@@ -1,3 +1,4 @@
+import { safeSocialLinks } from "@/lib/social-links";
 import { apiSession, apiUserId } from "@/lib/api-auth";
 import { getAdminClient } from "@/lib/supabase";
 import { getFollowStats, isFollowing } from "@/lib/follows";
@@ -69,7 +70,7 @@ export async function GET(
       // "어떤 사람인지" — 웹 프로필에 이미 공개 중인 정보를 앱에도 노출
       socialLinks: blockedByMe
         ? {}
-        : ((user.social_links as Record<string, string> | null) ?? {}),
+        : safeSocialLinks(user.social_links),
       education: blockedByMe
         ? []
         : ((user.education as unknown[] | null) ?? []),

@@ -1,6 +1,7 @@
 "use server";
 
 import { requireUserId } from "@/lib/db";
+import { getSession } from "@/lib/auth";
 import { getSocialStatus, postToX, postToFacebook, postToLinkedIn } from "@/lib/social";
 
 export interface SocialPosts {
@@ -15,6 +16,16 @@ export async function generateSocialPosts(
   slug: string,
   username: string
 ): Promise<SocialPosts> {
+  // 보안-7: 로그인한 본인 글만, 사용자당 하루 20번(유료 API)
+  const userId = await requireUserId();
+  const session = await getSession();
+  if (!session || session.username !== username) throw new Error("권한이 없어요.");
+  const { rateLimit } = await import("@/lib/rate-limit");
+  if (!rateLimit(`social-gen:${userId}`, 20, 24 * 3600_000).ok) {
+    throw new Error("오늘은 SNS 글 만들기를 더 할 수 없어요. 내일 다시 시도해 주세요.");
+  }
+  title = String(title ?? "").slice(0, 300);
+  content = String(content ?? "");
   const blogUrl = `https://blog.orbit42.org/${username}/${slug}`;
   const apiKey = process.env.ANTHROPIC_API_KEY;
 

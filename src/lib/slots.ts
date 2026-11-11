@@ -529,6 +529,15 @@ export async function updateSlot(id: string, patch: Partial<SlotInput>) {
   for (const f of fields) {
     if (patch[f] !== undefined) updateData[f] = patch[f];
   }
+  // 예약이 들어오면 이 캘린더에 일정이 생긴다 — 내 캘린더만(보안-7, createSlot 과 같은 규칙)
+  if (typeof updateData.calendar_id === "string" && updateData.calendar_id) {
+    const { data: cal } = await db
+      .from("calendars")
+      .select("user_id")
+      .eq("id", updateData.calendar_id)
+      .maybeSingle();
+    if (!cal || cal.user_id !== userId) return { error: "선택한 캘린더에 권한이 없어요." };
+  }
   if (patch.locations !== undefined) {
     const normalized = normalizeLocationList(patch.locations);
     updateData.locations = normalized;
@@ -1554,7 +1563,10 @@ export async function updateBookingStatus(
     )
     .eq("id", id)
     .eq("host_id", userId)
-    .single();
+    .maybeSingle();
+  // 내 예약(호스트)이 아니면 여기서 끝 — 아래 입금 확인·일정 삭제는 id 만 보고 돌기 때문(보안-7)
+  if (!booking) return { error: "예약을 찾을 수 없어요." };
+  if (!["confirmed", "canceled", "completed"].includes(status)) return { error: "상태가 올바르지 않아요." };
   if (status === "canceled" && booking && hasEnded(booking)) {
     return { error: PAST_CANCEL_ERROR };
   }

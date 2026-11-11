@@ -1,5 +1,6 @@
 // 일반 서버 모듈 — 서버 액션 아님(보안-6). 클라이언트용은 *-actions.ts
 import { cookies, headers } from "next/headers";
+import { parseSocialLinks } from "@/lib/social-links";
 import { getAdminClient } from "@/lib/supabase";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
 import { signSession, verifySession } from "@/lib/session";
@@ -438,7 +439,9 @@ export async function updateProfile(
     updateData.birth_date = birthDate || null;
   }
   if (socialLinks !== undefined) {
-    updateData.social_links = socialLinks;
+    const parsed = parseSocialLinks(socialLinks);
+    if ("error" in parsed) return { error: parsed.error };
+    updateData.social_links = parsed.links;
   }
   if (extra) {
     if (extra.bio !== undefined) updateData.bio = extra.bio || null;

@@ -1,3 +1,4 @@
+import { safeSocialLinks } from "@/lib/social-links";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -162,7 +163,8 @@ export default async function PublicProfile({
       })()
     : { upcomingEvents: [] as PublicEvent[], weekInsights: null };
 
-  const socialLinks = (profile.social_links || {}) as SocialLinks;
+  // 그릴 때도 http(s) 만(보안-7)
+  const socialLinks = safeSocialLinks(profile.social_links) as SocialLinks;
   const education = ((profile.education || []) as Education[]).sort((a, b) => {
     const yearA = parseInt(a.startYear || "0") || 0;
     const yearB = parseInt(b.startYear || "0") || 0;

@@ -2,6 +2,7 @@
 
 import { inclusiveAllDayEndToGoogle } from "@/lib/calendar-events";
 
+import { pickKeys } from "@/lib/pick-keys";
 import { getAdminClient } from "@/lib/supabase";
 import { deleteEarningsForEvents } from "@/lib/event-earnings-cleanup";
 import { requireUserId } from "@/lib/db";
@@ -190,8 +191,33 @@ function snapshotPatch(input: Partial<EventInput>): Partial<EventSnapshot> {
   return out;
 }
 
-export async function updateEvent(id: string, input: Partial<EventInput>): Promise<Event> {
+// 서버 액션은 아무 JSON 이나 받는다 — 타입이 아니라 이 목록으로 칸을 거른다(보안-7).
+const EVENT_PATCH_KEYS = [
+  "title", "description", "start_at", "end_at", "all_day", "business_id",
+  "calendar_id", "location", "location_lat", "location_lng", "travel_min",
+] as const;
+
+function pickEventPatch(input: unknown): Partial<EventInput> {
+  return pickKeys<EventInput, (typeof EVENT_PATCH_KEYS)[number]>(input, EVENT_PATCH_KEYS);
+}
+
+/** 새 캘린더는 내 것이거나 편집 권한을 받은 것이어야 한다 */
+async function assertCalendarWritable(userId: string, calendarId: string) {
+  const { data: cal } = await getAdminClient()
+    .from("calendars")
+    .select("user_id")
+    .eq("id", calendarId)
+    .maybeSingle();
+  if (!cal) throw new Error("선택한 캘린더에 권한이 없어요.");
+  if (cal.user_id === userId) return;
+  const { canEditCalendar } = await import("@/lib/calendar-members");
+  if (!(await canEditCalendar(userId, calendarId))) throw new Error("선택한 캘린더에 권한이 없어요.");
+}
+
+export async function updateEvent(id: string, rawInput: Partial<EventInput>): Promise<Event> {
   const userId = await requireUserId();
+  const input = pickEventPatch(rawInput);
+  if (input.calendar_id) await assertCalendarWritable(userId, input.calendar_id);
   const db = getAdminClient();
   const { data, error } = await db
     .from("events")
@@ -355,12 +381,43 @@ export async function listEventParticipants(
   return listParticipants(userId, eventKey);
 }
 
+const INVITES_PER_EVENT = 30;
+const INVITES_PER_DAY = 50;
+
+/** 초대해도 되면 null, 아니면 이유 */
+async function checkInviteAllowed(userId: string, eventKey: string): Promise<string | null> {
+  if (typeof eventKey !== "string" || !eventKey || eventKey.length > 300) return "일정을 찾을 수 없어요.";
+  const db = getAdminClient();
+  // Orbit42 일정(반복 회차 포함)은 내 것인지 본다. 구글 일정(gcal_)은 내 구글 계정의 일정 키라 표만 내 것으로 남는다.
+  if (!eventKey.startsWith("gcal_")) {
+    const { seriesIdOf } = await import("@/lib/recurrence");
+    const { data: ev } = await db
+      .from("events")
+      .select("id")
+      .eq("id", seriesIdOf(eventKey))
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!ev) return "내 일정에만 초대할 수 있어요.";
+  }
+  const dayAgo = new Date(Date.now() - 24 * 3600_000).toISOString();
+  const [{ count: perEvent }, { count: perDay }] = await Promise.all([
+    db.from("event_participants").select("id", { count: "exact", head: true }).eq("owner_id", userId).eq("event_key", eventKey),
+    db.from("event_participants").select("id", { count: "exact", head: true }).eq("owner_id", userId).gte("created_at", dayAgo),
+  ]);
+  if ((perEvent ?? 0) >= INVITES_PER_EVENT) return `한 일정에는 ${INVITES_PER_EVENT}명까지 초대할 수 있어요.`;
+  if ((perDay ?? 0) >= INVITES_PER_DAY) return "오늘은 초대를 더 보낼 수 없어요. 내일 다시 시도해 주세요.";
+  return null;
+}
+
 export async function addEventParticipant(
   eventKey: string,
   snapshot: EventSnapshotInput,
   target: { username?: string; email?: string },
 ): Promise<{ participants: ParticipantView[] } | { error: string }> {
   const userId = await requireUserId();
+  // 보안-7: 내 일정에만, 초대(특히 메일)는 일정당·하루당 횟수 제한 — Orbit42 이름으로 스팸이 나가지 않게
+  const gate = await checkInviteAllowed(userId, eventKey);
+  if (gate) return { error: gate };
   const {
     addParticipantByUsername,
     addParticipantByEmail,

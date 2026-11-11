@@ -1,5 +1,6 @@
 // 일반 서버 모듈 — 서버 액션 아님(보안-6). 클라이언트용은 *-actions.ts
 import { revalidatePath } from "next/cache";
+import { pickKeys } from "@/lib/pick-keys";
 import { getAdminClient } from "@/lib/supabase";
 import { requireUserId } from "@/lib/db";
 
@@ -80,6 +81,13 @@ export async function updateMenu(
   >,
 ) {
   const userId = await requireUserId();
+  // 서버 액션은 아무 JSON 이나 받는다 — 허용 칸만(보안-7). user_id·id 는 못 바꾼다.
+  patch = pickKeys<Menu, "name" | "category" | "description" | "price_cents" | "active">(patch, [
+    "name", "category", "description", "price_cents", "active",
+  ]);
+  if (patch.price_cents !== undefined && (!Number.isInteger(patch.price_cents) || (patch.price_cents as number) < 0)) {
+    return { error: "가격이 올바르지 않아요." };
+  }
   const db = getAdminClient();
   const { error } = await db
     .from("menus")
