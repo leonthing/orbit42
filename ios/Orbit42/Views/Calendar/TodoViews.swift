@@ -217,6 +217,7 @@ struct FollowUpSection: View {
             .listRowBackground(Theme.surface)
         }
         .task(id: event.id) { await load() }
+        .onReturnToForeground { await load() }
         .onReceive(NotificationCenter.default.publisher(for: TodoChanges.didChange)) { _ in Task { await load() } }
         .sheet(isPresented: $showingAddTodo) {
             AddTodoSheet(mode: .single, sourceKey: event.id) { _ in Task { await load() } }
@@ -449,6 +450,7 @@ struct DayTodoStrip: View {
             }
         }
         .task(id: date) { await load() }
+        .onReturnToForeground { await load() }
         .onReceive(NotificationCenter.default.publisher(for: TodoChanges.didChange)) { _ in Task { await load() } }
     }
 
@@ -564,6 +566,7 @@ struct TodoListView: View {
             }
             .refreshable { await load() }
             .task { await load() }
+            .onReturnToForeground { await load() }
             .sheet(item: $dueTarget) { t in
                 TodoDueSheet(todo: t) { Task { await load() } }
             }

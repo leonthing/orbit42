@@ -60,6 +60,7 @@ struct DmListView: View {
         .refreshable { await load() }
         .task { await load() }
         .onAppear { Task { await load() } }
+        .onReturnToForeground { await load() }
         .accessibilityIdentifier("dmList")
     }
 
@@ -187,6 +188,7 @@ struct DmChatView: View {
         } message: { Text(notice ?? "") }
         .task { await PushNotifications.shared.askIfNeeded() }
         .onAppear { Funnel.ref = nil } // 대화방으로 돌아오면 출처를 지운다
+        .onReturnToForeground { await load() } // 20초 주기를 기다리지 않고 바로
         .task {
             while !Task.isCancelled {
                 await load()

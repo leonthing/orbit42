@@ -125,6 +125,8 @@ final class CalendarViewModel {
 
     /// 마지막으로 앱을 본 시각 — 날이 바뀌었거나 오래 떠나 있다 돌아오면 오늘로 돌아간다.
     @ObservationIgnored private var lastActiveAt = Date()
+    /// 뒤(홈 화면·다른 앱)로 갔다 왔는지 — 제어 센터·알림 센터를 잠깐 내린 것(.inactive)은 빼고 센다
+    @ObservationIgnored private var wentBackground = false
     /// 위젯·알림 링크로 날짜를 고른 시각 — 그 직후의 '오늘로'가 링크 날짜를 덮지 않게
     @ObservationIgnored private var linkSelectedAt = Date.distantPast
 
@@ -155,13 +157,16 @@ final class CalendarViewModel {
         return 3600
     }
 
-    /// 앱이 앞으로 올 때 — 1분 넘게 떠나 있었으면 일정을 다시 받는다.
+    /// 앱이 앞으로 올 때 — 뒤에 갔다 왔으면(얼마나 있었든) 일정을 다시 받는다.
     /// 월별 캐시는 프로세스가 사는 동안 남아 있어서, 다른 기기·구글·서버에서 바뀐 것이
     /// 앱을 완전히 껐다 켜기 전까지 안 보였다(10/15 종일 일정 수정 뒤 실측).
+    /// 처음엔 1분 넘게 떠나 있을 때만 받았는데, 웹에서 고치고 바로 돌아오면 안 보였다(버그-2, 11/13 실측).
     func didBecomeActive(now: Date = Date()) {
         let away = now.timeIntervalSince(lastActiveAt)
+        let back = wentBackground
+        wentBackground = false
         returnToTodayIfStale(now: now)
-        guard away > 60 else { return }
+        guard back || away > 60 else { return }
         // 지금 보는 달은 화면에 둔 채로 새로 받아 바꾸고, 나머지 달은 다음에 볼 때 받는다
         let current = currentMonthKey
         cache = cache.filter { $0.key == current }
@@ -171,6 +176,7 @@ final class CalendarViewModel {
     /// 앱이 뒤로 갈 때 — 떠난 시각을 남긴다
     func markInactive(now: Date = Date()) {
         lastActiveAt = now
+        wentBackground = true
     }
 
     func showToday() {
