@@ -163,8 +163,6 @@ struct DayTimelineView: View {
     private var content: some View {
         ScrollViewReader { proxy in
         VStack(spacing: 0) {
-            // 할 일 (1.9.0): 그날 기한 + 오늘이면 기한 지난 것, 없으면 숨김
-            DayTodoStrip(date: date)
             if !allDayEvents.isEmpty {
                 allDayRow(proxy)
                     .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { allDayRowHeight = $0 }

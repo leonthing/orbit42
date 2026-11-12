@@ -241,6 +241,7 @@ struct FollowUpSection: View {
                     }
                 }
                 .font(.subheadline)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("followUp.todo")
@@ -266,6 +267,7 @@ struct FollowUpSection: View {
                         .foregroundStyle(Theme.secondaryText)
                 }
                 .font(.subheadline)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("followUp.event")
@@ -403,9 +405,12 @@ struct DayTodoStrip: View {
                             Image(systemName: expanded ? "chevron.up" : "chevron.down").font(.caption2)
                         }
                         .foregroundStyle(Theme.primaryText)
+                        // plain 버튼은 그려진 곳만 눌린다 — 가운데 빈 곳(Spacer)도 눌리게(실측: 가운데를 누르면 안 펼쳐짐)
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("dayTodos")
+                    .accessibilityValue(expanded ? "펼침" : "접힘")
                     if expanded {
                         ForEach(todos) { t in
                             Button {
@@ -428,6 +433,7 @@ struct DayTodoStrip: View {
                                     }
                                 }
                                 .font(.subheadline)
+                                .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
                         }
@@ -437,6 +443,9 @@ struct DayTodoStrip: View {
                 .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
                 .padding(.horizontal, 12)
                 .padding(.top, 6)
+            } else {
+                // 빈 Group 에는 .task 가 붙지 않는다(실측) — 0 높이 자리
+                Color.clear.frame(height: 0)
             }
         }
         .task(id: date) { await load() }

@@ -12,5 +12,28 @@ export function v190Open(now: Date = new Date()): boolean {
   return privacy190State(now) === "effective";
 }
 
+/**
+ * 미리보기(PO 11/13): 시행일 전이라도 운영 env V190_PREVIEW_USER_IDS(쉼표로 구분한 users.id)에 넣은 계정에만 연다.
+ * 앱은 /api/v1/chats 의 dmOpen 을 보고 화면을 켜므로 새 빌드 없이 따라온다. 1:1 대화는 미리보기 계정끼리만.
+ */
+export function v190Preview(userId: string | null | undefined): boolean {
+  if (!userId || process.env.V190_OFF === "1") return false;
+  return (process.env.V190_PREVIEW_USER_IDS || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .includes(userId);
+}
+
+/** 이 사람에게 1.9.0 기능이 열렸는지 — 시행일이 지났거나 미리보기 계정 */
+export function v190OpenFor(userId: string | null | undefined, now: Date = new Date()): boolean {
+  return v190Open(now) || v190Preview(userId);
+}
+
+/** 1:1 대화: 두 사람 모두에게 열렸는지(시행 전에는 미리보기 계정끼리만) */
+export function v190OpenPair(a: string | null | undefined, b: string | null | undefined, now: Date = new Date()): boolean {
+  return v190Open(now) || (v190Preview(a) && v190Preview(b));
+}
+
 export const WEB_DM_CLOSED_MESSAGE = "1:1 대화는 새 단장 중이에요. 11월 20일에 다시 열어 드릴게요.";
 export const V190_CLOSED_MESSAGE = "11월 20일부터 쓸 수 있어요.";

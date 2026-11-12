@@ -8,7 +8,7 @@
  * - 시행일(11/20) 전에는 v190Open() 이 false 라 모두 거절한다.
  */
 import { getAdminClient } from "@/lib/supabase";
-import { V190_CLOSED_MESSAGE, v190Open } from "@/lib/dm-flags";
+import { V190_CLOSED_MESSAGE, v190OpenFor } from "@/lib/dm-flags";
 import { toEventKey, normalizeEventKey } from "@/lib/event-key";
 
 export const TODO_TITLE_MAX = 200;
@@ -218,7 +218,7 @@ export type TodoList = { overdue: Todo[]; today: Todo[]; upcoming: Todo[]; somed
 
 /** 전체 목록 (완료는 최근 30일) */
 export async function listTodos(userId: string, now = new Date()): Promise<TodoList | Err> {
-  if (!v190Open(now)) return closed();
+  if (!v190OpenFor(userId, now)) return closed();
   const since = new Date(now.getTime() - 30 * 24 * 3600_000).toISOString();
   const [{ data: open }, { data: done }] = await Promise.all([
     db().from("todos").select("*").eq("user_id", userId).is("done_at", null).order("sort_order").order("created_at").limit(TODO_OPEN_LIMIT),
@@ -235,7 +235,7 @@ export async function listTodos(userId: string, now = new Date()): Promise<TodoL
 
 /** 하루 보기: 그날 기한 + (오늘이면) 기한 지난 미완료. 그날 체크한 것도 줄 그은 채 남긴다. */
 export async function dayTodos(userId: string, date: string, now = new Date()): Promise<{ todos: Todo[]; overdue: number } | Err> {
-  if (!v190Open(now)) return closed();
+  if (!v190OpenFor(userId, now)) return closed();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return { error: "날짜가 올바르지 않아요." };
   const today = kstToday(now);
   const { data: due } = await db().from("todos").select("*").eq("user_id", userId).eq("due_date", date).order("sort_order").limit(300);
@@ -259,7 +259,7 @@ export async function createTodos(
   input: { items: Array<{ title?: unknown; dueDate?: unknown }>; sourceEventKey?: unknown },
   now = new Date(),
 ): Promise<{ todos: Todo[] } | Err> {
-  if (!v190Open(now)) return closed();
+  if (!v190OpenFor(userId, now)) return closed();
   const items = Array.isArray(input.items) ? input.items : [];
   if (items.length === 0) return { error: "할 일을 적어 주세요." };
   if (items.length > TODO_BATCH_LIMIT) return { error: `한 번에 ${TODO_BATCH_LIMIT}개까지 만들 수 있어요.` };
@@ -307,7 +307,7 @@ export async function createTodos(
 
 /** 본인 것만. 바꿀 수 있는 칸: title, dueDate, done, sortOrder */
 export async function updateTodo(userId: string, id: string, patch: { title?: unknown; dueDate?: unknown; done?: unknown; sortOrder?: unknown }, now = new Date()): Promise<{ todo: Todo } | Err> {
-  if (!v190Open(now)) return closed();
+  if (!v190OpenFor(userId, now)) return closed();
   const row: Record<string, unknown> = { updated_at: now.toISOString() };
   if ("title" in patch) {
     const t = cleanTitle(patch.title);
@@ -332,7 +332,7 @@ export async function updateTodo(userId: string, id: string, patch: { title?: un
 }
 
 export async function deleteTodo(userId: string, id: string, now = new Date()): Promise<{ ok: true } | Err> {
-  if (!v190Open(now)) return closed();
+  if (!v190OpenFor(userId, now)) return closed();
   const { count } = await db().from("todos").delete({ count: "exact" }).eq("id", id).eq("user_id", userId);
   if (!count) return { error: "할 일을 찾을 수 없어요.", code: "not_found" };
   return { ok: true };
@@ -351,7 +351,7 @@ export type FollowUps = {
 };
 
 export async function followUpsOf(userId: string, rawKey: string, now = new Date()): Promise<FollowUps | Err> {
-  if (!v190Open(now)) return closed();
+  if (!v190OpenFor(userId, now)) return closed();
   const key = toEventKey(rawKey);
   const [{ data: targets }, { data: sources }, { data: todos }] = await Promise.all([
     db().from("event_follow_ups").select("target_key").eq("user_id", userId).eq("source_key", key).order("created_at"),
@@ -384,7 +384,7 @@ export async function followUpsOf(userId: string, rawKey: string, now = new Date
 }
 
 export async function linkFollowUp(userId: string, rawSource: string, rawTarget: string, now = new Date()): Promise<{ ok: true } | Err> {
-  if (!v190Open(now)) return closed();
+  if (!v190OpenFor(userId, now)) return closed();
   const source = toEventKey(rawSource);
   const target = toEventKey(rawTarget);
   if (!source || !target || source === target) return { error: "연결할 일정이 올바르지 않아요." };
@@ -396,14 +396,14 @@ export async function linkFollowUp(userId: string, rawSource: string, rawTarget:
 }
 
 export async function unlinkFollowUp(userId: string, rawSource: string, rawTarget: string, now = new Date()): Promise<{ ok: true } | Err> {
-  if (!v190Open(now)) return closed();
+  if (!v190OpenFor(userId, now)) return closed();
   await db().from("event_follow_ups").delete().eq("user_id", userId).eq("source_key", toEventKey(rawSource)).eq("target_key", toEventKey(rawTarget));
   return { ok: true };
 }
 
 /** 아침 요약 한 줄: 오늘 기한 + 기한 지난 미완료 수 */
 export async function todoCountForMorning(userId: string, now = new Date()): Promise<number> {
-  if (!v190Open(now)) return 0;
+  if (!v190OpenFor(userId, now)) return 0;
   const { count } = await db().from("todos").select("id", { count: "exact", head: true }).eq("user_id", userId).is("done_at", null).lte("due_date", kstToday(now));
   return count ?? 0;
 }

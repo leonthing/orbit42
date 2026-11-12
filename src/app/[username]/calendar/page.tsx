@@ -63,12 +63,10 @@ export default async function CalendarPage({
   // 할 일(1.9.0): 오늘 기한 + 기한 지난 미완료가 있으면 위에 링크 한 줄
   let todoCount = 0;
   if (isOwner && session) {
-    const { v190Open } = await import("@/lib/dm-flags");
-    if (v190Open()) {
-      const [{ userIdOf }, { todoCountForMorning }] = await Promise.all([import("@/lib/dm"), import("@/lib/todos")]);
-      const me = await userIdOf(session.username);
-      if (me) todoCount = await todoCountForMorning(me).catch(() => 0);
-    }
+    const [{ userIdOf }, { todoCountForMorning }] = await Promise.all([import("@/lib/dm"), import("@/lib/todos")]);
+    const me = await userIdOf(session.username);
+    // todoCountForMorning 이 v190OpenFor(me)로 시행 전·미리보기를 가린다
+    if (me) todoCount = await todoCountForMorning(me).catch(() => 0);
   }
 
   return (

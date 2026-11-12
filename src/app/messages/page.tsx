@@ -3,7 +3,7 @@ import { Avatar } from "@/components/Avatar";
 import { EmptyState } from "@/components/EmptyState";
 import { currentUserId } from "@/lib/messages";
 import { listDm, type DmSummary } from "@/lib/dm";
-import { v190Open } from "@/lib/dm-flags";
+import { v190OpenFor } from "@/lib/dm-flags";
 import { DmClosed } from "./DmClosed";
 import { RequestActions } from "./RequestActions";
 
@@ -41,8 +41,8 @@ function Row({ c }: { c: DmSummary }) {
 }
 
 export default async function MessagesPage() {
-  if (!v190Open()) return <DmClosed />;
   const me = await currentUserId();
+  if (!v190OpenFor(me)) return <DmClosed />;
   const { items, requests } = me ? await listDm(me) : { items: [], requests: [] };
 
   return (

@@ -16,7 +16,7 @@ import { getHostRating } from "@/lib/reviews";
 import { ProfileAvatar } from "./ProfileAvatar";
 import { FollowButton } from "./FollowButton";
 import { MessageButton, type DmButtonState } from "./MessageButton";
-import { v190Open } from "@/lib/dm-flags";
+import { v190Open, v190OpenFor } from "@/lib/dm-flags";
 import { TimeRequestButton } from "./TimeRequestButton";
 import { BlockMenu } from "./BlockMenu";
 import { isBlocked } from "@/lib/blocks";
@@ -122,7 +122,7 @@ export default async function PublicProfile({
   const isOwner = session?.username === params.username;
   // 1:1 대화 버튼 상태(1.9.0) — 시행일 전·본인·차단이면 null
   let dmState: DmButtonState = null;
-  if (!isOwner && authorId && v190Open()) {
+  if (!isOwner && authorId && (v190Open() || !!session)) {
     if (!session) dmState = "request";
     else {
       const { dmButtonState, userIdOf } = await import("@/lib/dm");
@@ -400,7 +400,7 @@ export default async function PublicProfile({
         </section>
       )}
 
-      {isOwner && <MobileProfileLinks username={params.username} dmOpen={v190Open()} />}
+      {isOwner && <MobileProfileLinks username={params.username} dmOpen={v190OpenFor(authorId)} />}
 
       {isOwner ? (
         <ProfileTabs

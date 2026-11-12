@@ -1,7 +1,7 @@
 import { getAdminClient } from "@/lib/supabase";
 import { shouldEmail } from "@/lib/booking-chat-mail";
 import { sideOf, type DmRow } from "@/lib/dm";
-import { v190Open } from "@/lib/dm-flags";
+import { v190Open, v190OpenPair } from "@/lib/dm-flags";
 
 /**
  * 1:1 대화 메일 묶음 (1.9.0) — 예약 대화 메일 cron(5분)이 함께 부른다. 규칙은 예약 대화와 같다(shouldEmail):
@@ -15,7 +15,8 @@ function kstDay(d: Date) {
 }
 
 export async function runDmMailDigest(now = Date.now(), opts: { onlyConversationId?: string } = {}) {
-  if (!v190Open(new Date(now))) return 0;
+  const preview = !v190Open(new Date(now)) && !!process.env.V190_PREVIEW_USER_IDS;
+  if (!v190Open(new Date(now)) && !preview) return 0;
   const db = getAdminClient();
   let q = db
     .from("conversations")
@@ -26,6 +27,7 @@ export async function runDmMailDigest(now = Date.now(), opts: { onlyConversation
   const { data } = await q.limit(500);
   let sent = 0;
   for (const c of (data ?? []) as DmRow[]) {
+    if (!v190OpenPair(c.user_a, c.user_b, new Date(now))) continue;
     for (const side of ["a", "b"] as const) {
       try {
         if (await emailOne(c, side, now)) sent++;

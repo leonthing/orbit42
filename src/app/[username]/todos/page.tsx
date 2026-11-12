@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { userIdOf } from "@/lib/dm";
 import { listTodos } from "@/lib/todos";
-import { v190Open } from "@/lib/dm-flags";
+import { v190OpenFor } from "@/lib/dm-flags";
 import { EmptyState } from "@/components/EmptyState";
 import { TodoChecklist } from "./TodoChecklist";
 
@@ -15,9 +15,8 @@ export default async function TodosPage({ params }: { params: { username: string
   const session = await getSession();
   if (!session) redirect("/login");
   if (session.username !== params.username) notFound();
-  if (!v190Open()) notFound();
   const me = await userIdOf(session.username);
-  if (!me) notFound();
+  if (!me || !v190OpenFor(me)) notFound();
   const r = await listTodos(me);
   if ("error" in r) notFound();
   const groups = [

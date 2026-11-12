@@ -1,7 +1,7 @@
 import { unreadChatCounts } from "@/lib/booking-chat";
 import { unreadDmCount } from "@/lib/dm";
 import { dmMe, noStore } from "@/lib/dm-route";
-import { v190Open } from "@/lib/dm-flags";
+import { v190OpenFor } from "@/lib/dm-flags";
 
 export const dynamic = "force-dynamic";
 
@@ -12,5 +12,5 @@ export async function GET() {
   const unread = await unreadChatCounts(a.me);
   const booking = Object.values(unread).reduce((s, n) => s + n, 0);
   const dm = await unreadDmCount(a.me);
-  return Response.json({ booking, dm, total: booking + dm, dmOpen: v190Open() }, noStore);
+  return Response.json({ booking, dm, total: booking + dm, dmOpen: v190OpenFor(a.me) }, noStore);
 }

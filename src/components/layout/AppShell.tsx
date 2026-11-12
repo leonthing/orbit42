@@ -1,5 +1,5 @@
 import { Sidebar } from "@/components/layout/Sidebar";
-import { v190Open } from "@/lib/dm-flags";
+import { v190OpenFor } from "@/lib/dm-flags";
 import { TopBar } from "@/components/layout/TopBar";
 import { MobileMenuProvider } from "@/components/layout/MobileMenuContext";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
@@ -48,7 +48,7 @@ export async function AppShell({
   return (
     <MobileMenuProvider>
       <div className="flex h-screen overflow-hidden bg-[rgb(var(--bg-base))]">
-        <Sidebar username={viewerUsername} unreadMessages={unreadMessages} bookingsBadge={bookingsBadge} weekStart={weekStart} dmOpen={v190Open()} />
+        <Sidebar username={viewerUsername} unreadMessages={unreadMessages} bookingsBadge={bookingsBadge} weekStart={weekStart} dmOpen={v190OpenFor(viewerId)} />
         <div className="flex flex-1 flex-col overflow-hidden">
           <TopBar
             username={viewerUsername}

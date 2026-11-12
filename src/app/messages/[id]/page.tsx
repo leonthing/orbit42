@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { currentUserId } from "@/lib/messages";
 import { getDm } from "@/lib/dm";
-import { v190Open } from "@/lib/dm-flags";
+import { v190OpenFor } from "@/lib/dm-flags";
 import { DmClosed } from "../DmClosed";
 import { RequestActions } from "../RequestActions";
 import { MessageThread } from "./MessageThread";
@@ -11,8 +11,8 @@ import { MessageThread } from "./MessageThread";
 export const dynamic = "force-dynamic";
 
 export default async function ConversationPage({ params }: { params: { id: string } }) {
-  if (!v190Open()) return <DmClosed />;
   const me = await currentUserId();
+  if (!v190OpenFor(me)) return <DmClosed />;
   if (!me) notFound();
   const t = await getDm(me, params.id);
   if ("error" in t) notFound();

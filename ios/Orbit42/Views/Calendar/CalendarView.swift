@@ -686,8 +686,13 @@ struct CalendarView: View {
 
     private var dayTimeline: some View {
         // 그 달을 아직 못 받았어도 시간표 페이지는 그대로 둔다 — 앞뒤 이동이 막히지 않게 (1.6.0 빌드 41)
-        dayPager
-            .overlay(alignment: .top) { monthLoadStatus }
+        VStack(spacing: 0) {
+            // 할 일 (1.9.0): 고른 날의 기한 + 오늘이면 기한 지난 것, 없으면 숨김.
+            // 넘기는 페이지 안에 두면 가로 페이징이 탭을 먹어 펼쳐지지 않아(실측) 페이지 위에 하나만 둔다
+            DayTodoStrip(date: calendar.startOfDay(for: viewModel.selectedDate))
+            dayPager
+                .overlay(alignment: .top) { monthLoadStatus }
+        }
     }
 
     private var dayPager: some View {

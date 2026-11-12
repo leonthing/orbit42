@@ -9,7 +9,7 @@
  * - 시행일(11/20) 전에는 v190Open() 이 false 라 모든 함수가 거절한다.
  */
 import { getAdminClient } from "@/lib/supabase";
-import { V190_CLOSED_MESSAGE, v190Open } from "@/lib/dm-flags";
+import { V190_CLOSED_MESSAGE, v190Open, v190OpenFor, v190OpenPair } from "@/lib/dm-flags";
 
 import { DM_MAX_LEN } from "@/lib/dm-limits";
 export { DM_MAX_LEN };
@@ -192,6 +192,7 @@ async function access(me: string, id: string): Promise<{ c: DmRow; side: "a" | "
   const side = c0 ? sideOf(c0, me) : null;
   if (!c0 || !side) return { error: "대화를 찾을 수 없어요.", code: "not_found" };
   const other = side === "a" ? c0.user_b : c0.user_a;
+  if (!v190OpenPair(me, other)) return { error: "대화를 찾을 수 없어요.", code: "not_found" };
   if (await blockedEitherWay(me, other)) return { error: "이 사용자와 대화할 수 없어요.", code: "blocked" };
   const c = await promoteIfAllowed(c0);
   const view = viewOf(c, me);
@@ -208,10 +209,11 @@ export type StartResult = { id: string; view: DmView } | (Err & { needsRequest?:
  * (없으면 needsRequest 로 알려 첫 글 입력을 띄운다).
  */
 export async function startDm(me: string, targetUsername: string, firstBody?: string | null, now = new Date()): Promise<StartResult> {
-  if (!v190Open(now)) return closed();
+  if (!v190OpenFor(me, now)) return closed();
   const target = await userIdOf(targetUsername);
   if (!target) return { error: "상대를 찾을 수 없어요.", code: "not_found" };
   if (target === me) return { error: "자기 자신과는 대화할 수 없어요.", code: "self" };
+  if (!v190OpenPair(me, target, now)) return { error: "이 사용자와는 아직 대화할 수 없어요.", code: "closed" };
   if (await blockedEitherWay(me, target)) return { error: "이 사용자와 대화할 수 없어요.", code: "blocked" };
 
   const [a, b] = orderedPair(me, target);
@@ -312,7 +314,7 @@ async function insertMessage(me: string, id: string, text: string, at: string): 
 // ── 목록·열기·보내기 ─────────────────────────────────────
 
 export async function listDm(me: string, now = new Date()): Promise<{ items: DmSummary[]; requests: DmSummary[] }> {
-  if (!v190Open(now)) return { items: [], requests: [] };
+  if (!v190OpenFor(me, now)) return { items: [], requests: [] };
   const { data } = await db()
     .from("conversations")
     .select("*")
@@ -328,6 +330,7 @@ export async function listDm(me: string, now = new Date()): Promise<{ items: DmS
     const side = sideOf(c0, me)!;
     const otherId = side === "a" ? c0.user_b : c0.user_a;
     if (blocked.has(otherId)) continue;
+    if (!v190Open(now) && !v190OpenPair(me, otherId, now)) continue; // 시행 전 미리보기: 미리보기 계정끼리만
     const peer = peers.get(otherId);
     if (!peer) continue;
     const c = await promoteIfAllowed(c0);
@@ -352,7 +355,7 @@ export async function listDm(me: string, now = new Date()): Promise<{ items: DmS
 }
 
 export async function unreadDmCount(me: string, now = new Date()): Promise<number> {
-  if (!v190Open(now)) return 0;
+  if (!v190OpenFor(me, now)) return 0;
   const { items, requests } = await listDm(me, now);
   return items.filter((i) => i.unread).length + requests.length;
 }
@@ -368,7 +371,7 @@ export type DmThread = {
 };
 
 export async function getDm(me: string, id: string, opts: { markRead?: boolean; since?: string | null } = {}, now = new Date()): Promise<DmThread | Err> {
-  if (!v190Open(now)) return closed();
+  if (!v190OpenFor(me, now)) return closed();
   const r = await access(me, id);
   if ("error" in r) return r;
   const { c, side, other, view } = r;
@@ -400,7 +403,7 @@ export async function getDm(me: string, id: string, opts: { markRead?: boolean; 
 
 /** 보내기. 받은 요청에 답장하면 수락으로 본다. */
 export async function sendDm(me: string, id: string, body: unknown, now = new Date()): Promise<{ ok: true; message: DmMessage } | Err> {
-  if (!v190Open(now)) return closed();
+  if (!v190OpenFor(me, now)) return closed();
   const text = cleanBody(body);
   if (typeof text !== "string") return text;
   {
@@ -456,7 +459,7 @@ async function pushDm(userId: string, c: DmRow, side: "a" | "b", now: number) {
 // ── 수락·거절·나가기·신고·차단 ────────────────────────────
 
 export async function acceptDm(me: string, id: string, now = new Date()) {
-  if (!v190Open(now)) return closed();
+  if (!v190OpenFor(me, now)) return closed();
   const r = await access(me, id);
   if ("error" in r) return r;
   if (r.view === "open") return { ok: true as const };
@@ -466,7 +469,7 @@ export async function acceptDm(me: string, id: string, now = new Date()) {
 }
 
 export async function declineDm(me: string, id: string, now = new Date()) {
-  if (!v190Open(now)) return closed();
+  if (!v190OpenFor(me, now)) return closed();
   const r = await access(me, id);
   if ("error" in r) return r;
   if (r.view !== "incoming") return { error: "받은 요청만 거절할 수 있어요.", code: "not_incoming" };
@@ -476,7 +479,7 @@ export async function declineDm(me: string, id: string, now = new Date()) {
 }
 
 export async function leaveDm(me: string, id: string, now = new Date()) {
-  if (!v190Open(now)) return closed();
+  if (!v190OpenFor(me, now)) return closed();
   const c = await loadRow(id);
   const side = c ? sideOf(c, me) : null;
   if (!c || !side) return { error: "대화를 찾을 수 없어요.", code: "not_found" };
@@ -490,7 +493,7 @@ export async function leaveDm(me: string, id: string, now = new Date()) {
 }
 
 export async function reportDm(me: string, id: string, messageId: string, reason: string | null, now = new Date()) {
-  if (!v190Open(now)) return closed();
+  if (!v190OpenFor(me, now)) return closed();
   const r = await access(me, id);
   if ("error" in r) return r;
   const { data: rows } = await db()
@@ -541,7 +544,7 @@ export async function reportDm(me: string, id: string, messageId: string, reason
 
 /** 대화에서 상대 차단 — 받은 요청이면 요청을 지운다. 팔로우는 양쪽 다 끊는다(기존 차단과 같다). */
 export async function blockFromDm(me: string, id: string, now = new Date()) {
-  if (!v190Open(now)) return closed();
+  if (!v190OpenFor(me, now)) return closed();
   const c = await loadRow(id);
   const side = c ? sideOf(c, me) : null;
   if (!c || !side) return { error: "대화를 찾을 수 없어요.", code: "not_found" };
@@ -555,7 +558,7 @@ export async function blockFromDm(me: string, id: string, now = new Date()) {
 
 /** 프로필에서 쓸 버튼 상태: 'open'(대화) / 'request'(대화 요청) / 'pending'(요청 보냄) / 'incoming'(요청 받음) / null(숨김) */
 export async function dmButtonState(me: string | null, targetId: string, now = new Date()): Promise<"open" | "request" | "pending" | "incoming" | null> {
-  if (!v190Open(now) || !me || me === targetId) return null;
+  if (!me || me === targetId || !v190OpenPair(me, targetId, now)) return null;
   if (await blockedEitherWay(me, targetId)) return null;
   const [a, b] = orderedPair(me, targetId);
   const { data } = await db().from("conversations").select("*").eq("user_a", a).eq("user_b", b).maybeSingle();
