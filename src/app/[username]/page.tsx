@@ -400,7 +400,7 @@ export default async function PublicProfile({
         </section>
       )}
 
-      {isOwner && <MobileProfileLinks username={params.username} />}
+      {isOwner && <MobileProfileLinks username={params.username} dmOpen={v190Open()} />}
 
       {isOwner ? (
         <ProfileTabs

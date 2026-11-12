@@ -6,6 +6,8 @@ import { privacy190State } from "@/lib/legal-change";
  * 로컬 실측만 NEXT_PUBLIC_V190_FORCE_OPEN=1 로 미리 켠다(운영에는 넣지 않는다).
  */
 export function v190Open(now: Date = new Date()): boolean {
+  // 비상 스위치: 운영 env V190_OFF=1 이면 시행일이 지나도 닫는다(코드 배포 없이 env 바꾸고 재배포만, PO 11/13)
+  if (process.env.V190_OFF === "1") return false;
   if (process.env.NEXT_PUBLIC_V190_FORCE_OPEN === "1") return true;
   return privacy190State(now) === "effective";
 }

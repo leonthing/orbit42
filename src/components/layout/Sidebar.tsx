@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { v190Open } from "@/lib/dm-flags";
 import { usePathname } from "next/navigation";
 import { NAV_ITEMS, NAV_MORE_ITEMS } from "@/lib/constants";
 import { useState } from "react";
@@ -137,8 +136,11 @@ export function Sidebar({
   unreadMessages = 0,
   bookingsBadge = 0,
   weekStart = "mon",
+  dmOpen = false,
 }: {
   weekStart?: "mon" | "sun";
+  /** 1:1 대화(1.9.0) 메뉴 — 서버가 v190Open() 으로 정해 넘긴다(기기 날짜를 보지 않게) */
+  dmOpen?: boolean;
   username: string;
   unreadMessages?: number;
   /** 내가 답할 예약 건수 — '예약' 옆 숫자, 0이면 숨김 (개선-30) */
@@ -213,7 +215,7 @@ export function Sidebar({
           collapsed={collapsed}
           onClick={close}
         />
-        {v190Open() && (
+        {dmOpen && (
           <NavLink
             href="/messages"
             label="메시지"

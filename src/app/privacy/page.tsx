@@ -9,8 +9,9 @@ import {
 } from "@/lib/legal-change";
 
 export const metadata: Metadata = { title: "개인정보처리방침 · Orbit42" };
-// 시행일에 배포 없이 새 문장으로 바뀌도록 1시간마다 다시 그린다 (lib/legal-change)
-export const revalidate = 3600;
+// 시행일(한국 0시)에 배포 없이 새 문장으로 바뀌도록 1분마다 다시 그린다 (lib/legal-change).
+// 1.9.0 기능이 0시에 켜지므로 문장도 늦어도 1분 안에 바뀌게(전에는 1시간)
+export const revalidate = 60;
 
 export default function PrivacyPage() {
   const change = legalChangeState();
