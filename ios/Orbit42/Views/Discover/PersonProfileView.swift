@@ -130,6 +130,10 @@ struct PersonProfileView: View {
                 } else {
                     if !data.isMe {
                         actionButtons(data)
+                        // 1:1 대화 (1.9.0) — 켜졌고 차단 관계가 아닐 때만 보인다
+                        if !data.isBlocked {
+                            DmProfileButton(username: data.user.username, displayName: data.user.preferredName)
+                        }
                     }
                     CalendarCardsSection(username: viewModel.username, isMe: data.isMe)
                     slotsSection(data)

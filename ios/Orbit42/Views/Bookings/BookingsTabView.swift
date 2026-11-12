@@ -6,6 +6,7 @@ struct BookingsTabView: View {
     enum Section: String, CaseIterable, Identifiable {
         case received
         case sent
+        case chats
         case links
 
         var id: String { rawValue }
@@ -13,6 +14,7 @@ struct BookingsTabView: View {
             switch self {
             case .received: return "받은 예약"
             case .sent: return "내가 한 예약"
+            case .chats: return "대화"
             case .links: return "예약 링크"
             }
         }
@@ -23,6 +25,7 @@ struct BookingsTabView: View {
             case "bookings", "received": self = .received
             case "sent", "guest": self = .sent
             case "links", "slots": self = .links
+            case "chats", "dm": self = .chats
             default: return nil
             }
         }
@@ -51,7 +54,8 @@ struct BookingsTabView: View {
                 Theme.background.ignoresSafeArea()
                 VStack(spacing: 0) {
                     Picker("예약 보기", selection: $section) {
-                        ForEach(Section.allCases) { s in
+                        // 1:1 대화(1.9.0)는 서버가 켰을 때만(처리방침 시행일 11/20부터)
+                        ForEach(Section.allCases.filter { $0 != .chats || DmStore.shared.open }) { s in
                             Text(s.title).tag(s)
                         }
                     }
@@ -64,6 +68,8 @@ struct BookingsTabView: View {
                     case .received, .sent:
                         // 같은 인스턴스를 유지해야 받은/내가 한 예약 사이를 오갈 때 다시 불러오지 않는다.
                         BookingsView(embedded: true, forcedSegment: section == .sent ? .guest : .host)
+                    case .chats:
+                        DmListView()
                     case .links:
                         SlotsContent(viewModel: slotsViewModel, path: $path)
                     }
@@ -75,6 +81,13 @@ struct BookingsTabView: View {
                 applySectionRequest(request)
             }
             .onAppear { applySectionRequest(router.bookingsSectionRequest) }
+            .task { await DmStore.shared.refresh() }
+            .overlay(alignment: .topTrailing) {
+                // '대화' 구역에 안 읽은 게 있으면 작은 점 (세그먼트에는 배지를 달 수 없다)
+                if DmStore.shared.open && DmStore.shared.unread > 0 && section != .chats {
+                    Circle().fill(.red).frame(width: 8, height: 8).padding(.top, 10).padding(.trailing, 14).allowsHitTesting(false)
+                }
+            }
         }
     }
 

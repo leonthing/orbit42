@@ -201,6 +201,7 @@ final class AuthViewModel {
         PushNotifications.shared.unregisterBeforeLogout()
         KeychainStore.deleteToken()
         WidgetBridge.reload()
+        DmStore.shared.clear()
         user = nil
         needsOnboarding = false
         onboardingStep = nil

@@ -349,9 +349,16 @@ final class NotificationTapHandler: NSObject, UNUserNotificationCenterDelegate {
     private var waitingDay: Date?
     /// 예약 대화 푸시를 눌렀을 때 열 예약 (1.8.0)
     private var waitingChat: (id: String, role: BookingRole)?
+    /// 1:1 대화 푸시를 눌렀을 때 (1.9.0)
+    private var waitingDm = false
 
     private func flush() {
         guard let router else { return }
+        if waitingDm {
+            waitingDm = false
+            router.selection = .bookings
+            router.bookingsSectionRequest = "chats"
+        }
         if let chat = waitingChat {
             waitingChat = nil
             router.openBookingChat(id: chat.id, role: chat.role)
@@ -381,9 +388,14 @@ final class NotificationTapHandler: NSObject, UNUserNotificationCenterDelegate {
         // 예약 대화 앱 푸시: { kind: "booking_message", bookingId, role: 받는 사람 "host"|"guest" }
         let chatId = (info["kind"] as? String) == "booking_message" ? info["bookingId"] as? String : nil
         let chatIsGuest = (info["role"] as? String) == "guest"
+        // 1:1 대화 앱 푸시 (1.9.0): { kind: "direct_message", conversationId } → 예약 탭의 '대화'
+        let isDm = (info["kind"] as? String) == "direct_message"
         DispatchQueue.main.async {
             MainActor.assumeIsolated {
-                if let chatId {
+                if isDm {
+                    self.waitingDm = true
+                    self.flush()
+                } else if let chatId {
                     self.waitingChat = (chatId, chatIsGuest ? .guest : .host)
                     self.flush()
                 } else if let morningDay {

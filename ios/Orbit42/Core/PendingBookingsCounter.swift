@@ -11,7 +11,8 @@ final class PendingBookingsCounter {
     /// 답할 예약 수
     private(set) var pendingCount = 0
     /// 탭 배지 = 답할 예약 + 안 읽은 예약 대화가 있는 예약 (1.8.0, 웹 메뉴 배지와 같은 셈)
-    var count: Int { pendingCount + BookingChatUnread.shared.threadCount }
+    /// + 1:1 대화 안 읽음·받은 요청 (1.9.0)
+    var count: Int { pendingCount + BookingChatUnread.shared.threadCount + DmStore.shared.unread }
     @ObservationIgnored private var observer: NSObjectProtocol?
 
     init() {
@@ -22,7 +23,10 @@ final class PendingBookingsCounter {
             MainActor.assumeIsolated {
                 self?.pendingCount = pending
                 // 목록을 새로 받을 때 대화 안 읽음도 함께 (1.8.0)
-                Task { await BookingChatUnread.shared.refresh() }
+                Task {
+                    await BookingChatUnread.shared.refresh()
+                    await DmStore.shared.refresh()
+                }
             }
         }
     }
@@ -33,6 +37,7 @@ final class PendingBookingsCounter {
         }
         pendingCount = Self.pending(in: response)
         await BookingChatUnread.shared.refresh()
+        await DmStore.shared.refresh()
     }
 
     /// 내가 답할 것: 승인 대기 예약 + 답하지 않은 시간 요청 + 상대가 보낸 시간 변경 제안(받은·내가 한 예약 모두, 개선-30).
