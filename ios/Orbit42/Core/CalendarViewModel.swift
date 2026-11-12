@@ -127,6 +127,9 @@ final class CalendarViewModel {
     @ObservationIgnored private var lastActiveAt = Date()
     /// 뒤(홈 화면·다른 앱)로 갔다 왔는지 — 제어 센터·알림 센터를 잠깐 내린 것(.inactive)은 빼고 센다
     @ObservationIgnored private var wentBackground = false
+    /// 달마다 마지막으로 서버에서 받은 시각 — 앱을 자주 오가도 구글 조회가 몇 초 간격으로 반복되지 않게(10초)
+    @ObservationIgnored private var fetchedAt: [MonthKey: Date] = [:]
+    static let foregroundRefetchGap: TimeInterval = 10
     /// 위젯·알림 링크로 날짜를 고른 시각 — 그 직후의 '오늘로'가 링크 날짜를 덮지 않게
     @ObservationIgnored private var linkSelectedAt = Date.distantPast
 
@@ -169,6 +172,7 @@ final class CalendarViewModel {
         guard back || away > 60 else { return }
         // 지금 보는 달은 화면에 둔 채로 새로 받아 바꾸고, 나머지 달은 다음에 볼 때 받는다
         let current = currentMonthKey
+        if let last = fetchedAt[current], now.timeIntervalSince(last) < Self.foregroundRefetchGap { return }
         cache = cache.filter { $0.key == current }
         Task { await loadDisplayedMonth(force: true) }
     }
@@ -240,6 +244,7 @@ final class CalendarViewModel {
                 "/api/v1/calendar/events?year=\(key.year)&month=\(key.month)"
             )
             cache[key] = MonthData(events: response.events, calendars: response.calendars)
+            fetchedAt[key] = Date()
             // 일정 추가·수정·삭제 뒤의 강제 새로고침 — 홈 화면 위젯도 다시 받게 한다.
             if force { WidgetBridge.reload(); EventReminders.shared.refreshSoon() }
         } catch is CancellationError {
@@ -273,6 +278,7 @@ final class CalendarViewModel {
         prefetching.remove(key)
         if let response, cache[key] == nil {
             cache[key] = MonthData(events: response.events, calendars: response.calendars)
+            fetchedAt[key] = Date()
         }
     }
 
