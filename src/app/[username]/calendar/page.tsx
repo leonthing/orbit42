@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 import { getEvents, isGoogleCalendarConnected } from "./actions";
 import { getProfile, getSession } from "@/lib/auth";
@@ -59,6 +60,16 @@ export default async function CalendarPage({
 
   const birthDate = profile?.birth_date || null;
   const isOwner = session?.username === params.username;
+  // 할 일(1.9.0): 오늘 기한 + 기한 지난 미완료가 있으면 위에 링크 한 줄
+  let todoCount = 0;
+  if (isOwner && session) {
+    const { v190Open } = await import("@/lib/dm-flags");
+    if (v190Open()) {
+      const [{ userIdOf }, { todoCountForMorning }] = await Promise.all([import("@/lib/dm"), import("@/lib/todos")]);
+      const me = await userIdOf(session.username);
+      if (me) todoCount = await todoCountForMorning(me).catch(() => 0);
+    }
+  }
 
   return (
     <SlotPanelProvider username={params.username}>
@@ -68,6 +79,11 @@ export default async function CalendarPage({
         {/* 홈이 캘린더로 옮겨오면서 시작하기 체크리스트도 함께 이주했다.
             내 캘린더일 때만 보여준다 (남의 캘린더에서는 의미 없음). */}
         {isOwner && <OnboardingSection />}
+        {todoCount > 0 && (
+          <Link href={`/${params.username}/todos`} className="self-start rounded-lg border border-charcoal-800/60 px-3 py-1.5 text-xs text-charcoal-300 hover:text-charcoal-100">
+            할 일 {todoCount} →
+          </Link>
+        )}
         <CalendarView
           username={params.username}
           initialEvents={events}

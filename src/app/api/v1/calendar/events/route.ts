@@ -279,6 +279,8 @@ export async function POST(request: Request) {
     rrule?: string | null;
     /** 매년 반복일 때만 — 기념일(n주년 표시, 2월 29일은 평년 2월 28일) */
     isAnniversary?: boolean;
+    /** 1.9.0: 이 일정을 어느 일정의 후속으로 만드는지(원래 일정 id) — 연결이 실패해도 일정은 남는다 */
+    followUpOf?: string | null;
   };
   try {
     body = await request.json();
@@ -343,7 +345,13 @@ export async function POST(request: Request) {
           ? Math.min(Math.round(body.travelMin), 480)
           : null,
     });
-    return Response.json({ event: toApiEvent(event) });
+    let followUpWarning: string | null = null;
+    if (typeof body.followUpOf === "string" && body.followUpOf) {
+      const { linkFollowUp } = await import("@/lib/todos");
+      const linked = await linkFollowUp(userId, body.followUpOf, String(event.id)).catch(() => ({ error: "후속 연결에 실패했어요." }));
+      if ("error" in linked) followUpWarning = "일정은 만들었지만 원래 일정과 연결하지 못했어요.";
+    }
+    return Response.json({ event: toApiEvent(event), ...(followUpWarning ? { warning: followUpWarning } : {}) });
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "일정 생성에 실패했어요.";

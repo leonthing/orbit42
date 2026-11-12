@@ -323,6 +323,12 @@ export async function DELETE(
       if (scope === "all") await deleteNativeSeries(userId, occ.seriesId);
       else if (scope === "following") await deleteNativeFollowing(userId, params.id);
       else await deleteNativeOccurrence(userId, params.id);
+      // 후속 연결·할 일의 원래 일정 정리(1.9.0) — 할 일은 남긴다. '이후 모두'는 읽을 때 정리된다
+      {
+        const { forgetEventLinks, forgetSeriesLinks } = await import("@/lib/todos");
+        if (scope === "all") await forgetSeriesLinks(userId, occ.seriesId);
+        else await forgetEventLinks(userId, params.id);
+      }
       return Response.json({ ok: true });
     }
     if (params.id.startsWith("gcal_")) {
@@ -352,6 +358,10 @@ export async function DELETE(
         }
         const masterId = await deleteGoogleSeries(cal, gcalId, params.id.slice("gcal_".length));
         await deleteEarningsForEvents(userId, { googleMasterId: masterId });
+        {
+          const { forgetEventLinks } = await import("@/lib/todos");
+          await forgetEventLinks(userId, params.id);
+        }
         return Response.json({ ok: true });
       }
       const result = await deleteGoogleEvent(
@@ -361,10 +371,22 @@ export async function DELETE(
       if ("error" in result) {
         return Response.json({ error: result.error }, { status: 400 });
       }
+      {
+        const { forgetEventLinks } = await import("@/lib/todos");
+        await forgetEventLinks(userId, params.id);
+      }
       return Response.json({ ok: true });
     }
 
     await deleteEvent(params.id);
+    {
+      const userId = await apiUserId(request);
+      if (userId) {
+        const { forgetEventLinks, forgetSeriesLinks } = await import("@/lib/todos");
+        await forgetEventLinks(userId, params.id);
+        await forgetSeriesLinks(userId, params.id); // 반복 일정 원본을 통째로 지운 경우 회차 키까지
+      }
+    }
     return Response.json({ ok: true });
   } catch (err) {
     console.error("api event delete", err);
