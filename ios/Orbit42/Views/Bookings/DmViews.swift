@@ -137,7 +137,7 @@ struct DmChatView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 10) {
                     NavigationLink {
-                        PersonProfileView(username: peer.username)
+                        PersonProfileView(username: peer.username, funnelRef: "dm")
                     } label: {
                         Label("\(peer.name)님의 예약 링크 보기", systemImage: "calendar.badge.plus")
                             .font(.footnote.weight(.medium))
@@ -186,6 +186,7 @@ struct DmChatView: View {
             Button("확인", role: .cancel) {}
         } message: { Text(notice ?? "") }
         .task { await PushNotifications.shared.askIfNeeded() }
+        .onAppear { Funnel.ref = nil } // 대화방으로 돌아오면 출처를 지운다
         .task {
             while !Task.isCancelled {
                 await load()

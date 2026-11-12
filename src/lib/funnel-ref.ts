@@ -3,7 +3,8 @@
  * 범주 이름만 서버로 보내고, 리퍼러 주소·도메인·UA는 보내지도 저장하지도 않는다.
  * 서버(lib/funnel)는 아래 목록에 있는 값만 센다.
  */
-export const FUNNEL_REFS = ["instagram", "kakao", "threads", "x", "youtube", "search", "orbit42", "direct", "other"] as const;
+// dm: 앱 1:1 대화방의 '예약 링크 보기'로 들어온 방문(1.9.0, 앱이 보낸다)
+export const FUNNEL_REFS = ["instagram", "kakao", "threads", "x", "youtube", "search", "orbit42", "direct", "other", "dm"] as const;
 export type FunnelRef = (typeof FUNNEL_REFS)[number];
 
 export function parseFunnelRef(v: unknown): FunnelRef | null {

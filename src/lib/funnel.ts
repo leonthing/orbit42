@@ -75,7 +75,8 @@ export function recordFunnel(args: {
         });
         if (viaErr) console.error("recordFunnel via", viaErr.message);
       }
-      if (args.ref && args.source === "web") {
+      // 웹은 브라우저가 정한 범주, 앱은 1:1 대화방에서 들어온 'dm' 만(1.9.0)
+      if (args.ref && (args.source === "web" || args.ref === "dm")) {
         const { error: refErr } = await getAdminClient().rpc("bump_booking_funnel_ref", {
           p_day: todayKst(),
           p_host: args.hostId,

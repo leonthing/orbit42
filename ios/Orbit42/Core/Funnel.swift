@@ -8,7 +8,12 @@ enum Funnel {
         let hostUsername: String?
         let step: String
         let source = "ios"
+        var ref: String? = Funnel.ref
     }
+
+    /// 지금 방문의 출처 범주 — 1:1 대화방의 '예약 링크 보기'로 들어오면 "dm"(1.9.0).
+    /// 그 프로필에서 이어지는 예약 링크·시간 고르기까지 같은 출처로 센다. 다른 길로 프로필을 열거나 대화방으로 돌아오면 지운다.
+    nonisolated(unsafe) static var ref: String?
 
     /// 예약 링크 화면 열람
     static func slotViewed(slotId: String) {

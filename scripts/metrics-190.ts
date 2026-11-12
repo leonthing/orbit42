@@ -4,7 +4,7 @@
  *
  * ① 1:1 대화 → 예약: 대화를 시작한 사람(요청자, 바로 대화면 첫 글을 쓴 사람) 중 그 뒤 7일 안에 같은 상대에게 예약한 비율.
  *    '예약 링크를 연 비율'은 지금 기록이 없다(예약 링크 방문 흐름은 사람을 남기지 않는 익명 횟수) — 대신 예약까지 간 비율을 센다.
- *    링크 열람까지 보려면 앱 대화창의 '예약 링크 보기'에 방문 흐름 출처 ref=dm 을 붙이면 된다(익명 횟수로 대화 수와 비교).
+ *    ①-2 앱 대화방 '예약 링크 보기'로 들어온 방문(출처 dm, 익명 횟수): 프로필 열람·예약 링크 열람·시간 고름 — 대화 시작 수와 비교.
  * ② 완료한 일정 중 후속(후속 일정 연결 또는 원래 일정이 그 일정인 할 일)이 붙은 비율 — 기간 안에 완료한 일정 기준.
  * ③ 할 일 체크율: 만든 지 14일 지난 할 일 중 done_at 이 있는 비율.
  */
@@ -45,6 +45,15 @@ const includeInternal = args.includes("--include-internal");
     if ((count ?? 0) > 0) booked++;
   }
 
+  // ①-2 대화방 → 예약 링크 방문 (익명 횟수, booking_funnel_ref_daily ref='dm')
+  const sinceDay = new Date(Date.now() - days * 864e5 + 9 * 3600e3).toISOString().slice(0, 10);
+  const { data: dmRef } = await db.from("booking_funnel_ref_daily").select("host_id, step, count").eq("ref", "dm").gte("day", sinceDay);
+  const dmSteps: Record<string, number> = {};
+  for (const r of dmRef ?? []) {
+    if (internal.has(r.host_id as string)) continue;
+    dmSteps[r.step as string] = (dmSteps[r.step as string] ?? 0) + (r.count as number);
+  }
+
   // ② 완료 일정 중 후속이 붙은 비율
   const { data: done } = await db.from("event_completions").select("user_id, event_key").eq("status", "done").gte("completed_at", since).limit(10000);
   const doneRows = (done ?? []).filter((r) => !internal.has(r.user_id as string));
@@ -70,6 +79,7 @@ const includeInternal = args.includes("--include-internal");
   const pct = (a: number, b: number) => (b ? `${((a / b) * 100).toFixed(1)}%` : "-");
   console.log(`기간: 최근 ${days}일${includeInternal ? " (내부 계정 포함)" : ""}`);
   console.log(`① 대화 시작 ${starters}명 → 7일 안 같은 상대 예약 ${booked} (${pct(booked, starters)})`);
+  console.log(`①-2 대화방 '예약 링크 보기' 경유: 프로필 ${dmSteps.profile_view ?? 0} → 예약 링크 ${dmSteps.slot_view ?? 0} → 시간 고름 ${dmSteps.time_picked ?? 0} (대화 시작 ${starters} 대비 ${pct(dmSteps.profile_view ?? 0, starters)})`);
   console.log(`② 완료한 일정 ${doneRows.length}개 → 후속 붙음 ${followed} (${pct(followed, doneRows.length)})`);
   console.log(`③ 만든 지 14일 지난 할 일 ${tRows.length}개 → 체크 ${checked} (${pct(checked, tRows.length)})`);
 })();

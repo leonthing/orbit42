@@ -8,8 +8,12 @@ struct PersonProfileView: View {
     @State private var showingTimeRequest = false
     @State private var showingBlockConfirm = false
 
-    init(username: String) {
+    /// 방문 흐름 출처(1.9.0) — 1:1 대화방에서 열면 "dm"
+    private let funnelRef: String?
+
+    init(username: String, funnelRef: String? = nil) {
         _viewModel = State(initialValue: PersonProfileViewModel(username: username))
+        self.funnelRef = funnelRef
     }
 
     var body: some View {
@@ -73,7 +77,8 @@ struct PersonProfileView: View {
         }
         .task {
             await viewModel.load()
-            // 방문 흐름 ① 다른 사람 프로필 열람 (개선-32)
+            // 방문 흐름 ① 다른 사람 프로필 열람 (개선-32) — 출처(dm)는 이 프로필에서 이어지는 단계까지
+            Funnel.ref = funnelRef
             if let data = viewModel.data, !data.isMe { Funnel.profileViewed(username: viewModel.username) }
         }
     }
