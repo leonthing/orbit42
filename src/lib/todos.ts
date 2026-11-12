@@ -89,27 +89,44 @@ export function groupOf(t: Pick<Todo, "done" | "dueDate">, today: string): "over
 
 // ── 일정 읽기(제목은 저장하지 않음) ─────────────────────────
 
+/** 일정 키 모양: 네이티브 uuid(+회차), 구글 gcal_<id> — .or() 문자열에 넣기 전 확인 */
+export function validEventKey(key: string): boolean {
+  return /^gcal_[A-Za-z0-9_@.-]{1,1024}$/.test(key) || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(_[0-9A-Za-z]{1,40})?$/.test(key);
+}
+
 /** 이 사람이 볼 수 있는 일정들의 제목·시각. 못 찾은 키는 결과에 없다. */
 export async function eventInfos(userId: string, keys: string[], now = new Date()): Promise<Map<string, EventInfo>> {
+  return (await eventLookup(userId, keys, now)).info;
+}
+
+/**
+ * info: 찾은 일정. gone: 지워진 게 확실한 키(네이티브 일정을 조회했는데 행이 없음).
+ * 구글은 오류·토큰 만료와 '지워짐'을 구별할 수 없어 gone 에 넣지 않는다(검토 11/13) — 연결을 잘못 지우지 않게.
+ */
+export async function eventLookup(userId: string, keys: string[], now = new Date()): Promise<{ info: Map<string, EventInfo>; gone: Set<string> }> {
   const out = new Map<string, EventInfo>();
+  const gone = new Set<string>();
   const uniq = Array.from(new Set(keys.map(toEventKey).filter(Boolean)));
-  if (uniq.length === 0) return out;
+  if (uniq.length === 0) return { info: out, gone };
   const { seriesIdOf, parseOccurrenceId } = await import("@/lib/recurrence");
   const local = uniq.filter((k) => !k.startsWith("gcal_"));
   if (local.length > 0) {
     const ids = Array.from(new Set(local.map(seriesIdOf)));
-    const { data: evs } = await db().from("events").select("id, user_id, title, start_at, all_day, calendar_id").in("id", ids);
+    const { data: evs, error: evErr } = await db().from("events").select("id, user_id, title, start_at, all_day, calendar_id").in("id", ids);
     const byId = new Map((evs ?? []).map((e) => [e.id as string, e]));
-    // 내 일정이거나 내가 편집할 수 있는 캘린더의 일정만
+    // 내 일정이거나, 내 캘린더(남이 편집자로 넣은 일정 포함)·공유받은 캘린더의 일정
     const others = (evs ?? []).filter((e) => e.user_id !== userId).map((e) => e.calendar_id as string).filter(Boolean);
     const shared = new Set<string>();
     if (others.length) {
-      const { data: m } = await db().from("calendar_members").select("calendar_id").eq("user_id", userId).in("calendar_id", others);
-      for (const r of m ?? []) shared.add(r.calendar_id as string);
+      const { accessibleCalendarIds } = await import("@/lib/calendar-members");
+      for (const id of await accessibleCalendarIds(userId)) shared.add(id);
     }
     for (const key of local) {
       const e = byId.get(seriesIdOf(key));
-      if (!e) continue;
+      if (!e) {
+        if (!evErr && evs) gone.add(key);
+        continue;
+      }
       if (e.user_id !== userId && !shared.has(e.calendar_id as string)) continue;
       const occ = parseOccurrenceId(key);
       const start = occ ? occ.originalStart.toISOString() : (e.start_at as string);
@@ -132,13 +149,13 @@ export async function eventInfos(userId: string, keys: string[], now = new Date(
       else if (info.start && new Date(info.start).getTime() < now.getTime()) info.status = "past";
     }
   }
-  return out;
+  return { info: out, gone };
 }
 
 /** 원래·후속 일정이 지워졌을 때: 연결 줄을 지우고 할 일의 원래 일정 칸을 비운다(할 일은 남김) */
 export async function forgetEventLinks(userId: string, rawKey: string) {
   const key = toEventKey(rawKey);
-  if (!key) return;
+  if (!key || !validEventKey(key)) return;
   try {
     await db().from("event_follow_ups").delete().eq("user_id", userId).or(`source_key.eq.${key},target_key.eq.${key}`);
     await db().from("todos").update({ source_event_key: null }).eq("user_id", userId).eq("source_event_key", key);
@@ -149,6 +166,7 @@ export async function forgetEventLinks(userId: string, rawKey: string) {
 
 /** 반복 일정 전체를 지울 때: 그 시리즈의 모든 회차 키 정리 */
 export async function forgetSeriesLinks(userId: string, seriesId: string) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(seriesId)) return;
   try {
     await db().from("event_follow_ups").delete().eq("user_id", userId).or(`source_key.like.${seriesId}*,target_key.like.${seriesId}*`);
     await db().from("todos").update({ source_event_key: null }).eq("user_id", userId).like("source_event_key", `${seriesId}%`);
@@ -174,25 +192,26 @@ function toTodo(r: TodoRow, info: Map<string, EventInfo>): Todo {
   };
 }
 
-/** 원래 일정을 읽고, 못 찾은 연결은 그 자리에서 정리한다(구글에서 직접 지운 경우) */
+/** 원래 일정을 읽고, 지워진 게 확실한 연결(네이티브)만 그 자리에서 정리한다 */
 async function withSources(userId: string, rows: TodoRow[], now: Date): Promise<Todo[]> {
   const keys = Array.from(new Set(rows.map((r) => r.source_event_key).filter(Boolean) as string[]));
-  const info = await eventInfos(userId, keys, now);
-  const missing = keys.filter((k) => !info.has(k));
-  // 구글 연결이 끊긴 경우에도 못 찾는다 — 그때 연결을 지우면 다시 연결해도 돌아오지 않으니, 구글 연결이 있을 때만 정리
-  if (missing.length) {
-    const hasGoogle = missing.some((k) => k.startsWith("gcal_")) ? await googleConnected(userId) : false;
-    for (const k of missing) {
-      if (k.startsWith("gcal_") && !hasGoogle) continue;
-      await forgetEventLinks(userId, k);
-    }
-  }
+  const { info, gone } = await eventLookup(userId, keys, now);
+  for (const k of Array.from(gone)) await forgetEventLinks(userId, k);
   return rows.map((r) => toTodo(r, info));
 }
 
-async function googleConnected(userId: string): Promise<boolean> {
-  const { count } = await db().from("calendars").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("source", "google");
-  return (count ?? 0) > 0;
+/** 일정을 다른 캘린더로 옮겨 id 가 바뀌면 할 일·후속 연결도 따라 옮긴다 (migrateEventKeys) */
+export async function migrateTodoKeys(userId: string, rawOld: string, rawNew: string) {
+  const oldKey = toEventKey(rawOld);
+  const newKey = toEventKey(rawNew);
+  if (!oldKey || !newKey || oldKey === newKey) return;
+  try {
+    await db().from("todos").update({ source_event_key: newKey }).eq("user_id", userId).eq("source_event_key", oldKey);
+    await db().from("event_follow_ups").update({ source_key: newKey }).eq("user_id", userId).eq("source_key", oldKey);
+    await db().from("event_follow_ups").update({ target_key: newKey }).eq("user_id", userId).eq("target_key", oldKey);
+  } catch (err) {
+    console.error("[todos] migrate keys", err);
+  }
 }
 
 export type TodoList = { overdue: Todo[]; today: Todo[]; upcoming: Todo[]; someday: Todo[]; done: Todo[]; today_date: string };
@@ -341,9 +360,8 @@ export async function followUpsOf(userId: string, rawKey: string, now = new Date
   ]);
   const targetKeys = (targets ?? []).map((t) => t.target_key as string);
   const sourceKey = (sources ?? [])[0]?.source_key as string | undefined;
-  const info = await eventInfos(userId, [...targetKeys, ...(sourceKey ? [sourceKey] : [])], now);
-  const google = await googleConnected(userId);
-  const gone = (k: string) => !info.has(k) && (!k.startsWith("gcal_") || google);
+  const { info, gone: goneSet } = await eventLookup(userId, [...targetKeys, ...(sourceKey ? [sourceKey] : [])], now);
+  const gone = (k: string) => goneSet.has(k);
 
   const items: FollowUpItem[] = [];
   for (const k of targetKeys) {

@@ -84,18 +84,10 @@ export async function GET(request: NextRequest) {
         if (n > 0) lines.push(label(n));
       }
 
-      let unreadMessages = 0;
-      for (const c of convRes.data ?? []) {
-        const isA = c.user_a === u.id;
-        const myLastRead = (isA ? c.a_last_read_at : c.b_last_read_at) as
-          | string
-          | null;
-        const lastAt = c.last_message_at as string | null;
-        if (!lastAt || c.last_sender_id === u.id) continue;
-        if (!myLastRead || new Date(myLastRead) < new Date(lastAt)) {
-          unreadMessages++;
-        }
-      }
+      // 1:1 대화(1.9.0): 차단·나가기·거절·요청 규칙을 따르는 같은 셈(시행일 전 0)
+      const { unreadDmCount } = await import("@/lib/dm");
+      void convRes;
+      const unreadMessages = await unreadDmCount(u.id as string);
 
       const upcomingBookings = bookingRes.count ?? 0;
 

@@ -49,6 +49,11 @@ export async function getPrefFor(
     .eq("user_id", userId)
     .eq("type", type)
     .maybeSingle();
+  // 1.9.0: '새 메시지'(new_message)가 '1:1 대화'(direct_message)로 바뀌었다 — 새 값이 없으면 옛 선택을 따른다
+  if (!data && type === "direct_message") {
+    const old = await getPrefFor(userId, "new_message");
+    return { ...old, type };
+  }
   return {
     type,
     in_app: (data?.in_app as boolean | undefined) ?? true,

@@ -221,6 +221,8 @@ export async function startDm(me: string, targetUsername: string, firstBody?: st
 
   if (existing) {
     if (existing.status === "open") return { id: existing.id, view: "open" };
+    // 거절은 받은 사람의 뜻 — 보낸 사람은 30일 동안 조건이 생겨도(맞팔·예약) 다시 열지 못한다(promoteIfAllowed 와 같은 규칙)
+    if (existing.status === "declined" && requestCoolingDown(existing, me, now.getTime())) return { id: existing.id, view: "pending" };
     if (allowed) {
       const at = now.toISOString();
       await db().from("conversations").update({ status: "open", accepted_at: at }).eq("id", existing.id);
@@ -478,17 +480,12 @@ export async function leaveDm(me: string, id: string, now = new Date()) {
   const c = await loadRow(id);
   const side = c ? sideOf(c, me) : null;
   if (!c || !side) return { error: "대화를 찾을 수 없어요.", code: "not_found" };
-  const otherLeft = side === "a" ? c.b_left_at : c.a_left_at;
-  if (otherLeft || c.status !== "open") {
-    // 상대도 나갔거나 아직 열리지 않은 요청 → 방을 지운다(나에게 받은 요청이면 거절과 같은 효과로 남길 필요 없음)
-    if (c.status === "requested" && c.requested_by !== me) {
-      await db().from("conversations").update({ status: "declined", [`${side}_left_at`]: now.toISOString() }).eq("id", id);
-    } else {
-      await db().from("conversations").delete().eq("id", id);
-    }
-    return { ok: true as const };
-  }
-  await db().from("conversations").update({ [`${side}_left_at`]: now.toISOString() }).eq("id", id);
+  const at = now.toISOString();
+  // 방은 지우지 않는다 — 지우면 하루 요청 수·거절 뒤 30일 기다림을 피해 다시 요청할 수 있다(검토 11/13).
+  // 열리지 않은 요청·거절은 30일 뒤, 둘 다 나간 열린 방은 정리 cron 이 지운다.
+  const patch: Record<string, unknown> = { [`${side}_left_at`]: at };
+  if (c.status === "requested" && c.requested_by !== me) patch.status = "declined"; // 받은 요청에서 나가기 = 거절
+  await db().from("conversations").update(patch).eq("id", id);
   return { ok: true as const };
 }
 
@@ -512,13 +509,14 @@ export async function reportDm(me: string, id: string, messageId: string, reason
     body: m.body,
     reported: m.id === messageId,
   }));
+  // 방·글이 나중에 지워져도 누구를 신고했는지 남도록 신고된 사람 id 를 사본에 함께 둔다
   const { error } = await db().from("message_reports").insert({
     conversation_id: id,
     dm_message_id: messageId,
     reporter_role: "member",
     reporter_id: me,
     reason: (reason ?? "").slice(0, 500) || null,
-    body_snapshot: JSON.stringify(context),
+    body_snapshot: JSON.stringify({ reportedUserId: r.other, messages: context }),
   });
   if (error) {
     console.error("[dm] report", error.message);
@@ -563,7 +561,8 @@ export async function dmButtonState(me: string | null, targetId: string, now = n
   const { data } = await db().from("conversations").select("*").eq("user_a", a).eq("user_b", b).maybeSingle();
   const c = data as DmRow | null;
   if (c && viewOf(c, me) === "open") return "open";
-  // 서로 팔로우·확정 예약이 생겼으면 요청 상태와 상관없이 바로 대화(startDm 도 같은 순서)
+  if (c && c.status === "declined" && requestCoolingDown(c, me, now.getTime())) return "pending";
+  // 서로 팔로우·확정 예약이 생겼으면 바로 대화(startDm 도 같은 순서)
   if (await directAllowed(me, targetId)) return "open";
   if (c) {
     const v = viewOf(c, me);

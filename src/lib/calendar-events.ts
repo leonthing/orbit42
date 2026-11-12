@@ -713,6 +713,9 @@ export async function migrateEventKeys(userId: string, oldId: string, newId: str
     .eq("event_key", normalizeEventKey(oldId));
   const { rekeyParticipants } = await import("@/lib/event-participants");
   await rekeyParticipants(userId, oldId, newId);
+  // 할 일·후속 연결(1.9.0)도 같은 키라 따라 옮긴다
+  const { migrateTodoKeys } = await import("@/lib/todos");
+  await migrateTodoKeys(userId, oldId, newId);
 }
 
 function googleEventBody(input: {
