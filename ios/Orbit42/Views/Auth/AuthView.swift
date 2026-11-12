@@ -56,6 +56,14 @@ struct AuthView: View {
                         }
                     }
 
+                    if errorMessage == nil, let notice = auth.sessionNotice {
+                        Text(notice)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: .infinity)
+                            .accessibilityIdentifier("auth.sessionNotice")
+                    }
                     if let errorMessage {
                         Text(errorMessage)
                             .font(.footnote)

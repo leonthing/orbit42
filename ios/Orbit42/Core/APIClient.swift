@@ -198,6 +198,7 @@ final class APIClient {
         guard (200..<300).contains(http.statusCode) else {
             let message = (try? JSONDecoder().decode(ServerErrorBody.self, from: data))?.error
             if http.statusCode == 401 {
+                SessionExpiry.note(request)
                 throw APIError.unauthorized(message: message ?? "로그인이 필요해요.")
             }
             throw APIError.server(

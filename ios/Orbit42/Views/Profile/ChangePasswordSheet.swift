@@ -77,7 +77,7 @@ struct ChangePasswordSheet: View {
             .alert("변경했어요", isPresented: $showingSuccess) {
                 Button("확인") { dismiss() }
             } message: {
-                Text("다음 로그인부터 새 비밀번호를 사용해 주세요.")
+                Text("이 기기는 로그인이 그대로 유지돼요. 다른 기기에서는 새 비밀번호로 다시 로그인해 주세요.")
             }
             .interactiveDismissDisabled(isSaving)
         }
@@ -99,13 +99,17 @@ struct ChangePasswordSheet: View {
         Task {
             defer { isSaving = false }
             do {
-                let _: AckResponse = try await APIClient.shared.post(
+                let res: ChangePasswordResponse = try await APIClient.shared.post(
                     "/api/v1/me/password",
                     body: ChangePasswordRequest(
                         currentPassword: currentPassword,
                         newPassword: newPassword
                     )
                 )
+                if let token = res.token, !token.isEmpty {
+                    KeychainStore.saveToken(token)
+                    WidgetBridge.reload()
+                }
                 showingSuccess = true
             } catch let apiError as APIError {
                 errorMessage = apiError.errorDescription

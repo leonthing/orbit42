@@ -17,11 +17,26 @@ final class AuthViewModel {
     private(set) var onboardingStep: String?
 
     var isAuthenticated: Bool { user != nil }
+    /// 다른 기기에서 비밀번호를 바꾸는 등으로 로그인이 끊겨 로그인 화면으로 온 경우 한 번 보여줄 안내 (개선-56)
+    var sessionNotice: String?
 
     private let api: APIClient
+    private var expiryObserver: NSObjectProtocol?
 
     init(api: APIClient = .shared) {
         self.api = api
+        expiryObserver = NotificationCenter.default.addObserver(
+            forName: SessionExpiry.didExpire, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.handleSessionExpired() }
+        }
+    }
+
+    /// 쓰던 토큰이 서버에서 끊김 — 오류창 대신 조용히 로그인 화면으로, 안내는 한 번만.
+    private func handleSessionExpired() {
+        guard user != nil, !BrowseMode.shared.active else { return }
+        sessionNotice = "로그인이 만료됐어요. 다른 기기에서 비밀번호를 바꿨다면 새 비밀번호로 다시 로그인해 주세요."
+        logout()
     }
 
     // MARK: - 세션 복원
@@ -130,6 +145,7 @@ final class AuthViewModel {
         }
 
         KeychainStore.saveToken(token)
+        sessionNotice = nil
         let response: MeResponse = try await api.get("/api/v1/me")
         if queryItems?.contains(where: { $0.name == "new" && $0.value == "1" }) == true {
             startOnboarding(for: response.user)
@@ -232,6 +248,7 @@ final class AuthViewModel {
     // MARK: - 내부
 
     private func apply(_ response: AuthResponse) {
+        sessionNotice = nil
         KeychainStore.saveToken(response.token)
         if response.isNew == true {
             startOnboarding(for: response.user)

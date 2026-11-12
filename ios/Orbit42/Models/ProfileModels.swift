@@ -65,6 +65,13 @@ struct ChangePasswordRequest: Encodable {
     let newPassword: String
 }
 
+/// `{"ok":true,"token":"..."}` — 비밀번호를 바꾸면 옛 토큰이 모두 끊기므로(보안-8),
+/// 이 기기는 새 토큰으로 바꿔 끼워 로그인을 이어간다(개선-56).
+struct ChangePasswordResponse: Decodable {
+    let ok: Bool?
+    let token: String?
+}
+
 // MARK: - 캘린더 설정 (GET/POST/PATCH/DELETE /api/v1/calendars)
 
 /// 목록 조회 및 모든 캘린더 mutation 의 공통 응답 — `{"calendars":[...]}`
