@@ -1,5 +1,5 @@
 export const NOTIFICATION_TYPES = [
-  { key: "new_message", label: "새 메시지" },
+  { key: "direct_message", label: "1:1 대화" },
   { key: "booking_message", label: "예약 대화" },
   { key: "booking_received", label: "예약 요청/확정" },
   { key: "booking_confirmed", label: "예약 확정" },
@@ -26,4 +26,4 @@ export type NotificationPref = {
 };
 
 /** 앱 푸시를 보내는 알림 유형 — 앱 설정에 푸시 스위치가 보이는 곳 */
-export const PUSH_TYPES = ["booking_message"] as const;
+export const PUSH_TYPES = ["booking_message", "direct_message"] as const;

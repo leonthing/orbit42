@@ -9,5 +9,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const sent = await runChatMailDigest();
-  return NextResponse.json({ ok: true, sent });
+  // 1:1 대화(1.9.0)도 같은 규칙으로 — 시행일 전에는 0
+  let dm = 0;
+  try {
+    const { runDmMailDigest } = await import("@/lib/dm-mail");
+    dm = await runDmMailDigest();
+  } catch (err) {
+    console.error("[dm-mail]", err);
+  }
+  return NextResponse.json({ ok: true, sent, dm });
 }

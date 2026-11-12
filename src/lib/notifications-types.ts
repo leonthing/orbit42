@@ -3,6 +3,7 @@ export type NotificationType =
   | "booking_confirmed"
   | "booking_canceled"
   | "new_message"
+  | "direct_message"
   | "new_follower"
   | "bid_placed"
   | "comment_received";

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { logout } from "@/lib/auth-actions";
-import { WEB_DM_OPEN } from "@/lib/dm-flags";
+import { v190Open } from "@/lib/dm-flags";
 
 /**
  * 모바일 프로필 탭의 메뉴 목록 — iOS 프로필 화면의 행들과 같은 자리.
@@ -14,7 +14,7 @@ export function MobileProfileLinks({ username, unreadMessages = 0 }: { username:
   const rows: Array<{ href: string; label: string; sub: string }> = [
     { href: `/${username}/slots`, label: "예약 링크", sub: "내 예약 링크 만들고 공유하기" },
     { href: `/${username}/timeline`, label: "타임라인", sub: "완료한 일정과 팔로잉의 기록" },
-    ...(WEB_DM_OPEN
+    ...(v190Open()
       ? [{ href: "/messages", label: "메시지", sub: unreadMessages > 0 ? `안 읽은 메시지 ${unreadMessages}개` : "주고받은 메시지" }]
       : []),
     { href: "/explore", label: "탐색", sub: "다른 사람들의 열린 시간" },

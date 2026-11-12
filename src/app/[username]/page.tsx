@@ -15,8 +15,8 @@ import { getValueStats } from "@/lib/value-stats";
 import { getHostRating } from "@/lib/reviews";
 import { ProfileAvatar } from "./ProfileAvatar";
 import { FollowButton } from "./FollowButton";
-import { MessageButton } from "./MessageButton";
-import { WEB_DM_OPEN } from "@/lib/dm-flags";
+import { MessageButton, type DmButtonState } from "./MessageButton";
+import { v190Open } from "@/lib/dm-flags";
 import { TimeRequestButton } from "./TimeRequestButton";
 import { BlockMenu } from "./BlockMenu";
 import { isBlocked } from "@/lib/blocks";
@@ -120,6 +120,15 @@ export default async function PublicProfile({
   );
 
   const isOwner = session?.username === params.username;
+  // 1:1 대화 버튼 상태(1.9.0) — 시행일 전·본인·차단이면 null
+  let dmState: DmButtonState = null;
+  if (!isOwner && authorId && v190Open()) {
+    if (!session) dmState = "request";
+    else {
+      const { dmButtonState, userIdOf } = await import("@/lib/dm");
+      dmState = await dmButtonState(await userIdOf(session.username), authorId);
+    }
+  }
   // 링크트리형 화면에서 "캘린더 보기" 카드를 띄울지 — 방문자에게 보이는 캘린더가 있는지
   const hasPublicCalendar = !isOwner
     ? (await listVisibleCalendars(params.username)).length > 0
@@ -311,10 +320,11 @@ export default async function PublicProfile({
                 initiallyFollowing={viewerFollowing}
                 loggedIn={!!session}
               />
-              {WEB_DM_OPEN && (
+              {dmState && (
                 <MessageButton
                   targetUsername={params.username}
                   loggedIn={!!session}
+                  state={dmState}
                 />
               )}
               <TimeRequestButton

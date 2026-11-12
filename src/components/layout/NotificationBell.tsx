@@ -8,7 +8,7 @@ import { Avatar } from "@/components/Avatar";
 
 function typeStyles(type: string): { bg: string; fg: string } {
   if (type.startsWith("booking")) return { bg: "bg-emerald-500/80", fg: "text-white" };
-  if (type === "new_message") return { bg: "bg-sky-500/80", fg: "text-white" };
+  if (type === "new_message" || type === "direct_message") return { bg: "bg-sky-500/80", fg: "text-white" };
   if (type === "new_follower" || type === "invite_used")
     return { bg: "bg-navy-400/80", fg: "text-white" };
   if (type === "reaction") return { bg: "bg-pink-500/80", fg: "text-white" };
@@ -26,7 +26,7 @@ function TypeIcon({ type, tiny }: { type: string; tiny?: boolean }) {
         <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
       </svg>
     );
-  if (type === "new_message")
+  if (type === "new_message" || type === "direct_message")
     return (
       <svg className={cls} fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.76c0 1.6 1.123 2.994 2.707 3.227 1.068.157 2.148.279 3.238.364.466.037.893.281 1.153.671L12 21l2.652-3.978c.26-.39.687-.634 1.153-.67 1.09-.086 2.17-.208 3.238-.365 1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z" />

@@ -367,6 +367,19 @@ export async function sendBookingChatEmail(
   return send(to, `[Orbit42] 새 메시지가 있어요 · ${args.slotTitle}`, html);
 }
 
+/** 1:1 대화 새 메시지 (1.9.0) — 보낸 사람·본문 없이 열기 버튼만(예약 대화와 같은 기준) */
+export async function sendDmEmail(to: string, args: { replyUrl: string }) {
+  const html = renderEmail({
+    eyebrow: "1:1 대화",
+    heading: "새 메시지가 있어요",
+    preheader: "Orbit42 1:1 대화에 새 메시지가 있어요",
+    bodyHtml:
+      emailButton("메시지 열기", args.replyUrl) +
+      mutedNote("새 메시지는 몰아서 알려드려요. 알림 설정에서 끌 수 있어요."),
+  });
+  return send(to, "[Orbit42] 1:1 대화에 새 메시지가 있어요", html);
+}
+
 export async function sendNewMessageEmail(
   to: string,
   args: { fromLabel: string; preview: string; conversationId: string },

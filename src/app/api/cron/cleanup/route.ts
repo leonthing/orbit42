@@ -30,6 +30,14 @@ export async function GET(request: NextRequest) {
   } catch (err) {
     console.error("cleanupChats", err);
   }
+  // 1:1 대화(1.9.0): 수락 안 된 요청 30일, 둘 다 나간 방, 마지막 메시지 1년
+  let dm: { requests: number; left: number; old: number } | null = null;
+  try {
+    const { cleanupDm } = await import("@/lib/dm");
+    dm = await cleanupDm();
+  } catch (err) {
+    console.error("cleanupDm", err);
+  }
   // 횟수 제한 기록(보안-8): 가장 긴 창이 하루라 이틀 지난 것은 지운다. 표가 없으면(마이그레이션 전) 조용히 넘긴다.
   {
     const { error } = await db
@@ -52,5 +60,5 @@ export async function GET(request: NextRequest) {
       { status: 500 },
     );
   }
-  return NextResponse.json({ ok: true, rescheduleExpired: expired, unpaidExpired, chats, bookingEvents });
+  return NextResponse.json({ ok: true, rescheduleExpired: expired, unpaidExpired, chats, dm, bookingEvents });
 }
