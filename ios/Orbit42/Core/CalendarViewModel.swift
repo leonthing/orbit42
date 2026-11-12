@@ -288,7 +288,8 @@ final class CalendarViewModel {
         locationLat: Double? = nil,
         locationLng: Double? = nil,
         travelMin: Int? = nil,
-        repeatRule: RepeatRule = RepeatRule()
+        repeatRule: RepeatRule = RepeatRule(),
+        followUpOf: String? = nil
     ) async throws -> CalendarEvent {
         var body = CreateEventRequest(
             title: title,
@@ -306,6 +307,7 @@ final class CalendarViewModel {
             body.rrule = rrule
             if repeatRule.anniversary { body.isAnniversary = true }
         }
+        body.followUpOf = followUpOf
         let response: CreateEventResponse = try await api.post(
             "/api/v1/calendar/events",
             body: body

@@ -84,9 +84,13 @@ final class EventReminders {
         let now = Date()
         let chosen = Set(justChosen.filter { now.timeIntervalSince($0.value) < 600 }.keys)
         justChosen.removeAll()
-        let mornings = settings.morningSummary
+        var mornings = settings.morningSummary
             ? Self.morningPlans(events: events, now: now, minutes: settings.morningSummaryMinutes)
             : []
+        // 할 일 (1.9.0): 가장 가까운 요약에 "할 일 N개" 한 줄 — 그날 기한 + (오늘이면) 기한 지난 것
+        if let first = mornings.first, let n = await Self.todoCount(on: first.day), n > 0 {
+            mornings[0] = MorningPlan(day: first.day, fireDate: first.fireDate, title: first.title, body: first.body + "\n할 일 \(n)개")
+        }
         let plans = Self.plan(events: events, rules: Rules(settings), now: now,
                               limit: Self.maxPending - remindPlans.count - mornings.count, justChosen: chosen)
         await removeOurs()
@@ -222,6 +226,15 @@ final class EventReminders {
     }
 
     // MARK: 아침 일정 요약 (1.6.0 ③)
+
+    /// 그날 할 일 수(안 한 것만). 1.9.0 이 켜지지 않았거나 못 받으면 nil
+    static func todoCount(on day: Date) async -> Int? {
+        await DmStore.shared.refresh()
+        guard DmStore.shared.open else { return nil }
+        let date = APIDateParser.encodeDateOnly(day)
+        guard let r: TodoDayResponse = try? await APIClient.shared.get("/api/v1/todos?view=day&date=\(date)") else { return nil }
+        return r.todos.filter { !$0.done }.count
+    }
 
     struct MorningPlan {
         let day: Date

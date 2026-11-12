@@ -44,6 +44,8 @@ export type Todo = {
   sourceEventKey: string | null;
   /** 원래 일정 제목(목록에 작게) — 못 찾으면 null 이고 연결은 정리된다 */
   sourceTitle: string | null;
+  /** 원래 일정 시작(누르면 그 일정 상세로) */
+  sourceStart: string | null;
   createdAt: string;
 };
 
@@ -167,6 +169,7 @@ function toTodo(r: TodoRow, info: Map<string, EventInfo>): Todo {
     sortOrder: r.sort_order,
     sourceEventKey: r.source_event_key,
     sourceTitle: r.source_event_key ? info.get(r.source_event_key)?.title ?? null : null,
+    sourceStart: r.source_event_key ? info.get(r.source_event_key)?.start ?? null : null,
     createdAt: r.created_at,
   };
 }

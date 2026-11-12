@@ -3,6 +3,8 @@ import SwiftUI
 /// 캘린더 탭 — 일정(연·월·주 드릴다운 + 이벤트 목록).
 /// 예약 링크(슬롯 관리)는 예약 탭의 "예약 링크" 구역에 있다.
 struct CalendarView: View {
+    /// 할 일 목록 (1.9.0)
+    @State private var showingTodos = false
     @State private var viewModel = CalendarViewModel()
     /// 새 일정 화면 — 시작 시각을 요청에 실어 보내야 꾹 누르기 경로에서도 누른 자리 시각이 들어간다
     @State private var addRequest: AddRequest?
@@ -270,6 +272,10 @@ struct CalendarView: View {
                 dayTimeline
             }
         }
+        .sheet(isPresented: $showingTodos) {
+            TodoListView()
+        }
+        .task { await DmStore.shared.refresh() }
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button("오늘") {
@@ -279,6 +285,18 @@ struct CalendarView: View {
             }
             ToolbarItem(placement: .topBarTrailing) {
                 calendarFilterMenu
+            }
+            // 할 일 목록 (1.9.0) — 탭이 5개라 툴바에 둔다. 켜졌을 때만
+            if DmStore.shared.open {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showingTodos = true
+                    } label: {
+                        Image(systemName: "checklist")
+                    }
+                    .accessibilityLabel("할 일")
+                    .accessibilityIdentifier("calendar.todos")
+                }
             }
             // 보기 전환 — 월 ↔ 일(시간축)
             ToolbarItem(placement: .topBarTrailing) {

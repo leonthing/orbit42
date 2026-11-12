@@ -95,6 +95,10 @@ struct EventDetailSheet: View {
     @State private var showingRemindPicker = false
     @State private var remindErrorMessage: String?
     @State private var completionErrorMessage: String?
+    /// 후속·할 일 (1.9.0)
+    @State private var showingFollowUpEvent = false
+    @State private var showingAfterCompletion = false
+    @State private var showingMemoTodo = false
 
     /// 완료 체크 초록 — 웹과 동일한 #22c55e
     private static let completedGreen = Color(hexString: "#22c55e") ?? .green
@@ -265,6 +269,11 @@ struct EventDetailSheet: View {
                 // 완료 체크는 스크롤 없이 보이게 위로 (1.5.0 A) + 완료한 일정은 별점
                 completionSection
 
+                // 후속 일정·할 일 (1.9.0) — 켜졌을 때만, 초대 대기 일정은 빼고
+                if DmStore.shared.open && !event.isInvite && !BrowseMode.shared.active {
+                    FollowUpSection(event: event) { showingFollowUpEvent = true }
+                }
+
                 editNoticeSection
 
                 locationMapSection
@@ -277,6 +286,17 @@ struct EventDetailSheet: View {
                         Text(description)
                             .font(.subheadline)
                             .foregroundStyle(Theme.primaryText.opacity(0.85))
+                        // "-" 줄 → 할 일 (1.9.0). 메모 자체는 고치지 않는다
+                        let bullets = MemoBullets.lines(description)
+                        if DmStore.shared.open && !bullets.isEmpty && !event.isInvite {
+                            Button {
+                                showingMemoTodo = true
+                            } label: {
+                                Label("할 일로 바꾸기 (\(bullets.count))", systemImage: "checklist")
+                                    .font(.subheadline)
+                            }
+                            .accessibilityIdentifier("memo.toTodo")
+                        }
                     }
                     .listRowBackground(Theme.surface)
                 }
@@ -472,6 +492,26 @@ struct EventDetailSheet: View {
                 Button("확인", role: .cancel) { remindErrorMessage = nil }
             } message: {
                 Text(remindErrorMessage ?? "")
+            }
+            .sheet(isPresented: $showingFollowUpEvent) {
+                // 후속 일정: 제목 "후속: 원래 제목", 같은 캘린더·장소. 날짜는 고르게(기본은 오늘 다음 정시)
+                AddEventSheet(
+                    viewModel: viewModel,
+                    defaultDate: Date(),
+                    initialTitle: "후속: \(event.title)",
+                    initialCalendarId: event.calendarId,
+                    initialLocation: event.location,
+                    followUpOf: event.id
+                )
+            }
+            .sheet(isPresented: $showingAfterCompletion) {
+                AddTodoSheet(mode: .afterCompletion, sourceKey: event.id, onAddFollowUpEvent: {
+                    // 시트가 내려간 뒤 일정 만들기를 연다
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { showingFollowUpEvent = true }
+                })
+            }
+            .sheet(isPresented: $showingMemoTodo) {
+                MemoTodoSheet(sourceKey: event.id, candidates: MemoBullets.lines(event.description))
             }
             .sheet(isPresented: $showingEdit) {
                 EditEventSheet(viewModel: viewModel, event: event) {
@@ -679,6 +719,10 @@ struct EventDetailSheet: View {
             defer { isSavingCompletion = false }
             do {
                 try await viewModel.setCompletion(event, completed: newValue)
+                // 완료로 표시한 직후 "후속으로 할 일이 있나요?" (1.9.0, 설정에서 끔). 완료 해제 때는 묻지 않는다
+                if newValue && AppSettings.shared.askFollowUp && DmStore.shared.open && !BrowseMode.shared.active {
+                    showingAfterCompletion = true
+                }
             } catch let apiError as APIError {
                 isCompleted = !newValue
                 isArchived = wasArchived

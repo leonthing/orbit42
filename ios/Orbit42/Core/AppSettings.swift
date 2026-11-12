@@ -92,6 +92,7 @@ final class AppSettings {
     private static let notifyGoogleKey = "notifyGoogleEvents"
     private static let defaultReminderKey = "defaultReminderMinutes"
     private static let morningSummaryKey = "morningSummaryEnabled"
+    private static let askFollowUpKey = "askFollowUpAfterCompletion"
     private static let morningSummaryMinutesKey = "morningSummaryMinutes"
     private static let morningSummaryAskedKey = "morningSummaryAsked"
 
@@ -121,6 +122,8 @@ final class AppSettings {
     private(set) var morningSummaryAsked: Bool
     /// 아침 요약 시각 — 0시부터 분, 기본 오전 8시
     private(set) var morningSummaryMinutes: Int
+    /// 일정을 완료로 표시한 뒤 "후속으로 할 일이 있나요?" 묻기 (1.9.0) — 기기 저장, 기본 켬
+    private(set) var askFollowUp: Bool
 
     @ObservationIgnored private var foregroundObserver: NSObjectProtocol?
 
@@ -148,6 +151,7 @@ final class AppSettings {
         #endif
         morningSummaryAsked = UserDefaults.standard.bool(forKey: Self.morningSummaryAskedKey)
         morningSummaryMinutes = UserDefaults.standard.object(forKey: Self.morningSummaryMinutesKey) as? Int ?? 8 * 60
+        askFollowUp = UserDefaults.standard.object(forKey: Self.askFollowUpKey) as? Bool ?? true
 
         // `.system` 인 동안 사용자가 기기 설정을 바꾸고 돌아올 수 있다.
         foregroundObserver = NotificationCenter.default.addObserver(
@@ -201,6 +205,11 @@ final class AppSettings {
     func setNotifyOrbitEvents(_ value: Bool) {
         notifyOrbitEvents = value
         UserDefaults.standard.set(value, forKey: Self.notifyOrbitKey)
+    }
+
+    func setAskFollowUp(_ value: Bool) {
+        askFollowUp = value
+        UserDefaults.standard.set(value, forKey: Self.askFollowUpKey)
     }
 
     func setMorningSummary(_ value: Bool) {

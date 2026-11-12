@@ -24,10 +24,15 @@ struct AddEventSheet: View {
         defaultDate: Date,
         defaultStart: Date? = nil,
         initialTitle: String = "",
-        initialParticipants: [PendingParticipant] = []
+        initialParticipants: [PendingParticipant] = [],
+        initialCalendarId: String? = nil,
+        initialLocation: String? = nil,
+        followUpOf: String? = nil
     ) {
         self.viewModel = viewModel
+        self.followUpOf = followUpOf
         _title = State(initialValue: initialTitle)
+        _locationText = State(initialValue: initialLocation ?? "")
         _pendingParticipants = State(initialValue: initialParticipants)
         _showMore = State(initialValue: !initialParticipants.isEmpty)
 
@@ -50,8 +55,11 @@ struct AddEventSheet: View {
         // 기본값: isDefault 캘린더. 구글 연동 캘린더도 선택 가능
         // (서버가 생성 시 구글에도 push 한다).
         let writable = viewModel.calendars
-        _selectedCalendarId = State(initialValue: (writable.first(where: \.isDefault) ?? writable.first)?.id)
+        _selectedCalendarId = State(initialValue: initialCalendarId ?? (writable.first(where: \.isDefault) ?? writable.first)?.id)
     }
+
+    /// 1.9.0: 후속 일정으로 만들 때 원래 일정 id — 저장하면 서버가 연결한다
+    let followUpOf: String?
 
     /// 시트를 연 시점의 최신 캘린더 목록 — 월 캐시(viewModel.calendars)는 설정에서
     /// 새로 만든 캘린더를 모를 수 있어, 열릴 때 서버에서 다시 받아 덮어쓴다.
@@ -339,7 +347,8 @@ struct AddEventSheet: View {
                         locationLat: locationLat,
                         locationLng: locationLng,
                         travelMin: travelMin,
-                        repeatRule: repeatRule
+                        repeatRule: repeatRule,
+                        followUpOf: followUpOf
                     )
                     createdEvent = event
                     // 중요도는 일정과 따로 저장 — 실패해도 일정은 살아 있으니 저장 흐름을 막지 않는다

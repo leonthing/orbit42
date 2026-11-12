@@ -281,10 +281,14 @@ struct CreateEventRequest: Encodable {
     /// 반복 규칙(RRULE 본문) — 없으면 한 번짜리
     var rrule: String?
     var isAnniversary: Bool?
+    /// 1.9.0: 이 일정을 어느 일정의 후속으로 만드는지(원래 일정 id)
+    var followUpOf: String?
 }
 
 struct CreateEventResponse: Decodable {
     let event: CalendarEvent
+    /// 일정은 만들었지만 후속 연결이 실패했을 때
+    let warning: String?
 }
 
 /// `PATCH /api/v1/calendar/events/{id}` — 모든 필드 선택.

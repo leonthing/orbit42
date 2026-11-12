@@ -142,6 +142,17 @@ struct CalendarSettingsView: View {
                 )
             )
             .tint(Theme.accent)
+            if DmStore.shared.open {
+                Toggle(
+                    "완료 후 후속 묻기",
+                    isOn: Binding(
+                        get: { settings.askFollowUp },
+                        set: { settings.setAskFollowUp($0) }
+                    )
+                )
+                .tint(Theme.accent)
+                .accessibilityIdentifier("settings.askFollowUp")
+            }
         } header: {
             Text("보기 설정")
                 .foregroundStyle(Theme.secondaryText)
