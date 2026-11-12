@@ -11,6 +11,8 @@ export type WeekItem =
       title: string;
       color: string;
       tentative: boolean;
+      /** 이동시간(분) — 소유자 화면에만 있다 */
+      travel_min?: number | null;
     }
   | {
       kind: "slot";
@@ -115,6 +117,7 @@ export async function getProfileWeek(
     title: e.title,
     color: e.calendar_color,
     tentative: e.tentative,
+    ...(e.travel_min ? { travel_min: e.travel_min } : {}),
   }));
 
   const all = [...eventItems, ...slotItems].sort(

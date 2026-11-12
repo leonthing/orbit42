@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { listVisibleCalendars } from "@/lib/calendars";
 import { listNativeEventsInCalendars } from "@/lib/native-events";
 import { googleAllDayEndToInclusive } from "@/lib/calendar-events";
+import { getGoogleMeta, legacyMeta, resolveGoogleMeta, type GoogleMeta } from "@/lib/google-event-meta";
 
 export type PublicEvent = {
   id: string;
@@ -14,6 +15,8 @@ export type PublicEvent = {
   calendar_color: string;
   calendar_label: string;
   tentative: boolean;
+  /** 이동시간(분) — 소유자에게만 채운다. 방문자에게는 늘 없다 */
+  travel_min?: number | null;
 };
 
 /**
@@ -149,6 +152,7 @@ export async function getPublicEvents(
               calendar_color: cs.color,
               calendar_label: cs.name,
               tentative: it.status === "tentative",
+              ...(isOwner && { legacy_meta: legacyMeta(it) }),
             })) as PublicEvent[];
           } catch {
             return [] as PublicEvent[];
@@ -161,6 +165,18 @@ export async function getPublicEvents(
     .flat()
     .filter((e) => e.start_at)
     .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime());
+
+  // 이동시간은 소유자 화면에만 — Orbit42 기록(event_annotations) → 시리즈 기록 → 구글 예전 값
+  if (isOwner && googleEvents.length > 0) {
+    const records = await getGoogleMeta(host.id as string, googleEvents.map((e) => e.id)).catch(
+      () => new Map<string, GoogleMeta>(),
+    );
+    for (const e of googleEvents) {
+      const holder = e as PublicEvent & { legacy_meta?: GoogleMeta };
+      e.travel_min = resolveGoogleMeta(records, e.id, holder.legacy_meta ?? null).travelMin;
+      delete holder.legacy_meta;
+    }
+  }
 
   // ── Native calendar events ───────────────────────────────────────────
   const nativeCalendarIds = filtered
@@ -180,6 +196,7 @@ export async function getPublicEvents(
     calendar_color: e.calendar_color,
     calendar_label: e.calendar_label,
     tentative: e.tentative,
+    ...(isOwner && { travel_min: e.travel_min ?? null }),
   }));
 
   return [...googleEvents, ...nativeEvents].sort(

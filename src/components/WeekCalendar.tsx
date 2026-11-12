@@ -28,6 +28,8 @@ type PositionedItem = WeekItem & {
   columnCount: number;
   /** True when item extends across midnight on its own day. */
   allDay: boolean;
+  /** 이동시간 막대 시작(분) — 0시 앞으로는 자른다. 막대가 없으면 startMin 과 같다 */
+  travelStartMin: number;
 };
 
 export function WeekCalendar({
@@ -309,6 +311,11 @@ function DayColumn({
       {/* Now line */}
       {isToday && <NowLine />}
 
+      {/* 이동시간 막대 — 일정 앞에 깔고 클릭은 통과시킨다(앱 하루 보기와 같은 규칙) */}
+      {items.map((item) =>
+        item.travelStartMin < item.startMin ? <TravelBand key={`t-${item.id}`} item={item} /> : null,
+      )}
+
       {/* Items */}
       {items.map((item) => (
         <ItemBlock
@@ -336,6 +343,42 @@ function NowLine() {
       style={{ top }}
     >
       <span className="absolute -left-1 -top-1 h-2 w-2 rounded-full bg-navy-400" />
+    </div>
+  );
+}
+
+function TravelBand({ item }: { item: PositionedItem }) {
+  if (item.kind !== "event") return null;
+  const top = (item.travelStartMin - START_MIN) * PX_PER_MIN;
+  const height = (item.startMin - item.travelStartMin) * PX_PER_MIN;
+  const widthPct = 100 / item.columnCount;
+  const leftPct = item.column * widthPct;
+  const c = item.color;
+  const minutes = item.travel_min ?? 0;
+  return (
+    <div
+      aria-hidden
+      data-testid="travel-band"
+      title={`이동 ${minutes}분`}
+      className="pointer-events-none absolute overflow-hidden rounded-t-sm border-l-2"
+      style={{
+        top,
+        height,
+        left: `calc(${leftPct}% + 2px)`,
+        width: `calc(${widthPct}% - 4px)`,
+        borderColor: `color-mix(in srgb, ${c} 45%, transparent)`,
+        backgroundColor: `color-mix(in srgb, ${c} 10%, transparent)`,
+        backgroundImage: `repeating-linear-gradient(135deg, color-mix(in srgb, ${c} 22%, transparent) 0 1px, transparent 1px 6px)`,
+      }}
+    >
+      {minutes >= 30 && height >= 16 && (
+        <span
+          className="block truncate px-1 text-2xs leading-[14px] opacity-80"
+          style={{ color: c }}
+        >
+          이동 {minutes}분
+        </span>
+      )}
     </div>
   );
 }
@@ -685,14 +728,27 @@ function position(items: WeekItem[], dayDate: Date): PositionedItem[] {
     const hasTimeComponent = item.start_at.includes("T");
     const allDay =
       item.kind === "event" && !!item.all_day && !hasTimeComponent;
-    return { item, startMin: allDay ? 0 : startMin, endMin: allDay ? 60 : endMin, allDay };
+    const travel =
+      !allDay && item.kind === "event" && item.travel_min && item.travel_min > 0
+        ? item.travel_min
+        : 0;
+    // 막대는 하루 위쪽(0시)에서 자른다. 일정이 전날부터 이어지면(startMin 0) 막대 없음
+    const travelStartMin = Math.max(0, startMin - travel);
+    return {
+      item,
+      startMin: allDay ? 0 : startMin,
+      endMin: allDay ? 60 : endMin,
+      allDay,
+      travelStartMin: allDay ? 0 : travelStartMin,
+    };
   });
 
   // Greedy column packing — minimizes width loss for common overlaps.
-  const sorted = [...rough].sort((a, b) => a.startMin - b.startMin);
+  // 겹침 배치는 이동시간까지 포함한 시작(travelStartMin)으로 — 막대가 앞 일정과 겹치지 않게
+  const sorted = [...rough].sort((a, b) => a.travelStartMin - b.travelStartMin);
   const columnEnds: number[] = [];
   const withColumns = sorted.map((r) => {
-    let col = columnEnds.findIndex((end) => end <= r.startMin);
+    let col = columnEnds.findIndex((end) => end <= r.travelStartMin);
     if (col === -1) {
       columnEnds.push(r.endMin);
       col = columnEnds.length - 1;
@@ -706,8 +762,8 @@ function position(items: WeekItem[], dayDate: Date): PositionedItem[] {
   const clusters: typeof withColumns[] = [];
   let current: typeof withColumns = [];
   let currentMaxEnd = -Infinity;
-  for (const r of [...withColumns].sort((a, b) => a.startMin - b.startMin)) {
-    if (r.startMin >= currentMaxEnd && current.length) {
+  for (const r of [...withColumns].sort((a, b) => a.travelStartMin - b.travelStartMin)) {
+    if (r.travelStartMin >= currentMaxEnd && current.length) {
       clusters.push(current);
       current = [];
       currentMaxEnd = -Infinity;
@@ -730,5 +786,6 @@ function position(items: WeekItem[], dayDate: Date): PositionedItem[] {
     column: r.column,
     columnCount: colCountFor.get(r.item.id) ?? 1,
     allDay: r.allDay,
+    travelStartMin: r.travelStartMin,
   })) as PositionedItem[];
 }

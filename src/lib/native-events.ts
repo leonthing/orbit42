@@ -16,6 +16,7 @@ export type NativeEvent = {
 };
 
 export type NativeEventWithCalendar = NativeEvent & {
+  travel_min?: number | null;
   calendar_color: string;
   calendar_label: string;
 };
@@ -80,7 +81,7 @@ export async function listNativeEventsInCalendars(
   // 공유·공개 캘린더(calendar_id 로 읽는 길)도 반복 회차로 펼친다(1.5.1)
   const data = await selectEventsInRange<Record<string, unknown> & { id: string; start_at: string }>({
     columns:
-      "id, calendar_id, title, description, start_at, end_at, all_day, tentative, calendar:calendars!events_calendar_id_fkey(name, color)",
+      "id, calendar_id, title, description, start_at, end_at, all_day, tentative, travel_min, calendar:calendars!events_calendar_id_fkey(name, color)",
     scope: (q) => q.in("calendar_id", calendarIds),
     from: rangeStart,
     to: rangeEnd,
@@ -96,6 +97,7 @@ export async function listNativeEventsInCalendars(
     end_at: string | null;
     all_day: boolean;
     tentative: boolean | null;
+    travel_min: number | null;
     calendar: { name: string; color: string } | null;
   }>).map((r) => ({
     id: r.id,
@@ -106,6 +108,7 @@ export async function listNativeEventsInCalendars(
     end_at: r.end_at ?? r.start_at,
     all_day: r.all_day,
     tentative: r.tentative ?? false,
+    travel_min: r.travel_min ?? null,
     calendar_color: r.calendar?.color ?? "#6366f1",
     calendar_label: r.calendar?.name ?? "내 캘린더",
   }));
