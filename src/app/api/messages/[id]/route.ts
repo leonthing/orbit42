@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getAdminClient } from "@/lib/supabase";
+import { WEB_DM_CLOSED_MESSAGE, WEB_DM_OPEN } from "@/lib/dm-flags";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +9,9 @@ export async function GET(
   req: Request,
   { params }: { params: { id: string } },
 ) {
+  if (!WEB_DM_OPEN) {
+    return NextResponse.json({ messages: [], error: WEB_DM_CLOSED_MESSAGE }, { status: 503 });
+  }
   const session = await getSession();
   if (!session) return NextResponse.json({ messages: [] }, { status: 401 });
 

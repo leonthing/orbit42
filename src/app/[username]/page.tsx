@@ -16,6 +16,7 @@ import { getHostRating } from "@/lib/reviews";
 import { ProfileAvatar } from "./ProfileAvatar";
 import { FollowButton } from "./FollowButton";
 import { MessageButton } from "./MessageButton";
+import { WEB_DM_OPEN } from "@/lib/dm-flags";
 import { TimeRequestButton } from "./TimeRequestButton";
 import { BlockMenu } from "./BlockMenu";
 import { isBlocked } from "@/lib/blocks";
@@ -310,10 +311,12 @@ export default async function PublicProfile({
                 initiallyFollowing={viewerFollowing}
                 loggedIn={!!session}
               />
-              <MessageButton
-                targetUsername={params.username}
-                loggedIn={!!session}
-              />
+              {WEB_DM_OPEN && (
+                <MessageButton
+                  targetUsername={params.username}
+                  loggedIn={!!session}
+                />
+              )}
               <TimeRequestButton
                 targetUsername={params.username}
                 loggedIn={!!session}

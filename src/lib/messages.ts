@@ -1,5 +1,6 @@
 // 일반 서버 모듈 — 서버 액션 아님(보안-6). 클라이언트용은 *-actions.ts
 import { revalidatePath } from "next/cache";
+import { WEB_DM_CLOSED_MESSAGE, WEB_DM_OPEN } from "@/lib/dm-flags";
 import { getSession } from "@/lib/auth";
 import { getAdminClient } from "@/lib/supabase";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
@@ -143,6 +144,7 @@ export async function getConversation(id: string) {
 // --- Mutations -----------------------------------------------------------
 
 export async function startConversation(targetUsername: string) {
+  if (!WEB_DM_OPEN) return { error: WEB_DM_CLOSED_MESSAGE };
   const me = await currentUserId();
   if (!me) return { error: "로그인이 필요합니다." };
   const db = getAdminClient();
@@ -180,6 +182,7 @@ export async function startConversation(targetUsername: string) {
 const NOTIFY_MIN_GAP_MS = 10 * 60_000; // throttle emails to once per 10 min per conv
 
 export async function sendMessage(conversationId: string, body: string) {
+  if (!WEB_DM_OPEN) return { error: WEB_DM_CLOSED_MESSAGE };
   const text = body.trim();
   if (!text) return { error: "내용을 입력해주세요." };
   if (text.length > 4000) return { error: "메시지가 너무 길어요 (4000자 이하)." };

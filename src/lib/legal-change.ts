@@ -11,12 +11,29 @@ function kstToday(now: Date): string {
   return now.toLocaleDateString("en-CA", { timeZone: "Asia/Seoul" });
 }
 
-export function legalChangeState(now: Date = new Date()): "none" | "notice" | "effective" {
-  if (!LEGAL_NOTICE_DATE || !LEGAL_EFFECTIVE_DATE) return "none";
+/**
+ * 1.9.0 처리방침 개정(1:1 대화 + 할 일·후속 일정, Leo 11/12 승인): 안내 11/13, 시행 11/20.
+ * 개인정보처리방침만 바뀌고 이용약관은 그대로다.
+ */
+export const PRIVACY_190_NOTICE_DATE: string | null = "2026-11-13";
+export const PRIVACY_190_EFFECTIVE_DATE: string | null = "2026-11-20";
+
+export type LegalChange = "none" | "notice" | "effective";
+
+function changeState(notice: string | null, effective: string | null, now: Date): LegalChange {
+  if (!notice || !effective) return "none";
   const today = kstToday(now);
-  if (today >= LEGAL_EFFECTIVE_DATE) return "effective";
-  if (today >= LEGAL_NOTICE_DATE) return "notice";
+  if (today >= effective) return "effective";
+  if (today >= notice) return "notice";
   return "none";
+}
+
+export function legalChangeState(now: Date = new Date()): LegalChange {
+  return changeState(LEGAL_NOTICE_DATE, LEGAL_EFFECTIVE_DATE, now);
+}
+
+export function privacy190State(now: Date = new Date()): LegalChange {
+  return changeState(PRIVACY_190_NOTICE_DATE, PRIVACY_190_EFFECTIVE_DATE, now);
 }
 
 /** "2026-11-10" → "2026년 11월 10일" */

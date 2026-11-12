@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { LEGAL_EFFECTIVE_DATE, koDate, legalChangeState } from "@/lib/legal-change";
+import {
+  LEGAL_EFFECTIVE_DATE,
+  PRIVACY_190_EFFECTIVE_DATE,
+  koDate,
+  legalChangeState,
+  privacy190State,
+} from "@/lib/legal-change";
 
 export const metadata: Metadata = { title: "개인정보처리방침 · Orbit42" };
 // 시행일에 배포 없이 새 문장으로 바뀌도록 1시간마다 다시 그린다 (lib/legal-change)
@@ -9,6 +15,15 @@ export const revalidate = 3600;
 export default function PrivacyPage() {
   const change = legalChangeState();
   const effective = change === "effective";
+  // 1.9.0 개정(1:1 대화, 할 일·후속 일정): 안내 기간에는 위 안내만, 시행일부터 새 문장
+  const change190 = privacy190State();
+  const v190 = change190 === "effective";
+  const updated =
+    v190 && PRIVACY_190_EFFECTIVE_DATE
+      ? koDate(PRIVACY_190_EFFECTIVE_DATE)
+      : effective && LEGAL_EFFECTIVE_DATE
+        ? koDate(LEGAL_EFFECTIVE_DATE)
+        : "2026년 10월 15일";
   return (
     <div className="min-h-screen bg-[rgb(var(--bg-base))]">
       <header className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4 sm:px-6">
@@ -29,8 +44,21 @@ export default function PrivacyPage() {
       <main className="mx-auto max-w-3xl px-4 pb-24 pt-6 sm:px-6">
         <h1 className="text-3xl font-bold text-charcoal-100">개인정보처리방침</h1>
         <p className="mt-2 text-sm text-charcoal-500">
-          최종 업데이트: {effective && LEGAL_EFFECTIVE_DATE ? koDate(LEGAL_EFFECTIVE_DATE) : "2026년 10월 15일"}
+          최종 업데이트: {updated}
         </p>
+        {change190 === "notice" && PRIVACY_190_EFFECTIVE_DATE && (
+          <div className="mt-6 rounded-xl border border-navy-400/40 bg-navy-400/10 p-4 text-sm text-charcoal-200">
+            <p className="font-semibold text-charcoal-100">
+              개인정보처리방침 변경 안내 — 시행일 {koDate(PRIVACY_190_EFFECTIVE_DATE)}
+            </p>
+            <ul className="mt-2 list-disc space-y-1 pl-5 marker:text-charcoal-500">
+              <li>회원 사이 1:1 대화를 도입하며, 수집 항목(대화 메시지·요청 기록·차단 목록)과 이용 목적, 보유 기간을 더합니다.</li>
+              <li>할 일과 후속 일정 연결을 도입하며, 수집 항목(할 일 제목·기한·완료 시각, 연결한 일정의 식별자)과 이용 목적, 보유 기간을 더합니다.</li>
+              <li>Google 사용자 데이터(11절): 접근하는 일정 정보에 설명(메모)을 적고, 이용자가 직접 누를 때만 고른 메모 줄이나 일정 제목을 할 일·후속 일정으로 저장한다는 내용을 더합니다.</li>
+            </ul>
+            <p className="mt-2 text-xs text-charcoal-400">시행일 전까지는 아래 지금의 방침이 적용됩니다.</p>
+          </div>
+        )}
         {change === "notice" && LEGAL_EFFECTIVE_DATE && (
           <div className="mt-6 rounded-xl border border-navy-400/40 bg-navy-400/10 p-4 text-sm text-charcoal-200">
             <p className="font-semibold text-charcoal-100">
@@ -81,6 +109,19 @@ export default function PrivacyPage() {
                   <li>앱 알림을 허용한 경우: 앱 푸시용 기기 토큰, 앱 버전.</li>
                 </>
               )}
+              {v190 && (
+                <>
+                  <li>
+                    1:1 대화를 쓰는 경우: 대화 메시지(내용·작성 시각), 대화 요청·수락·거절
+                    기록, 차단 목록.
+                  </li>
+                  <li>
+                    할 일을 쓰는 경우: 회원이 입력한 할 일 제목, 기한, 완료 시각, 회원이
+                    연결한 일정의 식별자. 후속 일정을 연결한 경우: 원래 일정과 후속 일정의
+                    식별자.
+                  </li>
+                </>
+              )}
             </List>
             <SubHead>다. 외부 서비스 연동 시</SubHead>
             <List>
@@ -107,7 +148,14 @@ export default function PrivacyPage() {
               <li>서비스 제공: 캘린더 공유, 타임슬롯 등록·예약, 피드, 경매, 이용자 본인의 관계 기록(오르빗)</li>
               <li>서비스 개선 및 통계 분석(개인 식별 불가능한 형태로)</li>
               {effective && (
-                <li>예약 당사자(호스트와 게스트) 사이의 연락, 새 메시지·예약 알림 발송</li>
+                <li>
+                  {v190
+                    ? "예약 당사자(호스트와 게스트) 사이의 연락, 회원 사이의 1:1 대화, 새 메시지·예약 알림 발송"
+                    : "예약 당사자(호스트와 게스트) 사이의 연락, 새 메시지·예약 알림 발송"}
+                </li>
+              )}
+              {v190 && (
+                <li>할 일 관리, 일정에서 이어지는 후속 일정·할 일을 연결해 보여 드리기 위해</li>
               )}
               <li>약관 위반 대응, 고객 문의 응대, 공지 발송</li>
               <li>법령상 의무 이행</li>
@@ -147,6 +195,20 @@ export default function PrivacyPage() {
                     </a>
                     ).
                   </li>
+                  {v190 && (
+                    <>
+                      <li>
+                        1:1 대화: 마지막 메시지로부터 1년 동안 보관한 뒤 파기합니다. 회원이
+                        탈퇴하면 그 회원이 참여한 대화를 즉시 파기하고, 삭제를 요청하시면 지체
+                        없이 파기합니다. 수락되지 않은 대화 요청은 30일 뒤 파기합니다.
+                      </li>
+                      <li>
+                        할 일과 후속 일정 연결: 회원이 지우거나 탈퇴할 때까지 보관합니다. 회원이
+                        지우면 즉시, 탈퇴하면 즉시 파기합니다. 원래 일정이 삭제되면 연결 정보만
+                        지우고 할 일은 남깁니다.
+                      </li>
+                    </>
+                  )}
                   <li>
                     신고 처리 기록: 신고된 메시지와 그 앞뒤 대화 중 신고 처리에 필요한
                     부분은 신고 처리 기록으로 남습니다. 삭제를 요청하셔도 신고 처리 기록은
@@ -190,8 +252,8 @@ export default function PrivacyPage() {
                 <li>
                   예약 발생 시 호스트와 게스트 간 상호 식별에 필요한 최소한의
                   정보(이름, 예약 메모 등)가 상대에게 전달됩니다. 예약 대화는 그 예약의
-                  호스트와 게스트만 볼 수 있으며, 회사는 신고 처리를 위해 필요한 경우에만
-                  확인합니다.
+                  호스트와 게스트만{v190 ? ", 1:1 대화는 대화한 두 회원만" : ""} 볼 수 있으며,
+                  회사는 신고 처리를 위해 필요한 경우에만 확인합니다.
                 </li>
               ) : (
                 <li>
@@ -373,7 +435,8 @@ export default function PrivacyPage() {
               <li>
                 <b>접근하는 데이터</b>: 로그인 시 Google 계정의 이메일·이름·프로필
                 사진. Google 캘린더 연결 시(권한: calendar.calendarlist.readonly,
-                calendar.events) 이용자 본인 캘린더의 목록과 일정(제목·시각·장소·참석자).
+                calendar.events) 이용자 본인 캘린더의 목록과 일정(제목·시각·장소·참석자
+                {v190 ? "·설명" : ""}).
               </li>
               <li>
                 <b>사용 목적</b>: 캘린더 화면에 일정을 표시하고, 다른 사람이 예약할 수
@@ -395,6 +458,15 @@ export default function PrivacyPage() {
                 정렬·표시를 위해 그 날짜만 저장합니다. 이 값들은 회원 탈퇴 시 올린 파일을
                 포함해 즉시 삭제되며, Google 연결을 해제해도 이용자가 다시 연결할 때를
                 위해 남아 있습니다.
+                {v190 && (
+                  <>
+                    {" "}이용자가 Google 일정 상세에서 직접 &lsquo;할 일로 바꾸기&rsquo;를
+                    누르거나 후속 일정을 만들면, 이용자가 고르고 고친 메모 줄이나 제목을 할
+                    일·일정 제목으로 서비스에 저장합니다. 이 내용은 이용자가 만든 할 일로
+                    다루며 위와 같이 탈퇴 시 즉시 삭제됩니다. 할 일과 후속 일정 연결에는
+                    Google 일정 식별자만 저장합니다.
+                  </>
+                )}
               </li>
               <li>
                 <b>공유</b>: Google 사용자 데이터를 제3자에게 판매하거나 제공하지
@@ -434,7 +506,8 @@ export default function PrivacyPage() {
                 <b>Data accessed.</b> With Google Sign-In: email, name and profile
                 photo. When the user connects Google Calendar (scopes:
                 calendar.calendarlist.readonly, calendar.events): the user&apos;s own
-                calendar list and events (title, time, location, attendees).
+                calendar list and events (title, time, location, attendees
+                {v190 ? ", description" : ""}).
               </p>
               <p>
                 <b>Data use.</b> To display the user&apos;s events in Orbit42, compute
@@ -461,6 +534,15 @@ export default function PrivacyPage() {
                 values, including uploaded files, are deleted immediately when the
                 account is deleted; they remain after disconnecting Google so they
                 reappear if the user reconnects.
+                {v190 && (
+                  <>
+                    {" "}When the user taps &ldquo;turn into a to-do&rdquo; on a Google
+                    event or creates a follow-up event, the note lines or title the user
+                    picked and edited are saved in Orbit42 as the user&apos;s own to-do or
+                    event title, and deleted immediately when the account is deleted.
+                    To-do and follow-up links store only the Google event ID.
+                  </>
+                )}
               </p>
               <p>
                 <b>Data sharing.</b> We do not sell or transfer Google user data to
@@ -522,6 +604,13 @@ export default function PrivacyPage() {
                   {LEGAL_EFFECTIVE_DATE}: 보유 기간(접속 기록·예약 기록) 정비, 예약 대화·앱
                   푸시 알림 도입에 따른 수집 항목·이용 목적·보유 기간 추가, 처리 위탁 표
                   정정(법인명·국가), 개인정보 국외 이전 항목 신설
+                </li>
+              )}
+              {v190 && PRIVACY_190_EFFECTIVE_DATE && (
+                <li>
+                  {PRIVACY_190_EFFECTIVE_DATE}: 회원 사이 1:1 대화, 할 일·후속 일정 연결
+                  도입에 따른 수집 항목·이용 목적·보유 기간 추가, Google 사용자 데이터의
+                  접근 항목(설명)과 이용자가 고른 메모·제목 저장 내용 추가
                 </li>
               )}
             </List>

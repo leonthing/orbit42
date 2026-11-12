@@ -3,6 +3,8 @@ import Link from "next/link";
 import { getConversation, markRead } from "@/lib/messages";
 import { Avatar } from "@/components/Avatar";
 import { MessageThread } from "./MessageThread";
+import { WEB_DM_OPEN } from "@/lib/dm-flags";
+import { DmClosed } from "../DmClosed";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +13,7 @@ export default async function ConversationPage({
 }: {
   params: { id: string };
 }) {
+  if (!WEB_DM_OPEN) return <DmClosed />;
   const res = await getConversation(params.id);
   if ("error" in res) notFound();
   if (!res.other) notFound();

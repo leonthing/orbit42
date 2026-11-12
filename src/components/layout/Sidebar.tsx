@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { WEB_DM_OPEN } from "@/lib/dm-flags";
 import { usePathname } from "next/navigation";
 import { NAV_ITEMS, NAV_MORE_ITEMS } from "@/lib/constants";
 import { useState } from "react";
@@ -212,15 +213,17 @@ export function Sidebar({
           collapsed={collapsed}
           onClick={close}
         />
-        <NavLink
-          href="/messages"
-          label="메시지"
-          icon={icons.chat}
-          active={pathname === "/messages" || pathname.startsWith("/messages/")}
-          collapsed={collapsed}
-          onClick={close}
-          badge={unreadMessages}
-        />
+        {WEB_DM_OPEN && (
+          <NavLink
+            href="/messages"
+            label="메시지"
+            icon={icons.chat}
+            active={pathname === "/messages" || pathname.startsWith("/messages/")}
+            collapsed={collapsed}
+            onClick={close}
+            badge={unreadMessages}
+          />
+        )}
         <NavLink
           href="/feed"
           label="피드"

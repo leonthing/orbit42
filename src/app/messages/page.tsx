@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { EmptyState } from "@/components/EmptyState";
 import { listConversations } from "@/lib/messages";
+import { WEB_DM_OPEN } from "@/lib/dm-flags";
+import { DmClosed } from "./DmClosed";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +31,7 @@ function formatWhen(iso: string | null) {
 }
 
 export default async function MessagesPage() {
+  if (!WEB_DM_OPEN) return <DmClosed />;
   const conversations = await listConversations();
 
   return (
