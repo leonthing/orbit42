@@ -220,15 +220,23 @@ export async function startDm(me: string, targetUsername: string, firstBody?: st
   const { data: found } = await db().from("conversations").select("*").eq("user_a", a).eq("user_b", b).maybeSingle();
   const existing = (found as DmRow | null) ?? null;
   const allowed = await directAllowed(me, target);
+  // 요청 창에서 첫 글을 썼는데 그 사이 바로 대화 조건이 됐으면(맞팔·예약) 글을 버리지 않고 열린 방에 보낸다
+  const openWith = async (id: string): Promise<StartResult> => {
+    if (firstBody != null && firstBody !== "") {
+      const sent = await sendDm(me, id, firstBody, now);
+      if ("error" in sent) return sent;
+    }
+    return { id, view: "open" };
+  };
 
   if (existing) {
-    if (existing.status === "open") return { id: existing.id, view: "open" };
+    if (existing.status === "open") return openWith(existing.id);
     // 거절은 받은 사람의 뜻 — 보낸 사람은 30일 동안 조건이 생겨도(맞팔·예약) 다시 열지 못한다(promoteIfAllowed 와 같은 규칙)
     if (existing.status === "declined" && requestCoolingDown(existing, me, now.getTime())) return { id: existing.id, view: "pending" };
     if (allowed) {
       const at = now.toISOString();
       await db().from("conversations").update({ status: "open", accepted_at: at }).eq("id", existing.id);
-      return { id: existing.id, view: "open" };
+      return openWith(existing.id);
     }
     if (existing.status === "requested" && existing.requested_by !== me) return { id: existing.id, view: "incoming" };
     if (requestCoolingDown(existing, me, now.getTime())) return { id: existing.id, view: "pending" };
@@ -242,10 +250,10 @@ export async function startDm(me: string, targetUsername: string, firstBody?: st
     if (error || !created) {
       // 동시에 두 번 눌렀을 때(고유 쌍) — 다시 읽는다
       const { data: again } = await db().from("conversations").select("id").eq("user_a", a).eq("user_b", b).maybeSingle();
-      if (again) return { id: again.id as string, view: "open" };
+      if (again) return openWith(again.id as string);
       return { error: "대화를 시작하지 못했어요." };
     }
-    return { id: created.id as string, view: "open" };
+    return openWith(created.id as string);
   }
 
   // 대화 요청: 첫 글 필요
