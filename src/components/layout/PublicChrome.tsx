@@ -20,26 +20,27 @@ export function PublicChrome({
         <main className="mx-auto w-full max-w-5xl px-4 py-8 md:px-8 md:py-10">
           {children}
         </main>
-        <footer className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 pb-8 pt-4 text-2xs text-charcoal-500">
-          <Link href="/explore" className="hover:text-charcoal-300">
+        {/* 링크 페이지 테마가 --link-footer 를 주면 그 색(테마 본문색 72%), 아니면 앱 보조 글자색. 모바일은 44px 높이(감사 12). */}
+        <footer className="flex flex-wrap items-center justify-center gap-x-1 px-4 pb-6 pt-2 text-2xs text-[color:var(--link-footer,rgb(var(--c-500)))]">
+          <Link href="/explore" className="inline-flex min-h-11 items-center px-2 hover:opacity-80">
             둘러보기
           </Link>
           <span aria-hidden>·</span>
           {viewerUsername ? (
-            <Link href={`/${viewerUsername}`} className="hover:text-charcoal-300">
+            <Link href={`/${viewerUsername}`} className="inline-flex min-h-11 items-center px-2 hover:opacity-80">
               내 프로필
             </Link>
           ) : (
-            <AppStoreAwareLink href="/?mode=signin#auth" iosLabel="앱 받기" className="hover:text-charcoal-300">
+            <AppStoreAwareLink href="/?mode=signin#auth" iosLabel="앱 받기" className="inline-flex min-h-11 items-center px-2 hover:opacity-80">
               로그인
             </AppStoreAwareLink>
           )}
           <span aria-hidden>·</span>
-          <Link href="/terms" className="hover:text-charcoal-300">
+          <Link href="/terms" className="inline-flex min-h-11 items-center px-2 hover:opacity-80">
             이용약관
           </Link>
           <span aria-hidden>·</span>
-          <Link href="/privacy" className="hover:text-charcoal-300">
+          <Link href="/privacy" className="inline-flex min-h-11 items-center px-2 hover:opacity-80">
             개인정보처리방침
           </Link>
         </footer>

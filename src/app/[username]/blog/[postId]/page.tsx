@@ -71,9 +71,9 @@ export default async function PublicPostPage({
               ? `/${author.username}/blog`
               : `/${author.username}`
           }
-          className="inline-flex items-center gap-1 text-xs text-charcoal-400 hover:text-charcoal-100"
+          className="inline-flex items-center gap-1 text-xs text-charcoal-400 hover:text-charcoal-100 max-md:-ml-2 max-md:min-h-11 max-md:px-2"
         >
-          ← {isOwner ? "Blog" : author.display_name || author.username}
+          ← {isOwner ? "블로그" : author.display_name || author.username}
         </Link>
         {isOwner && (
           <Link

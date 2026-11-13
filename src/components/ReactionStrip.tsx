@@ -95,7 +95,7 @@ export function ReactionStrip({
           onClick={() => tap(r.emoji)}
           disabled={pending}
           className={`inline-flex items-center gap-1 rounded-full border ${
-            sm ? "px-2 py-0.5 text-2xs" : "px-2.5 py-1 text-xs"
+            sm ? "px-2 py-0.5 text-2xs" : "px-2.5 py-1 text-xs max-md:min-h-11 max-md:px-3.5"
           } transition-colors ${
             r.by_me
               ? "border-navy-400/60 bg-navy-500/20 text-navy-200"
@@ -111,7 +111,7 @@ export function ReactionStrip({
         type="button"
         onClick={() => setPickerOpen((v) => !v)}
         className={`inline-flex items-center gap-1 rounded-full border border-dashed border-charcoal-800/60 ${
-          sm ? "px-2 py-0.5 text-2xs" : "px-2.5 py-1 text-xs"
+          sm ? "px-2 py-0.5 text-2xs" : "px-2.5 py-1 text-xs max-md:min-h-11 max-md:px-3.5"
         } text-charcoal-500 hover:border-charcoal-600 hover:text-charcoal-300`}
       >
         + 반응
@@ -138,7 +138,7 @@ export function ReactionStrip({
                   key={e}
                   type="button"
                   onClick={() => tap(e)}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-base hover:bg-charcoal-800/60"
+                  className="flex h-11 w-11 items-center justify-center rounded-lg text-base md:h-8 md:w-8 hover:bg-charcoal-800/60"
                 >
                   {e}
                 </button>

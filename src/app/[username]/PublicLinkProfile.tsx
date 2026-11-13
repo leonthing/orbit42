@@ -144,7 +144,7 @@ export function PublicLinkProfile({
       */}
       <style
         dangerouslySetInnerHTML={{
-          __html: `html{background:${theme.canvas} !important;}body{background:transparent !important;}`,
+          __html: `html{background:${theme.canvas} !important;--link-footer:color-mix(in srgb, ${theme.text} 72%, transparent);}body{background:transparent !important;}`,
         }}
       />
       <div className="mx-auto w-full max-w-lg text-center">
