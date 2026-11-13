@@ -82,7 +82,7 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
   };
 
   const input =
-    "w-full rounded-lg border border-charcoal-700 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-500 focus:border-navy-400 focus:outline-none focus:ring-1 focus:ring-navy-400/40";
+    "w-full rounded-lg border border-charcoal-700 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-500 focus:border-navy-400 focus:outline-none focus:ring-1 focus:ring-navy-400/40 max-md:min-h-11";
 
   return (
     <div
@@ -141,7 +141,7 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
         <button
           type="button"
           onClick={() => setExpanded(false)}
-          className="shrink-0 rounded-lg px-2 py-1 text-2xs text-charcoal-500 hover:text-charcoal-200 md:hidden"
+          className="shrink-0 rounded-lg px-2 py-1 text-2xs text-charcoal-500 hover:text-charcoal-200 max-md:min-h-11 max-md:min-w-11 md:hidden"
           title="접기"
         >
           접기
@@ -154,7 +154,7 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
             ? `/api/auth/google?ref=${encodeURIComponent(referrerRef)}`
             : "/api/auth/google"
         }
-        className="mb-2.5 flex w-full items-center justify-center gap-2 rounded-lg bg-[#111] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1f1f1f] ring-1 ring-black/5"
+        className="mb-2.5 flex w-full items-center justify-center gap-2 rounded-lg bg-[#111] px-4 py-2 max-md:min-h-11 text-sm font-semibold text-white hover:bg-[#1f1f1f] ring-1 ring-black/5"
       >
         <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden>
           <path fill="#4285f4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
@@ -261,7 +261,7 @@ function AuthCardInner({ initialMode }: { initialMode: Mode }) {
         <button
           type="submit"
           disabled={loading || !username || !password}
-          className="!mt-3 w-full rounded-lg bg-navy-500 py-2 text-sm font-semibold text-white shadow-sm hover:bg-navy-400 disabled:cursor-not-allowed disabled:bg-charcoal-800 disabled:text-charcoal-500"
+          className="!mt-3 w-full rounded-lg bg-navy-500 py-2 text-sm max-md:min-h-11 font-semibold text-white shadow-sm hover:bg-navy-400 disabled:cursor-not-allowed disabled:bg-charcoal-800 disabled:text-charcoal-500"
         >
           {loading
             ? "처리 중…"
@@ -308,7 +308,7 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
-      className={`flex-1 rounded-sm px-3 py-1 text-xs font-semibold transition-colors ${
+      className={`flex-1 rounded-sm px-3 py-1 text-xs font-semibold transition-colors max-md:min-h-11 ${
         active
           ? "bg-navy-500 text-white shadow-sm"
           : "text-charcoal-500 hover:text-charcoal-900 dark:text-charcoal-400 dark:hover:text-charcoal-100"
