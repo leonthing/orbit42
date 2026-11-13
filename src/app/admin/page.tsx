@@ -46,14 +46,15 @@ export default async function AdminPage() {
   return (
     <div className="min-h-screen bg-[rgb(var(--bg-base))]">
       <div className="mx-auto max-w-6xl px-5 py-8">
-        <div className="flex items-center justify-between">
+        {/* 모바일은 제목 한 줄, 버튼 줄은 그 아래로 감싼다(공용 버튼이 44px 로 커진 뒤 줄바꿈되던 것) */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-2xs font-semibold uppercase tracking-[0.18em] text-charcoal-500">
               Admin
             </p>
-            <h1 className="mt-1 text-2xl font-bold text-charcoal-100">대시보드</h1>
+            <h1 className="mt-1 whitespace-nowrap text-2xl font-bold text-charcoal-100">대시보드</h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Link
               href="/admin/reports"
               className={buttonClasses({ variant: openReports > 0 ? "primary" : "secondary", size: "sm" })}
@@ -74,7 +75,7 @@ export default async function AdminPage() {
             </Link>
             <Link
               href="/feed"
-              className="text-xs text-charcoal-500 hover:text-charcoal-200"
+              className="inline-flex items-center whitespace-nowrap text-xs text-charcoal-500 hover:text-charcoal-200 max-md:min-h-11"
             >
               ← 돌아가기
             </Link>
