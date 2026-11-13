@@ -6,3 +6,8 @@ import * as impl from "@/lib/admin";
 export async function adminDeleteUser(...args: Parameters<typeof impl.adminDeleteUser>) {
   return impl.adminDeleteUser(...args);
 }
+
+export async function handleReport(...args: Parameters<typeof import("@/lib/admin-reports").handleReport>) {
+  const { handleReport: run } = await import("@/lib/admin-reports");
+  return run(...args);
+}

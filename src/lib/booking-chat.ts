@@ -318,7 +318,7 @@ export async function reportChatMessage(args: {
       const { data: users } = await db.from("users").select("id").in("username", admins);
       const { createNotification } = await import("@/lib/notifications");
       for (const u of users ?? []) {
-        await createNotification({ userId: u.id as string, type: "booking_message_report", title: "예약 대화 신고가 들어왔어요", body: args.booking.slot?.title ?? null, link: "/admin" });
+        await createNotification({ userId: u.id as string, type: "booking_message_report", title: "예약 대화 신고가 들어왔어요", body: args.booking.slot?.title ?? null, link: "/admin/reports" });
       }
     }
   } catch (err) {

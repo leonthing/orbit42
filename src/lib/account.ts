@@ -187,6 +187,11 @@ export async function deleteMyAccount() {
     console.error("delete account chats", err);
   }
 
+  // 알림은 users 외래 키가 없어 따로 지운다(처리방침: 탈퇴하면 삭제, 11/13)
+  {
+    const { deleteNotificationsForUser } = await import("@/lib/notifications");
+    await deleteNotificationsForUser(user.id as string);
+  }
   const { error } = await db.from("users").delete().eq("id", user.id);
   if (error) {
     console.error("delete account", error);

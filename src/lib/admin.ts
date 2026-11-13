@@ -62,6 +62,11 @@ export async function adminDeleteUser(userId: string) {
   } catch (err) {
     console.error("admin delete chats", err);
   }
+  // 알림은 users 외래 키가 없어 따로 지운다(처리방침: 탈퇴하면 삭제, 11/13)
+  {
+    const { deleteNotificationsForUser } = await import("@/lib/notifications");
+    await deleteNotificationsForUser(userId);
+  }
   const { error } = await db.from("users").delete().eq("id", userId);
   if (error) {
     console.error("adminDeleteUser", error);

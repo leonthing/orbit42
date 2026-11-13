@@ -541,7 +541,7 @@ export async function reportDm(me: string, id: string, messageId: string, reason
       const { data: users } = await db().from("users").select("id").in("username", admins);
       const { createNotification } = await import("@/lib/notifications");
       for (const u of users ?? []) {
-        await createNotification({ userId: u.id as string, type: "booking_message_report", title: "1:1 대화 신고가 들어왔어요", body: null, link: "/admin" });
+        await createNotification({ userId: u.id as string, type: "booking_message_report", title: "1:1 대화 신고가 들어왔어요", body: null, link: "/admin/reports" });
       }
     }
   } catch (err) {

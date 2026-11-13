@@ -47,6 +47,17 @@ export async function createNotification(args: {
   }
 }
 
+/**
+ * 탈퇴·관리자 삭제 때 — 그 사람이 받은 알림과, 그 사람이 남긴 흔적(다른 사람에게 간 '○○님이 …' 알림)을 지운다.
+ * 운영 notifications.user_id 에 users 외래 키가 없어(11/13 확인) 계정 행을 지워도 남았다(처리방침: 탈퇴하면 삭제).
+ */
+export async function deleteNotificationsForUser(userId: string): Promise<void> {
+  const db = getAdminClient();
+  const a = await db.from("notifications").delete().eq("user_id", userId);
+  const b = await db.from("notifications").delete().eq("actor_id", userId);
+  if (a.error || b.error) console.error("delete notifications", a.error?.message ?? b.error?.message);
+}
+
 export async function listNotifications(
   limit = 30,
 ): Promise<AppNotification[]> {

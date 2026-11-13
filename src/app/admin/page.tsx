@@ -6,6 +6,7 @@ import { getAdminClient } from "@/lib/supabase";
 import { Avatar } from "@/components/Avatar";
 import { DeleteUserButton } from "./DeleteUserButton";
 import { buttonClasses } from "@/components/PendingButton";
+import { openReportCount } from "@/lib/admin-reports";
 
 export const metadata: Metadata = { title: "Admin · Orbit42" };
 export const dynamic = "force-dynamic";
@@ -28,6 +29,7 @@ export default async function AdminPage() {
   ]);
 
   const users = usersRes.data ?? [];
+  const openReports = await openReportCount();
 
   const inviterByUser = new Map<string, string>();
   for (const u of users) {
@@ -52,6 +54,12 @@ export default async function AdminPage() {
             <h1 className="mt-1 text-2xl font-bold text-charcoal-100">대시보드</h1>
           </div>
           <div className="flex items-center gap-2">
+            <Link
+              href="/admin/reports"
+              className={buttonClasses({ variant: openReports > 0 ? "primary" : "secondary", size: "sm" })}
+            >
+              신고{openReports > 0 ? ` ${openReports}` : ""}
+            </Link>
             <Link
               href="/admin/feedback"
               className={buttonClasses({ variant: "secondary", size: "sm" })}
