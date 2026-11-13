@@ -227,29 +227,46 @@ export function ChatUnreadProvider({ children }: { children: React.ReactNode }) 
 }
 
 /** 예약 카드 아래 '대화' 줄 — 누르면 대화가 펼쳐진다. ?chat=<id>로 들어오면 처음부터 펼친다. */
-export function BookingChatToggle({ bookingId, otherLabel }: { bookingId: string; otherLabel: string }) {
-  const { unread, clear } = useContext(UnreadContext);
-  const initiallyOpen = useSearchParams().get("chat") === bookingId;
-  const [open, setOpen] = useState(!!initiallyOpen);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (initiallyOpen) ref.current?.scrollIntoView({ block: "center" });
-  }, [initiallyOpen]);
+/** 예약 카드의 '대화' 버튼 — 다른 버튼과 한 줄에 둘 수 있게 패널과 나눴다(감사 10). */
+export function BookingChatButton({ bookingId, open, onToggle }: { bookingId: string; open: boolean; onToggle: () => void }) {
+  const { unread } = useContext(UnreadContext);
   const n = unread[bookingId] ?? 0;
   return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-charcoal-700 px-3 py-1 text-xs text-charcoal-300 hover:border-navy-400/60 hover:text-navy-400 max-md:min-h-11"
+      aria-expanded={open}
+    >
+      대화
+      {n > 0 && (
+        <span className="rounded-full bg-red-500 px-1.5 text-2xs font-semibold leading-4 text-white">{n}</span>
+      )}
+    </button>
+  );
+}
+
+/** 카드 아래 전체 폭으로 열리는 예약 대화. autoScroll 이면 열릴 때 화면 가운데로. */
+export function BookingChatPanel({ bookingId, otherLabel, autoScroll = false }: { bookingId: string; otherLabel: string; autoScroll?: boolean }) {
+  const { clear } = useContext(UnreadContext);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (autoScroll) ref.current?.scrollIntoView({ block: "center" });
+  }, [autoScroll]);
+  return (
     <div ref={ref} className="mt-3">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-charcoal-700 px-3 py-1 text-xs text-charcoal-300 hover:border-navy-400/60 hover:text-navy-400"
-        aria-expanded={open}
-      >
-        대화
-        {n > 0 && (
-          <span className="rounded-full bg-red-500 px-1.5 text-2xs font-semibold leading-4 text-white">{n}</span>
-        )}
-      </button>
-      {open && <BookingChat source={{ kind: "member", bookingId }} otherLabel={otherLabel} onRead={() => clear(bookingId)} />}
+      <BookingChat source={{ kind: "member", bookingId }} otherLabel={otherLabel} onRead={() => clear(bookingId)} />
+    </div>
+  );
+}
+
+export function BookingChatToggle({ bookingId, otherLabel }: { bookingId: string; otherLabel: string }) {
+  const initiallyOpen = useSearchParams().get("chat") === bookingId;
+  const [open, setOpen] = useState(!!initiallyOpen);
+  return (
+    <div className="mt-3">
+      <BookingChatButton bookingId={bookingId} open={open} onToggle={() => setOpen((o) => !o)} />
+      {open && <BookingChatPanel bookingId={bookingId} otherLabel={otherLabel} autoScroll={initiallyOpen} />}
     </div>
   );
 }

@@ -19,7 +19,7 @@ export function Segmented<T extends string>({
     <div className={`flex rounded-full bg-charcoal-800/70 p-1 ${className}`} role="tablist">
       {items.map((it) => {
         const active = it.value === value;
-        const cls = `flex h-9 flex-1 items-center justify-center rounded-full text-sm transition ${
+        const cls = `flex h-9 flex-1 items-center max-md:h-11 justify-center rounded-full text-sm transition ${
           active
             ? "bg-[rgb(var(--bg-surface))] font-semibold text-charcoal-50 shadow-sm"
             : "font-medium text-charcoal-300"

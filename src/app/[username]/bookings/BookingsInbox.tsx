@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState, useTransition, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { BookingChatToggle, ChatUnreadProvider } from "@/components/BookingChat";
+import { BookingChatButton, BookingChatPanel, ChatUnreadProvider } from "@/components/BookingChat";
 import { updateBookingStatus, cancelMyBooking, rescheduleMyBooking, refreshBookableOptions, proposeRescheduleAsHost, proposeRescheduleAsGuest, respondToReschedule, withdrawReschedule, changeMyBookingListState } from "@/lib/slots-actions";
 import type { BookingRow, GuestBookingRow, BookableOption } from "@/lib/slots";
 import { Segmented } from "@/components/Segmented";
@@ -150,7 +150,7 @@ export default function BookingsInbox({
           </p>
         </div>
         {tab === "host" && (
-          <div className="flex gap-2">
+          <div className="grid grid-cols-3 gap-2 sm:flex">
             <Stat label="승인·입금 대기" value={pendingCount} accent />
             <Stat label="예정" value={confirmedCount} />
             <Stat label="지난 예약" value={past.length} muted />
@@ -297,7 +297,7 @@ function ListStateButtons({
         type="button"
         onClick={() => onChange(mode === "archive" ? "unarchive" : "archive")}
         disabled={disabled}
-        className="flex-1 whitespace-nowrap rounded-lg border border-charcoal-800 px-2.5 py-1 text-xs text-charcoal-400 hover:border-navy-400/60 hover:text-navy-400 disabled:opacity-50"
+        className="flex-1 whitespace-nowrap rounded-lg border border-charcoal-800 px-2.5 py-1 text-xs max-md:min-h-11 text-charcoal-400 hover:border-navy-400/60 hover:text-navy-400 disabled:opacity-50"
       >
         {mode === "archive" ? "되돌리기" : "보관"}
       </button>
@@ -305,7 +305,7 @@ function ListStateButtons({
         type="button"
         onClick={() => onChange("delete")}
         disabled={disabled}
-        className="flex-1 whitespace-nowrap rounded-lg border border-charcoal-800 px-2.5 py-1 text-xs text-charcoal-400 hover:border-red-400/60 hover:text-red-500 disabled:opacity-50"
+        className="flex-1 whitespace-nowrap rounded-lg border border-charcoal-800 px-2.5 py-1 text-xs max-md:min-h-11 text-charcoal-400 hover:border-red-400/60 hover:text-red-500 disabled:opacity-50"
       >
         삭제
       </button>
@@ -438,6 +438,9 @@ function HostSection({
   onListChange?: OnListChange;
 }) {
   const [reschedulingId, setReschedulingId] = useState<string | null>(null);
+  // 예약 대화 — 버튼은 다른 버튼과 한 줄, 패널은 카드 아래 전체 폭(감사 10). ?chat=<id> 로 들어오면 열린 채로
+  const chatParam = useSearchParams().get("chat");
+  const [chatId, setChatId] = useState<string | null>(chatParam);
   return (
     <section className="space-y-3">
       {/* 보관함 안에서는 위의 '보관함 (n)' 줄이 제목 역할 */}
@@ -536,7 +539,7 @@ function HostSection({
                       <button
                         onClick={() => update(b.id, "confirmed")}
                         disabled={pending}
-                        className="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-60"
+                        className="rounded-lg bg-emerald-600 px-3 py-1 text-xs max-md:min-h-11 font-semibold text-white hover:bg-emerald-500 disabled:opacity-60"
                       >
                         {b.payment_status === "awaiting" ? "입금 확인 · 확정" : "수락"}
                       </button>
@@ -550,7 +553,7 @@ function HostSection({
                               reschedulingId === b.id ? null : b.id,
                             )
                           }
-                          className="rounded-lg border border-charcoal-700 px-3 py-1 text-xs text-charcoal-400 hover:border-navy-400/60 hover:text-navy-400"
+                          className="rounded-lg border border-charcoal-700 px-3 py-1 text-xs max-md:min-h-11 text-charcoal-400 hover:border-navy-400/60 hover:text-navy-400"
                         >
                           시간 변경
                         </button>
@@ -560,7 +563,7 @@ function HostSection({
                       <button
                         onClick={() => update(b.id, "canceled")}
                         disabled={pending}
-                        className="rounded-lg border border-charcoal-700 px-3 py-1 text-xs text-charcoal-400 hover:border-navy-400/60 hover:text-navy-400"
+                        className="rounded-lg border border-charcoal-700 px-3 py-1 text-xs max-md:min-h-11 text-charcoal-400 hover:border-navy-400/60 hover:text-navy-400"
                       >
                         취소
                       </button>
@@ -569,7 +572,7 @@ function HostSection({
                       <button
                         onClick={() => update(b.id, "completed")}
                         disabled={pending}
-                        className="rounded-lg border border-charcoal-700 px-3 py-1 text-xs text-charcoal-400 hover:border-charcoal-600 hover:text-charcoal-200"
+                        className="rounded-lg border border-charcoal-700 px-3 py-1 text-xs max-md:min-h-11 text-charcoal-400 hover:border-charcoal-600 hover:text-charcoal-200"
                       >
                         완료
                       </button>
@@ -581,12 +584,13 @@ function HostSection({
                         onChange={(change) => onListChange(b.id, change)}
                       />
                     )}
+                    <BookingChatButton bookingId={b.id} open={chatId === b.id} onToggle={() => setChatId(chatId === b.id ? null : b.id)} />
                   </div>
                 </div>
                 {/* 제안 배너는 행 전체 폭 — 모바일에서 버튼 열 옆 좁은 칸에 갇히지 않게 (개선-29 손질) */}
                 <RescheduleBanner booking={b} />
                 {/* 예약 대화 (1.8.0) */}
-                <BookingChatToggle bookingId={b.id} otherLabel={guestLabel} />
+                {chatId === b.id && <BookingChatPanel bookingId={b.id} otherLabel={guestLabel} autoScroll={chatParam === b.id} />}
               </li>
             );
           })}
@@ -619,6 +623,9 @@ function GuestSection({
   onListChange?: OnListChange;
 }) {
   const [reschedulingId, setReschedulingId] = useState<string | null>(null);
+  // 예약 대화 — 버튼은 다른 버튼과 한 줄, 패널은 카드 아래 전체 폭(감사 10). ?chat=<id> 로 들어오면 열린 채로
+  const chatParam = useSearchParams().get("chat");
+  const [chatId, setChatId] = useState<string | null>(chatParam);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
   const [reviewedLocal, setReviewedLocal] = useState<string[]>([]);
   const reviewed = new Set([...reviewedBookingIds, ...reviewedLocal]);
@@ -709,7 +716,7 @@ function GuestSection({
                               )
                             }
                             disabled={pending}
-                            className="rounded-lg border border-charcoal-800 px-2.5 py-1 text-xs text-charcoal-400 hover:border-charcoal-600 hover:text-charcoal-100 disabled:opacity-50"
+                            className="rounded-lg border border-charcoal-800 px-2.5 py-1 text-xs max-md:min-h-11 text-charcoal-400 hover:border-charcoal-600 hover:text-charcoal-100 disabled:opacity-50"
                           >
                             시간 변경
                           </button>
@@ -717,7 +724,7 @@ function GuestSection({
                             type="button"
                             onClick={() => onCancel(b.id)}
                             disabled={pending}
-                            className="rounded-lg border border-charcoal-800 px-2.5 py-1 text-xs text-charcoal-400 hover:border-navy-400/60 hover:text-navy-400 disabled:opacity-50"
+                            className="rounded-lg border border-charcoal-800 px-2.5 py-1 text-xs max-md:min-h-11 text-charcoal-400 hover:border-navy-400/60 hover:text-navy-400 disabled:opacity-50"
                           >
                             취소
                           </button>
@@ -733,7 +740,7 @@ function GuestSection({
                               cur === b.id ? null : b.id,
                             )
                           }
-                          className="rounded-lg bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-500/40 hover:bg-amber-500/25 dark:text-amber-200 dark:ring-0"
+                          className="rounded-lg bg-amber-500/15 px-2.5 py-1 text-xs max-md:min-h-11 font-semibold text-amber-700 ring-1 ring-amber-500/40 hover:bg-amber-500/25 dark:text-amber-200 dark:ring-0"
                         >
                           후기 남기기
                         </button>
@@ -750,6 +757,7 @@ function GuestSection({
                         onChange={(change) => onListChange(b.id, change)}
                       />
                     )}
+                    <BookingChatButton bookingId={b.id} open={chatId === b.id} onToggle={() => setChatId(chatId === b.id ? null : b.id)} />
                   </div>
                 </div>
                 <RescheduleBanner booking={b} />
@@ -769,7 +777,7 @@ function GuestSection({
                   />
                 )}
                 {/* 예약 대화 (1.8.0) */}
-                <BookingChatToggle bookingId={b.id} otherLabel={hostLabel} />
+                {chatId === b.id && <BookingChatPanel bookingId={b.id} otherLabel={hostLabel} autoScroll={chatParam === b.id} />}
               </li>
             );
           })}
@@ -936,7 +944,7 @@ function RescheduleBanner({
             type="button"
             onClick={withdraw}
             disabled={saving}
-            className="mt-2 rounded-lg border border-charcoal-700 px-3 py-1 text-xs text-charcoal-400 hover:border-navy-400/60 hover:text-navy-400 disabled:opacity-60"
+            className="mt-2 rounded-lg border border-charcoal-700 px-3 py-1 text-xs max-md:min-h-11 text-charcoal-400 hover:border-navy-400/60 hover:text-navy-400 disabled:opacity-60"
           >
             제안 취소
           </button>
@@ -947,7 +955,7 @@ function RescheduleBanner({
             type="button"
             onClick={() => respond("accept")}
             disabled={saving}
-            className="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-60"
+            className="rounded-lg bg-emerald-600 px-3 py-1 text-xs max-md:min-h-11 font-semibold text-white hover:bg-emerald-500 disabled:opacity-60"
           >
             수락
           </button>
@@ -955,7 +963,7 @@ function RescheduleBanner({
             type="button"
             onClick={() => respond("decline")}
             disabled={saving}
-            className="rounded-lg border border-charcoal-700 px-3 py-1 text-xs text-charcoal-400 hover:border-navy-400/60 hover:text-navy-400 disabled:opacity-60"
+            className="rounded-lg border border-charcoal-700 px-3 py-1 text-xs max-md:min-h-11 text-charcoal-400 hover:border-navy-400/60 hover:text-navy-400 disabled:opacity-60"
           >
             거절
           </button>
@@ -1022,7 +1030,7 @@ function HostReschedulePanel({
         <button
           type="button"
           onClick={onDone}
-          className="rounded-lg border border-charcoal-700 px-3 py-1 text-xs text-charcoal-400 hover:text-charcoal-200"
+          className="rounded-lg border border-charcoal-700 px-3 py-1 text-xs max-md:min-h-11 text-charcoal-400 hover:text-charcoal-200"
         >
           닫기
         </button>
@@ -1030,7 +1038,7 @@ function HostReschedulePanel({
           type="button"
           onClick={submit}
           disabled={!when || saving}
-          className="rounded-lg bg-navy-500 px-3 py-1 text-xs font-semibold text-white hover:bg-navy-400 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-lg bg-navy-500 px-3 py-1 text-xs max-md:min-h-11 font-semibold text-white hover:bg-navy-400 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {saving ? "보내는 중…" : "변경 제안"}
         </button>
@@ -1199,7 +1207,7 @@ function ReschedulePanel({
                 <button
                   type="button"
                   onClick={onDone}
-                  className="rounded-lg border border-charcoal-700 px-3 py-1 text-xs text-charcoal-400 hover:text-charcoal-200"
+                  className="rounded-lg border border-charcoal-700 px-3 py-1 text-xs max-md:min-h-11 text-charcoal-400 hover:text-charcoal-200"
                 >
                   닫기
                 </button>
@@ -1207,7 +1215,7 @@ function ReschedulePanel({
                   type="button"
                   onClick={propose}
                   disabled={!when || saving}
-                  className="rounded-lg bg-navy-500 px-3 py-1 text-xs font-semibold text-white hover:bg-navy-400 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-lg bg-navy-500 px-3 py-1 text-xs max-md:min-h-11 font-semibold text-white hover:bg-navy-400 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {saving ? "보내는 중…" : "제안 보내기"}
                 </button>
