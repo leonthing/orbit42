@@ -37,7 +37,7 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
         CODE_SIGN_STYLE: Automatic
         MARKETING_VERSION: "1.9.0"
-        CURRENT_PROJECT_VERSION: 46
+        CURRENT_PROJECT_VERSION: 47
         ENABLE_PREVIEWS: YES
     info:
       path: Orbit42/Info.plist
@@ -97,7 +97,7 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
         CODE_SIGN_STYLE: Automatic
         MARKETING_VERSION: "1.9.0"
-        CURRENT_PROJECT_VERSION: 46
+        CURRENT_PROJECT_VERSION: 47
         SKIP_INSTALL: YES
     info:
       path: Orbit42Widget/Info.plist
