@@ -19,7 +19,7 @@ export default async function ConversationPage({ params }: { params: { id: strin
   const name = t.peer.display_name || t.peer.username;
 
   return (
-    <div className="flex h-[calc(100dvh-5rem)] max-w-2xl flex-col">
+    <div className="flex h-full min-h-0 max-w-2xl flex-col">
       <header className="flex items-center gap-3 border-b border-charcoal-800/40 pb-3">
         <Link href="/messages" className="text-charcoal-500 hover:text-charcoal-200" aria-label="뒤로">
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">

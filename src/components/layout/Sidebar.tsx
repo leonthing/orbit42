@@ -270,7 +270,7 @@ export function Sidebar({
     <>
       {/* Desktop sidebar */}
       <aside
-        className={`hidden h-screen flex-col border-r border-charcoal-800/40 bg-[rgb(var(--bg-surface))] transition-all md:flex ${
+        className={`hidden h-dvh flex-col border-r border-charcoal-800/40 bg-[rgb(var(--bg-surface))] transition-all md:flex ${
           collapsed ? "w-16" : "w-56"
         }`}
       >
