@@ -13,6 +13,10 @@ const RESERVED = new Set<string>([
   "example.user", "exampleuser",
   "coach.example", "coachexample",
   "designer.example", "designerexample",
+  // 1.9.0 심사용 상대 데모 계정(운영에 있음, PO 11/13) — 지운 뒤에도 남이 가져가거나 비슷한 아이디로 사칭하지 못하게.
+  // 이미 있는 계정의 로그인·화면에는 영향 없음(가입·자동 아이디 생성에서만 확인).
+  "demodoyun", "demo.doyun", "demo-doyun", "demo_doyun",
+  "demoseoyeon", "demo.seoyeon", "demo-seoyeon", "demo_seoyeon",
 ]);
 
 export function isReservedUsername(username: string): boolean {
