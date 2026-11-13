@@ -258,7 +258,7 @@ export default function BookingForm({
               </p>
               <button
                 type="button"
-                className="shrink-0 rounded-lg border border-charcoal-700 px-3 py-1.5 text-xs font-semibold text-charcoal-200 hover:border-charcoal-500"
+                className="shrink-0 rounded-lg border border-charcoal-700 px-3 py-1.5 text-xs font-semibold max-md:min-h-11 text-charcoal-200 hover:border-charcoal-500"
                 onClick={async () => {
                   try {
                     await navigator.clipboard.writeText(payment.instructions);
@@ -305,7 +305,7 @@ export default function BookingForm({
                   type="button"
                   onClick={() => setSelectedLocation(loc)}
                   disabled={locPending || locations.length === 1}
-                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                  className={`inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-medium transition-colors max-md:min-h-11 ${
                     active
                       ? "border-navy-400 bg-navy-400/15 text-navy-600 dark:text-navy-300"
                       : "border-charcoal-800/60 bg-charcoal-800/20 text-charcoal-300 hover:border-charcoal-700"
@@ -330,7 +330,7 @@ export default function BookingForm({
       )}
 
       {loggedIn && options.length > 0 && (
-        <label className="flex w-fit cursor-pointer items-center gap-2 text-xs text-charcoal-400">
+        <label className="flex w-fit cursor-pointer items-center gap-2 text-xs text-charcoal-400 max-md:min-h-11">
           <input
             type="checkbox"
             checked={onlyMyFree}
@@ -390,7 +390,7 @@ export default function BookingForm({
               onChange={(e) => setName(e.target.value)}
               placeholder="이름"
               required
-              className="rounded-lg border border-charcoal-800/40 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100"
+              className="rounded-lg border border-charcoal-800/40 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100 max-md:min-h-11"
             />
             <input
               type="email"
@@ -398,7 +398,7 @@ export default function BookingForm({
               onChange={(e) => setEmail(e.target.value)}
               placeholder="이메일"
               required
-              className="rounded-lg border border-charcoal-800/40 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100"
+              className="rounded-lg border border-charcoal-800/40 bg-charcoal-900/60 px-3 py-2 text-sm text-charcoal-100 max-md:min-h-11"
             />
           </div>
         </>

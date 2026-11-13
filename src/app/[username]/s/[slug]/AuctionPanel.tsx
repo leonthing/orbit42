@@ -135,7 +135,7 @@ export default function AuctionPanel({
                 type="button"
                 onClick={submit}
                 disabled={pending || !loggedIn}
-                className="rounded-lg bg-navy-400 px-5 py-3 text-sm font-semibold text-charcoal-950 hover:bg-navy-400 disabled:opacity-60"
+                className="rounded-lg bg-navy-500 px-5 py-3 text-sm font-semibold text-white hover:bg-navy-400 disabled:opacity-60"
               >
                 {pending ? "입찰 중…" : loggedIn ? "입찰" : "로그인 후 입찰"}
               </button>
