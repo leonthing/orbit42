@@ -21,19 +21,19 @@ export default async function ConversationPage({ params }: { params: { id: strin
   return (
     <div className="flex h-full min-h-0 max-w-2xl flex-col">
       <header className="flex items-center gap-3 border-b border-charcoal-800/40 pb-3">
-        <Link href="/messages" className="text-charcoal-500 hover:text-charcoal-200" aria-label="뒤로">
+        <Link href="/messages" className="flex shrink-0 items-center justify-center text-charcoal-500 hover:text-charcoal-200 max-md:-ml-3 max-md:h-11 max-md:w-11" aria-label="뒤로">
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
           </svg>
         </Link>
-        <Link href={`/${t.peer.username}`} className="flex min-w-0 flex-1 items-center gap-2 hover:opacity-80">
+        <Link href={`/${t.peer.username}`} className="flex min-w-0 flex-1 items-center gap-2 hover:opacity-80 max-md:min-h-11">
           <Avatar url={t.peer.avatar_url} name={name} size={32} />
           <div className="flex min-w-0 flex-col">
             <span className="truncate text-sm font-semibold text-charcoal-100">{name}</span>
             <span className="text-2xs text-charcoal-500">@{t.peer.username}</span>
           </div>
         </Link>
-        <Link href={`/${t.peer.username}`} className="shrink-0 rounded-lg border border-charcoal-800/60 px-2.5 py-1 text-xs text-charcoal-300 hover:text-charcoal-100">
+        <Link href={`/${t.peer.username}`} className="inline-flex shrink-0 items-center rounded-lg border border-charcoal-800/60 px-2.5 py-1 text-xs text-charcoal-300 hover:text-charcoal-100 max-md:min-h-11">
           예약 링크 보기
         </Link>
       </header>

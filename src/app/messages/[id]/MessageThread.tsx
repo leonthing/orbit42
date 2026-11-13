@@ -120,7 +120,7 @@ export function MessageThread({
   return (
     <>
       <div className="relative flex justify-end pt-2">
-        <button type="button" onClick={() => setMenu((v) => !v)} className="rounded-lg px-2 py-1 text-xs text-charcoal-400 hover:text-charcoal-100" aria-label="대화 메뉴">
+        <button type="button" onClick={() => setMenu((v) => !v)} className="rounded-lg px-2 py-1 text-xs text-charcoal-400 hover:text-charcoal-100 max-md:min-h-11" aria-label="대화 메뉴">
           ⋯ 메뉴
         </button>
         {menu && (
@@ -187,7 +187,7 @@ export function MessageThread({
               }}
               placeholder={coarse ? "메시지 입력" : "메시지를 입력하세요… (Shift+Enter 줄바꿈)"}
               rows={1}
-              className="flex-1 resize-none rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] px-3 py-2 text-sm text-charcoal-100 placeholder-charcoal-600 focus:border-charcoal-600 focus:outline-none"
+              className="flex-1 resize-none rounded-xl border max-md:min-h-11 border-charcoal-800/60 bg-[rgb(var(--bg-surface))] px-3 py-2 text-sm text-charcoal-100 placeholder-charcoal-600 focus:border-charcoal-600 focus:outline-none"
               style={{ maxHeight: 120 }}
             />
             <PendingButton type="submit" pending={sending} disabled={!text.trim()}>
