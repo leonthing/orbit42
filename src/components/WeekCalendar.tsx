@@ -200,7 +200,8 @@ function UnifiedScroll({
   // Sticky headers stay pinned; the time-grid portion scrolls beneath.
   useEffect(() => {
     // 새벽 시간대를 보여줄 이유가 없다. 업무 시간대부터 보이게 맞춘다.
-    if (ref.current) ref.current.scrollTop = 8 * ROW_HEIGHT;
+    // 08:00 라벨은 선 가운데에 걸려 있어(-translate-y-1/2) 딱 맞춰 내리면 머리줄에 반쯤 가린다 — 12px 덜 내린다(감사 7).
+    if (ref.current) ref.current.scrollTop = 8 * ROW_HEIGHT - 12;
   }, []);
   const hasAllDay = positionedByDay.some((col) => col.some((i) => i.allDay));
   return (

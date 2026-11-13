@@ -817,7 +817,7 @@ export default function CalendarView({
         <button
           key={mode}
           onClick={() => switchView(mode)}
-          className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+          className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium transition-colors max-md:min-h-11 max-md:min-w-11 ${
             viewMode === mode
               ? "bg-navy-500 text-white"
               : "text-charcoal-400 hover:text-charcoal-200"
@@ -856,7 +856,7 @@ export default function CalendarView({
       <button
         onClick={() => navigate(-1)}
         aria-label="이전"
-        className="rounded-lg px-2 py-1.5 text-sm text-charcoal-400 hover:bg-charcoal-800/50 hover:text-charcoal-200"
+        className="inline-flex items-center justify-center rounded-lg px-2 py-1.5 text-sm text-charcoal-400 hover:bg-charcoal-800/50 hover:text-charcoal-200 max-md:-mx-1.5 max-md:h-11 max-md:w-11"
       >
         &larr;
       </button>
@@ -866,14 +866,14 @@ export default function CalendarView({
       <button
         onClick={() => navigate(1)}
         aria-label="다음"
-        className="rounded-lg px-2 py-1.5 text-sm text-charcoal-400 hover:bg-charcoal-800/50 hover:text-charcoal-200"
+        className="inline-flex items-center justify-center rounded-lg px-2 py-1.5 text-sm text-charcoal-400 hover:bg-charcoal-800/50 hover:text-charcoal-200 max-md:-mx-1.5 max-md:h-11 max-md:w-11"
       >
         &rarr;
       </button>
       {!isViewCurrent() && (
         <button
           onClick={goToToday}
-          className="ml-1 rounded-lg bg-charcoal-800/60 px-2.5 py-1 text-xs text-charcoal-400 hover:text-charcoal-200"
+          className="ml-1 rounded-lg bg-charcoal-800/60 px-2.5 py-1 text-xs text-charcoal-400 hover:text-charcoal-200 max-md:min-h-11"
         >
           오늘
         </button>
@@ -896,7 +896,7 @@ export default function CalendarView({
             <div className="relative">
               <button
                 onClick={() => setShowCalendarPicker(!showCalendarPicker)}
-                className="flex items-center gap-1.5 rounded-lg border border-charcoal-800 bg-charcoal-900/40 px-3 py-2 text-xs font-medium text-charcoal-200 hover:border-charcoal-700"
+                className="flex items-center gap-1.5 rounded-lg border border-charcoal-800 bg-charcoal-900/40 px-3 py-2 text-xs font-medium text-charcoal-200 hover:border-charcoal-700 max-md:min-h-11"
               >
                 <span className="inline-flex -space-x-1">
                   {myCalendars
@@ -1009,7 +1009,7 @@ export default function CalendarView({
           ) : null}
           <button
             onClick={() => openCreateForm()}
-            className="rounded-lg bg-navy-500 px-3 py-2 text-sm font-medium text-white hover:bg-navy-400 sm:px-4"
+            className="rounded-lg bg-navy-500 px-3 py-2 text-sm font-medium text-white hover:bg-navy-400 max-md:h-11 max-md:min-w-11 sm:px-4"
           >
             <span className="sm:hidden">+</span>
             <span className="hidden sm:inline">+ 새 일정</span>
@@ -1090,7 +1090,7 @@ export default function CalendarView({
                 <div
                   key={d}
                   className={`py-2 text-center text-xs font-medium ${
-                    i === saturdayIndex(weekStart) ? "text-blue-400/70" : i === sundayIndex(weekStart) ? "text-navy-400/70" : "text-charcoal-500"
+                    i === saturdayIndex(weekStart) ? "text-blue-600 dark:text-blue-400" : i === sundayIndex(weekStart) ? "text-red-600 dark:text-red-400" : "text-charcoal-500"
                   }`}
                 >
                   {d}
@@ -1163,9 +1163,9 @@ export default function CalendarView({
                               isToday
                                 ? "rounded-full bg-navy-500 text-white"
                                 : isSunday
-                                  ? "text-navy-400/70"
+                                  ? "text-red-600 dark:text-red-400"
                                   : isSaturday
-                                    ? "text-blue-400/70"
+                                    ? "text-blue-600 dark:text-blue-400"
                                     : "text-charcoal-300"
                             }`}
                           >
@@ -1284,7 +1284,7 @@ export default function CalendarView({
                     </h3>
                     <button
                       onClick={() => openCreateForm(selectedDay)}
-                      className="rounded-lg bg-navy-500 px-2.5 py-1 text-xs font-medium text-white hover:bg-navy-400"
+                      className="rounded-lg bg-navy-500 px-2.5 py-1 text-xs font-medium text-white hover:bg-navy-400 max-md:min-h-11 max-md:px-3.5"
                     >
                       + 추가
                     </button>
@@ -2045,17 +2045,22 @@ function EventList({
               type="button"
               onClick={() => onToggleComplete(ev.id)}
               aria-label={isDone ? "미완료로 표시" : "완료로 표시"}
-              className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
-                isDone
-                  ? "border-navy-400 bg-navy-500 text-white"
-                  : "border-charcoal-600 hover:border-charcoal-400"
-              }`}
+              className="group/chk mt-0.5 flex shrink-0 items-center justify-center max-md:-m-3.5 max-md:h-11 max-md:w-11"
             >
-              {isDone && (
-                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                </svg>
-              )}
+              {/* 모바일은 44px 버튼 안에 16px 상자(감사 7) */}
+              <span
+                className={`flex h-4 w-4 items-center justify-center rounded border transition-colors ${
+                  isDone
+                    ? "border-navy-400 bg-navy-500 text-white"
+                    : "border-charcoal-600 group-hover/chk:border-charcoal-400"
+                }`}
+              >
+                {isDone && (
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                  </svg>
+                )}
+              </span>
             </button>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
@@ -2087,10 +2092,10 @@ function EventList({
               )}
             </div>
             {ev.source !== "google" && (
-              <div className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+              <div className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100 max-md:-my-2.5 max-md:opacity-100">
                 <button
                   onClick={() => onEdit(ev)}
-                  className="rounded p-1 text-charcoal-500 hover:bg-charcoal-700/50 hover:text-charcoal-300"
+                  className="flex items-center justify-center rounded p-1 text-charcoal-500 hover:bg-charcoal-700/50 hover:text-charcoal-300 max-md:h-11 max-md:w-11"
                   title="수정"
                   aria-label="이벤트 수정"
                 >
@@ -2110,7 +2115,7 @@ function EventList({
                 </button>
                 <button
                   onClick={() => onDelete(ev.id)}
-                  className="rounded p-1 text-charcoal-500 hover:bg-red-900/30 hover:text-red-400"
+                  className="flex items-center justify-center rounded p-1 text-charcoal-500 hover:bg-red-900/30 hover:text-red-400 max-md:h-11 max-md:w-11"
                   title="삭제"
                   aria-label="이벤트 삭제"
                 >
@@ -2183,7 +2188,7 @@ function YearView({
                 <div
                   key={d}
                   className={`text-center text-3xs font-medium ${
-                    i === saturdayIndex(weekStart) ? "text-blue-400/50" : i === sundayIndex(weekStart) ? "text-navy-400/50" : "text-charcoal-600"
+                    i === saturdayIndex(weekStart) ? "text-blue-600 dark:text-blue-400" : i === sundayIndex(weekStart) ? "text-red-600 dark:text-red-400" : "text-charcoal-600"
                   }`}
                 >
                   {d}
@@ -2273,7 +2278,7 @@ function QuarterView({
                 <div
                   key={d}
                   className={`py-1 text-center text-2xs font-medium ${
-                    i === saturdayIndex(weekStart) ? "text-blue-400/60" : i === sundayIndex(weekStart) ? "text-navy-400/60" : "text-charcoal-600"
+                    i === saturdayIndex(weekStart) ? "text-blue-600 dark:text-blue-400" : i === sundayIndex(weekStart) ? "text-red-600 dark:text-red-400" : "text-charcoal-600"
                   }`}
                 >
                   {d}
@@ -2309,9 +2314,9 @@ function QuarterView({
                             isToday
                               ? "rounded-full bg-navy-500 text-white"
                               : isSun
-                                ? "text-navy-400/70"
+                                ? "text-red-600 dark:text-red-400"
                                 : isSat
-                                  ? "text-blue-400/70"
+                                  ? "text-blue-600 dark:text-blue-400"
                                   : "text-charcoal-400"
                           }`}
                         >

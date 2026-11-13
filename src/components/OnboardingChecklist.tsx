@@ -50,7 +50,7 @@ export function OnboardingChecklist({ steps }: { steps: OnboardingStep[] }) {
           onClick={() => setExpanded((v) => !v)}
           aria-expanded={expanded}
           aria-label={expanded ? "접기" : "전체 보기"}
-          className="rounded-lg p-1 text-charcoal-600 hover:bg-charcoal-800/50 hover:text-charcoal-300 sm:hidden"
+          className="flex items-center justify-center rounded-lg p-1 text-charcoal-600 hover:bg-charcoal-800/50 hover:text-charcoal-300 max-md:h-11 max-md:w-11 sm:hidden"
         >
           <svg
             className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`}
@@ -66,7 +66,7 @@ export function OnboardingChecklist({ steps }: { steps: OnboardingStep[] }) {
             setDismissed(true);
           }}
           aria-label="체크리스트 숨기기"
-          className="rounded-lg p-1 text-charcoal-600 hover:bg-charcoal-800/50 hover:text-charcoal-300"
+          className="flex items-center justify-center rounded-lg p-1 text-charcoal-600 hover:bg-charcoal-800/50 hover:text-charcoal-300 max-md:h-11 max-md:w-11"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -86,7 +86,7 @@ export function OnboardingChecklist({ steps }: { steps: OnboardingStep[] }) {
       {nextStep && !expanded && (
         <Link
           href={nextStep.href}
-          className="mt-3 flex items-center gap-2 text-sm font-medium text-charcoal-200 hover:text-charcoal-100 sm:hidden"
+          className="mt-1.5 flex min-h-11 items-center gap-2 text-sm font-medium text-charcoal-200 hover:text-charcoal-100 sm:hidden"
         >
           <span className="h-4 w-4 shrink-0 rounded-full border border-charcoal-700" />
           다음: {nextStep.label}

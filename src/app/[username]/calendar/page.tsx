@@ -78,7 +78,7 @@ export default async function CalendarPage({
             내 캘린더일 때만 보여준다 (남의 캘린더에서는 의미 없음). */}
         {isOwner && <OnboardingSection />}
         {todoCount > 0 && (
-          <Link href={`/${params.username}/todos`} className="self-start rounded-lg border border-charcoal-800/60 px-3 py-1.5 text-xs text-charcoal-300 hover:text-charcoal-100">
+          <Link href={`/${params.username}/todos`} className="inline-flex items-center self-start rounded-lg border border-charcoal-800/60 px-3 py-1.5 text-xs text-charcoal-300 hover:text-charcoal-100 max-md:min-h-11">
             할 일 {todoCount} →
           </Link>
         )}

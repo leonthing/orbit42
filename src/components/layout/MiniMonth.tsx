@@ -169,9 +169,9 @@ export function MiniMonth({ username, weekStart = "mon" }: { username: string; w
                 key={d}
                 className={`text-3xs font-medium ${
                   i === saturdayIndex(weekStart)
-                    ? "text-blue-400/70"
+                    ? "text-blue-600 dark:text-blue-400"
                     : i === sundayIndex(weekStart)
-                      ? "text-navy-400/70"
+                      ? "text-red-600 dark:text-red-400"
                       : "text-charcoal-500"
                 }`}
               >
@@ -197,9 +197,9 @@ export function MiniMonth({ username, weekStart = "mon" }: { username: string; w
                     isToday
                       ? "bg-navy-500 text-white"
                       : colIdx === saturdayIndex(weekStart)
-                        ? "text-blue-400/80 hover:bg-charcoal-800/60"
+                        ? "text-blue-600 dark:text-blue-400 hover:bg-charcoal-800/60"
                         : colIdx === sundayIndex(weekStart)
-                          ? "text-navy-400/80 hover:bg-charcoal-800/60"
+                          ? "text-red-600 dark:text-red-400 hover:bg-charcoal-800/60"
                           : "text-charcoal-300 hover:bg-charcoal-800/60"
                   }`}
                 >
