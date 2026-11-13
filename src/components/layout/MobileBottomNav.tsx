@@ -100,7 +100,7 @@ export function MobileBottomNav({
           <Link
             key={it.label}
             href={it.href}
-            className={`flex h-full flex-1 flex-col items-center justify-center gap-0.5 rounded-full text-[10px] font-medium transition-colors ${
+            className={`flex h-full flex-1 flex-col items-center justify-center gap-0.5 rounded-full text-tab font-medium transition-colors ${
               it.active ? "bg-charcoal-800/60 text-navy-500 dark:text-navy-400" : "text-charcoal-100"
             }`}
           >
@@ -108,7 +108,7 @@ export function MobileBottomNav({
               {it.icon}
               {it.label === "예약" && bookingsBadge > 0 && (
                 <span
-                  className="absolute -right-2 -top-1 min-w-[16px] rounded-full bg-red-500 px-1 text-center text-[10px] font-bold leading-4 text-white"
+                  className="absolute -right-2 -top-1 min-w-[16px] rounded-full bg-red-500 px-1 text-center text-tab font-bold leading-4 text-white"
                   aria-label={`답할 예약 ${bookingsBadge}건`}
                 >
                   {bookingsBadge > 99 ? "99+" : bookingsBadge}

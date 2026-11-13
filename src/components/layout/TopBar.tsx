@@ -36,7 +36,7 @@ export function TopBar({
   return (
     <header className="relative flex h-12 shrink-0 items-center justify-between px-4 md:border-b md:border-charcoal-800/40 md:px-6">
       {/* 모바일: iOS 내비게이션 바처럼 가운데 제목 (메뉴는 하단 탭·프로필 탭에서) */}
-      <p className="pointer-events-none absolute inset-x-16 text-center text-[17px] font-semibold text-charcoal-50 md:hidden">
+      <p className="pointer-events-none absolute inset-x-16 text-center text-title font-semibold text-charcoal-50 md:hidden">
         {mobileTitle}
       </p>
       {/* Left: Hamburger (mobile only — desktop clock lives in the sidebar) */}

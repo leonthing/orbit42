@@ -113,8 +113,8 @@
 .post-body ol { @apply my-4 ml-6 list-decimal space-y-1; }
 .post-body a { @apply text-red-500 underline underline-offset-2 hover:text-red-400; }
 .post-body blockquote { @apply my-4 border-l-2 border-charcoal-800/60 pl-4 text-charcoal-300; }
-.post-body code { @apply rounded bg-charcoal-800/40 px-1.5 py-0.5 text-[13px]; }
-.post-body pre { @apply my-4 overflow-x-auto rounded-lg bg-charcoal-800/60 p-4 text-[13px]; }
+.post-body code { @apply rounded bg-charcoal-800/40 px-1.5 py-0.5 text-xs; }
+.post-body pre { @apply my-4 overflow-x-auto rounded-lg bg-charcoal-800/60 p-4 text-xs; }
 .post-body pre code { @apply bg-transparent p-0; }
 .post-body hr { @apply my-6 border-charcoal-800/60; }
 .post-body strong { @apply text-charcoal-50; }

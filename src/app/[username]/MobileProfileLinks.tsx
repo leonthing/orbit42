@@ -28,7 +28,7 @@ export function MobileProfileLinks({ username, unreadMessages = 0, dmOpen = fals
           <li key={r.href}>
             <Link href={r.href} className="flex items-center gap-3 px-4 py-3 active:bg-charcoal-800/40">
               <div className="min-w-0 flex-1">
-                <p className="text-[15px] font-medium text-charcoal-50">{r.label}</p>
+                <p className="text-sm font-medium text-charcoal-50">{r.label}</p>
                 <p className="truncate text-xs text-charcoal-500">{r.sub}</p>
               </div>
               <svg className="h-4 w-4 shrink-0 text-charcoal-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -44,7 +44,7 @@ export function MobileProfileLinks({ username, unreadMessages = 0, dmOpen = fals
           await logout();
           router.push("/");
         }}
-        className="w-full rounded-2xl bg-[rgb(var(--bg-surface))] px-4 py-3 text-[15px] font-medium text-red-500"
+        className="w-full rounded-2xl bg-[rgb(var(--bg-surface))] px-4 py-3 text-sm font-medium text-red-500"
       >
         로그아웃
       </button>

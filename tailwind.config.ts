@@ -50,6 +50,9 @@ const config: Config = {
         "2xs": ["0.6875rem", { lineHeight: "0.9375rem" }], // 11px — 배지·메타 라벨
         xs: ["0.8125rem", { lineHeight: "1.125rem" }], // 13px — 보조 텍스트
         sm: ["0.9375rem", { lineHeight: "1.375rem" }], // 15px — 본문
+        // iOS 와 같은 고정 크기 두 개 — 탭 막대 라벨 10pt, 내비게이션 제목 17pt (감사 17)
+        tab: ["0.625rem", { lineHeight: "0.875rem" }], // 10px
+        title: ["1.0625rem", { lineHeight: "1.375rem" }], // 17px
       },
       fontFamily: {
         sans: [
