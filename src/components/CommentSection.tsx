@@ -74,6 +74,9 @@ export function CommentSection({
     setReactions(r);
   };
 
+  // 댓글 쓰기는 닫았다(11/14, 신고 없이 열려 있던 UGC — 가이드라인 1.2). 지난 댓글만 읽기 전용으로 보인다.
+  if (!count) return null;
+
   return (
     <div className="mt-3 border-t border-charcoal-800/40 pt-3">
       <button
@@ -92,25 +95,10 @@ export function CommentSection({
 
       {open && (
         <div className="mt-3 space-y-3">
-          {loggedIn ? (
-            <CommentForm
-              targetType={targetType}
-              targetId={targetId}
-              onPosted={refetch}
-            />
-          ) : (
-            <p className="text-xs text-charcoal-500">
-              <Link href="/login" className="text-navy-400 hover:text-navy-300">
-                로그인
-              </Link>{" "}
-              후 댓글을 남길 수 있어요.
-            </p>
-          )}
-
           {comments === null ? (
             <p className="text-xs text-charcoal-500">로딩…</p>
           ) : comments.length === 0 ? (
-            <p className="text-xs text-charcoal-500">첫 댓글을 남겨보세요.</p>
+            <p className="text-xs text-charcoal-500">댓글이 없어요.</p>
           ) : (
             <ul className="space-y-3">
               {comments.map((c) => (
@@ -288,15 +276,6 @@ function CommentItem({
               >
                 <span>❤️</span>
                 {(heart?.count ?? 0) > 0 && <span>{heart?.count}</span>}
-              </button>
-            )}
-            {loggedIn && depth === 0 && (
-              <button
-                type="button"
-                onClick={() => setReplying((v) => !v)}
-                className="text-charcoal-500 hover:text-charcoal-200"
-              >
-                답글
               </button>
             )}
             {mine && (

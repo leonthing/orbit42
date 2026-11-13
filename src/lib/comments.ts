@@ -93,12 +93,17 @@ export async function listComments(
   return roots;
 }
 
+/** 댓글 쓰기 열림 여부 — 1.10.0 결정: 댓글 없이 하트만. */
+const COMMENTS_OPEN = false as boolean;
+
 export async function addComment(
   targetType: "feed_post" | "blog_post",
   targetId: string,
   body: string,
   parentId: string | null = null,
 ) {
+  // 댓글 쓰기 닫음(11/14) — 신고 수단 없이 열려 있던 UGC(가이드라인 1.2). 화면에서 숨긴 것과 별개로 서버에서도 막는다.
+  if (!COMMENTS_OPEN) return { error: "댓글은 더 이상 남길 수 없어요." };
   const me = await currentUserId();
   if (!me) return { error: "로그인이 필요해요." };
   const text = body.trim();
