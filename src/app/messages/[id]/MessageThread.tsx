@@ -33,6 +33,11 @@ export function MessageThread({
   const toast = useToast();
   const [messages, setMessages] = useState<DmMessage[]>(initial);
   const [text, setText] = useState("");
+  // 터치 기기에는 Shift+Enter 안내가 의미 없고 칸을 넘친다 — 짧은 안내만
+  const [coarse, setCoarse] = useState(false);
+  useEffect(() => {
+    setCoarse(window.matchMedia("(pointer: coarse)").matches);
+  }, []);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [menu, setMenu] = useState(false);
@@ -142,11 +147,11 @@ export function MessageThread({
                 <div key={m.id}>
                   {showDay && <div className="my-3 text-center text-2xs text-charcoal-500">{day}</div>}
                   <div className={`group flex ${m.mine ? "justify-end" : "justify-start"}`}>
-                    <div className={`flex max-w-[75%] items-end gap-1.5 ${m.mine ? "flex-row-reverse" : "flex-row"}`}>
-                      <div className={`whitespace-pre-wrap break-words rounded-xl px-3 py-2 text-sm ${m.mine ? "bg-navy-500 text-white" : "bg-charcoal-800/60 text-charcoal-100"}`}>
+                    <div className={`flex max-w-[85%] items-end gap-1.5 ${m.mine ? "flex-row-reverse" : "flex-row"}`}>
+                      <div className={`min-w-0 whitespace-pre-wrap break-words rounded-xl px-3 py-2 text-sm ${m.mine ? "bg-navy-500 text-white" : "bg-charcoal-800/60 text-charcoal-100"}`}>
                         {m.body}
                       </div>
-                      <span className="pb-1 text-2xs text-charcoal-500">{formatTime(m.createdAt)}</span>
+                      <span className="shrink-0 whitespace-nowrap pb-1 text-2xs text-charcoal-500">{formatTime(m.createdAt)}</span>
                       {!m.mine && !m.id.startsWith("tmp-") && (
                         <button
                           type="button"
@@ -180,7 +185,7 @@ export function MessageThread({
                   onSubmit(e);
                 }
               }}
-              placeholder="메시지를 입력하세요… (Shift+Enter 줄바꿈)"
+              placeholder={coarse ? "메시지 입력" : "메시지를 입력하세요… (Shift+Enter 줄바꿈)"}
               rows={1}
               className="flex-1 resize-none rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] px-3 py-2 text-sm text-charcoal-100 placeholder-charcoal-600 focus:border-charcoal-600 focus:outline-none"
               style={{ maxHeight: 120 }}

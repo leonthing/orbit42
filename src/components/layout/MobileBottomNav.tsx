@@ -40,7 +40,7 @@ export function MobileBottomNav({
     {
       href: `${base}/bookings`,
       label: "예약",
-      active: under(`${base}/bookings`, `${base}/slots`, `${base}/services`),
+      active: under(`${base}/bookings`, `${base}/slots`, `${base}/services`, "/messages"), // 1:1 대화는 iOS처럼 예약 탭 아래
       icon: (
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
           <path fillRule="evenodd" d="M12 2.25a9.75 9.75 0 1 0 0 19.5 9.75 9.75 0 0 0 0-19.5Zm4.28 7.53a.75.75 0 0 0-1.06-1.06l-4.47 4.47-1.97-1.97a.75.75 0 1 0-1.06 1.06l2.5 2.5c.3.3.77.3 1.06 0l5-5Z" clipRule="evenodd" />
@@ -50,7 +50,7 @@ export function MobileBottomNav({
     {
       href: `${base}/people`,
       label: "오르빗",
-      active: under(`${base}/people`, "/explore", "/search", "/messages"),
+      active: under(`${base}/people`, "/explore", "/search"),
       icon: (
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
           <path fillRule="evenodd" d="M12 2.25a9.75 9.75 0 1 0 0 19.5 9.75 9.75 0 0 0 0-19.5Z" clipRule="evenodd" />
