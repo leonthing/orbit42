@@ -91,7 +91,7 @@ function Toggle({
       onClick={onClick}
       disabled={disabled}
       aria-pressed={on}
-      className={`inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${
+      className={`inline-flex h-5 w-9 shrink-0 items-center rounded-full bg-clip-content transition-colors max-md:-m-3 max-md:box-content max-md:p-3 ${
         on ? "bg-navy-500" : "bg-charcoal-700"
       }`}
     >

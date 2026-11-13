@@ -23,7 +23,7 @@ export function ReferralLink({ username }: { username: string }) {
         이 링크로 가입한 사람은 가입 즉시 당신과 서로 팔로우 연결돼요.
       </p>
 
-      <div className="flex items-center gap-2 rounded-lg border border-charcoal-800/40 bg-charcoal-800/20 px-3 py-2">
+      <div className="flex items-center gap-2 rounded-lg border border-charcoal-800/40 bg-charcoal-800/20 px-3 py-2 max-md:min-h-11">
         <span className="min-w-0 flex-1 truncate font-mono text-xs text-charcoal-200">
           {url}
         </span>

@@ -19,7 +19,7 @@ export function CalendarGoalShare({ calendar }: { calendar: Calendar }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between px-3 py-2 text-left"
+        className="flex w-full items-center justify-between px-3 py-2 text-left max-md:min-h-11"
       >
         <span className="text-xs font-medium text-charcoal-300">
           목표 · 함께 쓰기
@@ -81,11 +81,11 @@ function GoalForm({ calendar }: { calendar: Calendar }) {
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder="목표 (예: 토익 900점, 앱 출시)"
-        className="w-full rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-500/60 focus:outline-none"
+        className="w-full rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-500/60 focus:outline-none max-md:min-h-11"
       />
       {title.trim() && (
         <div className="flex gap-2">
-          <div className="flex flex-1 items-center gap-2 rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2">
+          <div className="flex flex-1 items-center gap-2 rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2 max-md:min-h-11">
             <input
               value={targetHours}
               onChange={(e) => setTargetHours(e.target.value.replace(/[^\d.]/g, ""))}
@@ -99,7 +99,7 @@ function GoalForm({ calendar }: { calendar: Calendar }) {
             type="date"
             value={deadline}
             onChange={(e) => setDeadline(e.target.value)}
-            className="rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2 text-sm text-charcoal-100 focus:border-navy-500/60 focus:outline-none"
+            className="rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2 text-sm text-charcoal-100 focus:border-navy-500/60 focus:outline-none max-md:min-h-11"
           />
         </div>
       )}
@@ -107,7 +107,7 @@ function GoalForm({ calendar }: { calendar: Calendar }) {
         type="button"
         onClick={save}
         disabled={pending}
-        className="rounded-lg bg-navy-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-400 disabled:opacity-50"
+        className="rounded-lg bg-navy-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-400 disabled:opacity-50 max-md:min-h-11"
       >
         {pending ? "저장 중…" : "목표 저장"}
       </button>
@@ -190,7 +190,7 @@ function ShareBox({ calendar }: { calendar: Calendar }) {
           {members.map((member) => (
             <li
               key={member.id}
-              className="flex items-center gap-2 rounded-lg bg-charcoal-900/40 px-2.5 py-1.5"
+              className="flex items-center gap-2 rounded-lg bg-charcoal-900/40 px-2.5 py-1.5 max-md:min-h-11"
             >
               <span className="text-xs text-charcoal-200">
                 {member.displayName || member.username}
@@ -223,7 +223,7 @@ function ShareBox({ calendar }: { calendar: Calendar }) {
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           placeholder="@핸들로 초대"
-          className="flex-1 rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-500/60 focus:outline-none"
+          className="flex-1 rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-500/60 focus:outline-none max-md:min-h-11"
         />
         <select
           value={role}
@@ -237,7 +237,7 @@ function ShareBox({ calendar }: { calendar: Calendar }) {
           type="button"
           onClick={invite}
           disabled={busy || !username.trim()}
-          className="rounded-lg bg-navy-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-400 disabled:opacity-50"
+          className="rounded-lg bg-navy-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-400 disabled:opacity-50 max-md:min-h-11"
         >
           초대
         </button>

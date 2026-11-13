@@ -72,7 +72,7 @@ export function SectionNav({ items }: { items: Item[] }) {
                   active === item.id
                     ? "bg-navy-500/15 text-navy-400"
                     : "text-charcoal-500 hover:bg-charcoal-800/40 hover:text-charcoal-200"
-                }`}
+                } max-md:min-h-11`}
               >
                 {item.label}
               </a>
@@ -88,7 +88,7 @@ export function SectionNav({ items }: { items: Item[] }) {
             <a
               key={item.id}
               href={`#${item.id}`}
-              className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-2xs font-medium transition-colors ${
+              className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-3.5 py-1 text-xs font-medium transition-colors max-md:min-h-11 ${
                 active === item.id
                   ? "bg-navy-500/15 text-navy-400"
                   : "bg-charcoal-900/40 text-charcoal-400 hover:text-charcoal-200"

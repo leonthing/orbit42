@@ -64,7 +64,7 @@ export function GoogleAccountsSection({
         {primaryConnected && (
           <a
             href="/api/google?return=settings&add=1"
-            className="shrink-0 whitespace-nowrap rounded-lg bg-navy-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-400"
+            className="shrink-0 whitespace-nowrap rounded-lg bg-navy-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-400 max-md:min-h-11"
           >
             + 계정 추가
           </a>
@@ -108,14 +108,14 @@ export function GoogleAccountsSection({
               type="button"
               onClick={disconnectPrimary}
               disabled={pending}
-              className="shrink-0 whitespace-nowrap rounded-lg border border-charcoal-700 px-3 py-1.5 text-xs text-charcoal-400 hover:border-navy-400/60 hover:text-navy-400"
+              className="shrink-0 whitespace-nowrap rounded-lg border border-charcoal-700 px-3 py-1.5 text-xs text-charcoal-400 hover:border-navy-400/60 hover:text-navy-400 max-md:min-h-11"
             >
               해제
             </button>
           ) : (
             <a
               href="/api/google?return=settings"
-              className="shrink-0 whitespace-nowrap rounded-lg bg-navy-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-400"
+              className="shrink-0 whitespace-nowrap rounded-lg bg-navy-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-navy-400 max-md:min-h-11"
             >
               Google 캘린더 연결
             </a>
@@ -141,7 +141,7 @@ export function GoogleAccountsSection({
               type="button"
               onClick={() => disconnect(acc.id)}
               disabled={pending}
-              className="rounded-lg border border-charcoal-700 px-3 py-1.5 text-xs text-charcoal-400 hover:border-navy-400/60 hover:text-navy-400"
+              className="rounded-lg border border-charcoal-700 px-3 py-1.5 text-xs text-charcoal-400 hover:border-navy-400/60 hover:text-navy-400 max-md:min-h-11"
             >
               해제
             </button>

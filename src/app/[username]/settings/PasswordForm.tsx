@@ -5,7 +5,7 @@ import { changePassword } from "@/lib/auth-actions";
 import { buttonClasses } from "@/components/PendingButton";
 
 const inputClass =
-  "w-full rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-400/60 focus:outline-none focus:ring-1 focus:ring-navy-400/40";
+  "w-full rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-400/60 focus:outline-none focus:ring-1 focus:ring-navy-400/40 max-md:min-h-11";
 
 /**
  * 비밀번호 변경 — 계정 보안 영역.

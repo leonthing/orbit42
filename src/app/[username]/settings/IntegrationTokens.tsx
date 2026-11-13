@@ -96,7 +96,7 @@ export function IntegrationTokens({ initial }: { initial: Row[] }) {
             onChange={(e) => setName(e.target.value)}
             placeholder="이름 (예: CEO 세션)"
             maxLength={60}
-            className="min-w-0 flex-1 rounded-lg border border-charcoal-800/60 bg-charcoal-800/20 px-3 py-2 text-sm text-charcoal-100"
+            className="min-w-0 flex-1 rounded-lg border border-charcoal-800/60 bg-charcoal-800/20 px-3 py-2 text-sm text-charcoal-100 max-md:min-h-11"
           />
           <button
             type="button"

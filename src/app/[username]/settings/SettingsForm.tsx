@@ -188,14 +188,14 @@ export function SettingsForm({
         <form onSubmit={handleProfileSave} className="space-y-4 p-5">
           <div>
             <label className="mb-1.5 block text-xs font-medium text-charcoal-400">아이디</label>
-            <div className="flex items-center rounded-lg border border-charcoal-800 bg-charcoal-800/30 px-4 py-2.5 text-sm text-charcoal-500">
+            <div className="flex items-center rounded-lg border border-charcoal-800 bg-charcoal-800/30 px-4 py-2.5 text-sm text-charcoal-500 max-md:min-h-11">
               {username}
             </div>
             <p className="mt-1 text-xs text-charcoal-600">orbit42.org/{username}</p>
           </div>
 
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-charcoal-400">Display Name</label>
+            <label className="mb-1.5 block text-xs font-medium text-charcoal-400">표시 이름</label>
             <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className={inputClass} />
           </div>
 
@@ -203,7 +203,7 @@ export function SettingsForm({
             <label className="mb-1.5 block text-xs font-medium text-charcoal-400">
               이메일
             </label>
-            <div className="flex items-center gap-2 rounded-lg border border-charcoal-800 bg-charcoal-800/30 px-4 py-2.5">
+            <div className="flex items-center gap-2 rounded-lg border border-charcoal-800 bg-charcoal-800/30 px-4 py-2.5 max-md:min-h-11">
               <span className="min-w-0 flex-1 truncate text-sm text-charcoal-200">
                 {email || "등록된 이메일이 없어요"}
               </span>
@@ -271,7 +271,7 @@ export function SettingsForm({
           <button
             type="button"
             onClick={addEducation}
-            className="text-xs font-medium text-navy-400 hover:text-navy-300"
+            className="text-xs font-medium text-navy-400 hover:text-navy-300 max-md:-my-3 max-md:min-h-11 max-md:px-2"
           >
             + 추가
           </button>
@@ -345,7 +345,7 @@ export function SettingsForm({
           <button
             type="button"
             onClick={addExperience}
-            className="text-xs font-medium text-navy-400 hover:text-navy-300"
+            className="text-xs font-medium text-navy-400 hover:text-navy-300 max-md:-my-3 max-md:min-h-11 max-md:px-2"
           >
             + 추가
           </button>
@@ -496,7 +496,7 @@ export function SettingsForm({
                     setSocialLinks((prev) => ({ ...prev, [field.key]: e.target.value }))
                   }
                   placeholder={field.placeholder}
-                  className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-400 focus:outline-none focus:ring-1 focus:ring-navy-400/50"
+                  className="w-full rounded-lg border border-charcoal-700 bg-charcoal-800/50 px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-400 focus:outline-none focus:ring-1 focus:ring-navy-400/50 max-md:min-h-11"
                 />
               </div>
             </div>

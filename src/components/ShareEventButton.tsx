@@ -102,7 +102,7 @@ export function ShareEventButton({
                 type="button"
                 onClick={submit}
                 disabled={pending}
-                className="rounded-lg bg-navy-400 px-4 py-2 text-sm font-semibold text-charcoal-950 hover:bg-navy-400 disabled:opacity-60"
+                className="rounded-lg bg-navy-500 px-4 py-2 text-sm font-semibold text-white hover:bg-navy-400 disabled:opacity-60"
               >
                 {pending ? "공유 중…" : "Share"}
               </button>

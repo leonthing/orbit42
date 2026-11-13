@@ -27,7 +27,7 @@ export function PaymentInstructionsForm({ initial }: { initial: string | null })
         rows={3}
         maxLength={500}
         placeholder={"예) 국민은행 123-456-789012 홍길동\n또는 토스·카카오페이 송금 링크"}
-        className="mt-3 w-full rounded-lg border border-charcoal-800/70 bg-[rgb(var(--bg-base))] px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-400 focus:outline-none"
+        className="mt-3 w-full rounded-lg border border-charcoal-800/70 bg-[rgb(var(--bg-base))] px-3 py-2 text-sm text-charcoal-100 placeholder:text-charcoal-600 focus:border-navy-400 focus:outline-none max-md:min-h-11"
       />
       <div className="mt-2 flex items-center justify-between gap-2">
         <p className="text-2xs text-charcoal-500">예약한 게스트에게만 보여요.</p>

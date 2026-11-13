@@ -14,15 +14,16 @@ const VARIANT_CLASS: Record<ButtonVariant, string> = {
     "text-charcoal-300 hover:bg-charcoal-800/50 hover:text-white disabled:opacity-50",
 };
 
+// 모바일(md 미만)은 모든 크기를 44px 로 — 터치 영역 기준(감사 5·6). 데스크톱은 그대로 32/36/44.
 const SIZE_CLASS: Record<ButtonSize, string> = {
-  sm: "h-8 rounded-lg px-3 text-xs font-medium",
-  md: "h-9 rounded-lg px-4 text-sm font-semibold",
+  sm: "h-8 rounded-lg px-3 text-xs font-medium max-md:h-11",
+  md: "h-9 rounded-lg px-4 text-sm font-semibold max-md:h-11",
   lg: "h-11 rounded-lg px-5 text-sm font-semibold",
 };
 
 const ICON_SIZE_CLASS: Record<ButtonSize, string> = {
-  sm: "h-8 w-8 rounded-lg",
-  md: "h-9 w-9 rounded-lg",
+  sm: "h-8 w-8 rounded-lg max-md:h-11 max-md:w-11",
+  md: "h-9 w-9 rounded-lg max-md:h-11 max-md:w-11",
   lg: "h-11 w-11 rounded-lg",
 };
 
