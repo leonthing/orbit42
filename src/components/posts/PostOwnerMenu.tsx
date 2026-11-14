@@ -99,7 +99,7 @@ export function PostOwnerMenu({
             type="button"
             className={item}
             disabled={!isPublic && !pinned}
-            onClick={() => run(() => pinPostAction(pinned ? null : postId))}
+            onClick={() => run(() => pinPostAction(postId, !pinned))}
           >
             {pinned ? "링크 페이지 고정 풀기" : isPublic ? "링크 페이지 맨 위에 고정" : "공개 글만 고정할 수 있어요"}
           </button>

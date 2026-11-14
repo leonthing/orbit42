@@ -48,7 +48,7 @@ export function PhotoPostGrid({
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={p.coverUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
               ) : (
-                <span className={`line-clamp-5 p-2 text-left text-xs ${textColor ? "" : "text-charcoal-200"}`} style={textColor ? { color: textColor } : undefined}>
+                <span className={`line-clamp-4 p-2 pt-7 text-left text-xs ${textColor ? "" : "text-charcoal-200"}`} style={textColor ? { color: textColor } : undefined}>
                   {label}
                 </span>
               )}

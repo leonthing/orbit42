@@ -611,6 +611,16 @@ export async function setPinnedPost(me: string, postId: unknown) {
   return { ok: true as const, pinnedPostId: (postId as string | null) || null };
 }
 
+/** 고정 풀기 — 이 글이 고정돼 있을 때만(다른 글 고정은 그대로) */
+export async function unpinPost(me: string, postId: string) {
+  if (!postsOpenFor(me)) return closed();
+  if (!UUID.test(postId)) return notFound();
+  const { error } = await db().from("users").update({ pinned_post_id: null }).eq("id", me).eq("pinned_post_id", postId);
+  if (error) return { error: "고정을 풀지 못했어요." } as PostErr;
+  const { data } = await db().from("users").select("pinned_post_id").eq("id", me).single();
+  return { ok: true as const, pinnedPostId: (data?.pinned_post_id as string | null) ?? null };
+}
+
 // ── ❤️·신고 ──
 
 export async function setLike(me: string, id: string, on: boolean) {

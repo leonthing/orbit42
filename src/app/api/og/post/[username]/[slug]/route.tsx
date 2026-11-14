@@ -23,8 +23,10 @@ function plain(md: string): string {
 export async function GET(_req: Request, { params }: { params: { username: string; slug: string } }) {
   const d = await ogDataForPost(params.username, decodeURIComponent(params.slug));
   if (!d) return new Response("Not found", { status: 404 });
-  const title = d.title || (d.photo ? "" : plain(d.body).slice(0, 60)) || `${d.authorName}님의 글`;
-  const excerpt = d.title && !d.photo ? plain(d.body).slice(0, 110) : "";
+  const cut = (t: string, n: number) => (t.length > n ? `${t.slice(0, n).trimEnd()}…` : t);
+  // 한 줄 약 18자(56px) — 제목 없는 글은 본문 앞부분을 두 줄까지
+  const title = cut(d.title, 54) || (d.photo ? "" : cut(plain(d.body), 34)) || `${d.authorName}님의 글`;
+  const excerpt = d.title && !d.photo ? cut(plain(d.body), 70) : "";
   const bg = d.photo
     ? `data:image/jpeg;base64,${(await sharp(d.photo).resize(1200, 630, { fit: "cover", position: "attention" }).jpeg({ quality: 78, mozjpeg: true }).toBuffer()).toString("base64")}`
     : null;
@@ -53,7 +55,7 @@ export async function GET(_req: Request, { params }: { params: { username: strin
           <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 360, display: "flex", background: "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.72) 100%)" }} />
         )}
         {title && (
-          <div style={{ display: "flex", fontSize: bg ? 54 : 64, fontWeight: 900, lineHeight: 1.2, maxWidth: 1050, overflow: "hidden", maxHeight: bg ? 140 : 240 }}>
+          <div style={{ display: "flex", fontSize: 56, fontWeight: 900, lineHeight: 1.25, maxWidth: 1050, overflow: "hidden", maxHeight: bg ? 140 : 210 }}>
             {title}
           </div>
         )}

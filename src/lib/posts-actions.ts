@@ -73,8 +73,8 @@ export async function setPhotoCaptionAction(postId: string, photoId: string, cap
 }
 
 /** 링크 페이지 고정 — users 에서 고치는 칸은 pinned_post_id 하나뿐(lib 가 본인 글인지 확인) */
-export async function pinPostAction(postId: string | null) {
+export async function pinPostAction(postId: string, on: boolean) {
   const me = await meId();
   if (!me) return LOGIN;
-  return posts.setPinnedPost(me, postId === null ? null : String(postId));
+  return on ? posts.setPinnedPost(me, String(postId)) : posts.unpinPost(me, String(postId));
 }

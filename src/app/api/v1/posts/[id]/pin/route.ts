@@ -1,4 +1,4 @@
-import { setPinnedPost } from "@/lib/posts";
+import { setPinnedPost, unpinPost } from "@/lib/posts";
 import { postJson, postMe } from "@/lib/post-route";
 
 export const dynamic = "force-dynamic";
@@ -13,5 +13,5 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   const a = await postMe(request);
   if ("res" in a) return a.res;
-  return postJson(await setPinnedPost(a.me, null));
+  return postJson(await unpinPost(a.me, params.id));
 }
