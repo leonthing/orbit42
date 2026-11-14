@@ -191,7 +191,7 @@ export function SettingsForm({
             <div className="flex items-center rounded-lg border border-charcoal-800 bg-charcoal-800/30 px-4 py-2.5 text-sm text-charcoal-500 max-md:min-h-11">
               {username}
             </div>
-            <p className="mt-1 text-xs text-charcoal-600">orbit42.org/{username}</p>
+            <p className="mt-1 text-xs text-charcoal-500">orbit42.org/{username}</p>
           </div>
 
           <div>
@@ -217,7 +217,7 @@ export function SettingsForm({
                 {emailVerified ? "확인됨" : "확인 필요"}
               </span>
             </div>
-            <p className="mt-1 text-xs text-charcoal-600">
+            <p className="mt-1 text-xs text-charcoal-500">
               이메일 변경 기능은 곧 지원될 예정이에요.
             </p>
           </div>
@@ -238,7 +238,7 @@ export function SettingsForm({
               onChange={(e) => setBirthDate(e.target.value)}
               className={`${inputClass} max-w-[10rem] sm:max-w-xs`}
             />
-            <p className="mt-1 text-xs text-charcoal-600">Life Calendar에 사용됩니다</p>
+            <p className="mt-1 text-xs text-charcoal-500">Life Calendar에 사용됩니다</p>
           </div>
 
           <div>
@@ -278,7 +278,7 @@ export function SettingsForm({
         </div>
         <div className="space-y-4 p-5">
           {education.length === 0 ? (
-            <p className="text-sm text-charcoal-600">등록된 학력이 없습니다</p>
+            <p className="text-sm text-charcoal-500">등록된 학력이 없습니다</p>
           ) : (
             education.map((edu, i) => (
               <div key={i} className="space-y-2 rounded-lg border border-charcoal-800/40 bg-charcoal-800/20 p-4">
@@ -287,7 +287,7 @@ export function SettingsForm({
                   <button
                     type="button"
                     onClick={() => removeEducation(i)}
-                    className="text-xs text-charcoal-600 hover:text-red-400"
+                    className="text-xs text-charcoal-500 hover:text-red-400"
                   >
                     삭제
                   </button>
@@ -334,7 +334,7 @@ export function SettingsForm({
               </div>
             ))
           )}
-          <p className="text-xs text-charcoal-600">변경 후 상단의 저장 버튼을 눌러주세요</p>
+          <p className="text-xs text-charcoal-500">변경 후 상단의 저장 버튼을 눌러주세요</p>
         </div>
       </section>
 
@@ -352,7 +352,7 @@ export function SettingsForm({
         </div>
         <div className="space-y-4 p-5">
           {experience.length === 0 ? (
-            <p className="text-sm text-charcoal-600">등록된 경력이 없습니다</p>
+            <p className="text-sm text-charcoal-500">등록된 경력이 없습니다</p>
           ) : (
             experience.map((exp, i) => (
               <div
@@ -364,7 +364,7 @@ export function SettingsForm({
                   <button
                     type="button"
                     onClick={() => removeExperience(i)}
-                    className="text-xs text-charcoal-600 hover:text-red-400"
+                    className="text-xs text-charcoal-500 hover:text-red-400"
                   >
                     삭제
                   </button>
@@ -422,7 +422,7 @@ export function SettingsForm({
               </div>
             ))
           )}
-          <p className="text-xs text-charcoal-600">변경 후 상단의 저장 버튼을 눌러주세요</p>
+          <p className="text-xs text-charcoal-500">변경 후 상단의 저장 버튼을 눌러주세요</p>
         </div>
       </section>
 
@@ -459,13 +459,15 @@ export function SettingsForm({
               {interests.map((tag) => (
                 <span
                   key={tag}
-                  className="flex items-center gap-1 rounded-full bg-navy-500/15 px-3 py-1 text-xs font-medium text-navy-400"
+                  className="flex items-center gap-1 rounded-full bg-navy-500/15 px-3 py-1 text-xs font-medium text-navy-400 max-md:py-2.5"
                 >
                   {tag}
                   <button
                     type="button"
                     onClick={() => removeInterest(tag)}
-                    className="ml-0.5 text-navy-400/60 hover:text-navy-400"
+                    aria-label={`${tag} 빼기`}
+                    // 칩 크기는 그대로, 누르는 영역만 44px 가까이(보이지 않는 가장자리)
+                    className="relative z-10 ml-0.5 text-navy-400/60 before:absolute before:-inset-x-[18px] before:-inset-y-[13px] before:content-[''] hover:text-navy-400"
                   >
                     ×
                   </button>
@@ -473,7 +475,7 @@ export function SettingsForm({
               ))}
             </div>
           )}
-          <p className="text-xs text-charcoal-600">변경 후 상단의 저장 버튼을 눌러주세요</p>
+          <p className="text-xs text-charcoal-500">변경 후 상단의 저장 버튼을 눌러주세요</p>
         </div>
       </section>
 
@@ -501,7 +503,7 @@ export function SettingsForm({
               </div>
             </div>
           ))}
-          <p className="text-xs text-charcoal-600">변경 후 상단의 저장 버튼을 눌러주세요</p>
+          <p className="text-xs text-charcoal-500">변경 후 상단의 저장 버튼을 눌러주세요</p>
         </div>
       </section>
 

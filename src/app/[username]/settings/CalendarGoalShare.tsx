@@ -29,7 +29,7 @@ export function CalendarGoalShare({ calendar }: { calendar: Calendar }) {
             </span>
           )}
         </span>
-        <span className="text-xs text-charcoal-600">{open ? "접기" : "펼치기"}</span>
+        <span className="text-xs text-charcoal-500">{open ? "접기" : "펼치기"}</span>
       </button>
       {open && (
         <div className="space-y-4 border-t border-charcoal-800/50 px-3 py-3">
@@ -195,7 +195,7 @@ function ShareBox({ calendar }: { calendar: Calendar }) {
               <span className="text-xs text-charcoal-200">
                 {member.displayName || member.username}
               </span>
-              <span className="text-2xs text-charcoal-600">
+              <span className="text-2xs text-charcoal-500">
                 @{member.username}
               </span>
               <span className="ml-auto text-2xs text-charcoal-500">
@@ -209,7 +209,7 @@ function ShareBox({ calendar }: { calendar: Calendar }) {
                 <button
                   type="button"
                   onClick={() => remove(member)}
-                  className="text-2xs text-charcoal-600 hover:text-red-400"
+                  className="text-2xs text-charcoal-500 hover:text-red-400"
                 >
                   내보내기
                 </button>

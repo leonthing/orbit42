@@ -2493,7 +2493,7 @@ function EventDetailModal({
               <button
                 type="button"
                 onClick={onToggleComplete}
-                className={`rounded-lg px-3 py-2 text-sm font-medium ${
+                className={`rounded-lg max-md:min-h-11 px-3 py-2 text-sm font-medium ${
                   isCompleted
                     ? "bg-charcoal-800 text-charcoal-300 hover:bg-charcoal-700"
                     : "bg-navy-500 text-white hover:bg-navy-400"
@@ -2506,7 +2506,7 @@ function EventDetailModal({
               <button
                 type="button"
                 onClick={onEdit}
-                className="rounded-lg border border-charcoal-700 px-3 py-2 text-sm text-charcoal-200 hover:border-charcoal-600 hover:bg-charcoal-800/60"
+                className="rounded-lg max-md:min-h-11 border border-charcoal-700 px-3 py-2 text-sm text-charcoal-200 hover:border-charcoal-600 hover:bg-charcoal-800/60"
               >
                 수정
               </button>
@@ -2515,7 +2515,7 @@ function EventDetailModal({
               <button
                 type="button"
                 onClick={onDelete}
-                className="rounded-lg border border-red-500/40 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10"
+                className="rounded-lg max-md:min-h-11 border border-red-500/40 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10"
               >
                 삭제
               </button>
@@ -2524,7 +2524,7 @@ function EventDetailModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg px-3 py-2 text-sm text-charcoal-300 hover:bg-charcoal-800/60"
+            className="rounded-lg max-md:min-h-11 px-3 py-2 text-sm text-charcoal-300 hover:bg-charcoal-800/60"
           >
             닫기
           </button>

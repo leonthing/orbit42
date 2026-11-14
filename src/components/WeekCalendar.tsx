@@ -469,7 +469,9 @@ function ItemBlock({
                 onToggleComplete?.(item.id);
               }}
               aria-label={completed ? "미완료로 표시" : "완료로 표시"}
-              className="mt-[2px] flex h-3 w-3 shrink-0 items-center justify-center rounded-sm border"
+              // 모바일(감사 후보): 블록 안 12px 체크는 누르기 어려워 숨기고, 블록을 눌러 여는 상세의 '완료로 표시'로.
+              // 데스크톱은 보이는 크기는 그대로 두고 누르는 영역만 사방 6px 넓힌다.
+              className="relative mt-[2px] flex h-3 w-3 shrink-0 items-center justify-center rounded-sm border before:absolute before:-inset-1.5 before:content-[''] max-md:hidden"
               style={{
                 borderColor: item.color,
                 backgroundColor: completed ? item.color : "transparent",
@@ -507,7 +509,8 @@ function ItemBlock({
           </p>
         )}
         {viewerIsOwner && (
-          <div className="absolute right-0.5 top-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+          // 마우스를 올릴 때만 보이는 메뉴라 터치에서는 안 보이는데 눌리기만 했다 → 모바일에선 빼고 상세에서
+          <div className="absolute right-0.5 top-0.5 opacity-0 transition-opacity group-hover:opacity-100 max-md:hidden">
             <ShareEventButton
               eventId={item.id}
               eventTitle={item.title}

@@ -39,7 +39,7 @@ export default async function LandingPage() {
     <div className="min-h-screen bg-[rgb(var(--bg-base))]">
       <JsonLd data={[websiteSchema, orgSchema]} />
       <header className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6 md:px-10 md:py-5">
-        <Link href="/" className="text-base font-semibold tracking-tight text-charcoal-100">
+        <Link href="/" className="inline-flex min-h-11 items-center text-base font-semibold tracking-tight text-charcoal-100">
           Orbit42
         </Link>
         <span />
@@ -231,7 +231,7 @@ export default async function LandingPage() {
           </p>
           <Link
             href="/explore"
-            className="mt-5 inline-flex items-center gap-2 rounded-full bg-navy-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-navy-400"
+            className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-full bg-navy-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-navy-400"
           >
             먼저 구경해볼게요
             <span>→</span>
@@ -243,11 +243,11 @@ export default async function LandingPage() {
         <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
           <span>© {new Date().getFullYear()} Orbit42</span>
           <span className="hidden text-charcoal-700 sm:inline">·</span>
-          <Link href="/terms" className="hover:text-charcoal-300">
+          <Link href="/terms" className="inline-flex min-h-11 items-center px-1 hover:text-charcoal-300">
             이용약관
           </Link>
           <span className="text-charcoal-700">·</span>
-          <Link href="/privacy" className="hover:text-charcoal-300">
+          <Link href="/privacy" className="inline-flex min-h-11 items-center px-1 hover:text-charcoal-300">
             개인정보처리방침
           </Link>
         </div>
@@ -435,7 +435,7 @@ function DemoBookingPage() {
         <button
           type="button"
           disabled
-          className="mt-4 w-full rounded-lg bg-navy-500 py-2.5 text-sm font-semibold text-white"
+          className="mt-4 min-h-11 w-full rounded-lg bg-navy-500 py-2.5 text-sm font-semibold text-white"
         >
           ₩50,000 · 예약 진행
         </button>
