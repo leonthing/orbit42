@@ -245,7 +245,7 @@ export function buildUpdate(old: GPerson, c: CardFields, o: SaveOpts): GPerson {
 
   // 메모: 기존 메모 그대로 + 이전 명함 + 새 명함 사진 링크
   const oldNote = old.biographies?.[0]?.value ?? "";
-  let lines = oldNote ? oldNote.split("\n") : [];
+  const lines = oldNote ? oldNote.split("\n") : [];
   const oldOrg = old.organizations?.[0];
   const prevText = [oldOrg?.name, oldOrg?.title].map((s) => (s ?? "").trim()).filter(Boolean).join(" ");
   const newText = [c.company, c.title].map((s) => s.trim()).filter(Boolean).join(" ");
