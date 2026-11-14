@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { getAdminClient } from "@/lib/supabase";
+import { postsPublic } from "@/lib/posts-access";
 
 export const metadata: Metadata = {
   title: "Orbit42 Blog",
@@ -29,6 +31,8 @@ async function getBloggers() {
 }
 
 export default async function BlogRootPage() {
+  // 1.10.0: 사람 모아 보기(피드 성격)는 열지 않는다(Leo 결정 1) — 공개 스위치와 함께 닫고 메인으로 보낸다
+  if (postsPublic()) redirect("https://orbit42.org");
   const bloggers = await getBloggers();
 
   return (

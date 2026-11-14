@@ -322,6 +322,7 @@ export async function createPost(me: string, input: { title?: unknown; body?: un
     console.error("[posts] create", error?.message);
     return { error: "글을 저장하지 못했어요." } as PostErr;
   }
+  if (isPublic) await notifyFollowersOfNewPost(me, (data as PostRow).id);
   const [post] = await shape(me, [data as PostRow], "all");
   return { post };
 }
@@ -336,7 +337,15 @@ export async function updatePost(me: string, id: string, input: { title?: unknow
   if (input.public !== undefined) {
     if (typeof input.public !== "boolean") return { error: "잘못된 요청이에요.", code: "invalid" } as PostErr;
     patch.published = input.public;
-    if (input.public && !r.published) patch.published_at = new Date().toISOString();
+  }
+  // 처음 공개하는 때만 published_at 을 찍고 팔로워 알림을 보낸다(나만 보기 ↔ 공개를 오가도 다시 안 보냄)
+  let firstPublish = false;
+  if (input.public === true && !r.published) {
+    const { data: pa } = await db().from("blog_posts").select("published_at").eq("id", id).single();
+    if (!pa?.published_at) {
+      patch.published_at = new Date().toISOString();
+      firstPublish = true;
+    }
   }
   const nextTitle = (patch.title as string | undefined) ?? r.title ?? "";
   const nextBody = (patch.content as string | undefined) ?? r.content ?? "";
@@ -348,8 +357,38 @@ export async function updatePost(me: string, id: string, input: { title?: unknow
   patch.updated_at = new Date().toISOString();
   const { data, error } = await db().from("blog_posts").update(patch).eq("id", id).eq("user_id", me).select(POST_COLS).single();
   if (error || !data) return { error: "글을 저장하지 못했어요." } as PostErr;
+  if (firstPublish) await notifyFollowersOfNewPost(me, id);
   const [post] = await shape(me, [data as PostRow], "all");
   return { post };
+}
+
+/**
+ * 팔로우한 사람의 새 공개 글 알림(1.10.0) — 공개 스위치(POSTS_PUBLIC)가 켜졌을 때만.
+ * 본문 없이 "○○님이 새 글을 올렸어요". 차단 관계는 뺀다. 실패해도 글 저장은 그대로.
+ */
+async function notifyFollowersOfNewPost(authorId: string, postId: string) {
+  try {
+    const { postsPublic } = await import("@/lib/posts-access");
+    if (!postsPublic()) return;
+    const [{ data: author }, { data: post }, { data: fols }, { data: blocks }] = await Promise.all([
+      db().from("users").select("username, display_name").eq("id", authorId).single(),
+      db().from("blog_posts").select("slug").eq("id", postId).single(),
+      db().from("follows").select("follower_id").eq("following_id", authorId).limit(2000),
+      db().from("user_blocks").select("blocker_id, blocked_id").or(`blocker_id.eq.${authorId},blocked_id.eq.${authorId}`),
+    ]);
+    if (!author || !post) return;
+    const blocked = new Set((blocks ?? []).map((b) => (b.blocker_id === authorId ? b.blocked_id : b.blocker_id) as string));
+    const name = (author.display_name as string | null) || (author.username as string);
+    const link = `/${author.username}/blog/${encodeURIComponent(post.slug as string)}`;
+    const { createNotification } = await import("@/lib/notifications");
+    for (const f of fols ?? []) {
+      const uid = f.follower_id as string;
+      if (uid === authorId || blocked.has(uid)) continue;
+      await createNotification({ userId: uid, type: "new_post", title: `${name}님이 새 글을 올렸어요`, body: null, link, actorId: authorId });
+    }
+  } catch (e) {
+    console.error("[posts] notify followers", e);
+  }
 }
 
 /** 글 삭제: 사진 파일(폴더 통째) → 행. 파일을 못 지우면 행도 남겨 다시 지울 수 있게 한다. */
