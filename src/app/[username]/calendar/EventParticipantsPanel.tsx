@@ -116,7 +116,7 @@ function ParticipantPicker({
           if (isEmail && !busyKey) pick({ email: trimmed });
         }}
         placeholder="이름, @핸들 또는 이메일"
-        className="w-full rounded-lg border border-charcoal-800/60 bg-transparent px-2.5 py-1.5 text-xs text-charcoal-100 placeholder-charcoal-600 focus:border-charcoal-700 focus:outline-none"
+        className="w-full rounded-lg border border-charcoal-800/60 bg-transparent px-2.5 py-1.5 text-xs text-charcoal-100 placeholder-charcoal-600 focus:border-charcoal-700 focus:outline-none max-md:min-h-11"
       />
 
       {isEmail && (

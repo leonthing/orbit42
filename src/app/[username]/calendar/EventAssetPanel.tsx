@@ -129,7 +129,7 @@ export function EventAssetPanel({
           <button
             type="button"
             onClick={() => saveBucket(null)}
-            className={`rounded-full px-2.5 py-1 text-xs ${
+            className={`rounded-full px-2.5 py-1 text-xs max-md:min-h-11 max-md:px-3.5 ${
               bucket === null
                 ? "bg-charcoal-800 text-charcoal-100"
                 : "text-charcoal-500 hover:text-charcoal-300"
@@ -142,7 +142,7 @@ export function EventAssetPanel({
               key={b.key}
               type="button"
               onClick={() => saveBucket(b.key)}
-              className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs"
+              className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs max-md:min-h-11"
               style={
                 bucket === b.key
                   ? { backgroundColor: `${b.color}26`, color: b.color }
@@ -163,7 +163,7 @@ export function EventAssetPanel({
       <button
         type="button"
         onClick={saveEarning}
-        className="flex w-full items-center justify-between rounded-lg border border-charcoal-800/60 px-3 py-2 text-left text-xs hover:border-charcoal-700"
+        className="flex w-full items-center justify-between rounded-lg border border-charcoal-800/60 px-3 py-2 text-left text-xs hover:border-charcoal-700 max-md:min-h-11"
       >
         <span className="text-charcoal-300">수익 기록</span>
         <span className={earning ? "font-semibold text-navy-400" : "text-charcoal-500"}>
@@ -212,7 +212,7 @@ export function EventAssetPanel({
           type="button"
           disabled={busy}
           onClick={() => fileRef.current?.click()}
-          className="rounded-lg border border-charcoal-800/60 px-3 py-1.5 text-xs text-navy-400 hover:border-navy-500/50 disabled:opacity-50"
+          className="rounded-lg border border-charcoal-800/60 px-3 py-1.5 text-xs text-navy-400 hover:border-navy-500/50 disabled:opacity-50 max-md:min-h-11"
         >
           {busy ? "올리는 중…" : images.length > 0 ? "사진 추가" : "사진 붙이기"}
         </button>
