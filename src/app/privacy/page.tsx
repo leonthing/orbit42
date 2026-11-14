@@ -6,6 +6,8 @@ import {
   koDate,
   legalChangeState,
   privacy190State,
+  privacy1100State,
+  PRIVACY_1100_EFFECTIVE_DATE,
 } from "@/lib/legal-change";
 
 export const metadata: Metadata = { title: "개인정보처리방침 · Orbit42" };
@@ -19,8 +21,13 @@ export default function PrivacyPage() {
   // 1.9.0 개정(1:1 대화, 할 일·후속 일정): 안내 기간에는 위 안내만, 시행일부터 새 문장
   const change190 = privacy190State();
   const v190 = change190 === "effective";
+  // 1.10.0 개정(글·사진): 안내 기간에는 위 안내만, 시행일부터 새 문장
+  const change1100 = privacy1100State();
+  const v1100 = change1100 === "effective";
   const updated =
-    v190 && PRIVACY_190_EFFECTIVE_DATE
+    v1100 && PRIVACY_1100_EFFECTIVE_DATE
+      ? koDate(PRIVACY_1100_EFFECTIVE_DATE)
+      : v190 && PRIVACY_190_EFFECTIVE_DATE
       ? koDate(PRIVACY_190_EFFECTIVE_DATE)
       : effective && LEGAL_EFFECTIVE_DATE
         ? koDate(LEGAL_EFFECTIVE_DATE)
@@ -47,6 +54,17 @@ export default function PrivacyPage() {
         <p className="mt-2 text-sm text-charcoal-500">
           최종 업데이트: {updated}
         </p>
+        {change1100 === "notice" && PRIVACY_1100_EFFECTIVE_DATE && (
+          <div className="mt-6 rounded-xl border border-navy-400/40 bg-navy-400/10 p-4 text-sm text-charcoal-200">
+            <p className="font-semibold text-charcoal-100">
+              개인정보처리방침 변경 안내 — 시행일 {koDate(PRIVACY_1100_EFFECTIVE_DATE)}
+            </p>
+            <ul className="mt-2 list-disc space-y-1 pl-5 marker:text-charcoal-500">
+              <li>글과 사진 올리기를 도입하며, 수집 항목(글 제목·본문, 사진, 공개 범위, 반응, 신고 기록)과 이용 목적, 보유 기간을 더합니다.</li>
+            </ul>
+            <p className="mt-2 text-xs text-charcoal-400">시행일 전까지는 아래 지금의 방침이 적용됩니다.</p>
+          </div>
+        )}
         {change190 === "notice" && PRIVACY_190_EFFECTIVE_DATE && (
           <div className="mt-6 rounded-xl border border-navy-400/40 bg-navy-400/10 p-4 text-sm text-charcoal-200">
             <p className="font-semibold text-charcoal-100">
@@ -123,6 +141,14 @@ export default function PrivacyPage() {
                   </li>
                 </>
               )}
+              {v1100 && (
+                <li>
+                  글과 사진을 올리는 경우: 회원이 쓴 글의 제목·본문, 사진, 공개 범위, 작성·수정
+                  시각. 사진은 긴 변 2048픽셀 이하로 줄여 저장하며, 촬영 위치·촬영 기기 등 사진
+                  속 정보(EXIF)는 저장하기 전에 지웁니다. 다른 회원의 글에 남긴 반응(하트)과 신고
+                  기록.
+                </li>
+              )}
             </List>
             <SubHead>다. 외부 서비스 연동 시</SubHead>
             <List>
@@ -157,6 +183,9 @@ export default function PrivacyPage() {
               )}
               {v190 && (
                 <li>할 일 관리, 일정에서 이어지는 후속 일정·할 일을 연결해 보여 드리기 위해</li>
+              )}
+              {v1100 && (
+                <li>회원이 쓴 글과 사진을 회원의 공개 페이지에 보여 드리고, 신고된 글을 확인·처리하기 위해</li>
               )}
               <li>약관 위반 대응, 고객 문의 응대, 공지 발송</li>
               <li>법령상 의무 이행</li>
@@ -210,8 +239,15 @@ export default function PrivacyPage() {
                       </li>
                     </>
                   )}
+                  {v1100 && (
+                    <li>
+                      글과 사진: 회원이 지우거나 탈퇴할 때까지 보관합니다. 글이나 사진을 지우면
+                      저장된 사진 파일도 즉시 파기하고, 탈퇴하면 그 회원의 글과 사진을 모두 즉시
+                      파기합니다. 반응은 반응을 취소하거나 탈퇴하면 즉시 삭제합니다.
+                    </li>
+                  )}
                   <li>
-                    신고 처리 기록: 신고된 메시지와 그 앞뒤 대화 중 신고 처리에 필요한
+                    신고 처리 기록: 신고된 {v1100 ? "메시지·글과" : "메시지와"} 그 앞뒤 대화 중 신고 처리에 필요한
                     부분은 신고 처리 기록으로 남습니다. 삭제를 요청하셔도 신고 처리 기록은
                     처리일로부터 1년 보관한 뒤 삭제합니다.
                   </li>
@@ -246,8 +282,9 @@ export default function PrivacyPage() {
             </p>
             <List>
               <li>
-                이용자가 공개로 설정한 프로필, 타임슬롯, 피드 글, 캘린더 이벤트는
-                다른 이용자에게 노출됩니다.
+                {v1100
+                  ? "이용자가 공개로 설정한 프로필, 타임슬롯, 글과 사진, 캘린더 이벤트는 다른 이용자와 방문자에게 노출됩니다."
+                  : "이용자가 공개로 설정한 프로필, 타임슬롯, 피드 글, 캘린더 이벤트는 다른 이용자에게 노출됩니다."}
               </li>
               {effective ? (
                 <li>
@@ -318,7 +355,7 @@ export default function PrivacyPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-charcoal-800/40 align-top text-charcoal-300">
-                    {TRANSFERS.map((row) => (
+                    {TRANSFERS.map((row) => (v1100 && row[0].startsWith("Supabase") ? [row[0], row[1], SUPABASE_ITEMS_1100, ...row.slice(3)] : row)).map((row) => (
                       <tr key={row[0]}>
                         {row.map((cell, i) => (
                           <Td key={i}>{cell}</Td>
@@ -614,6 +651,12 @@ export default function PrivacyPage() {
                   접근 항목(설명)과 이용자가 고른 메모·제목 저장 내용 추가
                 </li>
               )}
+              {v1100 && PRIVACY_1100_EFFECTIVE_DATE && (
+                <li>
+                  {PRIVACY_1100_EFFECTIVE_DATE}: 글과 사진 올리기 도입에 따른 수집 항목·이용 목적·보유
+                  기간 추가, 공개 정보에 글과 사진 추가, 국외 이전 항목(Supabase)에 글과 사진 추가
+                </li>
+              )}
             </List>
           </Section>
         </div>
@@ -637,6 +680,10 @@ const PROCESSORS_NEW: [string, string, string][] = [
   ["Google LLC", "OAuth 로그인, Calendar API 연동", "미국"],
   ["Apple Inc.", "Apple 계정 로그인(Sign in with Apple), 앱 푸시 알림 전달(APNs)", "미국"],
 ];
+
+// 1.10.0 시행일부터 Supabase 이전 항목에 글과 사진을 적는다
+const SUPABASE_ITEMS_1100 =
+  "회원 정보, 예약·일정 기록, 예약 대화, 앱 푸시 기기 토큰, 프로필 사진, 회원이 올린 글과 사진 등 서비스에 저장되는 정보 전부";
 
 // 5-1. 개인정보의 국외 이전 (LEGAL_EFFECTIVE_DATE부터)
 const TRANSFERS: [string, string, string, string, string, string][] = [

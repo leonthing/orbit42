@@ -18,6 +18,13 @@ function kstToday(now: Date): string {
 export const PRIVACY_190_NOTICE_DATE: string | null = "2026-11-13";
 export const PRIVACY_190_EFFECTIVE_DATE: string | null = "2026-11-20";
 
+/**
+ * 1.10.0 처리방침 개정(글·사진, Leo 11/14 "추천대로" — 문장은 Leo 승인 대기): 안내 11/20, 시행 11/27.
+ * 문장 승인 전에는 날짜를 null 로 두면 아무 데도 안 보인다. 승인되면 이 두 값만 그대로 둔 채 배포.
+ */
+export const PRIVACY_1100_NOTICE_DATE: string | null = "2026-11-20";
+export const PRIVACY_1100_EFFECTIVE_DATE: string | null = "2026-11-27";
+
 export type LegalChange = "none" | "notice" | "effective";
 
 function changeState(notice: string | null, effective: string | null, now: Date): LegalChange {
@@ -34,6 +41,10 @@ export function legalChangeState(now: Date = new Date()): LegalChange {
 
 export function privacy190State(now: Date = new Date()): LegalChange {
   return changeState(PRIVACY_190_NOTICE_DATE, PRIVACY_190_EFFECTIVE_DATE, now);
+}
+
+export function privacy1100State(now: Date = new Date()): LegalChange {
+  return changeState(PRIVACY_1100_NOTICE_DATE, PRIVACY_1100_EFFECTIVE_DATE, now);
 }
 
 /** "2026-11-10" → "2026년 11월 10일" */
