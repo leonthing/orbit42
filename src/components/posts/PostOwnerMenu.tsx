@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { pinPostAction, updatePostAction } from "@/lib/posts-actions";
+import { deletePostAction, pinPostAction, updatePostAction } from "@/lib/posts-actions";
 
 /**
  * 내 글 ⋯ 메뉴(1.10.0) — 목록 칸·상세에서 같은 것: 고치기, 공개 ↔ 나만 보기, 링크 페이지 맨 위에 고정/풀기.
@@ -14,8 +14,11 @@ export function PostOwnerMenu({
   postId,
   isPublic,
   pinned,
+  draft = false,
   variant = "tile",
 }: {
+  /** 임시 저장 글 — 삭제 확인 문구를 짧게 */
+  draft?: boolean;
   username: string;
   postId: string;
   isPublic: boolean;
@@ -54,6 +57,21 @@ export function PostOwnerMenu({
     });
   };
 
+  const remove = () => {
+    setOpen(false);
+    if (!window.confirm(draft ? "임시 저장한 글을 지울까요?" : "이 글을 지울까요? 사진도 함께 지워져요.")) return;
+    start(async () => {
+      const r = await deletePostAction(postId);
+      if ("error" in r) setMsg(r.error);
+      else {
+        setMsg(null);
+        // 상세에서 지웠으면 목록으로, 목록에서 지웠으면 새로 고침
+        if (variant === "inline") router.push(`/${username}/blog`);
+        router.refresh();
+      }
+    });
+  };
+
   const item = "block min-h-11 w-full px-4 text-left text-sm text-charcoal-100 hover:bg-charcoal-900 disabled:opacity-50";
   return (
     <div ref={ref} className={variant === "tile" ? "absolute bottom-0 right-0 z-10" : "relative"}>
@@ -69,16 +87,18 @@ export function PostOwnerMenu({
         }}
         className={
           variant === "tile"
-            ? "flex h-11 w-11 items-center justify-center text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
+            ? "flex h-11 w-11 items-center justify-center text-white"
             : "flex h-11 w-11 items-center justify-center rounded-full text-charcoal-300 hover:bg-charcoal-900/60 hover:text-charcoal-50"
         }
         data-testid="postMenu"
       >
-        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden>
-          <circle cx="5" cy="12" r="1.8" />
-          <circle cx="12" cy="12" r="1.8" />
-          <circle cx="19" cy="12" r="1.8" />
-        </svg>
+        <span className={variant === "tile" ? "flex h-6 w-8 items-center justify-center rounded-full bg-black/45" : "contents"}>
+          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden>
+            <circle cx="5" cy="12" r="1.8" />
+            <circle cx="12" cy="12" r="1.8" />
+            <circle cx="19" cy="12" r="1.8" />
+          </svg>
+        </span>
       </button>
       {open && (
         // 휴대폰은 화면 아래 시트(칸 위치와 상관없이 화면 안), 넓은 화면은 칸 옆 메뉴
@@ -102,6 +122,9 @@ export function PostOwnerMenu({
             onClick={() => run(() => pinPostAction(postId, !pinned))}
           >
             {pinned ? "링크 페이지 고정 풀기" : isPublic ? "링크 페이지 맨 위에 고정" : "공개 글만 고정할 수 있어요"}
+          </button>
+          <button role="menuitem" type="button" className={`${item} border-t border-charcoal-800/60 !text-red-400`} onClick={remove} data-testid="deletePost">
+            삭제
           </button>
         </div>
       )}

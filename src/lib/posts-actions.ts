@@ -78,3 +78,10 @@ export async function pinPostAction(postId: string, on: boolean) {
   if (!me) return LOGIN;
   return on ? posts.setPinnedPost(me, String(postId)) : posts.unpinPost(me, String(postId));
 }
+
+/** 웹 새 글 화면: 이 브라우저에 남은 임시 저장 글을 이어 쓸 수 있는지 */
+export async function ownDraftAction(postId: string) {
+  const me = await meId();
+  if (!me) return false;
+  return posts.isOwnDraft(me, String(postId));
+}

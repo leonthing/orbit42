@@ -580,6 +580,13 @@ export async function reorderPhotos(me: string, id: string, order: unknown) {
   return { post };
 }
 
+/** 이어 쓸 수 있는 내 임시 저장 글인지(한 번도 공개 안 한 나만 보기 앱 글) — 웹 새 글 화면이 이어 쓰기에 쓴다 */
+export async function isOwnDraft(me: string, id: string): Promise<boolean> {
+  if (!postsOpenFor(me)) return false;
+  const r = await ownRow(me, id);
+  return !!r && !r.published && !r.published_at;
+}
+
 /** 사진 설명(캡션) — 빈 글자면 지운다 */
 export async function setPhotoCaption(me: string, id: string, photoId: string, caption: unknown) {
   if (!postsOpenFor(me)) return closed();

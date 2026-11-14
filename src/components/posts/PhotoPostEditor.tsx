@@ -8,6 +8,7 @@ import {
   addPhotoAction,
   createPostAction,
   deletePostAction,
+  ownDraftAction,
   removePhotoAction,
   reorderPhotosAction,
   setPhotoCaptionAction,
@@ -36,17 +37,28 @@ export type EditorInitial = {
   body: string;
   isPublic: boolean;
   photos: { id: string; url: string | null; caption?: string | null }[];
+  /** 한 번도 공개하지 않은 임시 저장 글 — 제목·버튼을 '새 글'처럼 */
+  draft?: boolean;
 };
 
 type Draft = { title: string; body: string; at: number };
 const draftKey = (id: string) => `orbit42:post-draft:${id}`;
+/** 새 글 화면이 자동 저장으로 만든 글 id — 새로고침·다른 탭·'새 글'을 다시 눌러도 같은 행을 이어 쓰게(행이 늘지 않게) */
+const newKey = (username: string) => `orbit42:post-new:${username}`;
+const forget = (k: string) => {
+  try {
+    localStorage.removeItem(k);
+  } catch {
+    /* 무시 */
+  }
+};
 const AUTOSAVE_MS = 1500;
 
 const MAX = 10;
 const MAX_SOURCE = 10 * 1024 * 1024; // 고를 수 있는 원본 한 장
 
 /** 웹 글·사진 쓰기·고치기(1.10.0) — 앱과 같은 API 규칙: 나만 보기로 만들고 사진을 다 올린 뒤 공개 범위 적용 */
-export function PhotoPostEditor({ username, initial }: { username: string; initial?: EditorInitial }) {
+export function PhotoPostEditor({ username, initial, resumed = false }: { username: string; initial?: EditorInitial; resumed?: boolean }) {
   const router = useRouter();
   const [items, setItems] = useState<Item[]>(() =>
     (initial?.photos ?? []).map((p) => ({ key: p.id, remoteId: p.id, src: p.url, caption: p.caption ?? "", savedCaption: p.caption ?? "" })),
@@ -65,10 +77,12 @@ export function PhotoPostEditor({ username, initial }: { username: string; initi
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const [tab, setTab] = useState<"write" | "preview">("write");
   // 자동 저장: 서버에 '나만 보기'인 글(새 글 포함)만 서버로, 이미 공개된 글은 이 브라우저에만 둔다
-  const serverPublic = useRef(initial?.isPublic ?? false);
+  const serverPublic = useRef(!!initial && initial.isPublic && !initial.draft);
   const savedText = useRef({ title: initial?.title ?? "", body: initial?.body ?? "" });
   const creating = useRef<Promise<string> | null>(null);
   const [autoState, setAutoState] = useState<"idle" | "saving" | "saved" | "local" | "failed">("idle");
+  /** 서버가 준 이유(하루 글 수 제한 등) — 없으면 연결 문제로 안내 */
+  const [autoError, setAutoError] = useState<string | null>(null);
   const [restore, setRestore] = useState<Draft | null>(null);
   const done = useRef(false);
 
@@ -82,6 +96,11 @@ export function PhotoPostEditor({ username, initial }: { username: string; initi
           throw new Error(r.error);
         }
         setPostId(r.post.id);
+        try {
+          localStorage.setItem(newKey(username), r.post.id);
+        } catch {
+          /* 무시 */
+        }
         savedText.current = { title: t, body: b };
         // 주소는 그대로 둔다(replaceState 는 Next 라우터가 받아 편집기를 다시 그려 입력이 날아감).
         // 임시 저장 글은 내 목록에 '임시 저장'으로 남아 거기서 이어 쓴다.
@@ -89,7 +108,35 @@ export function PhotoPostEditor({ username, initial }: { username: string; initi
       });
     }
     return creating.current;
-  }, [postId]);
+  }, [postId, username]);
+
+  // 새 글 화면: 이 브라우저가 만들어 둔 임시 저장 글이 있으면 그 글을 이어 쓴다(새 행을 만들지 않음).
+  // ?fresh=1 은 '새 글로 시작'.
+  const [checking, setChecking] = useState(!initial);
+  useEffect(() => {
+    if (initial) return;
+    const fresh = new URLSearchParams(window.location.search).get("fresh") === "1";
+    let id: string | null = null;
+    try {
+      id = localStorage.getItem(newKey(username));
+    } catch {
+      /* 무시 */
+    }
+    if (fresh || !id) {
+      if (fresh) forget(newKey(username));
+      setChecking(false);
+      return;
+    }
+    ownDraftAction(id)
+      .then((ok) => {
+        if (ok) router.replace(`/${username}/blog/photo/${id}/edit?resumed=1`);
+        else {
+          forget(newKey(username));
+          setChecking(false);
+        }
+      })
+      .catch(() => setChecking(false));
+  }, [initial, username, router]);
 
   // 이 브라우저에 남은 고친 내용(공개 글) 되살리기
   useEffect(() => {
@@ -129,7 +176,9 @@ export function PhotoPostEditor({ username, initial }: { username: string; initi
           savedText.current = { title, body };
         }
         setAutoState("saved");
-      } catch {
+        setAutoError(null);
+      } catch (e) {
+        setAutoError(e instanceof Error && e.message ? e.message : null);
         setAutoState("failed");
       }
     }, AUTOSAVE_MS);
@@ -282,8 +331,10 @@ export function PhotoPostEditor({ username, initial }: { username: string; initi
       const r = await updatePostAction(id, { title, body, public: isPublic });
       if ("error" in r) throw new Error(r.error);
       done.current = true;
+      forget(draftKey(id));
+      // 올리기·저장을 누른 글은 더 이상 '쓰는 중인 새 글'이 아니다
       try {
-        localStorage.removeItem(draftKey(id));
+        if (localStorage.getItem(newKey(username)) === id) localStorage.removeItem(newKey(username));
       } catch {
         /* 무시 */
       }
@@ -305,26 +356,39 @@ export function PhotoPostEditor({ username, initial }: { username: string; initi
     if ("error" in r) setError(r.error);
     else {
       done.current = true;
-      try {
-        localStorage.removeItem(draftKey(postId));
-      } catch {
-        /* 무시 */
-      }
+      forget(draftKey(postId));
+      forget(newKey(username));
       router.push(`/${username}/blog`);
       router.refresh();
     }
   };
 
+  if (checking) {
+    return (
+      <p className="mx-auto max-w-2xl py-10 text-center text-sm text-charcoal-400" role="status">
+        쓰던 글을 확인하는 중…
+      </p>
+    );
+  }
+
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6 max-md:pb-[var(--mobile-nav-pb)]">
+      {resumed && (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 px-4 py-2 text-sm text-charcoal-200" role="status" data-testid="resumed">
+          <span className="mr-auto">임시 저장한 글을 이어서 열었어요.</span>
+          <a href={`/${username}/blog/photo/new?fresh=1`} className="inline-flex min-h-11 items-center rounded-lg px-3 font-semibold text-navy-600 hover:bg-charcoal-900/60 dark:text-navy-300">
+            새 글로 시작
+          </a>
+        </div>
+      )}
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-xl font-bold text-charcoal-50">{initial ? "글 고치기" : "새 글"}</h1>
+          <h1 className="text-xl font-bold text-charcoal-50">{initial && !initial.draft ? "글 고치기" : "새 글"}</h1>
           <p className="min-h-4 text-xs text-charcoal-500" role="status" data-testid="autoState">
             {autoState === "saving" && "임시 저장 중…"}
             {autoState === "saved" && "나만 보기로 임시 저장했어요"}
             {autoState === "local" && "이 브라우저에 임시 저장했어요 · 저장을 눌러야 공개 글에 반영돼요"}
-            {autoState === "failed" && <span className="text-red-400">임시 저장하지 못했어요 · 연결을 확인해 주세요</span>}
+            {autoState === "failed" && <span className="text-red-400">임시 저장하지 못했어요 · {autoError ?? "연결을 확인해 주세요"}</span>}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -343,7 +407,7 @@ export function PhotoPostEditor({ username, initial }: { username: string; initi
             className="inline-flex min-h-11 items-center rounded-lg bg-navy-500 px-5 text-sm font-semibold text-white hover:bg-navy-400 disabled:opacity-50"
             data-testid="savePost"
           >
-            {saving ? "저장 중…" : initial ? "저장" : "올리기"}
+            {saving ? "저장 중…" : initial && !initial.draft ? "저장" : "올리기"}
           </button>
         </div>
       </div>

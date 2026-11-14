@@ -63,7 +63,7 @@ export function PhotoPostGrid({
                 {p.hidden && <span aria-label="숨겨짐">⊘</span>}
               </span>
             </Link>
-            {owner && <PostOwnerMenu username={username} postId={p.id} isPublic={p.isPublic} pinned={!!p.pinned} />}
+            {owner && <PostOwnerMenu username={username} postId={p.id} isPublic={p.isPublic} pinned={!!p.pinned} draft={!!p.draft} />}
           </li>
         );
       })}
