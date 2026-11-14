@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { LEGAL_EFFECTIVE_DATE, koDate, legalChangeState } from "@/lib/legal-change";
+import { LEGAL_EFFECTIVE_DATE, TERMS_1100_EFFECTIVE_DATE, koDate, legalChangeState, terms1100State } from "@/lib/legal-change";
 
 export const metadata: Metadata = { title: "이용약관 · Orbit42" };
 // 시행일에 배포 없이 새 문장으로 바뀌도록 1시간마다 다시 그린다 (lib/legal-change)
@@ -9,6 +9,15 @@ export const revalidate = 3600;
 export default function TermsPage() {
   const change = legalChangeState();
   const effective = change === "effective";
+  // 1.10.0 개정(제8조): 안내 기간에는 위 안내만, 시행일부터 새 문장
+  const change1100 = terms1100State();
+  const v1100 = change1100 === "effective";
+  const updated =
+    v1100 && TERMS_1100_EFFECTIVE_DATE
+      ? koDate(TERMS_1100_EFFECTIVE_DATE)
+      : effective && LEGAL_EFFECTIVE_DATE
+        ? koDate(LEGAL_EFFECTIVE_DATE)
+        : "2026년 4월 15일";
   return (
     <div className="min-h-screen bg-[rgb(var(--bg-base))]">
       <header className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4 sm:px-6">
@@ -29,8 +38,19 @@ export default function TermsPage() {
       <main className="mx-auto max-w-3xl px-4 pb-24 pt-6 sm:px-6">
         <h1 className="text-3xl font-bold text-charcoal-100">이용약관</h1>
         <p className="mt-2 text-sm text-charcoal-500">
-          최종 업데이트: {effective && LEGAL_EFFECTIVE_DATE ? koDate(LEGAL_EFFECTIVE_DATE) : "2026년 4월 15일"}
+          최종 업데이트: {updated}
         </p>
+        {change1100 === "notice" && TERMS_1100_EFFECTIVE_DATE && (
+          <div className="mt-6 rounded-xl border border-navy-400/40 bg-navy-400/10 p-4 text-sm text-charcoal-200">
+            <p className="font-semibold text-charcoal-100">
+              이용약관 변경 안내 — 시행일 {koDate(TERMS_1100_EFFECTIVE_DATE)}
+            </p>
+            <ul className="mt-2 list-disc space-y-1 pl-5 marker:text-charcoal-500">
+              <li>제8조(이용자의 의무 및 금지 행위): 불쾌한 콘텐츠와 괴롭힘에 대한 기준과 조치를 더합니다.</li>
+            </ul>
+            <p className="mt-2 text-xs text-charcoal-400">시행일 전까지는 아래 지금의 약관이 적용됩니다.</p>
+          </div>
+        )}
         {change === "notice" && LEGAL_EFFECTIVE_DATE && (
           <div className="mt-6 rounded-xl border border-navy-400/40 bg-navy-400/10 p-4 text-sm text-charcoal-200">
             <p className="font-semibold text-charcoal-100">
@@ -184,7 +204,15 @@ export default function TermsPage() {
                 서비스를 무단으로 리버스 엔지니어링·크롤링·자동화하여 상업적
                 목적으로 이용하는 행위
               </li>
+              {v1100 && <li>다른 이용자를 괴롭히거나 위협하는 행위, 원치 않는 연락을 반복하는 행위</li>}
             </List>
+            {v1100 && (
+              <p className="mt-3">
+                회사는 불쾌하거나 부적절한 콘텐츠와 다른 이용자를 괴롭히는 행위를 용납하지 않습니다.
+                신고된 콘텐츠는 24시간 안에 확인해 위반이면 삭제하고, 그 콘텐츠를 올린 이용자의
+                서비스 이용을 제한하거나 계정을 해지할 수 있습니다.
+              </p>
+            )}
           </Section>
 
           <Section title="제9조 (콘텐츠의 권리)">
@@ -242,6 +270,18 @@ export default function TermsPage() {
               </li>
             </List>
           </Section>
+          {(effective || v1100) && (
+            <Section title="변경 이력">
+              <List>
+                {effective && LEGAL_EFFECTIVE_DATE && (
+                  <li>{LEGAL_EFFECTIVE_DATE}: 제7조(결제) — 회사가 결제를 중개하지 않는 지금의 방식대로 정비</li>
+                )}
+                {v1100 && TERMS_1100_EFFECTIVE_DATE && (
+                  <li>{TERMS_1100_EFFECTIVE_DATE}: 제8조 — 괴롭힘 금지, 불쾌한 콘텐츠와 괴롭힘에 대한 기준과 조치(24시간 안 확인, 삭제, 이용 제한·계정 해지) 추가</li>
+                )}
+              </List>
+            </Section>
+          )}
         </div>
 
         <p className="mt-12 text-xs text-charcoal-500">
