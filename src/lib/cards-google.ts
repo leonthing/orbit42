@@ -171,8 +171,11 @@ export async function warmupSearch(userId: string) {
   await c.people.people.searchContacts({ query: "", readMask: "names" }).catch(() => undefined);
 }
 
-/** 같은 사람 후보 찾기 — 그때그때 searchContacts(캐시 없음). 질의는 동시에 */
-export async function matchCard(userId: string, card: CardFields): Promise<Candidate[]> {
+/**
+ * 같은 사람 후보 찾기 — 그때그때 searchContacts(캐시 없음). 질의는 동시에.
+ * recent: 앱이 최근에 만든 연락처 중 번호·메일이 겹치는 것(기기에만 기억). 검색 색인이 늦게 잡는 것을 메운다.
+ */
+export async function matchCard(userId: string, card: CardFields, recent: string[] = []): Promise<Candidate[]> {
   const c = await connect(userId);
   try {
     const qs = searchQueries(card);
@@ -182,6 +185,11 @@ export async function matchCard(userId: string, card: CardFields): Promise<Candi
       ),
     );
     const found = res.flat().map((r) => r.person as GPerson).filter(Boolean);
+    const extra = recent.filter((rn) => /^people\/[\w-]+$/.test(rn) && !found.some((p) => p.resourceName === rn)).slice(0, 20);
+    if (extra.length) {
+      const b = await c.people.people.getBatchGet({ resourceNames: extra, personFields: READ_MASK }).catch(() => null);
+      for (const r of b?.data.responses ?? []) if (r.person) found.push(r.person as GPerson);
+    }
     return findCandidates(card, found);
   } catch (e) {
     return handleGoogleError(userId, e);
@@ -252,12 +260,13 @@ export async function saveCard(
   choice: SaveChoice,
   seen: string[],
   photos: CardPhoto[],
+  recent: string[] = [],
 ): Promise<SaveResult> {
   const c = await connect(userId);
   const uploaded: string[] = [];
   const drive = google.drive({ version: "v3", auth: c.auth });
   try {
-    const cands = await matchCard(userId, card);
+    const cands = await matchCard(userId, card, recent);
     const unseen = cands.filter((x) => !seen.includes(x.person.resourceName));
     if (unseen.length) return { ok: false, reason: "new_candidates", candidates: cands };
     const target = choice.kind === "update" ? cands.find((x) => x.person.resourceName === choice.resourceName) : null;

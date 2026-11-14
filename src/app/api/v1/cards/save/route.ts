@@ -7,7 +7,7 @@ export const maxDuration = 60;
 const MAX_PHOTO = 2 * 1024 * 1024;
 
 /**
- * POST multipart: card(JSON) · choice(JSON {kind:"create"} | {kind:"update",resourceName}) · seen(JSON 화면에 보인 후보들) · front · back(JPEG)
+ * POST multipart: card(JSON) · recent(JSON, 선택) · choice(JSON {kind:"create"} | {kind:"update",resourceName}) · seen(JSON 화면에 보인 후보들) · front · back(JPEG)
  * 사진은 메모리에서 바로 Leo Drive 로 — 서버·DB 에 남기지 않는다.
  * → 200 { ok, kind, resourceName, name } | 409 { reason:"new_candidates", candidates } (다시 고르기)
  */
@@ -29,6 +29,8 @@ export async function POST(request: Request) {
   else return Response.json({ error: "저장 방법을 골라 주세요." }, { status: 400 });
   const seenRaw = json("seen");
   const seen = Array.isArray(seenRaw) ? seenRaw.filter((x): x is string => typeof x === "string").slice(0, 50) : [];
+  const recentRaw = json("recent");
+  const recent = Array.isArray(recentRaw) ? recentRaw.filter((x): x is string => typeof x === "string").slice(0, 20) : [];
 
   const photos: CardPhoto[] = [];
   for (const [key, side] of [["front", "앞"], ["back", "뒤"]] as const) {
@@ -41,7 +43,7 @@ export async function POST(request: Request) {
     photos.push({ side, data, mime: "image/jpeg" });
   }
   try {
-    const r = await saveCard(a.id, card, choice, seen, photos);
+    const r = await saveCard(a.id, card, choice, seen, photos, recent);
     if (!r.ok && r.reason === "new_candidates")
       return Response.json({ error: "같은 사람으로 보이는 연락처가 새로 보여요. 다시 골라 주세요.", reason: r.reason, candidates: r.candidates.map(candidateView) }, { status: 409 });
     if (!r.ok) return Response.json({ error: "고른 연락처가 이 명함과 같은 사람 후보가 아니에요.", reason: r.reason }, { status: 409 });
