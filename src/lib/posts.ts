@@ -4,7 +4,7 @@
 import { randomBytes, randomUUID } from "crypto";
 import { getAdminClient } from "@/lib/supabase";
 import { rateLimitDb } from "@/lib/rate-limit";
-import { postsOpenFor } from "@/lib/posts-access";
+import { postsOpenFor, postsVisibleTo } from "@/lib/posts-access";
 import {
   POST_PHOTO_BUCKET,
   POST_PHOTO_MAX_BYTES,
@@ -96,14 +96,16 @@ async function blockedEitherWay(a: string, b: string): Promise<boolean> {
 }
 
 /** 행 → 응답. photosMode 'all' 은 모든 사진, 'cover' 는 첫 장만 서명한다(목록). */
-async function shape(me: string, rows: PostRow[], photosMode: "all" | "cover"): Promise<ApiPost[]> {
+async function shape(me: string | null, rows: PostRow[], photosMode: "all" | "cover"): Promise<ApiPost[]> {
   if (rows.length === 0) return [];
   const ids = rows.map((r) => r.id);
   const [authors, photosRes, likesRes, mineRes] = await Promise.all([
     authorsOf(Array.from(new Set(rows.map((r) => r.user_id)))),
     db().from("post_photos").select("id, post_id, position, storage_key, width, height").in("post_id", ids).order("position"),
     db().from("reactions").select("target_id").eq("target_type", "post").in("target_id", ids.map(likeTarget)),
-    db().from("reactions").select("target_id").eq("target_type", "post").eq("user_id", me).in("target_id", ids.map(likeTarget)),
+    me
+      ? db().from("reactions").select("target_id").eq("target_type", "post").eq("user_id", me).in("target_id", ids.map(likeTarget))
+      : Promise.resolve({ data: [] as { target_id: string }[] }),
   ]);
   const photos = (photosRes.data ?? []) as PhotoRow[];
   const byPost = new Map<string, PhotoRow[]>();
@@ -136,14 +138,14 @@ async function shape(me: string, rows: PostRow[], photosMode: "all" | "cover"): 
 }
 
 /** 내가 볼 수 있는 글 한 개(행) — 남의 글은 공개·숨김 아님·차단 아님일 때만 */
-async function visibleRow(me: string, id: string): Promise<PostRow | null> {
+async function visibleRow(me: string | null, id: string): Promise<PostRow | null> {
   if (!UUID.test(id)) return null;
   const { data } = await db().from("blog_posts").select(POST_COLS).eq("id", id).eq("origin", "app").maybeSingle();
   const r = data as PostRow | null;
   if (!r) return null;
-  if (r.user_id === me) return r;
+  if (me && r.user_id === me) return r;
   if (!r.published || r.hidden_at) return null;
-  if (await blockedEitherWay(me, r.user_id)) return null;
+  if (me && (await blockedEitherWay(me, r.user_id))) return null;
   return r;
 }
 
@@ -199,6 +201,91 @@ export async function getPost(me: string, id: string) {
   const author = await authorsOf([r.user_id]);
   post.bookingUrl = await bookingUrlFor(r.user_id, author.get(r.user_id)?.username ?? "");
   return { post };
+}
+
+// ── 웹 화면용 (1.10.0) — 보는 사람은 비로그인(null)일 수 있다 ──
+
+/** 웹 상세: 슬러그로 앱 글 하나. 볼 수 없으면 null(→ 404) */
+export async function getPostForWeb(viewerId: string | null, username: string, slug: string): Promise<ApiPost | null> {
+  const { data: u } = await db().from("users").select("id, username").eq("username", username).maybeSingle();
+  if (!u) return null;
+  const own = viewerId === u.id;
+  if (!own && !postsVisibleTo(viewerId)) return null;
+  if (own && !postsOpenFor(viewerId)) return null;
+  const { data } = await db().from("blog_posts").select("id").eq("origin", "app").eq("user_id", u.id).eq("slug", slug).maybeSingle();
+  if (!data) return null;
+  const r = await visibleRow(viewerId, data.id as string);
+  if (!r) return null;
+  const [post] = await shape(viewerId, [r], "all");
+  post.bookingUrl = own ? null : await bookingUrlFor(r.user_id, u.username as string);
+  return post;
+}
+
+/** 웹 목록(링크 페이지 칸·글 목록): 그 사람의 공개 앱 글. 본인이면 나만 보기·숨김 포함. 볼 수 없으면 [] */
+export async function listPostsForWeb(viewerId: string | null, authorId: string, limit = 30): Promise<(ApiPost & { slug: string })[]> {
+  const own = viewerId === authorId;
+  if (own ? !postsOpenFor(viewerId) : !postsVisibleTo(viewerId)) return [];
+  if (!own && viewerId && (await blockedEitherWay(viewerId, authorId))) return [];
+  let q = db()
+    .from("blog_posts")
+    .select(POST_COLS + ", slug")
+    .eq("origin", "app")
+    .eq("user_id", authorId)
+    .order("created_at", { ascending: false })
+    .limit(Math.min(limit, 60));
+  if (!own) q = q.eq("published", true).is("hidden_at", null);
+  const { data } = await q;
+  const rows = (data ?? []) as unknown as (PostRow & { slug: string })[];
+  const shaped = await shape(viewerId, rows, "cover");
+  return shaped.map((p, i) => ({ ...p, slug: rows[i].slug }));
+}
+
+/** 공개 스위치가 켜졌을 때만: 사이트맵·RSS 용 공개 앱 글(사진 없이) */
+export async function listPublicAppPostsForFeeds(authorId?: string, limit = 5000) {
+  const { postsPublic } = await import("@/lib/posts-access");
+  if (!postsPublic()) return [];
+  let q = db()
+    .from("blog_posts")
+    .select("id, slug, title, content, published_at, created_at, user:users!blog_posts_user_id_fkey(username)")
+    .eq("origin", "app")
+    .eq("published", true)
+    .is("hidden_at", null)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (authorId) q = q.eq("user_id", authorId);
+  const { data } = await q;
+  return (data ?? []).map((p) => ({
+    id: p.id as string,
+    slug: p.slug as string,
+    title: (p.title as string) || "",
+    body: (p.content as string) || "",
+    publishedAt: ((p.published_at as string | null) ?? (p.created_at as string)) as string,
+    username: ((p.user as unknown as { username: string } | null)?.username ?? "") as string,
+  }));
+}
+
+/** OG 이미지용: 공개 스위치가 켜졌고 공개 글일 때 첫 사진 원본(JPEG) — 아니면 null */
+export async function firstPhotoForOg(username: string, slug: string): Promise<Buffer | null> {
+  const { postsPublic } = await import("@/lib/posts-access");
+  if (!postsPublic()) return null;
+  const { data: u } = await db().from("users").select("id").eq("username", username).maybeSingle();
+  if (!u) return null;
+  const { data: p } = await db()
+    .from("blog_posts")
+    .select("id")
+    .eq("origin", "app")
+    .eq("user_id", u.id)
+    .eq("slug", slug)
+    .eq("published", true)
+    .is("hidden_at", null)
+    .maybeSingle();
+  if (!p) return null;
+  const { data: ph } = await db().from("post_photos").select("storage_key").eq("post_id", p.id).order("position").limit(1);
+  const key = ph?.[0]?.storage_key as string | undefined;
+  if (!key) return null;
+  const dl = await db().storage.from(POST_PHOTO_BUCKET).download(key);
+  if (dl.error || !dl.data) return null;
+  return Buffer.from(await dl.data.arrayBuffer());
 }
 
 // ── 쓰기 ──

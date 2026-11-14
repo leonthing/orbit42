@@ -4,6 +4,7 @@ import { FollowButton } from "./FollowButton";
 import type { SocialLinks } from "@/lib/auth";
 import { resolveLinkTheme } from "@/lib/link-themes";
 import type { CustomLink } from "@/lib/custom-links";
+import { PhotoPostGrid, type GridPost } from "@/components/posts/PhotoPostGrid";
 
 /**
  * 링크트리형 공개 프로필 — SNS 바이오에 걸어두는 "얼굴" 화면.
@@ -95,6 +96,7 @@ export function PublicLinkProfile({
   totalBookings,
   themeKey,
   customLinks = [],
+  photoPosts = [],
 }: {
   username: string;
   displayName: string;
@@ -112,6 +114,8 @@ export function PublicLinkProfile({
   themeKey: string | null;
   /** 호스트가 고른 직접 링크 (개선-46) — 이미 http/https 만 걸러져 온다 */
   customLinks?: CustomLink[];
+  /** 글·사진(1.10.0) 최근 공개 글 6개 — 볼 수 없거나 0개면 빈 배열(칸 없음) */
+  photoPosts?: GridPost[];
 }) {
   const theme = resolveLinkTheme(themeKey);
   const socials = Object.entries(SOCIAL_META)
@@ -332,6 +336,21 @@ export function PublicLinkProfile({
             />
           )}
         </div>
+
+        {/* 글·사진 (1.10.0) — 예약 칸 아래. 공개 글이 없으면 칸을 그리지 않는다 */}
+        {photoPosts.length > 0 && (
+          <section className="mt-8 text-left" aria-labelledby="link-photo-posts">
+            <div className="mb-2 flex items-center justify-between">
+              <h2 id="link-photo-posts" className="text-sm font-semibold">
+                글·사진
+              </h2>
+              <Link href={`/${username}/blog`} className="inline-flex min-h-11 items-center text-xs font-medium" style={{ color: theme.accent }}>
+                모두 보기 →
+              </Link>
+            </div>
+            <PhotoPostGrid username={username} posts={photoPosts} tileStyle={{ backgroundColor: theme.surface }} textColor={theme.text} />
+          </section>
+        )}
 
         {/* 로그인한 방문자용 팔로우 — 예약이 먼저 보이도록 맨 아래에 둔다 */}
         {loggedIn && (

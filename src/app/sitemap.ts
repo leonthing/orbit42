@@ -86,5 +86,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })
     .filter((x): x is NonNullable<typeof x> => x !== null);
 
-  return [...staticRoutes, ...userRoutes, ...slotRoutes, ...postRoutes];
+  // 글·사진(1.10.0): 공개 스위치(POSTS_PUBLIC)가 켜졌을 때만 — 꺼져 있으면 빈 목록
+  const { listPublicAppPostsForFeeds } = await import("@/lib/posts");
+  const appPostRoutes: MetadataRoute.Sitemap = (await listPublicAppPostsForFeeds())
+    .filter((p) => p.username)
+    .map((p) => ({
+      url: `${base}/${p.username}/blog/${encodeURIComponent(p.slug)}`,
+      changeFrequency: "weekly" as const,
+      priority: 0.6,
+      lastModified: new Date(p.publishedAt),
+    }));
+
+  return [...staticRoutes, ...userRoutes, ...slotRoutes, ...postRoutes, ...appPostRoutes];
 }

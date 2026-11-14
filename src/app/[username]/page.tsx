@@ -120,6 +120,20 @@ export default async function PublicProfile({
   );
 
   const isOwner = session?.username === params.username;
+  // 글·사진 칸(1.10.0) — 시험 기간에는 허용 목록 계정으로 로그인한 방문자에게만, 공개 스위치 뒤엔 누구나
+  let photoPosts: Awaited<ReturnType<typeof import("@/lib/posts").listPostsForWeb>> = [];
+  // 블로그 카드: 옛 마크다운 글(origin 'web') 공개 글이 있을 때 (전엔 feed_posts 개수로 판단해 안 보였다)
+  let hasWebPosts = false;
+  if (!isOwner && authorId) {
+    const { listPostsForWeb } = await import("@/lib/posts");
+    const viewerId = session ? ((await db.from("users").select("id").eq("username", session.username).maybeSingle()).data?.id as string | undefined) ?? null : null;
+    const [pp, wp] = await Promise.all([
+      listPostsForWeb(viewerId, authorId, 6),
+      db.from("blog_posts").select("id", { count: "exact", head: true }).eq("user_id", authorId).eq("origin", "web").eq("published", true),
+    ]);
+    photoPosts = pp;
+    hasWebPosts = (wp.count ?? 0) > 0;
+  }
   // 1:1 대화 버튼 상태(1.9.0) — 시행일 전·본인·차단이면 null
   let dmState: DmButtonState = null;
   if (!isOwner && authorId && (v190Open() || !!session)) {
@@ -245,7 +259,8 @@ export default async function PublicProfile({
             reserve_price_cents: s.reserve_price_cents ?? null,
           }))}
           hasPublicCalendar={hasPublicCalendar}
-          hasPosts={myFeedPosts.length > 0}
+          hasPosts={hasWebPosts}
+          photoPosts={photoPosts.map((p) => ({ id: p.id, slug: p.slug, title: p.title, body: p.body, isPublic: p.visibility === "public", hidden: p.hidden, photoCount: p.photoCount, coverUrl: p.photos[0]?.url ?? null }))}
           loggedIn={!!session}
           viewerFollowing={viewerFollowing}
           rating={hostRating}

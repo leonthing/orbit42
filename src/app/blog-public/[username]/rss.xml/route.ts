@@ -40,6 +40,22 @@ export async function GET(
     ? new Date(posts[0].published_at).toUTCString()
     : new Date().toUTCString();
 
+  // 글·사진(1.10.0): 공개 스위치가 켜졌을 때만 함께 싣는다(꺼져 있으면 빈 목록)
+  const { getAdminClient } = await import("@/lib/supabase");
+  const { listPublicAppPostsForFeeds } = await import("@/lib/posts");
+  const { data: au } = await getAdminClient().from("users").select("id").eq("username", author.username).maybeSingle();
+  const appItems = au ? await listPublicAppPostsForFeeds(au.id as string, 20) : [];
+  const appXml = appItems.map((p) => {
+    const link = `${SITE.url}/${author.username}/blog/${encodeURIComponent(p.slug)}`;
+    return `    <item>
+      <title>${escapeXml(p.title || `${name}님의 사진`)}</title>
+      <link>${escapeXml(link)}</link>
+      <guid isPermaLink="true">${escapeXml(link)}</guid>
+      <pubDate>${new Date(p.publishedAt).toUTCString()}</pubDate>
+      <description>${escapeXml(p.body.slice(0, 300))}</description>
+    </item>`;
+  });
+
   const items = posts
     .slice(0, 20)
     .map((post) => {
@@ -57,6 +73,7 @@ export async function GET(
       ${categories}
     </item>`;
     })
+    .concat(appXml)
     .join("\n");
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>

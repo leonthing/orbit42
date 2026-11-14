@@ -12,6 +12,22 @@ import { getReactionsFor } from "@/lib/reactions";
 import { ReactionStrip } from "@/components/ReactionStrip";
 import { CommentSection } from "@/components/CommentSection";
 import { getAdminClient } from "@/lib/supabase";
+import { getPostForWeb } from "@/lib/posts";
+import { PhotoPostView } from "@/components/posts/PhotoPostView";
+
+async function viewerIdOf(username: string | null | undefined): Promise<string | null> {
+  if (!username) return null;
+  const { data } = await getAdminClient().from("users").select("id").eq("username", username).maybeSingle();
+  return (data?.id as string | undefined) ?? null;
+}
+
+/** 앱 글·사진(1.10.0) — 공개 스위치가 꺼져 있으면 허용 목록 계정(과 본인)에게만, 아니면 null(→ 404) */
+async function appPost(username: string, slug: string) {
+  const session = await getSession();
+  const viewerId = await viewerIdOf(session?.username);
+  const post = await getPostForWeb(viewerId, username, decodeURIComponent(slug));
+  return post ? { post, viewerId, loggedIn: !!session } : null;
+}
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +39,22 @@ export async function generateMetadata({
   params: { username: string; postId: string };
 }): Promise<Metadata> {
   const data = await getPublicPostBySlug(params.username, params.postId);
-  if (!data) return { title: "찾을 수 없음" };
+  if (!data) {
+    const a = await appPost(params.username, params.postId);
+    if (!a) return { title: "찾을 수 없음" };
+    const { postsPublic } = await import("@/lib/posts-access");
+    const name = a.post.author.displayName || a.post.author.username;
+    return {
+      title: a.post.title || `${name}님의 사진`,
+      description: a.post.body.slice(0, 120) || undefined,
+      // 공개 스위치 전에는 검색에 안 잡히게
+      robots: postsPublic() && a.post.visibility === "public" ? undefined : { index: false, follow: false },
+      openGraph:
+        postsPublic() && a.post.visibility === "public" && a.post.photos.length > 0
+          ? { images: [{ url: `/api/og/post/${encodeURIComponent(params.username)}/${encodeURIComponent(decodeURIComponent(params.postId))}`, width: 1200, height: 630 }] }
+          : undefined,
+    };
+  }
   return {
     title: data.post.title,
     description: data.post.excerpt ?? undefined,
@@ -37,6 +68,30 @@ export default async function PublicPostPage({
 }) {
   const data = await getPublicPostBySlug(params.username, params.postId);
   if (!data) {
+    const a = await appPost(params.username, params.postId);
+    if (a) {
+      const p = a.post;
+      return (
+        <PhotoPostView
+          loggedIn={a.loggedIn}
+          isOwner={p.mine}
+          post={{
+            id: p.id,
+            slug: params.postId,
+            title: p.title,
+            body: p.body,
+            isPublic: p.visibility === "public",
+            hidden: p.hidden,
+            photos: p.photos.map((ph) => ({ id: ph.id, url: ph.url, width: ph.width, height: ph.height })),
+            likeCount: p.likeCount,
+            liked: p.liked,
+            createdAt: p.createdAt,
+            bookingUrl: p.bookingUrl ?? null,
+            author: { username: p.author.username, displayName: p.author.displayName },
+          }}
+        />
+      );
+    }
     const currentSlug = await resolveRenamedSlug(params.username, params.postId);
     if (currentSlug) {
       permanentRedirect(
