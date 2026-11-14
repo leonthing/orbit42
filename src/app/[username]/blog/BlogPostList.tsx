@@ -171,7 +171,7 @@ export default function BlogPostList({ initialPosts }: { initialPosts: BlogPost[
           <p className="mt-1 text-xs text-charcoal-600">
             {search
               ? "다른 키워드로 검색해보세요"
-              : "생각을 기록하면 프로필과 피드에 함께 보여요"}
+              : "생각을 기록하면 프로필에 함께 보여요"}
           </p>
           {!search && (
             <PendingButton

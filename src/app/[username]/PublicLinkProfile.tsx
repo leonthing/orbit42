@@ -135,7 +135,13 @@ export function PublicLinkProfile({
   };
 
   return (
-    <div style={{ color: theme.text }}>
+    <div
+      // 로그인한 방문자는 앱 셸(사이드바·탭 바) 안에서 보므로 셸 배경이 html 캔버스를 덮는다 →
+      // 이 영역에 직접 테마 캔버스를 칠하고, 셸 안쪽 여백(px-4 py-4 sm:px-5 md:px-6 md:py-5)만큼 넓혀 테두리가 안 보이게.
+      // (전엔 라이트 모드에서 어두운 테마의 밝은 글자가 흰 바탕에 놓여 이름·소개가 안 보였다)
+      className={loggedIn ? "-mx-4 -my-4 min-h-[calc(100%+2rem)] px-4 py-4 sm:-mx-5 sm:px-5 md:-mx-6 md:-my-5 md:min-h-[calc(100%+2.5rem)] md:px-6 md:py-5" : undefined}
+      style={{ color: theme.text, ...(loggedIn ? { backgroundColor: theme.canvas } : {}) }}
+    >
       {/*
         배경은 body 에 직접 칠한다. 고정 레이어(z-index)로는 셸 배경에 가려질 수
         있고, body 배경은 캔버스로 전파돼 스크롤·하단 링크 영역까지 항상 덮는다.
