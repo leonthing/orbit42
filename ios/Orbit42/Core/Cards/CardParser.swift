@@ -88,7 +88,7 @@ enum CardParser {
             m[keyPath: k] = other[keyPath: k]
         }
         for e in other.emails where !m.emails.contains(where: { sameEmailish($0, e) }) { m.emails.append(e) }
-        return m
+        return trimmed(m)
     }
 
     /// 같은 도메인이고 아이디가 점·밑줄만 다르거나 한쪽이 다른 쪽의 꼬리(OCR 이 앞부분을 다른 줄로 떼어 냄)
@@ -202,7 +202,17 @@ enum CardParser {
             let personal = ["gmail", "naver", "daum", "hanmail", "kakao", "nate", "yahoo", "hotmail", "outlook", "icloud", "me"]
             if !personal.contains(host), host.count >= 2 { d.company = host.uppercased() == host ? host : host.capitalized }
         }
-        d.company = d.company.trimmingCharacters(in: .whitespaces)
+        return trimmed(d)
+    }
+
+    /// 모든 칸 앞뒤 공백·구분 기호 정리
+    static func trimmed(_ x: CardDraft) -> CardDraft {
+        var d = x
+        let set = CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: "|,·"))
+        for k in [\CardDraft.name, \.company, \.department, \.title, \.mobile, \.workPhone, \.fax, \.address, \.website] {
+            d[keyPath: k] = d[keyPath: k].replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression).trimmingCharacters(in: set)
+        }
+        d.emails = d.emails.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
         return d
     }
 

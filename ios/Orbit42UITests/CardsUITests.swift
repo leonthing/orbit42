@@ -62,7 +62,13 @@ final class CardsUITests: XCTestCase {
         shot(app, "c-2-confirm-top")
         // 저장은 같은 사람 찾기가 끝나고 방법을 골라야만 — 연결 전이면 막혀 있어야 한다
         XCTAssertFalse(app.buttons["cardSave"].isEnabled, "찾기 전인데 저장이 열림")
+        // 연결 전 → 확인 화면 안에서 바로 연결하기 버튼
         app.swipeUp()
+        XCTAssertTrue(app.buttons["cardConnectInline"].waitForExistence(timeout: 15), "확인 화면에 연결하기 버튼 없음")
+        // 앞뒤 공백 없음
+        let addr = app.textFields["cardAddress"].value as? String ?? ""
+        XCTAssertEqual(addr, addr.trimmingCharacters(in: .whitespaces), "주소 앞뒤 공백")
+        XCTAssertFalse(addr.isEmpty)
         sleep(1)
         shot(app, "c-3-confirm-bottom")
     }

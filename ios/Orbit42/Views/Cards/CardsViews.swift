@@ -173,6 +173,8 @@ struct CardConfirmView: View {
     @State private var searched = false
     @State private var searching = false
     @State private var searchError: String?
+    /// 구글 연락처 연결이 끊겨 있음(서버 409 not_connected) — 이 화면에서 바로 연결, 쓰던 값은 그대로
+    @State private var needsConnect = false
     /// "create" 또는 resourceName. nil = 아직 안 고름
     @State private var choice: String?
     @State private var saving = false
@@ -194,7 +196,7 @@ struct CardConfirmView: View {
     private var draftForSave: CardDraft {
         var x = d
         x.emails = ([d.emails.first ?? ""] + [email2]).map { $0.trimmingCharacters(in: .whitespaces) }.filter { $0.contains("@") }
-        return x
+        return CardParser.trimmed(x)
     }
 
     private var displayName: String {
@@ -238,7 +240,13 @@ struct CardConfirmView: View {
                 field("팩스", $d.fax, id: "cardFax", kb: .phonePad)
                 field("이메일", Binding(get: { d.emails.first ?? "" }, set: { d.emails = [$0] }), id: "cardEmail", kb: .emailAddress)
                 field("이메일 2", $email2, id: "cardEmail2", kb: .emailAddress)
-                field("주소", $d.address, id: "cardAddress")
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("주소")
+                    TextField("주소", text: $d.address, axis: .vertical)
+                        .lineLimit(1...4)
+                        .autocorrectionDisabled()
+                        .accessibilityIdentifier("cardAddress")
+                }
                 field("웹", $d.website, id: "cardWeb", kb: .URL)
             }
 
@@ -247,6 +255,18 @@ struct CardConfirmView: View {
                     HStack { ProgressView(); Text("같은 사람을 찾는 중…") }
                 } else if let searchError {
                     Text(searchError).foregroundStyle(.red)
+                    if needsConnect {
+                        Button {
+                            Task {
+                                await CardsStore.shared.connect()
+                                if CardsStore.shared.status?.connected == true { scheduleSearch(immediate: true) }
+                            }
+                        } label: {
+                            Label(CardsStore.shared.busy ? "연결하는 중…" : "Google 연락처 연결하기", systemImage: "person.crop.circle.badge.plus")
+                        }
+                        .disabled(CardsStore.shared.busy)
+                        .accessibilityIdentifier("cardConnectInline")
+                    }
                     Button("다시 찾기") { scheduleSearch(immediate: true) }
                 } else if searched {
                     if candidates.isEmpty {
@@ -283,6 +303,7 @@ struct CardConfirmView: View {
         .onChange(of: d.emails) { _, _ in scheduleSearch() }
         .onChange(of: email2) { _, _ in scheduleSearch() }
         .onChange(of: d.name) { _, _ in if candidates.isEmpty { scheduleSearch() } }
+        .onChange(of: CardsStore.shared.message) { _, m in if let m { notice = m; CardsStore.shared.message = nil } }
         .alert("알림", isPresented: Binding(get: { notice != nil }, set: { if !$0 { notice = nil } })) {
             Button("확인", role: .cancel) {}
         } message: { Text(notice ?? "") }
@@ -347,6 +368,7 @@ struct CardConfirmView: View {
         }
         searching = true
         searchError = nil
+        needsConnect = false
         defer { searching = false }
         do {
             let r = try await CardsStore.shared.match(draftForSave)
@@ -356,6 +378,7 @@ struct CardConfirmView: View {
         } catch is CancellationError {
             return
         } catch let e as APIError {
+            if case .server(_, let code) = e, code == 409 { needsConnect = true }
             searchError = e.errorDescription ?? "같은 사람을 찾지 못했어요."
         } catch {
             searchError = "같은 사람을 찾지 못했어요. 네트워크를 확인해 주세요."
