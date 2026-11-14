@@ -393,11 +393,11 @@ struct PostComposeView: View {
     private var photoStrip: some View {
         if !photos.isEmpty || importing {
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
+                HStack(spacing: 12) {
                     ForEach(Array(photos.enumerated()), id: \.element.id) { index, photo in
                         VStack(spacing: 6) {
                             thumb(photo)
-                                .frame(width: 96, height: 96)
+                                .frame(width: 132, height: 132)
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
                                 .overlay(alignment: .topLeading) {
                                     Text("\(index + 1)")
@@ -415,17 +415,17 @@ struct PostComposeView: View {
                                 }
                             HStack(spacing: 0) {
                                 Button { move(index, by: -1) } label: {
-                                    Image(systemName: "chevron.left").frame(width: 32, height: 44)
+                                    Image(systemName: "chevron.left").frame(width: 44, height: 44)
                                 }
                                 .disabled(index == 0 || saving)
                                 .accessibilityLabel("앞으로")
                                 Button(role: .destructive) { remove(index) } label: {
-                                    Image(systemName: "xmark.circle.fill").frame(width: 32, height: 44)
+                                    Image(systemName: "xmark.circle.fill").frame(width: 44, height: 44)
                                 }
                                 .disabled(saving)
                                 .accessibilityLabel("사진 빼기")
                                 Button { move(index, by: 1) } label: {
-                                    Image(systemName: "chevron.right").frame(width: 32, height: 44)
+                                    Image(systemName: "chevron.right").frame(width: 44, height: 44)
                                 }
                                 .disabled(index == photos.count - 1 || saving)
                                 .accessibilityLabel("뒤로")
@@ -435,7 +435,7 @@ struct PostComposeView: View {
                         }
                     }
                     if importing {
-                        ProgressView().frame(width: 96, height: 96)
+                        ProgressView().frame(width: 132, height: 132)
                     }
                 }
                 .padding(.vertical, 4)
