@@ -151,6 +151,18 @@ struct PostsListView: View {
                         .accessibilityIdentifier("postTile")
                         .contextMenu {
                             if post.mine {
+                                Button {
+                                    Task { await setPublic(post, !post.isPublic) }
+                                } label: {
+                                    Label(post.isPublic ? "나만 보기로 바꾸기" : "전체 공개로 바꾸기", systemImage: post.isPublic ? "lock" : "globe")
+                                }
+                                if post.isPublic || post.isPinned {
+                                    Button {
+                                        Task { await setPinned(post, !post.isPinned) }
+                                    } label: {
+                                        Label(post.isPinned ? "링크 페이지 고정 풀기" : "링크 페이지 맨 위에 고정", systemImage: post.isPinned ? "pin.slash" : "pin")
+                                    }
+                                }
                                 Button(role: .destructive) {
                                     pendingDelete = post
                                 } label: {
@@ -165,7 +177,7 @@ struct PostsListView: View {
                 }
                 .padding(.top, 3)
                 if isMe {
-                    Text("길게 누르면 삭제할 수 있어요")
+                    Text("길게 누르면 공개 범위·고정·삭제를 바꿀 수 있어요")
                         .font(.caption)
                         .foregroundStyle(Theme.secondaryText)
                         .padding(.top, 10)
@@ -188,6 +200,26 @@ struct PostsListView: View {
             posts = reset ? r.posts : posts + r.posts
             nextBefore = r.nextBefore
             errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func setPublic(_ post: Post, _ on: Bool) async {
+        do {
+            let _: PostResponse = try await APIClient.shared.patch("/api/v1/posts/\(post.id)", body: PostPublicRequest(public: on))
+            await load(reset: true)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func setPinned(_ post: Post, _ on: Bool) async {
+        do {
+            let _: PostPinResponse = on
+                ? try await APIClient.shared.put("/api/v1/posts/\(post.id)/pin", body: PostEmptyBody())
+                : try await APIClient.shared.delete("/api/v1/posts/\(post.id)/pin")
+            await load(reset: true)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -224,7 +256,7 @@ private struct PostTile: View {
                 } else {
                     ZStack {
                         Theme.surface
-                        Text(post.title.isEmpty ? post.body : post.title)
+                        Text(post.title.isEmpty ? PostMarkdown.clean(post.body).replacingOccurrences(of: #"[#>*_~`]"#, with: "", options: .regularExpression) : post.title)
                             .font(.caption)
                             .foregroundStyle(Theme.primaryText)
                             .lineLimit(5)
@@ -236,8 +268,11 @@ private struct PostTile: View {
             .contentShape(Rectangle())
             .overlay(alignment: .topTrailing) {
                 HStack(spacing: 4) {
+                    if post.isPinned { Image(systemName: "pin.fill") }
                     if post.photoCount > 1 { Image(systemName: "square.on.square") }
-                    if !post.isPublic { Image(systemName: "lock.fill") }
+                    if post.isDraft {
+                        Text("임시 저장").padding(.horizontal, 4).background(.black.opacity(0.55), in: Capsule())
+                    } else if !post.isPublic { Image(systemName: "lock.fill") }
                     if post.hidden { Image(systemName: "eye.slash.fill") }
                 }
                 .font(.caption2.weight(.semibold))
@@ -245,7 +280,10 @@ private struct PostTile: View {
                 .shadow(radius: 2)
                 .padding(6)
             }
-            .accessibilityLabel(post.title.isEmpty ? "사진 글" : post.title)
+            .accessibilityLabel(([post.title.isEmpty ? "사진 글" : post.title]
+                + (post.isPinned ? ["고정됨"] : [])
+                + (post.isDraft ? ["임시 저장"] : (post.isPublic ? [] : ["나만 보기"]))
+                + (post.hidden ? ["숨겨짐"] : [])).joined(separator: ", "))
     }
 }
 
@@ -257,10 +295,14 @@ private struct ComposePhoto: Identifiable, Equatable {
     var remote: PostPhoto?
     var jpeg: Data?
     var thumb: UIImage?
+    /// 사진 설명(선택, 200자)
+    var caption = ""
+    /// 서버에 저장된 설명 — 바뀐 것만 보낸다
+    var savedCaption = ""
     /// 올리다 실패
     var failed = false
 
-    static func == (a: ComposePhoto, b: ComposePhoto) -> Bool { a.id == b.id && a.remote == b.remote && a.failed == b.failed && a.jpeg == b.jpeg }
+    static func == (a: ComposePhoto, b: ComposePhoto) -> Bool { a.id == b.id && a.remote == b.remote && a.failed == b.failed && a.jpeg == b.jpeg && a.caption == b.caption }
 }
 
 struct PostComposeView: View {
@@ -279,6 +321,9 @@ struct PostComposeView: View {
     @State private var progress: (done: Int, total: Int)?
     @State private var errorMessage: String?
     @State private var importing = false
+    @State private var confirmClose = false
+    /// 임시 저장으로 닫는 중(공개 범위를 나만 보기로 두고 저장)
+    @State private var savingDraft = false
 
     private let maxPhotos = 10
 
@@ -289,8 +334,21 @@ struct PostComposeView: View {
         _bodyText = State(initialValue: existing?.body ?? "")
         _isPublic = State(initialValue: existing?.isPublic ?? true)
         _postId = State(initialValue: existing?.id)
-        _photos = State(initialValue: (existing?.photos ?? []).map { ComposePhoto(id: $0.id, remote: $0) })
+        _photos = State(initialValue: (existing?.photos ?? []).map {
+            ComposePhoto(id: $0.id, remote: $0, caption: $0.caption ?? "", savedCaption: $0.caption ?? "")
+        })
     }
+
+    /// 처음 연 때와 달라진 게 있는지 — 닫을 때 물어볼지
+    private var dirty: Bool {
+        if title != (existing?.title ?? "") || bodyText != (existing?.body ?? "") { return true }
+        if !removedRemoteIds.isEmpty || photos.contains(where: { $0.remote == nil || $0.caption != $0.savedCaption }) { return true }
+        if let existing, photos.map(\.id) != existing.photos.map(\.id) { return true }
+        return false
+    }
+
+    /// 이미 공개된 글을 고치는 중인지(임시 저장 대신 '저장하고 닫기')
+    private var editingPublic: Bool { existing?.isPublic ?? false }
 
     private var isEmpty: Bool {
         photos.isEmpty && title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && bodyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -310,15 +368,19 @@ struct PostComposeView: View {
                 } header: {
                     Text("사진")
                 } footer: {
-                    Text("첫 사진이 목록에 보여요. 화살표로 순서를 바꿔요. 사진 속 촬영 위치 같은 정보는 올리기 전에 지워져요.")
+                    Text("첫 사진이 대표 사진이에요 — 목록과 공유 미리보기에 보여요. 화살표로 순서를 바꿔요. 사진 속 촬영 위치 같은 정보는 올리기 전에 지워져요.")
                 }
 
-                Section("글 (선택)") {
+                Section {
                     TextField("제목", text: $title)
                         .accessibilityIdentifier("postTitle")
                     TextField("내용", text: $bodyText, axis: .vertical)
                         .lineLimit(4...12)
                         .accessibilityIdentifier("postBody")
+                } header: {
+                    Text("글 (선택)")
+                } footer: {
+                    Text(verbatim: "## 소제목 · **굵게** · - 목록 · > 인용 · [글자](주소). 주소는 그대로 붙여도 링크가 돼요.")
                 }
 
                 Section {
@@ -363,8 +425,11 @@ struct PostComposeView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("취소") { dismiss() }
-                        .disabled(saving)
+                    Button("취소") {
+                        if dirty && !isEmpty { confirmClose = true } else { dismiss() }
+                    }
+                    .disabled(saving)
+                    .accessibilityIdentifier("closeCompose")
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     if saving {
@@ -376,7 +441,20 @@ struct PostComposeView: View {
                     }
                 }
             }
-            .interactiveDismissDisabled(saving)
+            // 쓴 게 있으면 쓸어내려 닫지 못하게 하고 '취소'에서 물어본다(쓴 글이 날아가지 않게)
+            .interactiveDismissDisabled(saving || (dirty && !isEmpty))
+            .confirmationDialog(editingPublic ? "고친 내용을 저장할까요?" : "임시 저장할까요?", isPresented: $confirmClose, titleVisibility: .visible) {
+                if editingPublic {
+                    Button("저장하고 닫기") { Task { await save() } }
+                } else {
+                    Button("나만 보기로 임시 저장") { Task { await save(asDraft: true) } }
+                        .accessibilityIdentifier("saveDraft")
+                }
+                Button(editingPublic ? "고친 내용 버리기" : "버리기", role: .destructive) { dismiss() }
+                Button("계속 쓰기", role: .cancel) {}
+            } message: {
+                Text(editingPublic ? "저장하지 않으면 고친 내용이 사라져요." : "나만 보기로 저장해 두면 내 목록에서 이어 쓸 수 있어요.")
+            }
             .onChange(of: pickerItems) { _, items in
                 guard !items.isEmpty else { return }
                 Task { await importPicked(items) }
@@ -400,7 +478,7 @@ struct PostComposeView: View {
                                 .frame(width: 132, height: 132)
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
                                 .overlay(alignment: .topLeading) {
-                                    Text("\(index + 1)")
+                                    Text(index == 0 ? "대표" : "\(index + 1)")
                                         .font(.caption2.weight(.bold))
                                         .foregroundStyle(.white)
                                         .padding(.horizontal, 6).padding(.vertical, 2)
@@ -432,6 +510,17 @@ struct PostComposeView: View {
                             }
                             .buttonStyle(.borderless)
                             .font(.footnote.weight(.semibold))
+                            TextField("설명 (선택)", text: Binding(
+                                get: { photos.indices.contains(index) ? photos[index].caption : "" },
+                                set: { v in if photos.indices.contains(index) { photos[index].caption = String(v.prefix(200)) } }
+                            ))
+                            .font(.caption)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 132)
+                            .frame(minHeight: 44)
+                            .disabled(saving)
+                            .accessibilityLabel("사진 \(index + 1) 설명")
+                            .accessibilityIdentifier("photoCaption")
                         }
                     }
                     if importing {
@@ -489,8 +578,9 @@ struct PostComposeView: View {
 
     /// 저장: (새 글이면 나만 보기로 먼저 만들기) → 뺀 사진 지우기 → 새 사진 올리기 → 순서 → 글·공개 범위.
     /// 사진 하나라도 못 올리면 거기서 멈추고 '다시 올리기'로 이어서 한다(올라간 사진은 다시 안 올림).
-    private func save() async {
+    private func save(asDraft: Bool = false) async {
         guard !saving, !isEmpty else { return }
+        if asDraft { isPublic = false }
         saving = true
         errorMessage = nil
         defer { saving = false; progress = nil }
@@ -529,6 +619,14 @@ struct PostComposeView: View {
                     return
                 }
             }
+            for i in photos.indices {
+                guard let rid = photos[i].remote?.id else { continue }
+                let want = photos[i].caption.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard want != photos[i].savedCaption else { continue }
+                let r: PostCaptionResponse = try await api.patch("/api/v1/posts/\(id)/photos/\(rid)", body: PostCaptionRequest(caption: want.isEmpty ? nil : want))
+                photos[i].savedCaption = r.caption ?? ""
+                photos[i].caption = r.caption ?? ""
+            }
             let order = photos.compactMap { $0.remote?.id }
             if order.count > 1 {
                 let _: PostResponse = try await api.put("/api/v1/posts/\(id)/photos", body: PostOrderRequest(order: order))
@@ -560,6 +658,8 @@ struct PostComposeView: View {
             }
         }
         if let t = ProcessInfo.processInfo.environment["DEMO_POST_TITLE"] { title = t }
+        if let b = ProcessInfo.processInfo.environment["DEMO_POST_BODY"] { bodyText = b.replacingOccurrences(of: "\\n", with: "\n") }
+        if let c = ProcessInfo.processInfo.environment["DEMO_POST_CAPTION"], !photos.isEmpty { photos[0].caption = c }
     }
     #endif
 }
@@ -581,6 +681,7 @@ struct PostDetailView: View {
     @State private var confirmBlock = false
     @State private var notice: String?
     @State private var bookingURL: IdentifiableURL?
+    @State private var working = false
 
     var body: some View {
         ZStack {
@@ -605,6 +706,16 @@ struct PostDetailView: View {
                     Menu {
                         if post.mine {
                             Button { editing = true } label: { Label("고치기", systemImage: "pencil") }
+                            if !post.hidden {
+                                Button { Task { await setPublic(!post.isPublic) } } label: {
+                                    Label(post.isPublic ? "나만 보기로 바꾸기" : "전체 공개로 바꾸기", systemImage: post.isPublic ? "lock" : "globe")
+                                }
+                                if post.isPublic || post.isPinned {
+                                    Button { Task { await setPinned(!post.isPinned) } } label: {
+                                        Label(post.isPinned ? "링크 페이지 고정 풀기" : "링크 페이지 맨 위에 고정", systemImage: post.isPinned ? "pin.slash" : "pin")
+                                    }
+                                }
+                            }
                             Button(role: .destructive) { confirmDelete = true } label: { Label("삭제", systemImage: "trash") }
                         } else {
                             Button(role: .destructive) { reporting = true } label: { Label("신고하기", systemImage: "exclamationmark.bubble") }
@@ -687,7 +798,13 @@ struct PostDetailView: View {
                                 .background(Theme.surface, in: Capsule())
                         }
                         Spacer(minLength: 0)
-                        Text(Self.dateText(post.createdAt))
+                        Text(Self.dateText(post.publishedAt ?? post.createdAt) + (post.editedAt != nil ? " · 수정됨" : ""))
+                            .font(.caption)
+                            .foregroundStyle(Theme.secondaryText)
+                            .accessibilityIdentifier("postDate")
+                    }
+                    if post.isPinned {
+                        Label("링크 페이지 맨 위에 고정한 글", systemImage: "pin.fill")
                             .font(.caption)
                             .foregroundStyle(Theme.secondaryText)
                     }
@@ -697,10 +814,8 @@ struct PostDetailView: View {
                             .foregroundStyle(Theme.primaryText)
                     }
                     if !post.body.isEmpty {
-                        Text(post.body)
-                            .font(.body)
-                            .foregroundStyle(Theme.primaryText.opacity(0.9))
-                            .textSelection(.enabled)
+                        PostBodyView(text: post.body)
+                            .accessibilityIdentifier("postBodyView")
                     }
                     HStack(spacing: 12) {
                         Button {
@@ -722,9 +837,26 @@ struct PostDetailView: View {
                         .disabled(liking || (post.mine && !post.isPublic))
                         .accessibilityLabel(post.liked ? "하트 취소" : "하트")
                         .accessibilityIdentifier("postLike")
+                        if post.isPublic && !post.hidden, let url = post.url.flatMap(URL.init(string:)) {
+                            ShareLink(item: url, subject: Text(post.title.isEmpty ? "\(post.author.preferredName)님의 글" : post.title)) {
+                                Label("공유", systemImage: "square.and.arrow.up")
+                                    .font(.body.weight(.medium))
+                                    .foregroundStyle(Theme.primaryText)
+                                    .padding(.horizontal, 14)
+                                    .frame(minHeight: 44)
+                                    .background(Theme.surface, in: Capsule())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("postShare")
+                        }
                         Spacer(minLength: 0)
                     }
                     .padding(.top, 4)
+                    if post.isPublic && !post.hidden && post.shareable == false {
+                        Text("공개 전이라 다른 사람에게는 아직 안 열려요.")
+                            .font(.caption)
+                            .foregroundStyle(Theme.secondaryText)
+                    }
                     if !post.mine, let url = post.bookingUrl.flatMap(URL.init(string:)) {
                         Button {
                             bookingURL = IdentifiableURL(url: url)
@@ -765,12 +897,21 @@ struct PostDetailView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Color.black.opacity(0.04))
                     .tag(index)
-                    .accessibilityLabel("사진 \(index + 1) / \(post.photos.count)")
+                    .accessibilityLabel(photo.caption.flatMap { $0.isEmpty ? nil : $0 } ?? "사진 \(index + 1) / \(post.photos.count)")
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .aspectRatio(clamped, contentMode: .fit)
             .accessibilityIdentifier("photoPager")
+            if post.photos.indices.contains(page), let cap = post.photos[page].caption, !cap.isEmpty {
+                Text(cap)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.secondaryText)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 16)
+                    .accessibilityIdentifier("photoCaptionText")
+            }
             if post.photos.count > 1 {
                 HStack(spacing: 6) {
                     ForEach(0..<post.photos.count, id: \.self) { i in
@@ -794,6 +935,36 @@ struct PostDetailView: View {
             errorMessage = "글을 찾을 수 없어요. 지워졌거나 나만 보기로 바뀌었을 수 있어요."
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    private func setPublic(_ on: Bool) async {
+        guard !working else { return }
+        working = true
+        defer { working = false }
+        do {
+            let _: PostResponse = try await APIClient.shared.patch("/api/v1/posts/\(postId)", body: PostPublicRequest(public: on))
+            await load()
+            PostsStore.shared.bump()
+            onChanged()
+        } catch {
+            notice = error.localizedDescription
+        }
+    }
+
+    private func setPinned(_ on: Bool) async {
+        guard !working else { return }
+        working = true
+        defer { working = false }
+        do {
+            let _: PostPinResponse = on
+                ? try await APIClient.shared.put("/api/v1/posts/\(postId)/pin", body: PostEmptyBody())
+                : try await APIClient.shared.delete("/api/v1/posts/\(postId)/pin")
+            await load()
+            PostsStore.shared.bump()
+            onChanged()
+        } catch {
+            notice = error.localizedDescription
         }
     }
 

@@ -9,6 +9,8 @@ struct PostPhoto: Decodable, Identifiable, Hashable, Sendable {
     let width: Int
     let height: Int
     let position: Int
+    /// 사진 설명(선택, 200자)
+    var caption: String?
 }
 
 struct PostAuthor: Decodable, Hashable, Sendable {
@@ -39,10 +41,24 @@ struct Post: Decodable, Identifiable, Hashable, Sendable {
     let mine: Bool
     let createdAt: String
     let updatedAt: String
+    /// 처음 공개한 시각 — 한 번도 공개 안 한 임시 저장 글은 nil
+    let publishedAt: String?
+    /// "수정됨" 기준(처음 공개 10분 뒤 고친 시각)
+    let editedAt: String?
+    /// 링크 페이지 맨 위 고정 글
+    let pinned: Bool?
+    let slug: String?
+    /// 공유 주소
+    let url: String?
+    /// 지금 남이 이 주소를 열 수 있는지(공개 스위치 켜짐 + 공개) — 아니면 "공개 전" 안내
+    let shareable: Bool?
     /// 상세에서만 — 예약하기 버튼 주소
     let bookingUrl: String?
 
     var isPublic: Bool { visibility == "public" }
+    var isPinned: Bool { pinned ?? false }
+    /// 한 번도 공개하지 않은 임시 저장 글
+    var isDraft: Bool { !isPublic && publishedAt == nil }
 }
 
 struct PostsListResponse: Decodable, Sendable {
@@ -86,3 +102,22 @@ struct PostReportRequest: Encodable {
 }
 
 struct PostEmptyBody: Encodable {}
+
+struct PostCaptionRequest: Encodable {
+    let caption: String?
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(caption, forKey: .caption) // nil 이면 null 로 보내 지운다
+    }
+    enum CodingKeys: String, CodingKey { case caption }
+}
+
+struct PostCaptionResponse: Decodable, Sendable {
+    let ok: Bool
+    let caption: String?
+}
+
+struct PostPinResponse: Decodable, Sendable {
+    let ok: Bool
+    let pinnedPostId: String?
+}
