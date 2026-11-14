@@ -1,6 +1,7 @@
 import { google, type people_v1 } from "googleapis";
 import { Readable } from "node:stream";
 import { getAdminClient } from "@/lib/supabase";
+import { logCardsError } from "@/lib/cards-log";
 import { getOAuth2Client, revokeGoogleToken, deleteExtraGoogleAccount } from "@/lib/google";
 import {
   type CardFields,
@@ -57,7 +58,7 @@ export async function saveCardTokens(userId: string, tokens: Tokens) {
     const about = await google.drive({ version: "v3", auth }).about.get({ fields: "user(emailAddress)" });
     email = about.data.user?.emailAddress ?? null;
   } catch (e) {
-    console.error("cards about", e);
+    logCardsError("about", e);
   }
   const db = getAdminClient();
   const { data: prev } = await db.from("card_google_tokens").select("refresh_token, email").eq("user_id", userId).maybeSingle();
@@ -147,7 +148,7 @@ async function connect(userId: string): Promise<Conn> {
         updated_at: new Date().toISOString(),
       })
       .eq("user_id", userId)
-      .then(({ error }) => error && console.error("cards token persist", error));
+      .then(({ error }) => error && logCardsError("token persist", { name: "DbError", code: error.code }));
   });
   return { auth, people: google.people({ version: "v1", auth }), row: data };
 }

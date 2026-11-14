@@ -3,6 +3,7 @@ import { getAdminClient } from "@/lib/supabase";
 import { cardsOpenFor } from "@/lib/cards-access";
 import { CardsNotConnected } from "@/lib/cards-google";
 import type { CardFields } from "@/lib/cards-match";
+import { logCardsError } from "@/lib/cards-log";
 
 /** 앱(Bearer) 요청의 사용자 — 허용 목록이 아니면 404(기능이 있다는 것도 안 보이게) */
 export async function cardsMe(request: Request): Promise<{ id: string; username: string } | { res: Response }> {
@@ -16,8 +17,8 @@ export async function cardsMe(request: Request): Promise<{ id: string; username:
 export function cardsError(e: unknown): Response {
   if (e instanceof CardsNotConnected)
     return Response.json({ error: "구글 연락처 연결이 필요해요.", code: "not_connected" }, { status: 409 });
-  console.error("cards", e);
-  const status = Number((e as { code?: number })?.code);
+  logCardsError("api", e);
+  const status = Number((e as { response?: { status?: number } })?.response?.status);
   if (status === 429) return Response.json({ error: "구글이 잠시 바빠요. 조금 뒤에 다시 해 주세요." }, { status: 503 });
   return Response.json({ error: "구글 연락처에 연결하지 못했어요. 잠시 뒤 다시 해 주세요." }, { status: 502 });
 }

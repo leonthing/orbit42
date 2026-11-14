@@ -6,6 +6,7 @@ import { getAdminClient } from "@/lib/supabase";
 import { exchangeCode } from "@/lib/google";
 import { cardsOpenFor } from "@/lib/cards-access";
 import { checkCardScopes, saveCardTokens } from "@/lib/cards-google";
+import { logCardsError } from "@/lib/cards-log";
 
 /**
  * 명함용 구글 권한 콜백. 사용자는 state 의 단일목적 토큰(purpose=cards-connect, 10분)으로 정한다.
@@ -55,7 +56,7 @@ export async function handleCardsCallback(
     await saveCardTokens(user.id as string, tokens);
     return done("connected");
   } catch (e) {
-    console.error("cards callback", e);
+    logCardsError("callback", e);
     return done("error", "exchange_failed");
   }
 }
