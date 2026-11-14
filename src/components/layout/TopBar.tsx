@@ -14,7 +14,10 @@ export function TopBar({
   avatarUrl = null,
   unreadNotifications = 0,
   unreadMessages = 0,
+  postsOpen = false,
 }: {
+  /** 글·사진(1.10.0)을 쓸 수 있는 계정 — 내 /blog 머리 제목을 앱과 같게 '글·사진'으로 */
+  postsOpen?: boolean;
   username: string;
   displayName: string;
   avatarUrl?: string | null;
@@ -25,7 +28,7 @@ export function TopBar({
   const pathname = usePathname();
   const [showMenu, setShowMenu] = useState(false);
   const { toggle } = useMobileMenu();
-  const mobileTitle = titleFor(pathname, username);
+  const mobileTitle = titleFor(pathname, username, postsOpen);
   const onProfile = pathname === `/${username}`;
 
   const handleLogout = async () => {
@@ -134,9 +137,11 @@ export function TopBar({
 }
 
 /** 모바일 상단 가운데 제목 — iOS 각 탭의 내비게이션 제목과 같게 */
-function titleFor(pathname: string, username: string): string {
+function titleFor(pathname: string, username: string, postsOpen = false): string {
   const base = `/${username}`;
   const map: Array<[string, string]> = [
+    [`${base}/blog/photo`, "글·사진"],
+    ...(postsOpen ? ([[`${base}/blog`, "글·사진"]] as Array<[string, string]>) : []),
     [`${base}/calendar`, "캘린더"],
     [`${base}/slots`, "예약"],
     [`${base}/bookings`, "예약"],

@@ -172,7 +172,7 @@ export function PhotoPostEditor({ username, initial }: { username: string; initi
   };
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-6">
+    <div className="mx-auto w-full max-w-2xl space-y-6 max-md:pb-[var(--mobile-nav-pb)]">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-xl font-bold text-charcoal-50">{initial ? "글 고치기" : "새 글"}</h1>
         <div className="flex items-center gap-2">
@@ -212,7 +212,7 @@ export function PhotoPostEditor({ username, initial }: { username: string; initi
           <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(e) => pick(e.target.files)} data-testid="photoInput" />
         </div>
         {(items.length > 0 || importing) && (
-          <ul className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
             {items.map((it, i) => (
               <li
                 key={it.key}
@@ -235,13 +235,13 @@ export function PhotoPostEditor({ username, initial }: { username: string; initi
                   {it.failed && <span className="absolute inset-x-0 bottom-0 bg-red-600/80 py-0.5 text-center text-2xs text-white">못 올림</span>}
                 </div>
                 <div className="flex justify-between">
-                  <button type="button" aria-label="앞으로" onClick={() => move(i, i - 1)} disabled={i === 0 || saving} className="flex h-11 w-11 items-center justify-center rounded text-charcoal-300 hover:text-charcoal-50 disabled:opacity-30">
+                  <button type="button" aria-label="앞으로" onClick={() => move(i, i - 1)} disabled={i === 0 || saving} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-lg text-charcoal-300 hover:text-charcoal-50 disabled:opacity-30">
                     ‹
                   </button>
-                  <button type="button" aria-label="사진 빼기" onClick={() => remove(i)} disabled={saving} className="flex h-11 w-11 items-center justify-center rounded text-red-400 hover:text-red-300 disabled:opacity-30">
+                  <button type="button" aria-label="사진 빼기" onClick={() => remove(i)} disabled={saving} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-lg text-red-400 hover:text-red-300 disabled:opacity-30">
                     ×
                   </button>
-                  <button type="button" aria-label="뒤로" onClick={() => move(i, i + 1)} disabled={i === items.length - 1 || saving} className="flex h-11 w-11 items-center justify-center rounded text-charcoal-300 hover:text-charcoal-50 disabled:opacity-30">
+                  <button type="button" aria-label="뒤로" onClick={() => move(i, i + 1)} disabled={i === items.length - 1 || saving} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-lg text-charcoal-300 hover:text-charcoal-50 disabled:opacity-30">
                     ›
                   </button>
                 </div>

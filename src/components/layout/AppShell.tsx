@@ -52,6 +52,7 @@ export async function AppShell({
         <div className="flex flex-1 flex-col overflow-hidden">
           <TopBar
             username={viewerUsername}
+            postsOpen={(await import("@/lib/posts-access")).postsOpenFor(viewerId)}
             displayName={viewerDisplayName}
             avatarUrl={viewerAvatarUrl}
             unreadNotifications={unreadNotifications}
