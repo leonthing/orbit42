@@ -112,4 +112,48 @@ final class PostsBasicsUITests: XCTestCase {
         XCTAssertTrue(draftTile.waitForExistence(timeout: 10), "임시 저장 표시 없음")
         shot(app, "b-8-list-draft")
     }
+
+    /// 임시 저장 글을 다시 열어 고친 뒤 또 임시 저장 — 행이 늘지 않아야 한다(행 수는 시험 뒤 DB 로 확인)
+    func test5_ReopenDraftNoNewRow() throws {
+        XCUIDevice.shared.appearance = .light
+        let app = launch(token: try XCTUnwrap(env["POSTS_A"]), extra: ["DEMO_POST_PHOTOS": "1", "DEMO_POST_TITLE": "다시 여는 글"])
+        openOwnPosts(app)
+        app.buttons["newPost"].tap()
+        XCTAssertTrue(app.buttons["closeCompose"].waitForExistence(timeout: 10))
+        sleep(2)
+        app.buttons["closeCompose"].tap()
+        app.buttons["나만 보기로 임시 저장"].firstMatch.tap()
+        let draftTile = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "다시 여는 글")).firstMatch
+        XCTAssertTrue(draftTile.waitForExistence(timeout: 60))
+        for round in 1...2 {
+            sleep(3)
+            draftTile.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+            XCTAssertTrue(app.buttons["postMenu"].waitForExistence(timeout: 20))
+            app.buttons["postMenu"].tap()
+            app.buttons["고치기"].firstMatch.tap()
+            let title = app.textFields["postTitle"]
+            XCTAssertTrue(title.waitForExistence(timeout: 10))
+            title.tap(); title.typeText(" \(round)")
+            app.buttons["closeCompose"].tap()
+            let again = app.buttons["나만 보기로 임시 저장"].firstMatch
+            XCTAssertTrue(again.waitForExistence(timeout: 5), "다시 연 임시 저장 글에서 묻기 없음")
+            again.tap()
+            sleep(3)
+            app.navigationBars.buttons.firstMatch.tap() // 상세 → 목록
+            XCTAssertTrue(draftTile.waitForExistence(timeout: 30))
+        }
+        shot(app, "b-9-reopen-draft")
+        // 길게 눌러 삭제(확인 한 번)
+        sleep(2)
+        draftTile.press(forDuration: 1.2)
+        let del = app.buttons["삭제"].firstMatch
+        XCTAssertTrue(del.waitForExistence(timeout: 5), "길게 누르기 메뉴에 삭제 없음")
+        shot(app, "b-10-longpress-menu")
+        del.tap()
+        let confirm = app.buttons.matching(NSPredicate(format: "label == %@", "삭제")).firstMatch
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5), "삭제 확인 없음")
+        shot(app, "b-11-delete-confirm")
+        confirm.tap()
+        XCTAssertTrue(draftTile.waitForNonExistence(timeout: 20), "지운 글이 목록에 남음")
+    }
 }
