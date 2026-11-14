@@ -54,11 +54,19 @@ export async function GET(request: NextRequest) {
   } catch (err) {
     console.error("cleanupBookingEvents", err);
   }
+  // 앱 글·사진(1.10.0): 사진을 다 올리지 못하고 떠나 하루 넘게 비어 있는 글과 그 폴더
+  let emptyPosts = 0;
+  try {
+    const { cleanupEmptyAppPosts } = await import("@/lib/posts");
+    emptyPosts = await cleanupEmptyAppPosts();
+  } catch (err) {
+    console.error("cleanupEmptyAppPosts", err);
+  }
   if (!tokensOk) {
     return NextResponse.json(
       { error: "failed", rescheduleExpired: expired, unpaidExpired },
       { status: 500 },
     );
   }
-  return NextResponse.json({ ok: true, rescheduleExpired: expired, unpaidExpired, chats, dm, bookingEvents });
+  return NextResponse.json({ ok: true, rescheduleExpired: expired, unpaidExpired, chats, dm, bookingEvents, emptyPosts });
 }

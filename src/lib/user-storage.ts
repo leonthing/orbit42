@@ -8,6 +8,7 @@
  *   slot-media/<uid>/         예약 링크 사진 (lib/slot-media.ts, slots/[id]/images)
  *   slot-media/timelog/<uid>/ 시간 로그 사진 (lib/event-posts.ts)
  *   slot-media/share/<uid>/   공유 이미지 (me/share-image)
+ *   post-photos/<uid>/<postId>/ 글 사진 (lib/posts.ts, 1.10.0) — 두 단계라 하위 폴더까지 돈다
  *
  * 실패해도 던지지 않는다 — 탈퇴는 끝나야 하므로, 실패한 폴더만 로그에 남긴다.
  */
@@ -25,6 +26,7 @@ export function userStorageFolders(userId: string): Array<[bucket: string, prefi
     ["slot-media", userId],
     ["slot-media", `timelog/${userId}`],
     ["slot-media", `share/${userId}`],
+    ["post-photos", userId],
   ];
 }
 
@@ -36,21 +38,30 @@ export async function deleteUserStorage(userId: string): Promise<{ removed: numb
   const db = getAdminClient();
   for (const [bucket, prefix] of userStorageFolders(userId)) {
     try {
-      // 업로드는 모두 폴더 바로 아래 파일 하나 깊이 — 하위 폴더는 없다.
-      for (;;) {
-        const { data, error } = await db.storage.from(bucket).list(prefix, { limit: PAGE });
-        if (error) throw error;
-        const keys = (data ?? []).filter((o) => o.id).map((o) => `${prefix}/${o.name}`);
-        if (keys.length === 0) break;
-        const { error: rmErr } = await db.storage.from(bucket).remove(keys);
-        if (rmErr) throw rmErr;
-        removed += keys.length;
-        if (keys.length < PAGE) break;
-      }
+      removed += await removeTree(db, bucket, prefix, 0);
     } catch (e) {
       failed.push(`${bucket}/${prefix}`);
       console.error("delete user storage", bucket, prefix, e);
     }
   }
   return { removed, failed };
+}
+
+/** prefix 아래 파일을 지우고 하위 폴더(id 없는 항목)는 한 단계씩 내려가 지운다(최대 3단계) */
+async function removeTree(db: ReturnType<typeof getAdminClient>, bucket: string, prefix: string, depth: number): Promise<number> {
+  let removed = 0;
+  const folders = new Set<string>();
+  for (;;) {
+    const { data, error } = await db.storage.from(bucket).list(prefix, { limit: PAGE });
+    if (error) throw error;
+    for (const o of data ?? []) if (!o.id) folders.add(`${prefix}/${o.name}`);
+    const keys = (data ?? []).filter((o) => o.id).map((o) => `${prefix}/${o.name}`);
+    if (keys.length === 0) break;
+    const { error: rmErr } = await db.storage.from(bucket).remove(keys);
+    if (rmErr) throw rmErr;
+    removed += keys.length;
+    if (keys.length < PAGE) break;
+  }
+  if (depth < 3) for (const f of Array.from(folders)) removed += await removeTree(db, bucket, f, depth + 1);
+  return removed;
 }

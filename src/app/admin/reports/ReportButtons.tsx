@@ -7,7 +7,7 @@ import { handleReport } from "@/lib/admin-actions";
 const LABEL = { block: "차단", hide: "숨김", ignore: "무시" } as const;
 const CONFIRM = {
   block: "신고한 사람 쪽에서 상대를 차단할까요? 대화·예약이 막히고 팔로우가 풀려요.",
-  hide: "신고된 메시지를 지울까요? 양쪽 화면에서 사라지고 신고 사본만 남아요.",
+  hide: "신고된 메시지를 지우거나 글을 숨길까요? 다른 사람 화면에서 사라지고 신고 사본만 남아요.",
   ignore: "조치 없이 처리 완료로 둘까요?",
 } as const;
 

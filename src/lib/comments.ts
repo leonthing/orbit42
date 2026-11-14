@@ -155,6 +155,7 @@ export async function addComment(
       const { data: p } = await db
         .from("blog_posts")
         .select("user_id, slug")
+        .eq("origin", "web") // 앱 글·사진(1.10.0 시험)은 웹 블로그 경로에 내보내지 않는다
         .eq("id", targetId)
         .maybeSingle();
       postAuthorId = (p?.user_id as string | undefined) ?? null;

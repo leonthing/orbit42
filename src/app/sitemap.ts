@@ -29,6 +29,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .select(
         "slug, published_at, user:users!blog_posts_user_id_fkey(username)",
       )
+      .eq("origin", "web") // 앱 글·사진(1.10.0 시험)은 웹 블로그 경로에 내보내지 않는다
       .eq("published", true)
       .limit(5000),
   ]);

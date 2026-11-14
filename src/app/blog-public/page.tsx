@@ -13,6 +13,7 @@ async function getBloggers() {
   const { data: posts } = await db
     .from("blog_posts")
     .select("user_id")
+    .eq("origin", "web") // 앱 글·사진(1.10.0 시험)은 웹 블로그 경로에 내보내지 않는다
     .eq("published", true);
 
   if (!posts || posts.length === 0) return [];

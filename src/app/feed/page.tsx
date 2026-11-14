@@ -119,6 +119,7 @@ export default async function FeedPage() {
     db
       .from("blog_posts")
       .select("id, slug, title, excerpt, cover_image, published_at, user_id")
+      .eq("origin", "web") // 앱 글·사진(1.10.0 시험)은 웹 블로그 경로에 내보내지 않는다
       .eq("published", true)
       .in("user_id", authorIds)
       .gte("published_at", recentSince.toISOString())

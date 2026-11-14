@@ -40,6 +40,7 @@ export async function getBlogPosts() {
   const { data, error } = await db
     .from("blog_posts")
     .select("*")
+    .eq("origin", "web") // 앱 글·사진(1.10.0 시험)은 웹 블로그 경로에 내보내지 않는다
     .eq("user_id", userId)
     .order("updated_at", { ascending: false });
 
@@ -59,6 +60,7 @@ export async function getPublicPostsByUsername(username: string) {
   const { data } = await db
     .from("blog_posts")
     .select("*")
+    .eq("origin", "web") // 앱 글·사진(1.10.0 시험)은 웹 블로그 경로에 내보내지 않는다
     .eq("user_id", user.id)
     .eq("published", true)
     .order("published_at", { ascending: false });
@@ -89,6 +91,7 @@ export async function getPublicPostBySlug(username: string, slug: string) {
   let q = db
     .from("blog_posts")
     .select("*")
+    .eq("origin", "web") // 앱 글·사진(1.10.0 시험)은 웹 블로그 경로에 내보내지 않는다
     .eq("user_id", user.id)
     .eq("slug", decoded);
   if (!isOwner) q = q.eq("published", true);
@@ -111,6 +114,7 @@ export async function getBlogPost(id: string) {
   const { data, error } = await db
     .from("blog_posts")
     .select("*")
+    .eq("origin", "web") // 앱 글·사진(1.10.0 시험)은 웹 블로그 경로에 내보내지 않는다
     .eq("id", id)
     .eq("user_id", userId)
     .single();
@@ -185,6 +189,7 @@ export async function updateBlogPost(
     const { data: current } = await db
       .from("blog_posts")
       .select("slug")
+      .eq("origin", "web") // 앱 글·사진(1.10.0 시험)은 웹 블로그 경로에 내보내지 않는다
       .eq("id", id)
       .eq("user_id", userId)
       .single();
@@ -196,6 +201,7 @@ export async function updateBlogPost(
   const { data: post, error } = await db
     .from("blog_posts")
     .update({ ...data, updated_at: new Date().toISOString() })
+    .eq("origin", "web") // 앱 글·사진(1.10.0 시험)은 웹 블로그 경로에 내보내지 않는다
     .eq("id", id)
     .eq("user_id", userId)
     .select()
@@ -229,6 +235,7 @@ export async function publishBlogPost(id: string) {
   const { data: post, error } = await db
     .from("blog_posts")
     .update({ published: true, published_at: now, updated_at: now })
+    .eq("origin", "web") // 앱 글·사진(1.10.0 시험)은 웹 블로그 경로에 내보내지 않는다
     .eq("id", id)
     .eq("user_id", userId)
     .select()
@@ -245,6 +252,7 @@ export async function unpublishBlogPost(id: string) {
   const { data: post, error } = await db
     .from("blog_posts")
     .update({ published: false, updated_at: new Date().toISOString() })
+    .eq("origin", "web") // 앱 글·사진(1.10.0 시험)은 웹 블로그 경로에 내보내지 않는다
     .eq("id", id)
     .eq("user_id", userId)
     .select()
@@ -271,6 +279,7 @@ export async function saveSocialTexts(
   const { error } = await db
     .from("blog_posts")
     .update(patch)
+    .eq("origin", "web") // 앱 글·사진(1.10.0 시험)은 웹 블로그 경로에 내보내지 않는다
     .eq("id", id)
     .eq("user_id", userId);
 
@@ -284,6 +293,7 @@ export async function deleteBlogPost(id: string) {
   const { error } = await db
     .from("blog_posts")
     .delete()
+    .eq("origin", "web") // 앱 글·사진(1.10.0 시험)은 웹 블로그 경로에 내보내지 않는다
     .eq("id", id)
     .eq("user_id", userId);
 

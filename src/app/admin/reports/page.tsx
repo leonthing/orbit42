@@ -67,7 +67,7 @@ export default async function AdminReportsPage() {
                     <div className="space-y-1 text-xs text-charcoal-400">
                       <p>
                         <span className="mr-2 rounded bg-charcoal-800/60 px-1.5 py-0.5 text-2xs text-charcoal-300">
-                          {r.kind === "dm" ? "1:1 대화" : "예약 대화"}
+                          {r.kind === "post" ? "글·사진" : r.kind === "dm" ? "1:1 대화" : "예약 대화"}
                         </span>
                         {kst(r.createdAt)} 접수{!r.handledAt && <span className={late ? "text-red-400" : ""}> · {hours}시간 지남</span>}
                       </p>
@@ -94,6 +94,15 @@ export default async function AdminReportsPage() {
                         </p>
                       );
                     })}
+                    {r.photos.length > 0 && (
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {r.photos.map((u, i) => (
+                          // 비공개 버킷 서명 주소(1시간) — 처리 전 확인용
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <a key={i} href={u} target="_blank" rel="noreferrer"><img src={u} alt="" className="h-20 w-20 rounded object-cover" /></a>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </li>
               );

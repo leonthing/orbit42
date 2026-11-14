@@ -1,5 +1,5 @@
 // 일반 서버 모듈 — 서버 액션 아님(보안-6). 클라이언트용은 admin-actions.ts
-// 운영자 신고 목록·처리(예약 대화 + 1:1 대화). 24시간 안 처리가 목표(가이드라인 1.2).
+// 운영자 신고 목록·처리(예약 대화 + 1:1 대화 + 글·사진 1.10.0). 24시간 안 처리가 목표(가이드라인 1.2).
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin";
 import { getAdminClient } from "@/lib/supabase";
@@ -11,7 +11,7 @@ export type SnapshotLine = { role: string; at: string; body: string; reported: b
 
 export type AdminReport = {
   id: string;
-  kind: "dm" | "booking";
+  kind: "dm" | "booking" | "post";
   createdAt: string;
   handledAt: string | null;
   action: ReportAction | null;
@@ -22,6 +22,8 @@ export type AdminReport = {
   /** 신고된 메시지가 아직 남아 있는지(숨김 가능 여부) */
   messageLive: boolean;
   lines: SnapshotLine[];
+  /** 글 신고: 처리 전 확인용 사진 서명 주소(1시간) — 글이 지워졌으면 비어 있음 */
+  photos: string[];
 };
 
 type Row = {
@@ -30,6 +32,8 @@ type Row = {
   message_id: string | null;
   conversation_id: string | null;
   dm_message_id: string | null;
+  post_id: string | null;
+  kind: string | null;
   reporter_role: string;
   reporter_id: string | null;
   reason: string | null;
@@ -46,7 +50,12 @@ export function parseSnapshot(raw: string | null): { reportedUserId: string | nu
   try {
     const v = JSON.parse(raw) as unknown;
     if (Array.isArray(v)) return { reportedUserId: null, lines: v as SnapshotLine[] };
-    const o = v as { reportedUserId?: string; messages?: SnapshotLine[] };
+    const o = v as { reportedUserId?: string; messages?: SnapshotLine[]; title?: string; body?: string; photoCount?: number };
+    if (!o.messages && (o.title !== undefined || o.body !== undefined)) {
+      // 글 신고 사본: {reportedUserId, title, body, photoCount}
+      const text = [o.title, o.body].filter(Boolean).join("\n") + (o.photoCount ? `\n(사진 ${o.photoCount}장)` : "");
+      return { reportedUserId: o.reportedUserId ?? null, lines: [{ role: "reported", at: "", body: text || "(빈 글)", reported: true }] };
+    }
     return { reportedUserId: o.reportedUserId ?? null, lines: o.messages ?? [] };
   } catch {
     return { reportedUserId: null, lines: [] };
@@ -65,7 +74,7 @@ export async function listReports(): Promise<AdminReport[] | null> {
   const db = getAdminClient();
   const { data } = await db
     .from("message_reports")
-    .select("id, booking_id, message_id, conversation_id, dm_message_id, reporter_role, reporter_id, reason, body_snapshot, created_at, handled_at, action, handled_by")
+    .select("id, booking_id, message_id, conversation_id, dm_message_id, post_id, kind, reporter_role, reporter_id, reason, body_snapshot, created_at, handled_at, action, handled_by")
     .order("handled_at", { ascending: true, nullsFirst: true })
     .order("created_at", { ascending: false })
     .limit(200);
@@ -73,9 +82,19 @@ export async function listReports(): Promise<AdminReport[] | null> {
   const items = await Promise.all(
     rows.map(async (r) => {
       const snap = parseSnapshot(r.body_snapshot);
-      const kind: AdminReport["kind"] = r.conversation_id ? "dm" : "booking";
-      const reportedId = kind === "dm" ? snap.reportedUserId : await reportedOfBooking(r.booking_id, r.reporter_role);
-      return { r, snap, kind, reportedId };
+      const kind: AdminReport["kind"] = r.kind === "post" ? "post" : r.conversation_id ? "dm" : "booking";
+      const reportedId = kind === "booking" ? await reportedOfBooking(r.booking_id, r.reporter_role) : snap.reportedUserId;
+      let postLive = false;
+      let photos: string[] = [];
+      if (kind === "post" && r.post_id) {
+        const { data: p } = await db.from("blog_posts").select("hidden_at").eq("id", r.post_id).maybeSingle();
+        postLive = !!p && !p.hidden_at;
+        if (p && !r.handled_at) {
+          const { adminPostPhotos } = await import("@/lib/posts");
+          photos = await adminPostPhotos(r.post_id);
+        }
+      }
+      return { r, snap, kind, reportedId, postLive, photos };
     }),
   );
   const ids = Array.from(new Set(items.flatMap((i) => [i.r.reporter_id, i.reportedId]).filter((x): x is string => !!x)));
@@ -84,7 +103,7 @@ export async function listReports(): Promise<AdminReport[] | null> {
     const { data: us } = await db.from("users").select("id, username").in("id", ids);
     for (const u of us ?? []) names.set(u.id as string, u.username as string);
   }
-  return items.map(({ r, snap, kind, reportedId }) => ({
+  return items.map(({ r, snap, kind, reportedId, postLive, photos }) => ({
     id: r.id,
     kind,
     createdAt: r.created_at,
@@ -94,8 +113,9 @@ export async function listReports(): Promise<AdminReport[] | null> {
     reason: r.reason,
     reporter: { id: r.reporter_id, username: r.reporter_id ? names.get(r.reporter_id) ?? null : null },
     reported: { id: reportedId, username: reportedId ? names.get(reportedId) ?? null : null },
-    messageLive: kind === "dm" ? !!r.dm_message_id : !!r.message_id,
-    lines: snap.lines,
+    messageLive: kind === "post" ? postLive : kind === "dm" ? !!r.dm_message_id : !!r.message_id,
+    lines: snap.lines.map((l) => (l.at ? l : { ...l, at: r.created_at })),
+    photos,
   }));
 }
 
@@ -109,7 +129,7 @@ export async function openReportCount(): Promise<number> {
 
 /**
  * 처리: block = 신고자 쪽에서 신고된 사람을 차단(앱의 차단과 같음: 대화·예약 막힘, 팔로우 양쪽 해제)
- *       hide  = 신고된 메시지를 지운다(양쪽 화면에서 사라짐, 신고 사본은 남음)
+ *       hide  = 신고된 메시지를 지운다(양쪽 화면에서 사라짐, 신고 사본은 남음) / 글은 hidden_at(작성자만 '숨겨진 글'로 봄)
  *       ignore = 조치 없이 처리 완료
  */
 export async function handleReport(id: string, action: ReportAction): Promise<{ ok: true } | { error: string }> {
@@ -119,20 +139,23 @@ export async function handleReport(id: string, action: ReportAction): Promise<{ 
   const db = getAdminClient();
   const { data } = await db
     .from("message_reports")
-    .select("id, booking_id, message_id, conversation_id, dm_message_id, reporter_role, reporter_id, body_snapshot")
+    .select("id, booking_id, message_id, conversation_id, dm_message_id, post_id, kind, reporter_role, reporter_id, body_snapshot")
     .eq("id", id)
     .maybeSingle();
   const r = data as Row | null;
   if (!r) return { error: "신고를 찾을 수 없어요." };
 
   if (action === "block") {
-    const reported = r.conversation_id ? parseSnapshot(r.body_snapshot).reportedUserId : await reportedOfBooking(r.booking_id, r.reporter_role);
+    const reported = r.conversation_id || r.kind === "post" ? parseSnapshot(r.body_snapshot).reportedUserId : await reportedOfBooking(r.booking_id, r.reporter_role);
     if (!r.reporter_id || !reported) return { error: "신고자나 신고된 사람이 이미 없어요. 무시로 처리해 주세요." };
     await db.from("user_blocks").upsert({ blocker_id: r.reporter_id, blocked_id: reported }, { onConflict: "blocker_id,blocked_id" });
     await db.from("follows").delete().match({ follower_id: r.reporter_id, following_id: reported });
     await db.from("follows").delete().match({ follower_id: reported, following_id: r.reporter_id });
   } else if (action === "hide") {
-    if (r.conversation_id && r.dm_message_id) {
+    if (r.kind === "post") {
+      if (!r.post_id) return { error: "글이 이미 지워졌어요. 무시로 처리해 주세요." };
+      await db.from("blog_posts").update({ hidden_at: new Date().toISOString() }).eq("id", r.post_id);
+    } else if (r.conversation_id && r.dm_message_id) {
       await db.from("messages").delete().eq("id", r.dm_message_id);
       // 목록 미리보기가 지운 글이면 남은 마지막 글로 바꾼다
       const { data: last } = await db

@@ -34,6 +34,7 @@ export async function getPublishedPosts(username: string) {
   const { data: posts, error } = await db
     .from("blog_posts")
     .select("id, slug, title, content, excerpt, cover_image, published_at, tags")
+    .eq("origin", "web") // 앱 글·사진(1.10.0 시험)은 웹 블로그 경로에 내보내지 않는다
     .eq("user_id", user.id)
     .eq("published", true)
     .order("published_at", { ascending: false });
@@ -61,6 +62,7 @@ export async function getPublishedPost(username: string, slug: string) {
   const { data: post, error } = await db
     .from("blog_posts")
     .select("id, slug, title, content, excerpt, cover_image, published_at, tags")
+    .eq("origin", "web") // 앱 글·사진(1.10.0 시험)은 웹 블로그 경로에 내보내지 않는다
     .eq("user_id", user.id)
     .eq("slug", decodedSlug)
     .eq("published", true)
@@ -100,6 +102,7 @@ export async function resolveRenamedSlug(username: string, slug: string) {
   const { data: post } = await db
     .from("blog_posts")
     .select("slug, published")
+    .eq("origin", "web") // 앱 글·사진(1.10.0 시험)은 웹 블로그 경로에 내보내지 않는다
     .eq("id", redirect.post_id)
     .maybeSingle();
   if (!post?.published) return null;

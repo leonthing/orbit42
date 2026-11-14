@@ -88,6 +88,7 @@ export default async function ExplorePage() {
     db
       .from("blog_posts")
       .select("user_id, published_at, user:users!blog_posts_user_id_fkey(username, display_name, bio, avatar_url, is_private)")
+      .eq("origin", "web") // 앱 글·사진(1.10.0 시험)은 웹 블로그 경로에 내보내지 않는다
       .eq("published", true)
       .gte("published_at", recentSince)
       .order("published_at", { ascending: false })
