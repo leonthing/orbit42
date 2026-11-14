@@ -9,6 +9,7 @@ import rehypeHighlight from "rehype-highlight";
 import type { BlogPost } from "../../actions";
 import {
   updateBlogPost,
+  createBlogPost,
   deleteBlogPost,
   publishBlogPost,
   unpublishBlogPost,
@@ -109,6 +110,27 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
+  /**
+   * 저장. 새 글(id 가 빈 글자 — /blog/new)은 처음 저장할 때 행을 만든다(열기만 하면 빈 글이 생기던 문제, PO 11/14).
+   * 빈 제목·본문이면 만들지 않는다.
+   */
+  const createdId = useRef("");
+  const persist = async (fields: Parameters<typeof updateBlogPost>[1]): Promise<BlogPost | null> => {
+    let id = post.id || createdId.current;
+    if (!id) {
+      if (!(fields.title ?? "").trim() && !(fields.content ?? "").trim()) return null;
+      const created = await createBlogPost({ title: (fields.title ?? "").trim() || undefined });
+      id = created.id;
+      createdId.current = id;
+      setSlug((s) => s || created.slug);
+    }
+    // 빈 슬러그는 보내지 않는다(만들 때 제목으로 지은 주소를 지우지 않게)
+    const { slug: wantSlug, ...rest } = fields;
+    const updated = await updateBlogPost(id, wantSlug ? { ...rest, slug: wantSlug } : rest);
+    if (!wantSlug) setSlug(updated.slug);
+    return updated;
+  };
+
   const parseTags = (input: string) =>
     input
       .split(",")
@@ -128,7 +150,7 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
     setSaved(false);
     saveTimerRef.current = setTimeout(() => {
       startTransition(async () => {
-        const updated = await updateBlogPost(post.id, {
+        const updated = await persist({
           title,
           content,
           slug,
@@ -136,11 +158,11 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
           cover_image: coverImage,
           tags: parseTags(tagsInput),
         });
-        setPost(updated);
+        if (updated) setPost(updated);
         setSaved(true);
       });
     }, 1500);
-  }, [post.id, title, content, slug, excerpt, coverImage, tagsInput]);
+  }, [post.id, title, content, slug, excerpt, coverImage, tagsInput]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (hasChanges) scheduleSave();
@@ -315,7 +337,7 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
   function handleSave() {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     startTransition(async () => {
-      const updated = await updateBlogPost(post.id, {
+      const updated = await persist({
         title,
         content,
         slug,
@@ -323,7 +345,7 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
         cover_image: coverImage,
         tags: parseTags(tagsInput),
       });
-      setPost(updated);
+      if (updated) setPost(updated);
       setSaved(true);
     });
   }
@@ -362,17 +384,22 @@ export default function BlogEditor({ post: initialPost }: { post: BlogPost }) {
     });
     if (!ok) return;
     startTransition(async () => {
-      await deleteBlogPost(post.id);
+      if (post.id) await deleteBlogPost(post.id);
       router.push(`/${params.username}/blog`);
     });
   }
 
   function handleTogglePublish() {
     startTransition(async () => {
-      const updated = post.published
-        ? await unpublishBlogPost(post.id)
-        : await publishBlogPost(post.id);
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      // 아직 저장 전인 새 글이면 먼저 만든다
+      const base = post.id
+        ? post
+        : await persist({ title, content, slug, excerpt: excerpt || null, cover_image: coverImage, tags: parseTags(tagsInput) });
+      if (!base) return;
+      const updated = base.published ? await unpublishBlogPost(base.id) : await publishBlogPost(base.id);
       setPost(updated);
+      setSaved(true);
     });
   }
 

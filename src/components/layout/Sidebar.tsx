@@ -137,7 +137,10 @@ export function Sidebar({
   bookingsBadge = 0,
   weekStart = "mon",
   dmOpen = false,
+  postsOpen = false,
 }: {
+  /** 글·사진(1.10.0) 통합 — '블로그' 메뉴 이름을 '글·사진'으로 */
+  postsOpen?: boolean;
   weekStart?: "mon" | "sun";
   /** 1:1 대화(1.9.0) 메뉴 — 서버가 v190Open() 으로 정해 넘긴다(기기 날짜를 보지 않게) */
   dmOpen?: boolean;
@@ -240,7 +243,7 @@ export function Sidebar({
             <NavLink
               key={item.label}
               href={href}
-              label={item.label}
+              label={postsOpen && item.href === "/blog" ? "글·사진" : item.label}
               icon={icons[item.icon]}
               active={pathname === href || pathname.startsWith(href + "/")}
               collapsed={collapsed}

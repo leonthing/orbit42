@@ -36,11 +36,14 @@ type PostRow = {
   hidden_at: string | null;
   created_at: string;
   updated_at: string;
+  published_at: string | null;
+  edited_at: string | null;
+  slug: string;
 };
-type PhotoRow = { id: string; post_id: string; position: number; storage_key: string; width: number; height: number };
-type Author = { id: string; username: string; displayName: string | null; avatarUrl: string | null };
+type PhotoRow = { id: string; post_id: string; position: number; storage_key: string; width: number; height: number; caption: string | null };
+type Author = { id: string; username: string; displayName: string | null; avatarUrl: string | null; pinnedPostId: string | null };
 
-export type ApiPhoto = { id: string; url: string | null; width: number; height: number; position: number };
+export type ApiPhoto = { id: string; url: string | null; width: number; height: number; position: number; caption: string | null };
 export type ApiPost = {
   id: string;
   author: { username: string; displayName: string | null; avatarUrl: string | null };
@@ -56,11 +59,24 @@ export type ApiPost = {
   mine: boolean;
   createdAt: string;
   updatedAt: string;
+  /** 처음 공개한 시각(한 번도 공개 안 한 임시 저장 글은 null) */
+  publishedAt: string | null;
+  /** "수정됨" — 처음 공개 10분 뒤 제목·본문·사진·설명을 바꾼 마지막 시각 */
+  editedAt: string | null;
+  /** 작성자의 링크 페이지 맨 위 고정 글인지 */
+  pinned: boolean;
+  slug: string;
+  /** 공유용 주소 */
+  url: string;
   /** 상세에서만: 예약하기 버튼 주소(공개 예약 링크가 하나면 그 링크, 여럿이면 링크 페이지, 없으면 null) */
   bookingUrl?: string | null;
 };
 
-const POST_COLS = "id, user_id, title, content, published, hidden_at, created_at, updated_at";
+const POST_COLS = "id, user_id, title, content, published, hidden_at, created_at, updated_at, published_at, edited_at, slug";
+const PHOTO_COLS = "id, post_id, position, storage_key, width, height, caption";
+export const POST_CAPTION_MAX = 200;
+/** 처음 공개하고 이만큼 지난 뒤 고치면 "수정됨" */
+const EDIT_GRACE_MS = 10 * 60_000;
 const likeTarget = (postId: string) => `app:${postId}`;
 
 function cleanText(v: unknown, max: number): string | null {
@@ -74,13 +90,14 @@ function cleanText(v: unknown, max: number): string | null {
 async function authorsOf(ids: string[]): Promise<Map<string, Author>> {
   const out = new Map<string, Author>();
   if (ids.length === 0) return out;
-  const { data } = await db().from("users").select("id, username, display_name, avatar_url").in("id", ids);
+  const { data } = await db().from("users").select("id, username, display_name, avatar_url, pinned_post_id").in("id", ids);
   for (const u of data ?? [])
     out.set(u.id as string, {
       id: u.id as string,
       username: u.username as string,
       displayName: (u.display_name as string | null) ?? null,
       avatarUrl: (u.avatar_url as string | null) ?? null,
+      pinnedPostId: (u.pinned_post_id as string | null) ?? null,
     });
   return out;
 }
@@ -101,7 +118,7 @@ async function shape(me: string | null, rows: PostRow[], photosMode: "all" | "co
   const ids = rows.map((r) => r.id);
   const [authors, photosRes, likesRes, mineRes] = await Promise.all([
     authorsOf(Array.from(new Set(rows.map((r) => r.user_id)))),
-    db().from("post_photos").select("id, post_id, position, storage_key, width, height").in("post_id", ids).order("position"),
+    db().from("post_photos").select(PHOTO_COLS).in("post_id", ids).order("position"),
     db().from("reactions").select("target_id").eq("target_type", "post").in("target_id", ids.map(likeTarget)),
     me
       ? db().from("reactions").select("target_id").eq("target_type", "post").eq("user_id", me).in("target_id", ids.map(likeTarget))
@@ -126,13 +143,18 @@ async function shape(me: string | null, rows: PostRow[], photosMode: "all" | "co
       body: r.content ?? "",
       visibility: r.published ? "public" : "private",
       hidden: !!r.hidden_at,
-      photos: shown.map((p) => ({ id: p.id, url: urls.get(p.storage_key) ?? null, width: p.width, height: p.height, position: p.position })),
+      photos: shown.map((p) => ({ id: p.id, url: urls.get(p.storage_key) ?? null, width: p.width, height: p.height, position: p.position, caption: p.caption ?? null })),
       photoCount: list.length,
       likeCount: likeCount.get(likeTarget(r.id)) ?? 0,
       liked: liked.has(likeTarget(r.id)),
       mine: r.user_id === me,
       createdAt: r.created_at,
       updatedAt: r.updated_at,
+      publishedAt: r.published_at,
+      editedAt: r.edited_at,
+      pinned: !!a?.pinnedPostId && a.pinnedPostId === r.id,
+      slug: r.slug,
+      url: `${SITE}/${a?.username ?? ""}/blog/${encodeURIComponent(r.slug)}`,
     };
   });
 }
@@ -155,6 +177,16 @@ async function ownRow(me: string, id: string): Promise<PostRow | null> {
   return (data as PostRow | null) ?? null;
 }
 
+/** 처음 공개 10분 뒤의 내용 변경이면 edited_at 을 찍는다(updated_at 과 따로) */
+function editedPatch(r: { published_at: string | null }): { edited_at?: string } {
+  if (!r.published_at) return {};
+  return Date.now() - Date.parse(r.published_at) > EDIT_GRACE_MS ? { edited_at: new Date().toISOString() } : {};
+}
+
+async function touch(r: PostRow, edited: boolean) {
+  await db().from("blog_posts").update({ updated_at: new Date().toISOString(), ...(edited ? editedPatch(r) : {}) }).eq("id", r.id);
+}
+
 async function bookingUrlFor(userId: string, username: string): Promise<string | null> {
   const { listPublicSlotsByUsername } = await import("@/lib/slots");
   const slots = await listPublicSlotsByUsername(username).catch(() => []);
@@ -162,6 +194,21 @@ async function bookingUrlFor(userId: string, username: string): Promise<string |
   if (slots.length === 0) return null;
   if (slots.length === 1) return `${SITE}/${username}/s/${encodeURIComponent(slots[0].slug)}`;
   return `${SITE}/${username}`;
+}
+
+/** 고정 글을 맨 앞으로(목록 범위 밖의 옛 글이어도). 공개·숨김 아님일 때만 — 본인 목록도 같은 규칙 */
+async function pinFirst(authorId: string, rows: PostRow[], limit: number) {
+  const { data: au } = await db().from("users").select("pinned_post_id").eq("id", authorId).maybeSingle();
+  const pinId = (au?.pinned_post_id as string | null) ?? null;
+  if (!pinId) return;
+  let pin = rows.find((r) => r.id === pinId) ?? null;
+  if (!pin) {
+    const { data: pr } = await db().from("blog_posts").select(POST_COLS).eq("id", pinId).eq("origin", "app").eq("user_id", authorId).maybeSingle();
+    pin = (pr as PostRow | null) ?? null;
+  }
+  if (!pin || !pin.published || pin.hidden_at) return;
+  const rest = rows.filter((r) => r.id !== pinId);
+  rows.splice(0, rows.length, pin, ...rest.slice(0, Math.max(limit - 1, 0)));
 }
 
 // ── 목록·상세 ──
@@ -189,8 +236,17 @@ export async function listPosts(me: string, opts: { username?: string | null; be
   if (error) return { error: "글을 불러오지 못했어요." } as PostErr;
   const rows = (data ?? []) as PostRow[];
   const page = rows.slice(0, LIST_LIMIT);
+  const cursor = rows.length > LIST_LIMIT ? page[page.length - 1].created_at : null;
+  // 첫 쪽만 고정 글을 맨 앞에(다음 쪽 기준 시각은 고정 전 목록으로).
+  // 다음 쪽에서는 고정 글을 빼서 두 번 나오지 않게
+  if (!opts.before) await pinFirst(authorId, page, LIST_LIMIT + 1);
+  else {
+    const { data: au } = await db().from("users").select("pinned_post_id").eq("id", authorId).maybeSingle();
+    const i = page.findIndex((r) => r.id === au?.pinned_post_id);
+    if (i >= 0) page.splice(i, 1);
+  }
   const posts = await shape(me, page, "cover");
-  return { posts, nextBefore: rows.length > LIST_LIMIT ? page[page.length - 1].created_at : null };
+  return { posts, nextBefore: cursor };
 }
 
 export async function getPost(me: string, id: string) {
@@ -222,22 +278,22 @@ export async function getPostForWeb(viewerId: string | null, username: string, s
 }
 
 /** 웹 목록(링크 페이지 칸·글 목록): 그 사람의 공개 앱 글. 본인이면 나만 보기·숨김 포함. 볼 수 없으면 [] */
-export async function listPostsForWeb(viewerId: string | null, authorId: string, limit = 30): Promise<(ApiPost & { slug: string })[]> {
+export async function listPostsForWeb(viewerId: string | null, authorId: string, limit = 30): Promise<ApiPost[]> {
   const own = viewerId === authorId;
   if (own ? !postsOpenFor(viewerId) : !postsVisibleTo(viewerId)) return [];
   if (!own && viewerId && (await blockedEitherWay(viewerId, authorId))) return [];
   let q = db()
     .from("blog_posts")
-    .select(POST_COLS + ", slug")
+    .select(POST_COLS)
     .eq("origin", "app")
     .eq("user_id", authorId)
     .order("created_at", { ascending: false })
     .limit(Math.min(limit, 60));
   if (!own) q = q.eq("published", true).is("hidden_at", null);
   const { data } = await q;
-  const rows = (data ?? []) as unknown as (PostRow & { slug: string })[];
-  const shaped = await shape(viewerId, rows, "cover");
-  return shaped.map((p, i) => ({ ...p, slug: rows[i].slug }));
+  const rows = (data ?? []) as unknown as PostRow[];
+  await pinFirst(authorId, rows, limit);
+  return shape(viewerId, rows, "cover");
 }
 
 /** 공개 스위치가 켜졌을 때만: 사이트맵·RSS 용 공개 앱 글(사진 없이) */
@@ -264,15 +320,18 @@ export async function listPublicAppPostsForFeeds(authorId?: string, limit = 5000
   }));
 }
 
-/** OG 이미지용: 공개 스위치가 켜졌고 공개 글일 때 첫 사진 원본(JPEG) — 아니면 null */
-export async function firstPhotoForOg(username: string, slug: string): Promise<Buffer | null> {
+/** OG 이미지용: 공개 스위치가 켜졌고 공개 글일 때 대표(첫) 사진 원본(JPEG, 없으면 null)·제목·작성자 — 아니면 null */
+export async function ogDataForPost(
+  username: string,
+  slug: string,
+): Promise<{ photo: Buffer | null; title: string; body: string; authorName: string } | null> {
   const { postsPublic } = await import("@/lib/posts-access");
   if (!postsPublic()) return null;
-  const { data: u } = await db().from("users").select("id").eq("username", username).maybeSingle();
+  const { data: u } = await db().from("users").select("id, username, display_name").eq("username", username).maybeSingle();
   if (!u) return null;
   const { data: p } = await db()
     .from("blog_posts")
-    .select("id")
+    .select("id, title, content")
     .eq("origin", "app")
     .eq("user_id", u.id)
     .eq("slug", slug)
@@ -282,10 +341,17 @@ export async function firstPhotoForOg(username: string, slug: string): Promise<B
   if (!p) return null;
   const { data: ph } = await db().from("post_photos").select("storage_key").eq("post_id", p.id).order("position").limit(1);
   const key = ph?.[0]?.storage_key as string | undefined;
-  if (!key) return null;
-  const dl = await db().storage.from(POST_PHOTO_BUCKET).download(key);
-  if (dl.error || !dl.data) return null;
-  return Buffer.from(await dl.data.arrayBuffer());
+  let photo: Buffer | null = null;
+  if (key) {
+    const dl = await db().storage.from(POST_PHOTO_BUCKET).download(key);
+    if (!dl.error && dl.data) photo = Buffer.from(await dl.data.arrayBuffer());
+  }
+  return {
+    photo,
+    title: (p.title as string) || "",
+    body: (p.content as string) || "",
+    authorName: (u.display_name as string | null) || (u.username as string),
+  };
 }
 
 // ── 쓰기 ──
@@ -355,6 +421,7 @@ export async function updatePost(me: string, id: string, input: { title?: unknow
     if (!count) return { error: "제목·본문·사진 중 하나는 있어야 공개할 수 있어요.", code: "invalid" } as PostErr;
   }
   patch.updated_at = new Date().toISOString();
+  if (nextTitle !== (r.title ?? "") || nextBody !== (r.content ?? "")) Object.assign(patch, editedPatch(r));
   const { data, error } = await db().from("blog_posts").update(patch).eq("id", id).eq("user_id", me).select(POST_COLS).single();
   if (error || !data) return { error: "글을 저장하지 못했어요." } as PostErr;
   if (firstPublish) await notifyFollowersOfNewPost(me, id);
@@ -446,13 +513,13 @@ export async function addPhoto(me: string, id: string, file: Blob | null) {
     const ins = await db()
       .from("post_photos")
       .insert({ id: photoId, post_id: id, user_id: me, position: pos, storage_key: key, width: enc.width, height: enc.height, bytes: enc.bytes })
-      .select("id, post_id, position, storage_key, width, height")
+      .select(PHOTO_COLS)
       .single();
     if (!ins.error && ins.data) {
-      await db().from("blog_posts").update({ updated_at: new Date().toISOString() }).eq("id", id);
+      await touch(r, true);
       const urls = await signPhotoUrls([key]);
       const p = ins.data as PhotoRow;
-      return { photo: { id: p.id, url: urls.get(key) ?? null, width: p.width, height: p.height, position: p.position } as ApiPhoto };
+      return { photo: { id: p.id, url: urls.get(key) ?? null, width: p.width, height: p.height, position: p.position, caption: p.caption ?? null } as ApiPhoto };
     }
     if (ins.error && ins.error.code !== "23505") {
       console.error("[posts] photo row", ins.error.message);
@@ -478,7 +545,7 @@ export async function removePhoto(me: string, id: string, photoId: string) {
   if (r.published && !(r.title ?? "") && !(r.content ?? "") && (rest ?? []).length === 0) {
     await db().from("blog_posts").update({ published: false }).eq("id", id);
   }
-  await db().from("blog_posts").update({ updated_at: new Date().toISOString() }).eq("id", id);
+  await touch(r, true);
   return { ok: true as const };
 }
 
@@ -495,15 +562,49 @@ export async function reorderPhotos(me: string, id: string, order: unknown) {
   const r = await ownRow(me, id);
   if (!r) return notFound();
   if (!Array.isArray(order) || order.some((x) => typeof x !== "string")) return { error: "잘못된 요청이에요.", code: "invalid" } as PostErr;
-  const { data } = await db().from("post_photos").select("id").eq("post_id", id);
+  const { data } = await db().from("post_photos").select("id").eq("post_id", id).order("position");
   const have = new Set((data ?? []).map((p) => p.id as string));
   const ids = order as string[];
+  const same = (data ?? []).every((p, i) => p.id === ids[i]);
   if (ids.length !== have.size || new Set(ids).size !== ids.length || ids.some((x) => !have.has(x)))
     return { error: "사진 목록이 맞지 않아요. 새로 고친 뒤 다시 시도해 주세요.", code: "invalid" } as PostErr;
-  if (!(await applyOrder(id, ids))) return { error: "순서를 바꾸지 못했어요." } as PostErr;
-  await db().from("blog_posts").update({ updated_at: new Date().toISOString() }).eq("id", id);
+  if (!same) {
+    if (!(await applyOrder(id, ids))) return { error: "순서를 바꾸지 못했어요." } as PostErr;
+    await touch(r, true);
+  }
   const [post] = await shape(me, [(await ownRow(me, id))!], "all");
   return { post };
+}
+
+/** 사진 설명(캡션) — 빈 글자면 지운다 */
+export async function setPhotoCaption(me: string, id: string, photoId: string, caption: unknown) {
+  if (!postsOpenFor(me)) return closed();
+  const r = await ownRow(me, id);
+  if (!r || !UUID.test(photoId)) return notFound();
+  if (caption !== null && typeof caption !== "string") return { error: "잘못된 요청이에요.", code: "invalid" } as PostErr;
+  const text = (cleanText(caption, POST_CAPTION_MAX) ?? "").replace(/\s*\n\s*/g, " ") || null;
+  const { data: cur } = await db().from("post_photos").select("caption").eq("id", photoId).eq("post_id", id).maybeSingle();
+  if (!cur) return { error: "사진을 찾을 수 없어요.", code: "not_found" } as PostErr;
+  if ((cur.caption ?? null) !== text) {
+    const { error } = await db().from("post_photos").update({ caption: text }).eq("id", photoId).eq("post_id", id);
+    if (error) return { error: "설명을 저장하지 못했어요." } as PostErr;
+    await touch(r, true);
+  }
+  return { ok: true as const, caption: text };
+}
+
+/** 링크 페이지 맨 위 고정 글 1개 — 내 앱 글만(남의 글·없는 글은 거절). null 이면 풀기 */
+export async function setPinnedPost(me: string, postId: unknown) {
+  if (!postsOpenFor(me)) return closed();
+  if (postId !== null && typeof postId !== "string") return { error: "잘못된 요청이에요.", code: "invalid" } as PostErr;
+  if (postId) {
+    const r = await ownRow(me, postId);
+    if (!r) return notFound();
+    if (!r.published || r.hidden_at) return { error: "공개된 글만 고정할 수 있어요.", code: "invalid" } as PostErr;
+  }
+  const { error } = await db().from("users").update({ pinned_post_id: postId || null }).eq("id", me);
+  if (error) return { error: "고정하지 못했어요." } as PostErr;
+  return { ok: true as const, pinnedPostId: (postId as string | null) || null };
 }
 
 // ── ❤️·신고 ──

@@ -35,10 +35,10 @@ export async function GET(
 
   const { author, posts } = result;
   const name = author.display_name || author.username;
-  const blogUrl = `${SITE.url}/blog-public/${author.username}`;
-  const lastBuild = posts[0]?.published_at
-    ? new Date(posts[0].published_at).toUTCString()
-    : new Date().toUTCString();
+  // 1.10.0 통합: 공개 스위치가 켜지면 채널 이름·주소를 '글·사진'(/{아이디}/blog) 하나로, 옛 글·앱 글을 날짜순으로 섞는다
+  const { postsPublic } = await import("@/lib/posts-access");
+  const unified = postsPublic();
+  const blogUrl = unified ? `${SITE.url}/${author.username}/blog` : `${SITE.url}/blog-public/${author.username}`;
 
   // 글·사진(1.10.0): 공개 스위치가 켜졌을 때만 함께 싣는다(꺼져 있으면 빈 목록)
   const { getAdminClient } = await import("@/lib/supabase");
@@ -47,39 +47,43 @@ export async function GET(
   const appItems = au ? await listPublicAppPostsForFeeds(au.id as string, 20) : [];
   const appXml = appItems.map((p) => {
     const link = `${SITE.url}/${author.username}/blog/${encodeURIComponent(p.slug)}`;
-    return `    <item>
-      <title>${escapeXml(p.title || `${name}님의 사진`)}</title>
+    return {
+      at: Date.parse(p.publishedAt),
+      xml: `    <item>
+      <title>${escapeXml(p.title || `${name}님의 글`)}</title>
       <link>${escapeXml(link)}</link>
       <guid isPermaLink="true">${escapeXml(link)}</guid>
       <pubDate>${new Date(p.publishedAt).toUTCString()}</pubDate>
-      <description>${escapeXml(p.body.slice(0, 300))}</description>
-    </item>`;
+      <description>${escapeXml(stripMarkdown(p.body).slice(0, 300))}</description>
+    </item>`,
+    };
   });
 
-  const items = posts
-    .slice(0, 20)
-    .map((post) => {
-      const link = `${blogUrl}/${encodeURIComponent(post.slug)}`;
-      const description = post.excerpt || stripMarkdown(post.content);
-      const categories = post.tags
-        .map((t) => `<category>${escapeXml(t)}</category>`)
-        .join("");
-      return `    <item>
+  const webXml = posts.slice(0, 20).map((post) => {
+    const link = `${blogUrl}/${encodeURIComponent(post.slug)}`;
+    const description = post.excerpt || stripMarkdown(post.content);
+    const categories = post.tags.map((t) => `<category>${escapeXml(t)}</category>`).join("");
+    return {
+      at: Date.parse(post.published_at),
+      xml: `    <item>
       <title>${escapeXml(post.title)}</title>
       <link>${escapeXml(link)}</link>
       <guid isPermaLink="true">${escapeXml(link)}</guid>
       <pubDate>${new Date(post.published_at).toUTCString()}</pubDate>
       <description>${escapeXml(description)}</description>
       ${categories}
-    </item>`;
-    })
-    .concat(appXml)
-    .join("\n");
+    </item>`,
+    };
+  });
+  const all = [...webXml, ...appXml].sort((x, y) => y.at - x.at).slice(0, 20);
+  const items = all.map((x) => x.xml).join("\n");
+  const lastBuild = all[0] ? new Date(all[0].at).toUTCString() : new Date().toUTCString();
+  const channelTitle = unified ? `${name}의 글·사진 · ${SITE.title}` : `${name} · ${SITE.title}`;
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>${escapeXml(`${name} · ${SITE.title}`)}</title>
+    <title>${escapeXml(channelTitle)}</title>
     <link>${escapeXml(blogUrl)}</link>
     <atom:link href="${escapeXml(`${blogUrl}/rss.xml`)}" rel="self" type="application/rss+xml"/>
     <description>${escapeXml(author.bio || `${name}의 글`)}</description>

@@ -3,7 +3,7 @@
 import { useRouter, useParams } from "next/navigation";
 import { useState, useMemo, useTransition } from "react";
 import type { BlogPost } from "./actions";
-import { createBlogPost, deleteBlogPost, publishBlogPost, unpublishBlogPost } from "./actions";
+import { deleteBlogPost, publishBlogPost, unpublishBlogPost } from "./actions";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { PendingButton } from "@/components/PendingButton";
 
@@ -41,7 +41,11 @@ function contentPreview(content: string, max = 150) {
   return stripped.length > max ? stripped.slice(0, max) + "..." : stripped;
 }
 
-export default function BlogPostList({ initialPosts }: { initialPosts: BlogPost[] }) {
+/**
+ * 옛 마크다운 글 목록. legacy(글·사진을 쓸 수 있는 계정, 1.10.0 통합)면 새 글·첫 글 쓰기 버튼을 닫고
+ * '예전 글'로만 보여 준다 — 읽기·공개 전환·삭제는 그대로, 새 글은 글·사진 편집기로만.
+ */
+export default function BlogPostList({ initialPosts, legacy = false }: { initialPosts: BlogPost[]; legacy?: boolean }) {
   const router = useRouter();
   const params = useParams<{ username: string }>();
   const confirm = useConfirm();
@@ -66,11 +70,9 @@ export default function BlogPostList({ initialPosts }: { initialPosts: BlogPost[
     return result;
   }, [posts, filter, search]);
 
+  // 새 글은 빈 편집기로 — 처음 저장할 때 글이 만들어진다(열기만 해도 빈 글이 생기던 문제)
   function handleCreate() {
-    startTransition(async () => {
-      const post = await createBlogPost();
-      router.push(`/${params.username}/blog/${post.id}/edit`);
-    });
+    router.push(`/${params.username}/blog/new`);
   }
 
   async function handleDelete(e: React.MouseEvent, id: string) {
@@ -103,14 +105,20 @@ export default function BlogPostList({ initialPosts }: { initialPosts: BlogPost[
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-charcoal-100 max-md:sr-only">블로그</h1>
+          {legacy ? (
+            <h2 className="text-lg font-semibold text-charcoal-100">예전 글</h2>
+          ) : (
+            <h1 className="text-2xl font-bold text-charcoal-100 max-md:sr-only">블로그</h1>
+          )}
           <p className="mt-1 text-sm text-charcoal-500">
             {posts.length}개의 글
           </p>
         </div>
-        <PendingButton onClick={handleCreate} pending={isPending}>
-          + 새 글
-        </PendingButton>
+        {!legacy && (
+          <PendingButton onClick={handleCreate} pending={isPending}>
+            + 새 글
+          </PendingButton>
+        )}
       </div>
 
       {/* Search */}
@@ -173,7 +181,7 @@ export default function BlogPostList({ initialPosts }: { initialPosts: BlogPost[
               ? "다른 키워드로 검색해보세요"
               : "생각을 기록하면 프로필에 함께 보여요"}
           </p>
-          {!search && (
+          {!search && !legacy && (
             <PendingButton
               onClick={handleCreate}
               pending={isPending}

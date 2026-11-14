@@ -90,6 +90,7 @@ export function PublicLinkProfile({
   slots,
   hasPublicCalendar,
   hasPosts,
+  postsLabel = "블로그",
   loggedIn,
   viewerFollowing,
   rating,
@@ -107,6 +108,8 @@ export function PublicLinkProfile({
   slots: PublicSlot[];
   hasPublicCalendar: boolean;
   hasPosts: boolean;
+  /** 1.10.0 통합 뒤 '글·사진' */
+  postsLabel?: string;
   loggedIn: boolean;
   viewerFollowing: boolean;
   rating: { average: number; count: number } | null;
@@ -335,7 +338,7 @@ export function PublicLinkProfile({
           {hasPosts && (
             <LinkCard
               href={`/${username}/blog`}
-              label="블로그"
+              label={postsLabel}
               sub="글 읽어보기"
               style={cardStyle}
               muted={theme.muted}
@@ -354,7 +357,31 @@ export function PublicLinkProfile({
                 모두 보기 →
               </Link>
             </div>
-            <PhotoPostGrid username={username} posts={photoPosts} tileStyle={{ backgroundColor: theme.surface }} textColor={theme.text} />
+            {photoPosts[0]?.pinned && (
+              <Link
+                href={`/${username}/blog/${encodeURIComponent(photoPosts[0].slug)}`}
+                className="mb-2 flex min-h-11 items-stretch overflow-hidden rounded-xl"
+                style={{ backgroundColor: theme.surface, color: theme.text }}
+                data-testid="pinnedPost"
+              >
+                {photoPosts[0].coverUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={photoPosts[0].coverUrl} alt="" className="h-24 w-24 shrink-0 object-cover" />
+                )}
+                <span className="flex min-w-0 flex-1 flex-col justify-center gap-1 px-4 py-3">
+                  <span className="text-2xs font-semibold" style={{ color: theme.accent }}>
+                    📌 고정한 글
+                  </span>
+                  <span className="line-clamp-2 text-sm font-semibold">{photoPosts[0].title || photoPosts[0].body.replace(/[#>*_~`[\]()-]/g, "").slice(0, 60) || "사진 글"}</span>
+                </span>
+              </Link>
+            )}
+            <PhotoPostGrid
+              username={username}
+              posts={(photoPosts[0]?.pinned ? photoPosts.slice(1) : photoPosts).slice(0, 6)}
+              tileStyle={{ backgroundColor: theme.surface }}
+              textColor={theme.text}
+            />
           </section>
         )}
 

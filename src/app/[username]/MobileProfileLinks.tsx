@@ -8,7 +8,18 @@ import { logout } from "@/lib/auth-actions";
  * 모바일 프로필 탭의 메뉴 목록 — iOS 프로필 화면의 행들과 같은 자리.
  * 하단 탭이 5개뿐이라 나머지 메뉴(예전 햄버거 서랍)는 여기로 모았다.
  */
-export function MobileProfileLinks({ username, unreadMessages = 0, dmOpen = false }: { username: string; unreadMessages?: number; dmOpen?: boolean }) {
+export function MobileProfileLinks({
+  username,
+  unreadMessages = 0,
+  dmOpen = false,
+  postsOpen = false,
+}: {
+  username: string;
+  unreadMessages?: number;
+  dmOpen?: boolean;
+  /** 글·사진(1.10.0) 통합 */
+  postsOpen?: boolean;
+}) {
   const router = useRouter();
   const rows: Array<{ href: string; label: string; sub: string }> = [
     { href: `/${username}/slots`, label: "예약 링크", sub: "내 예약 링크 만들고 공유하기" },
@@ -18,7 +29,9 @@ export function MobileProfileLinks({ username, unreadMessages = 0, dmOpen = fals
       : []),
     { href: "/explore", label: "탐색", sub: "다른 사람들의 열린 시간" },
     { href: `/${username}/services`, label: "서비스 메뉴", sub: "예약에 붙이는 추가 메뉴" },
-    { href: `/${username}/blog`, label: "블로그", sub: "내 글" },
+    postsOpen
+      ? { href: `/${username}/blog`, label: "글·사진", sub: "사진과 소식 올리기" }
+      : { href: `/${username}/blog`, label: "블로그", sub: "내 글" },
     { href: `/${username}/settings`, label: "설정", sub: "프로필·캘린더·결제 안내·알림" },
   ];
   return (

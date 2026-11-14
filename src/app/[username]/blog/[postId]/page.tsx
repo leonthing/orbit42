@@ -1,10 +1,7 @@
+import { PostBody } from "@/components/posts/PostBody";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import remarkBreaks from "remark-breaks";
-import rehypeHighlight from "rehype-highlight";
 import { getPublicPostBySlug } from "../actions";
 import { resolveRenamedSlug } from "@/app/blog-public/actions";
 import { getSession } from "@/lib/auth";
@@ -13,6 +10,7 @@ import { ReactionStrip } from "@/components/ReactionStrip";
 import { CommentSection } from "@/components/CommentSection";
 import { getAdminClient } from "@/lib/supabase";
 import { getPostForWeb } from "@/lib/posts";
+import { postsOpenFor, postsPublic } from "@/lib/posts-access";
 import { PhotoPostView } from "@/components/posts/PhotoPostView";
 
 async function viewerIdOf(username: string | null | undefined): Promise<string | null> {
@@ -42,15 +40,14 @@ export async function generateMetadata({
   if (!data) {
     const a = await appPost(params.username, params.postId);
     if (!a) return { title: "찾을 수 없음" };
-    const { postsPublic } = await import("@/lib/posts-access");
     const name = a.post.author.displayName || a.post.author.username;
     return {
       title: a.post.title || `${name}님의 사진`,
-      description: a.post.body.slice(0, 120) || undefined,
+      description: a.post.body.replace(/[#>*_~`]/g, "").replace(/\s+/g, " ").slice(0, 120) || undefined,
       // 공개 스위치 전에는 검색에 안 잡히게
       robots: postsPublic() && a.post.visibility === "public" ? undefined : { index: false, follow: false },
       openGraph:
-        postsPublic() && a.post.visibility === "public" && a.post.photos.length > 0
+        postsPublic() && a.post.visibility === "public"
           ? { images: [{ url: `/api/og/post/${encodeURIComponent(params.username)}/${encodeURIComponent(decodeURIComponent(params.postId))}`, width: 1200, height: 630 }] }
           : undefined,
     };
@@ -73,6 +70,7 @@ export default async function PublicPostPage({
       const p = a.post;
       return (
         <PhotoPostView
+          publicOpen={postsPublic()}
           loggedIn={a.loggedIn}
           isOwner={p.mine}
           post={{
@@ -82,10 +80,13 @@ export default async function PublicPostPage({
             body: p.body,
             isPublic: p.visibility === "public",
             hidden: p.hidden,
-            photos: p.photos.map((ph) => ({ id: ph.id, url: ph.url, width: ph.width, height: ph.height })),
+            photos: p.photos.map((ph) => ({ id: ph.id, url: ph.url, width: ph.width, height: ph.height, caption: ph.caption })),
             likeCount: p.likeCount,
             liked: p.liked,
-            createdAt: p.createdAt,
+            createdAt: p.publishedAt ?? p.createdAt,
+            editedAt: p.editedAt,
+            pinned: p.pinned,
+            url: p.url,
             bookingUrl: p.bookingUrl ?? null,
             author: { username: p.author.username, displayName: p.author.displayName },
           }}
@@ -128,9 +129,10 @@ export default async function PublicPostPage({
           }
           className="inline-flex items-center gap-1 text-xs text-charcoal-400 hover:text-charcoal-100 max-md:-ml-2 max-md:min-h-11 max-md:px-2"
         >
-          ← {isOwner ? "블로그" : author.display_name || author.username}
+          ← {isOwner ? (postsOpenFor(viewerId) ? "내 글·사진" : "블로그") : author.display_name || author.username}
         </Link>
-        {isOwner && (
+        {/* 1.10.0 통합: 글·사진을 쓸 수 있는 계정은 옛 편집기로 들어가지 않는다(읽기만, 공개 전환·삭제는 목록에서) */}
+        {isOwner && !postsOpenFor(viewerId) && (
           <Link
             href={`/${author.username}/blog/${post.id}/edit`}
             className="rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-3 py-1.5 text-xs font-medium text-charcoal-200 hover:border-charcoal-700 hover:text-white"
@@ -177,14 +179,7 @@ export default async function PublicPostPage({
         />
       )}
 
-      <div className="post-body text-sm leading-relaxed text-charcoal-100">
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm, remarkBreaks]}
-          rehypePlugins={[rehypeHighlight]}
-        >
-          {post.content}
-        </ReactMarkdown>
-      </div>
+      <PostBody text={post.content ?? ""} />
 
       <div className="border-t border-charcoal-800/40 pt-5">
         <ReactionStrip

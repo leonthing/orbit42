@@ -1,4 +1,5 @@
 import { safeSocialLinks } from "@/lib/social-links";
+import { toGridPost } from "@/components/posts/PhotoPostGrid";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -124,11 +125,19 @@ export default async function PublicProfile({
   let photoPosts: Awaited<ReturnType<typeof import("@/lib/posts").listPostsForWeb>> = [];
   // 블로그 카드: 옛 마크다운 글(origin 'web') 공개 글이 있을 때 (전엔 feed_posts 개수로 판단해 안 보였다)
   let hasWebPosts = false;
+  // 1.10.0 통합: 글·사진을 볼 수 있는 방문자에게는 '블로그' 대신 '글·사진' 이름 하나로
+  let postsUnified = false;
+  let viewerUid: string | null = null;
+  if (session) viewerUid = ((await db.from("users").select("id").eq("username", session.username).maybeSingle()).data?.id as string | undefined) ?? null;
+  {
+    const { postsVisibleTo, postsOpenFor } = await import("@/lib/posts-access");
+    postsUnified = isOwner ? postsOpenFor(viewerUid) : postsVisibleTo(viewerUid);
+  }
   if (!isOwner && authorId) {
     const { listPostsForWeb } = await import("@/lib/posts");
-    const viewerId = session ? ((await db.from("users").select("id").eq("username", session.username).maybeSingle()).data?.id as string | undefined) ?? null : null;
+    const viewerId = viewerUid;
     const [pp, wp] = await Promise.all([
-      listPostsForWeb(viewerId, authorId, 6),
+      listPostsForWeb(viewerId, authorId, 7), // 고정 글 1 + 칸 6
       db.from("blog_posts").select("id", { count: "exact", head: true }).eq("user_id", authorId).eq("origin", "web").eq("published", true),
     ]);
     photoPosts = pp;
@@ -259,8 +268,10 @@ export default async function PublicProfile({
             reserve_price_cents: s.reserve_price_cents ?? null,
           }))}
           hasPublicCalendar={hasPublicCalendar}
-          hasPosts={hasWebPosts}
-          photoPosts={photoPosts.map((p) => ({ id: p.id, slug: p.slug, title: p.title, body: p.body, isPublic: p.visibility === "public", hidden: p.hidden, photoCount: p.photoCount, coverUrl: p.photos[0]?.url ?? null }))}
+          // 글·사진 칸이 보이면 '모두 보기'가 같은 곳(/blog)으로 가므로 따로 카드를 두지 않는다
+          hasPosts={hasWebPosts && photoPosts.length === 0}
+          postsLabel={postsUnified ? "글·사진" : "블로그"}
+          photoPosts={photoPosts.map(toGridPost)}
           loggedIn={!!session}
           viewerFollowing={viewerFollowing}
           rating={hostRating}
@@ -415,7 +426,7 @@ export default async function PublicProfile({
         </section>
       )}
 
-      {isOwner && <MobileProfileLinks username={params.username} dmOpen={v190OpenFor(authorId)} />}
+      {isOwner && <MobileProfileLinks username={params.username} dmOpen={v190OpenFor(authorId)} postsOpen={postsUnified} />}
 
       {isOwner ? (
         <ProfileTabs
@@ -618,9 +629,9 @@ export default async function PublicProfile({
           className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5 hover:border-charcoal-700"
         >
           <p className="text-xs font-semibold uppercase tracking-wider text-charcoal-500">
-            긴 글
+            {postsUnified ? "글·사진" : "긴 글"}
           </p>
-          <p className="mt-1 text-sm text-charcoal-200">블로그 둘러보기 →</p>
+          <p className="mt-1 text-sm text-charcoal-200">{postsUnified ? "글·사진 둘러보기 →" : "블로그 둘러보기 →"}</p>
         </Link>
       </div>
 

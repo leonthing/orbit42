@@ -8,7 +8,7 @@ import { getReactionsForMany } from "@/lib/reactions";
 import { ReactionStrip } from "@/components/ReactionStrip";
 import { getAdminClient } from "@/lib/supabase";
 import { listPostsForWeb } from "@/lib/posts";
-import { postsOpenFor } from "@/lib/posts-access";
+import { postsOpenFor, postsVisibleTo } from "@/lib/posts-access";
 import { PhotoPostGrid, toGridPost } from "@/components/posts/PhotoPostGrid";
 
 async function idOf(username: string | null | undefined): Promise<string | null> {
@@ -37,7 +37,7 @@ function PhotoSection({ username, posts, isOwner, canWrite }: { username: string
         )}
       </div>
       {posts.length > 0 ? (
-        <PhotoPostGrid username={username} posts={posts.map(toGridPost)} />
+        <PhotoPostGrid username={username} posts={posts.map(toGridPost)} owner={isOwner} />
       ) : (
         <p className="rounded-xl border border-dashed border-charcoal-800/60 px-4 py-8 text-center text-sm text-charcoal-400">
           작업 사진이나 소식을 올리면 링크 페이지를 찾은 분들이 볼 수 있어요.
@@ -65,7 +65,7 @@ export default async function BlogPage({
       <div className="space-y-8">
         <PhotoSection username={params.username} posts={photoPosts} isOwner canWrite={postsOpenFor(viewerId)} />
         {/* 옛 마크다운 글: 글·사진을 쓸 수 있는 계정은 옛 글이 있을 때만 목록을 보인다('새 글' 버튼이 두 개가 되지 않게) */}
-        {(!postsOpenFor(viewerId) || posts.length > 0) && <BlogPostList initialPosts={posts} />}
+        {(!postsOpenFor(viewerId) || posts.length > 0) && <BlogPostList initialPosts={posts} legacy={postsOpenFor(viewerId)} />}
       </div>
     );
   }
@@ -92,10 +92,10 @@ export default async function BlogPage({
         >
           ← {profile.display_name || profile.username}
         </Link>
-        <h1 className="mt-1 text-2xl font-bold text-charcoal-100">Posts</h1>
-        <p className="mt-1 text-sm text-charcoal-500">
-          {posts.length === 0 ? "아직 글이 없어요." : `${posts.length}개의 글`}
-        </p>
+        <h1 className="mt-1 text-2xl font-bold text-charcoal-100">{postsVisibleTo(viewerId) ? "글·사진" : "Posts"}</h1>
+        {!(postsVisibleTo(viewerId) && photoPosts.length > 0) && (
+          <p className="mt-1 text-sm text-charcoal-500">{posts.length === 0 ? "아직 글이 없어요." : `${posts.length}개의 글`}</p>
+        )}
       </header>
 
       <PhotoSection username={params.username} posts={photoPosts} isOwner={false} canWrite={false} />

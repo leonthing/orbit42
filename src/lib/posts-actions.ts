@@ -65,3 +65,16 @@ export async function addPhotoAction(postId: string, form: FormData) {
   const file = form.get("photo");
   return posts.addPhoto(me, String(postId), file instanceof Blob ? file : null);
 }
+
+export async function setPhotoCaptionAction(postId: string, photoId: string, caption: string | null) {
+  const me = await meId();
+  if (!me) return LOGIN;
+  return posts.setPhotoCaption(me, String(postId), String(photoId), caption === null ? null : String(caption).slice(0, 400));
+}
+
+/** 링크 페이지 고정 — users 에서 고치는 칸은 pinned_post_id 하나뿐(lib 가 본인 글인지 확인) */
+export async function pinPostAction(postId: string | null) {
+  const me = await meId();
+  if (!me) return LOGIN;
+  return posts.setPinnedPost(me, postId === null ? null : String(postId));
+}

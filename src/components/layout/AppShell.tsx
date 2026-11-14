@@ -44,15 +44,16 @@ export async function AppShell({
       ])
     : [0, 0];
   const bookingsBadge = needReply + unreadChats;
+  const postsOpen = (await import("@/lib/posts-access")).postsOpenFor(viewerId);
 
   return (
     <MobileMenuProvider>
       <div className="flex h-dvh overflow-hidden bg-[rgb(var(--bg-base))]">
-        <Sidebar username={viewerUsername} unreadMessages={unreadMessages} bookingsBadge={bookingsBadge} weekStart={weekStart} dmOpen={v190OpenFor(viewerId)} />
+        <Sidebar username={viewerUsername} unreadMessages={unreadMessages} bookingsBadge={bookingsBadge} weekStart={weekStart} dmOpen={v190OpenFor(viewerId)} postsOpen={postsOpen} />
         <div className="flex flex-1 flex-col overflow-hidden">
           <TopBar
             username={viewerUsername}
-            postsOpen={(await import("@/lib/posts-access")).postsOpenFor(viewerId)}
+            postsOpen={postsOpen}
             displayName={viewerDisplayName}
             avatarUrl={viewerAvatarUrl}
             unreadNotifications={unreadNotifications}
