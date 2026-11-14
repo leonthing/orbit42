@@ -76,6 +76,7 @@ struct PersonProfileView: View {
             Text(viewModel.actionMessage ?? "")
         }
         .task {
+            if !PostsStore.shared.open { await PostsStore.shared.refresh() }
             await viewModel.load()
             // 방문 흐름 ① 다른 사람 프로필 열람 (개선-32) — 출처(dm)는 이 프로필에서 이어지는 단계까지
             Funnel.ref = funnelRef
@@ -140,6 +141,8 @@ struct PersonProfileView: View {
                             DmProfileButton(username: data.user.username, displayName: data.user.preferredName)
                         }
                     }
+                    // 글·사진 (1.10.0 시험) — 내 쪽이 허용 목록일 때만
+                    PostsEntryRow(username: data.user.username, isMe: data.isMe, displayName: data.user.preferredName)
                     CalendarCardsSection(username: viewModel.username, isMe: data.isMe)
                     slotsSection(data)
                 }

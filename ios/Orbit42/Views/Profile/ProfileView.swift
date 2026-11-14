@@ -96,6 +96,8 @@ private struct MyProfileContent: View {
                     actionButtons
                     publicPageLink
                     timelineLink
+                    // 글·사진 (1.10.0 시험) — 서버 허용 목록 계정에만 보인다
+                    PostsEntryRow(username: username, isMe: true)
                     CalendarCardsSection(username: username, isMe: true)
                     slotsSection
                 }
@@ -118,6 +120,7 @@ private struct MyProfileContent: View {
             StoryComposerView(subject: .profile)
         }
         .task {
+            await PostsStore.shared.refresh()
             await viewModel.load()
             #if DEBUG
             // 스크린샷용: DEMO_STORY_PROFILE=1 이면 프로필 스토리 작성기를 연다.

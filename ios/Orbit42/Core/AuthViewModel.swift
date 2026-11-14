@@ -202,6 +202,7 @@ final class AuthViewModel {
         KeychainStore.deleteToken()
         WidgetBridge.reload()
         DmStore.shared.clear()
+        PostsStore.shared.clear()
         user = nil
         needsOnboarding = false
         onboardingStep = nil
