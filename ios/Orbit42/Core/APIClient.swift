@@ -168,6 +168,37 @@ final class APIClient {
         return try await perform(request)
     }
 
+    /// 여러 파일 multipart — 응답 상태와 본문을 그대로 돌려준다(409 처럼 본문에 다음 할 일이 담긴 경우용, 명함 저장)
+    func multipartRaw(
+        _ path: String,
+        fields: [String: String],
+        files: [(name: String, fileName: String, mimeType: String, data: Data)]
+    ) async throws -> (status: Int, data: Data) {
+        var request = request(path: path, method: "POST")
+        let boundary = "orbit42-\(UUID().uuidString)"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 60
+        var body = Data()
+        func add(_ s: String) { body.append(s.data(using: .utf8)!) }
+        for (name, value) in fields {
+            add("--\(boundary)\r\nContent-Disposition: form-data; name=\"\(name)\"\r\n\r\n\(value)\r\n")
+        }
+        for f in files {
+            add("--\(boundary)\r\nContent-Disposition: form-data; name=\"\(f.name)\"; filename=\"\(f.fileName)\"\r\nContent-Type: \(f.mimeType)\r\n\r\n")
+            body.append(f.data)
+            add("\r\n")
+        }
+        add("--\(boundary)--\r\n")
+        request.httpBody = body
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        if http.statusCode == 401 {
+            SessionExpiry.note(request)
+            throw APIError.unauthorized(message: "로그인이 필요해요.")
+        }
+        return (http.statusCode, data)
+    }
+
     // MARK: - 내부
 
     private func request(path: String, method: String) -> URLRequest {

@@ -8,6 +8,7 @@ struct SettingsView: View {
 
     @State private var showingLogoutConfirm = false
     @State private var showingFeedback = false
+    @State private var cardsStore = CardsStore.shared
 
     // 프로필 비공개 토글 상태 — auth.user 값으로 최초 1회 동기화 후 로컬로 관리,
     // PATCH 실패 시 원복한다.
@@ -29,6 +30,7 @@ struct SettingsView: View {
         .background(Theme.background)
         .navigationTitle("설정")
         .navigationBarTitleDisplayMode(.inline)
+        .task { if !BrowseGate.isOn { await cardsStore.refresh() } }
         .confirmationDialog(
             "로그아웃할까요?",
             isPresented: $showingLogoutConfirm,
@@ -116,6 +118,16 @@ struct SettingsView: View {
                 menuRow(icon: "arrow.triangle.2.circlepath", title: "Google 캘린더")
             }
             .accessibilityIdentifier("settings.google")
+
+            // 명함 → 구글 연락처(1차, 허용 계정만) — 서버가 허용하지 않으면(404·오류) 보이지 않는다
+            if cardsStore.available == true {
+                NavigationLink {
+                    CardsHomeView()
+                } label: {
+                    menuRow(icon: "person.text.rectangle", title: "명함 → 구글 연락처")
+                }
+                .accessibilityIdentifier("settings.cards")
+            }
 
             NavigationLink {
                 PeopleImportSettingsView()
