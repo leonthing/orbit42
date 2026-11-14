@@ -107,7 +107,7 @@ export function WorkHoursForm({ initial }: Props) {
                     onChange={(e) => setField(d, "start", e.target.value)}
                     className="rounded-lg border border-charcoal-800/60 bg-charcoal-900/60 px-2 py-1 text-xs max-md:min-h-11"
                   />
-                  <span className="text-charcoal-600">–</span>
+                  <span className="text-charcoal-500">–</span>
                   <input
                     type="time"
                     value={w.end}
@@ -116,7 +116,7 @@ export function WorkHoursForm({ initial }: Props) {
                   />
                 </div>
               ) : (
-                <span className="text-xs text-charcoal-600">쉬는 날</span>
+                <span className="text-xs text-charcoal-500">쉬는 날</span>
               )}
             </li>
           );

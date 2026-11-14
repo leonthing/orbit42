@@ -366,7 +366,7 @@ function NewCalendarForm({
                   onClick={() =>
                     setInvites((prev) => prev.filter((h) => h !== handle))
                   }
-                  className="text-charcoal-600 hover:text-charcoal-300"
+                  className="relative z-10 text-charcoal-500 before:absolute before:-inset-x-[18px] before:-inset-y-[13px] before:content-[''] hover:text-charcoal-300"
                   aria-label={`@${handle} 빼기`}
                 >
                   ×

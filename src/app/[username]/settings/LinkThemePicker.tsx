@@ -88,7 +88,7 @@ export function LinkThemePicker({
           href={`/${username}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-xs font-semibold text-navy-400 hover:text-navy-300"
+          className="inline-flex min-h-11 items-center text-xs font-semibold text-navy-400 hover:text-navy-300"
         >
           내 링크 페이지 미리보기 →
         </a>

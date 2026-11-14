@@ -70,7 +70,7 @@ export function LocationBuffersForm({ initial }: Props) {
         )}
       </ul>
 
-      <div className="border-t border-charcoal-800/40 px-5 py-3 text-2xs text-charcoal-600">
+      <div className="border-t border-charcoal-800/40 px-5 py-3 text-2xs text-charcoal-500">
         예) 이름{" "}
         <span className="font-mono text-charcoal-400">여의도</span>, 버퍼{" "}
         <span className="font-mono text-charcoal-400">60</span>, 별칭{" "}
