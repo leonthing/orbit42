@@ -6,7 +6,16 @@ import { cardsOpenFor } from "@/lib/cards-access";
 import { cardStatus } from "@/lib/cards-google";
 import { CardsConnectPanel } from "./CardsConnectPanel";
 
-export const metadata: Metadata = { title: "명함 → 구글 연락처", robots: { index: false } };
+/** 허용 계정이 아니면 제목에도 기능 이름을 드러내지 않는다 */
+export async function generateMetadata({ params }: { params: { username: string } }): Promise<Metadata> {
+  const s = await getSession();
+  let open = false;
+  if (s && s.username === params.username) {
+    const { data } = await getAdminClient().from("users").select("id").eq("username", s.username).single();
+    open = !!data && cardsOpenFor(data.id as string);
+  }
+  return { title: open ? "명함 → 구글 연락처" : "orbit42", robots: { index: false } };
+}
 export const dynamic = "force-dynamic";
 
 const ERRORS: Record<string, string> = {
