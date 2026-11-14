@@ -4,7 +4,7 @@
 import { randomBytes, randomUUID } from "crypto";
 import { getAdminClient } from "@/lib/supabase";
 import { rateLimitDb } from "@/lib/rate-limit";
-import { postsOpenFor, postsVisibleTo } from "@/lib/posts-access";
+import { postsOpenFor, postsPublic, postsVisibleTo } from "@/lib/posts-access";
 import {
   POST_PHOTO_BUCKET,
   POST_PHOTO_MAX_BYTES,
@@ -68,6 +68,8 @@ export type ApiPost = {
   slug: string;
   /** 공유용 주소 */
   url: string;
+  /** 지금 남이 이 주소를 열 수 있는지(공개 스위치 켜짐 + 공개 + 숨김 아님) — 꺼져 있으면 앱이 "공개 전" 안내 */
+  shareable: boolean;
   /** 상세에서만: 예약하기 버튼 주소(공개 예약 링크가 하나면 그 링크, 여럿이면 링크 페이지, 없으면 null) */
   bookingUrl?: string | null;
 };
@@ -132,6 +134,7 @@ async function shape(me: string | null, rows: PostRow[], photosMode: "all" | "co
   const likeCount = new Map<string, number>();
   for (const l of likesRes.data ?? []) likeCount.set(l.target_id as string, (likeCount.get(l.target_id as string) ?? 0) + 1);
   const liked = new Set((mineRes.data ?? []).map((l) => l.target_id as string));
+  const open = postsPublic();
   return rows.map((r) => {
     const a = authors.get(r.user_id);
     const list = byPost.get(r.id) ?? [];
@@ -155,6 +158,7 @@ async function shape(me: string | null, rows: PostRow[], photosMode: "all" | "co
       pinned: !!a?.pinnedPostId && a.pinnedPostId === r.id,
       slug: r.slug,
       url: `${SITE}/${a?.username ?? ""}/blog/${encodeURIComponent(r.slug)}`,
+      shareable: open && r.published && !r.hidden_at,
     };
   });
 }
