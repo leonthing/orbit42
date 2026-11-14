@@ -30,6 +30,7 @@ import { normalizeWeekStart } from "@/lib/week-start";
 import { getAdminClient } from "@/lib/supabase";
 import { IntegrationTokens } from "./IntegrationTokens";
 import { listPersonalAccessTokens } from "@/lib/pat";
+import { cardsOpenFor } from "@/lib/cards-access";
 
 export const metadata: Metadata = { title: "설정" };
 export const dynamic = "force-dynamic";
@@ -142,6 +143,16 @@ export default async function SettingsPage({
                   new Date().toISOString(),
               }))}
             />
+            {cardsOpenFor(userId) && (
+              <a
+                href={`/${params.username}/cards`}
+                data-testid="cardsEntry"
+                className="mt-3 flex items-center justify-between rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 px-5 py-3 text-sm text-charcoal-200 hover:bg-charcoal-800/40 max-md:min-h-11"
+              >
+                <span>명함 → 구글 연락처 <span className="text-xs text-charcoal-500">(시험)</span></span>
+                <span aria-hidden className="text-charcoal-500">›</span>
+              </a>
+            )}
           </section>
 
           <section id="link-theme" className="scroll-mt-16">

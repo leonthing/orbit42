@@ -17,6 +17,12 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get("code");
   const stateRaw = searchParams.get("state") || "";
 
+  // 명함 → 구글 연락처(1차, 허용 계정만): state = "cards:<10분 단일목적 토큰>:<web|app>"
+  if (stateRaw.startsWith("cards:")) {
+    const { handleCardsCallback } = await import("@/lib/cards-callback");
+    return handleCardsCallback(request, stateRaw, code, searchParams.get("error"));
+  }
+
   // Landing-page sign-in/sign-up (no session yet).
   // state format: "signin" (existing user only) or "signin:<ref>"
   // for a fresh signup crediting a referrer username.
