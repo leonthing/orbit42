@@ -4,7 +4,7 @@
 import { randomBytes, randomUUID } from "crypto";
 import { getAdminClient } from "@/lib/supabase";
 import { rateLimitDb } from "@/lib/rate-limit";
-import { postsOpenFor, postsPublic, postsVisibleTo } from "@/lib/posts-access";
+import { postsOpenFor, postsPublic, postsPublicNotice, postsVisibleTo } from "@/lib/posts-access";
 import {
   POST_PHOTO_BUCKET,
   POST_PHOTO_MAX_BYTES,
@@ -70,6 +70,8 @@ export type ApiPost = {
   url: string;
   /** 지금 남이 이 주소를 열 수 있는지(공개 스위치 켜짐 + 공개 + 숨김 아님) — 꺼져 있으면 앱이 "공개 전" 안내 */
   shareable: boolean;
+  /** 공개 스위치가 꺼진 동안 '전체 공개' 글에 보일 안내("11월 27일부터 다른 분들께 보여요.") — 켜지거나 나만 보기·숨김이면 null */
+  publicNotice: string | null;
   /** 상세에서만: 예약하기 버튼 주소(공개 예약 링크가 하나면 그 링크, 여럿이면 링크 페이지, 없으면 null) */
   bookingUrl?: string | null;
 };
@@ -159,6 +161,7 @@ async function shape(me: string | null, rows: PostRow[], photosMode: "all" | "co
       slug: r.slug,
       url: `${SITE}/${a?.username ?? ""}/blog/${encodeURIComponent(r.slug)}`,
       shareable: open && r.published && !r.hidden_at,
+      publicNotice: r.published && !r.hidden_at ? postsPublicNotice() : null,
     };
   });
 }

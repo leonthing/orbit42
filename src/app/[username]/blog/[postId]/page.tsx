@@ -86,6 +86,8 @@ export default async function PublicPostPage({
             createdAt: p.publishedAt ?? p.createdAt,
             editedAt: p.editedAt,
             pinned: p.pinned,
+            draft: !p.publishedAt && p.visibility !== "public",
+            publicNotice: p.publicNotice,
             url: p.url,
             bookingUrl: p.bookingUrl ?? null,
             author: { username: p.author.username, displayName: p.author.displayName },

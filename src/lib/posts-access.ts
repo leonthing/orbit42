@@ -9,6 +9,14 @@ export function postsPublic(): boolean {
   return process.env.POSTS_OFF !== "1" && process.env.POSTS_PUBLIC === "1";
 }
 
+/** 글·사진이 모두에게 열리는 날(처리방침 개정 시행일) — 화면 안내의 날짜는 여기 한 곳에서만 */
+export const POSTS_PUBLIC_FROM = "11월 27일";
+
+/** 공개 스위치가 꺼져 있는 동안 '전체 공개' 글에 붙는 안내. 켜지면 null(안내가 사라진다) */
+export function postsPublicNotice(): string | null {
+  return postsPublic() ? null : `${POSTS_PUBLIC_FROM}부터 다른 분들께 보여요.`;
+}
+
 /** 남의 공개 글을 볼 수 있는지 — 공개 스위치가 켜졌으면 누구나(비로그인 포함), 아니면 허용 목록 계정만 */
 export function postsVisibleTo(viewerId: string | null | undefined): boolean {
   return postsPublic() || postsOpenFor(viewerId);

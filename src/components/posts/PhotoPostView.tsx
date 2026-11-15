@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { likePostAction, reportPostAction } from "@/lib/posts-actions";
+import { likePostAction, reportPostAction, updatePostAction } from "@/lib/posts-actions";
 import { blockUser } from "@/lib/blocks-actions";
 import { PostBody } from "@/components/posts/PostBody";
 import { PostOwnerMenu } from "@/components/posts/PostOwnerMenu";
@@ -23,6 +23,10 @@ export type WebPost = {
   /** "수정됨" 기준 시각(없으면 표시 안 함) */
   editedAt?: string | null;
   pinned?: boolean;
+  /** 한 번도 공개하지 않은 임시 저장 글 — 글쓴이에게 '올리기' 버튼 */
+  draft?: boolean;
+  /** 공개 스위치 꺼진 동안 공개 글 안내(서버 상수 POSTS_PUBLIC_FROM) */
+  publicNotice?: string | null;
   /** 공유 주소 */
   url: string;
   bookingUrl: string | null;
@@ -52,6 +56,24 @@ export function PhotoPostView({
   const [menuOpen, setMenuOpen] = useState(false);
   const [reporting, setReporting] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [publishing, setPublishing] = useState(false);
+  /** 임시 저장 글 바로 올리기(전체 공개) — 앱 임시 저장 글 화면의 '올리기'와 같다 */
+  const publish = async () => {
+    setPublishing(true);
+    const r = await updatePostAction(post.id, { public: true }).catch(() => ({ error: "올리지 못했어요. 잠시 뒤 다시 해 주세요." }));
+    setPublishing(false);
+    if ("error" in r) setNotice(r.error);
+    else {
+      setNotice("올렸어요.");
+      router.refresh();
+    }
+  };
+  // 화면 위 안내는 8초 뒤 저절로 닫는다(닫기 버튼도 있음)
+  useEffect(() => {
+    if (!notice) return;
+    const t = setTimeout(() => setNotice(null), 8000);
+    return () => clearTimeout(t);
+  }, [notice]);
   const [copied, setCopied] = useState(false);
   const [pending, start] = useTransition();
   const track = useRef<HTMLDivElement>(null);
@@ -154,6 +176,17 @@ export function PhotoPostView({
         <div className="relative" ref={menuRef}>
           {isOwner ? (
             <div className="flex items-center gap-1">
+              {post.draft && !post.hidden && (
+                <button
+                  type="button"
+                  onClick={publish}
+                  disabled={publishing}
+                  className="inline-flex min-h-11 items-center rounded-lg bg-navy-500 px-4 text-xs font-semibold text-white hover:bg-navy-400 disabled:opacity-60"
+                  data-testid="publishDraft"
+                >
+                  {publishing ? "올리는 중…" : "올리기"}
+                </button>
+              )}
               <Link
                 href={`/${post.author.username}/blog/photo/${post.id}/edit`}
                 className="inline-flex min-h-11 items-center rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-4 text-xs font-medium text-charcoal-200 hover:border-charcoal-700 hover:text-charcoal-50"
@@ -312,8 +345,8 @@ export function PhotoPostView({
           </button>
         )}
       </div>
-      {post.isPublic && !post.hidden && !publicOpen && (isOwner || copied) && (
-        <p className="-mt-2 text-xs text-charcoal-500">공개 전이라 다른 사람에게는 아직 안 열려요.</p>
+      {post.isPublic && !post.hidden && !publicOpen && post.publicNotice && (isOwner || copied) && (
+        <p className="-mt-2 text-xs text-charcoal-500" data-testid="publicNotice">{post.publicNotice ?? ""}</p>
       )}
 
       {!isOwner && post.bookingUrl && (
@@ -343,7 +376,11 @@ export function PhotoPostView({
       )}
 
       {notice && (
-        <div role="status" className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/60 px-4 py-3 text-sm text-charcoal-100">
+        <div
+          role="status"
+          data-testid="postNotice"
+          className="fixed inset-x-4 top-[max(1rem,env(safe-area-inset-top))] z-50 mx-auto max-w-md rounded-xl border border-charcoal-800/60 bg-charcoal-900 px-4 py-3 text-sm text-charcoal-100 shadow-lg"
+        >
           {notice}
           <button type="button" onClick={() => setNotice(null)} className="ml-3 text-xs text-charcoal-400 underline">
             닫기

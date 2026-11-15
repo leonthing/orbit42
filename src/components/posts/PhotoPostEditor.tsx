@@ -85,6 +85,68 @@ export function PhotoPostEditor({ username, initial, resumed = false }: { userna
   const [autoError, setAutoError] = useState<string | null>(null);
   const [restore, setRestore] = useState<Draft | null>(null);
   const done = useRef(false);
+  // 사진 동기화(빼기·올리기·설명·순서)는 한 줄로만 — 자동 저장과 올리기가 겹쳐도 같은 사진을 두 번 올리지 않게
+  const itemsRef = useRef<Item[]>([]);
+  const removedRef = useRef<string[]>([]);
+  const syncing = useRef<Promise<void>>(Promise.resolve());
+  const syncedOrder = useRef((initial?.photos ?? []).map((p) => p.id).join());
+  useEffect(() => {
+    itemsRef.current = items;
+    removedRef.current = removed;
+  }, [items, removed]);
+
+  /**
+   * 화면의 사진을 서버 글(id)에 맞춘다. 임시 저장(나만 보기 글)과 올리기가 함께 쓴다 — 앱과 같이 임시 저장에도 사진이 남는다.
+   * 사진은 비공개 버킷(서명 URL)에 올라가고, 글이 나만 보기인 동안은 나에게만 보인다.
+   */
+  const syncPhotos = useCallback((id: string): Promise<void> => {
+    const run = syncing.current.then(async () => {
+      for (const rid of removedRef.current) {
+        const r = await removePhotoAction(id, rid);
+        if ("error" in r) throw new Error(r.error);
+        setRemoved((cur) => cur.filter((x) => x !== rid));
+        removedRef.current = removedRef.current.filter((x) => x !== rid);
+      }
+      const pending = itemsRef.current.filter((it) => !it.remoteId && it.file);
+      let failures = 0;
+      if (pending.length) setProgress({ done: 0, total: pending.length });
+      for (let n = 0; n < pending.length; n++) {
+        const it = pending[n];
+        const fd = new FormData();
+        fd.append("photo", it.file!, "photo.jpg");
+        const r = await addPhotoAction(id, fd).catch(() => ({ error: "사진을 올리지 못했어요." }) as const);
+        if ("error" in r) {
+          failures++;
+          itemsRef.current = itemsRef.current.map((x) => (x.key === it.key ? { ...x, failed: true } : x));
+        } else if (!itemsRef.current.some((x) => x.key === it.key)) {
+          // 올리는 사이에 뺀 사진 — 서버에서도 지운다
+          await removePhotoAction(id, r.photo.id).catch(() => undefined);
+        } else {
+          itemsRef.current = itemsRef.current.map((x) => (x.key === it.key ? { ...x, remoteId: r.photo.id, failed: false, savedCaption: "" } : x));
+        }
+        setItems(itemsRef.current);
+        setProgress({ done: n + 1, total: pending.length });
+      }
+      setProgress(null);
+      if (failures) throw new Error(`사진 ${failures}장을 올리지 못했어요. 다시 저장하면 남은 사진만 올려요.`);
+      for (const it of itemsRef.current) {
+        if (!it.remoteId || it.caption.trim() === it.savedCaption) continue;
+        const caption = it.caption.trim();
+        const r = await setPhotoCaptionAction(id, it.remoteId, caption || null);
+        if ("error" in r) throw new Error(r.error);
+        itemsRef.current = itemsRef.current.map((x) => (x.key === it.key ? { ...x, savedCaption: caption } : x));
+      }
+      setItems(itemsRef.current);
+      const order = itemsRef.current.map((it) => it.remoteId).filter((x): x is string => !!x);
+      if (order.length > 1 && order.join() !== syncedOrder.current) {
+        const r = await reorderPhotosAction(id, order);
+        if ("error" in r) throw new Error(r.error);
+      }
+      syncedOrder.current = order.join();
+    });
+    syncing.current = run.catch(() => undefined);
+    return run;
+  }, []);
 
   /** 글 id — 없으면 '나만 보기'로 한 번만 만든다(자동 저장과 올리기가 겹쳐도 하나) */
   const ensureId = useCallback(async (t: string, b: string): Promise<string> => {
@@ -152,12 +214,18 @@ export function PhotoPostEditor({ username, initial, resumed = false }: { userna
     }
   }, [initial]);
 
-  // 자동 저장(입력 멈추고 1.5초 뒤)
+  // 자동 저장(입력 멈추고 1.5초 뒤). 나만 보기 글은 사진(빼기·올리기·설명·순서)까지 서버에 — 앱 임시 저장과 같게(PO 11/15)
+  const photoSig = items.map((i) => `${i.key}:${i.remoteId ?? ""}:${i.failed ? "!" : ""}:${i.caption}`).join("|") + "/" + removed.join(",");
+  const syncedPhotoSig = useRef(photoSig);
   useEffect(() => {
     if (saving || done.current) return;
-    if (title === savedText.current.title && body === savedText.current.body) return;
+    const textChanged = title !== savedText.current.title || body !== savedText.current.body;
+    const photosChanged = photoSig !== syncedPhotoSig.current;
+    if (!textChanged && !photosChanged) return;
     const t = setTimeout(async () => {
       if (serverPublic.current && postId) {
+        // 이미 공개된 글: 글은 이 브라우저에만, 사진은 '저장'을 누를 때(공개 글에 반쯤 고친 사진이 보이지 않게)
+        if (!textChanged) return;
         try {
           localStorage.setItem(draftKey(postId), JSON.stringify({ title, body, at: Date.now() } satisfies Draft));
           setAutoState("local");
@@ -166,7 +234,7 @@ export function PhotoPostEditor({ username, initial, resumed = false }: { userna
         }
         return;
       }
-      if (!postId && !title.trim() && !body.trim()) return;
+      if (!postId && !title.trim() && !body.trim() && items.length === 0) return;
       setAutoState("saving");
       try {
         const id = await ensureId(title, body);
@@ -175,6 +243,8 @@ export function PhotoPostEditor({ username, initial, resumed = false }: { userna
           if ("error" in r) throw new Error(r.error);
           savedText.current = { title, body };
         }
+        if (photosChanged) await syncPhotos(id);
+        syncedPhotoSig.current = itemsRef.current.map((i) => `${i.key}:${i.remoteId ?? ""}:${i.failed ? "!" : ""}:${i.caption}`).join("|") + "/" + removedRef.current.join(",");
         setAutoState("saved");
         setAutoError(null);
       } catch (e) {
@@ -183,7 +253,7 @@ export function PhotoPostEditor({ username, initial, resumed = false }: { userna
       }
     }, AUTOSAVE_MS);
     return () => clearTimeout(t);
-  }, [title, body, postId, saving, ensureId]);
+  }, [title, body, photoSig, items.length, postId, saving, ensureId, syncPhotos]);
 
   // 아직 안 올린 사진이나 저장 못 한 글이 있으면 떠나기 전에 묻기
   const unsaved = items.some((i) => !i.remoteId) || removed.length > 0 || items.some((i) => i.caption !== i.savedCaption) || autoState === "failed";
@@ -290,44 +360,7 @@ export function PhotoPostEditor({ username, initial, resumed = false }: { userna
     setError(null);
     try {
       const id = await ensureId(title, body);
-      for (const rid of removed) {
-        const r = await removePhotoAction(id, rid);
-        if ("error" in r) throw new Error(r.error);
-      }
-      setRemoved([]);
-      const pending = items.map((it, i) => ({ it, i })).filter(({ it }) => !it.remoteId);
-      let failures = 0;
-      if (pending.length) {
-        setProgress({ done: 0, total: pending.length });
-        const updated = [...items];
-        for (let n = 0; n < pending.length; n++) {
-          const { it, i } = pending[n];
-          const fd = new FormData();
-          fd.append("photo", it.file!, "photo.jpg");
-          const r = await addPhotoAction(id, fd).catch(() => ({ error: "사진을 올리지 못했어요." }) as const);
-          if ("error" in r) {
-            failures++;
-            updated[i] = { ...it, failed: true };
-          } else {
-            updated[i] = { ...it, remoteId: r.photo.id, failed: false, savedCaption: "" };
-          }
-          setProgress({ done: n + 1, total: pending.length });
-          setItems([...updated]);
-        }
-        if (failures) throw new Error(`사진 ${failures}장을 올리지 못했어요. 다시 저장하면 남은 사진만 올려요.`);
-        items.splice(0, items.length, ...updated);
-      }
-      for (const it of items) {
-        if (!it.remoteId || it.caption.trim() === it.savedCaption) continue;
-        const r = await setPhotoCaptionAction(id, it.remoteId, it.caption.trim() || null);
-        if ("error" in r) throw new Error(r.error);
-        it.savedCaption = it.caption.trim();
-      }
-      const order = items.map((it) => it.remoteId).filter((x): x is string => !!x);
-      if (order.length > 1) {
-        const r = await reorderPhotosAction(id, order);
-        if ("error" in r) throw new Error(r.error);
-      }
+      await syncPhotos(id);
       const r = await updatePostAction(id, { title, body, public: isPublic });
       if ("error" in r) throw new Error(r.error);
       done.current = true;
