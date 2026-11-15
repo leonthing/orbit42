@@ -1,5 +1,6 @@
 // 일반 서버 모듈 — 서버 액션 아님(보안-6). 클라이언트용은 *-actions.ts
 import { cookies, headers } from "next/headers";
+import { likeExact } from "@/lib/like";
 import { parseSocialLinks } from "@/lib/social-links";
 import { getAdminClient } from "@/lib/supabase";
 import { clientKey, rateLimitDb } from "@/lib/rate-limit";
@@ -85,7 +86,7 @@ export async function signup(
   const { data: byEmail } = await db
     .from("users")
     .select("id")
-    .ilike("email", normalizedEmail)
+    .ilike("email", likeExact(normalizedEmail))
     .maybeSingle();
   if (byEmail) {
     return { error: "이미 사용 중인 이메일입니다." };
@@ -163,7 +164,7 @@ async function oauthLoginOrSignup(profile: {
   const { data: existing } = await db
     .from("users")
     .select("id, username, email_verified, apple_sub")
-    .ilike("email", normalized)
+    .ilike("email", likeExact(normalized))
     .maybeSingle();
 
   if (existing?.username) {

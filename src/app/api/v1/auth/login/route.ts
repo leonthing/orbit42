@@ -1,4 +1,5 @@
 import { getAdminClient } from "@/lib/supabase";
+import { likeExact } from "@/lib/like";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
 import { tokenResponse } from "@/lib/api-auth";
 
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
     const { data } = await db
       .from("users")
       .select("username")
-      .ilike("email", identifier.toLowerCase())
+      .ilike("email", likeExact(identifier.toLowerCase()))
       .maybeSingle();
     username = (data?.username as string | undefined) ?? "";
   }

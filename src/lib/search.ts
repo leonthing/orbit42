@@ -1,5 +1,6 @@
 // 일반 서버 모듈 — 서버 액션 아님(보안-6). 클라이언트용은 *-actions.ts
 import { getAdminClient } from "@/lib/supabase";
+import { likeContains, pgrstQuote } from "@/lib/like";
 
 export type SearchResult = {
   users: {
@@ -26,16 +27,16 @@ export async function searchAll(q: string): Promise<SearchResult> {
   if (query.length < 1) return { users: [], slots: [] };
   const db = getAdminClient();
 
-  // Strip both LIKE wildcards (%_) and PostgREST-structural characters (,()
-  // and the field.op.value separator `.`) so a crafted query cannot inject
-  // extra filter clauses into the `.or(...)` grammar below.
-  const pattern = `%${query.replace(/[%_,().]/g, "")}%`;
+  // 아이디의 '.'·'_' 를 글자 그대로 찾는다(PO 11/15): LIKE 와일드카드는 이스케이프, `.or(...)` 안의 값은 큰따옴표로 감싸
+  // ',' '.' '(' ')' 가 PostgREST 문법으로 읽히지 않게 한다(필터 끼워 넣기 방지는 그대로).
+  const pattern = likeContains(query);
+  const quoted = pgrstQuote(pattern);
 
   const [usersRes, slotsRes] = await Promise.all([
     db
       .from("users")
       .select("username, display_name, avatar_url, bio, interests")
-      .or(`username.ilike.${pattern},display_name.ilike.${pattern}`)
+      .or(`username.ilike.${quoted},display_name.ilike.${quoted}`)
       .limit(20),
     db
       .from("time_slots")

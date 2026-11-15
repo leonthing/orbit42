@@ -1,5 +1,6 @@
 // 일반 서버 모듈 — 서버 액션 아님(보안-6). 클라이언트용은 *-actions.ts
 import { revalidatePath } from "next/cache";
+import { likeExact } from "@/lib/like";
 import { changeBookingListState, type BookingListChange } from "@/lib/booking-list-state";
 import { removeBookingCalendarEvent } from "@/lib/booking-calendar";
 import { getAdminClient } from "@/lib/supabase";
@@ -929,7 +930,7 @@ export async function bookSlot(args: {
     const hourAgo = new Date(Date.now() - 3600_000).toISOString();
     const [perEmail, perSlot] = await Promise.all([
       email
-        ? db.from("bookings").select("id", { count: "exact", head: true }).ilike("guest_email", email).gte("created_at", dayAgo)
+        ? db.from("bookings").select("id", { count: "exact", head: true }).ilike("guest_email", likeExact(email)).gte("created_at", dayAgo)
         : Promise.resolve({ count: 0 }),
       db.from("bookings").select("id", { count: "exact", head: true }).eq("slot_id", slot.id).gte("created_at", hourAgo),
     ]);

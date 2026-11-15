@@ -6,6 +6,7 @@
  */
 
 import { getAdminClient } from "@/lib/supabase";
+import { likeExact } from "@/lib/like";
 
 export type ParticipantRow = {
   id: string;
@@ -212,7 +213,7 @@ export async function addParticipantByEmail(
   const { data: existing } = await db
     .from("users")
     .select("username")
-    .ilike("email", normalized)
+    .ilike("email", likeExact(normalized))
     .maybeSingle();
   if (existing?.username) {
     return addParticipantByUsername(
