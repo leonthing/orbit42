@@ -46,6 +46,14 @@ export async function GET(request: NextRequest) {
       .lt("created_at", new Date(Date.now() - 2 * 24 * 3600_000).toISOString());
     if (error && error.code !== "42P01" && error.code !== "PGRST205") console.error("rate_limit_hits cleanup", error.message);
   }
+  // 소셜 로그인 감사 기록: 90일(PO 11/16)
+  let oauthAudit = 0;
+  try {
+    const { cleanupOauthAudit } = await import("@/lib/oauth-audit");
+    oauthAudit = await cleanupOauthAudit();
+  } catch (err) {
+    console.error("cleanupOauthAudit", (err as Error)?.message);
+  }
   // 예약 상태 변경 기록: 예약이 끝난 날로부터 1년(보안-8)
   let bookingEvents = 0;
   try {
@@ -68,5 +76,5 @@ export async function GET(request: NextRequest) {
       { status: 500 },
     );
   }
-  return NextResponse.json({ ok: true, rescheduleExpired: expired, unpaidExpired, chats, dm, bookingEvents, emptyPosts });
+  return NextResponse.json({ ok: true, rescheduleExpired: expired, unpaidExpired, chats, dm, bookingEvents, emptyPosts, oauthAudit });
 }

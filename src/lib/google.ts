@@ -50,7 +50,7 @@ export function getSignInUrl(state?: string) {
   });
 }
 
-/** Fetch { email, name } for the sign-in flow. */
+/** Fetch { email, name } for the sign-in flow. email 은 구글이 확인한 주소일 때만(아니면 null). */
 export async function fetchGoogleProfile(tokens: {
   access_token?: string | null;
 }): Promise<{ email: string | null; name: string | null }> {
@@ -61,8 +61,9 @@ export async function fetchGoogleProfile(tokens: {
     });
     const oauth2 = google.oauth2({ version: "v2", auth: client });
     const res = await oauth2.userinfo.get();
+    // 구글이 확인한(verified_email) 주소만 쓴다 — 이메일만으로 기존 계정에 들어가므로 확인 안 된 주소는 '없음'으로(PO 11/16)
     return {
-      email: (res.data.email as string | null) ?? null,
+      email: res.data.verified_email === true ? ((res.data.email as string | null) ?? null) : null,
       name: (res.data.name as string | null) ?? null,
     };
   } catch {

@@ -1,6 +1,6 @@
 // 일반 서버 모듈 — 서버 액션 아님(보안-6). 클라이언트용은 *-actions.ts
 import { cookies } from "next/headers";
-import { likeExact } from "@/lib/like";
+import { idForEmail } from "@/lib/email-lookup";
 import { randomBytes } from "node:crypto";
 import { getAdminClient } from "@/lib/supabase";
 import { getSession } from "@/lib/auth";
@@ -102,7 +102,7 @@ export async function requestPasswordReset(email: string) {
   const { data: user } = await db
     .from("users")
     .select("id, email")
-    .ilike("email", likeExact(normalized))
+    .eq("id", await idForEmail(normalized))
     .maybeSingle();
   if (user?.email) {
     const token = newToken();

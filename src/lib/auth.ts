@@ -1,6 +1,7 @@
 // 일반 서버 모듈 — 서버 액션 아님(보안-6). 클라이언트용은 *-actions.ts
 import { cookies, headers } from "next/headers";
-import { likeExact } from "@/lib/like";
+import { idForEmail } from "@/lib/email-lookup";
+import { auditOauthLogin } from "@/lib/oauth-audit";
 import { parseSocialLinks } from "@/lib/social-links";
 import { getAdminClient } from "@/lib/supabase";
 import { clientKey, rateLimitDb } from "@/lib/rate-limit";
@@ -86,7 +87,7 @@ export async function signup(
   const { data: byEmail } = await db
     .from("users")
     .select("id")
-    .ilike("email", likeExact(normalizedEmail))
+    .eq("id", await idForEmail(normalizedEmail))
     .maybeSingle();
   if (byEmail) {
     return { error: "이미 사용 중인 이메일입니다." };
@@ -150,6 +151,7 @@ export async function signup(
  * password. Used by Google (web) and Apple (iOS) sign-in.
  */
 async function oauthLoginOrSignup(profile: {
+  provider: "google" | "apple";
   email: string;
   displayName: string | null;
   referrerRef?: string | null;
@@ -164,7 +166,7 @@ async function oauthLoginOrSignup(profile: {
   const { data: existing } = await db
     .from("users")
     .select("id, username, email_verified, apple_sub")
-    .ilike("email", likeExact(normalized))
+    .eq("id", await idForEmail(normalized))
     .maybeSingle();
 
   if (existing?.username) {
@@ -181,6 +183,7 @@ async function oauthLoginOrSignup(profile: {
       await db.from("users").update(patch).eq("id", existing.id);
     }
     await setSessionCookie(existing.username as string);
+    await auditOauthLogin({ provider: profile.provider, matchedBy: "email", userId: existing.id as string, email: normalized });
     return { username: existing.username as string, created: false };
   }
 
@@ -255,7 +258,7 @@ export async function loginOrSignupWithGoogle(
   displayName: string | null,
   referrerRef: string | null = null,
 ): Promise<{ username: string; created: boolean } | { error: string }> {
-  return oauthLoginOrSignup({ email, displayName, referrerRef });
+  return oauthLoginOrSignup({ provider: "google", email, displayName, referrerRef });
 }
 
 /**
@@ -272,11 +275,12 @@ export async function loginOrSignupWithApple(
   const db = getAdminClient();
   const { data: bySub } = await db
     .from("users")
-    .select("username")
+    .select("id, username")
     .eq("apple_sub", appleSub)
     .maybeSingle();
   if (bySub?.username) {
     await setSessionCookie(bySub.username as string);
+    await auditOauthLogin({ provider: "apple", matchedBy: "apple_sub", userId: bySub.id as string, email });
     return { username: bySub.username as string, created: false };
   }
 
@@ -289,6 +293,7 @@ export async function loginOrSignupWithApple(
     };
   }
   return oauthLoginOrSignup({
+    provider: "apple",
     email,
     displayName,
     referrerRef,

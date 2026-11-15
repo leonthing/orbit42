@@ -35,9 +35,10 @@ export async function POST(request: Request) {
     );
   }
 
+  // Apple 이 확인한(email_verified) 주소만 이메일로 기존 계정을 찾는 데 쓴다(릴레이 주소도 Apple 은 true 로 준다) — PO 11/16
   const result = await loginOrSignupWithApple(
     identity.sub,
-    identity.email,
+    identity.emailVerified ? identity.email : null,
     body.displayName?.trim() || null,
   );
   if ("error" in result) {

@@ -1,13 +1,12 @@
 /**
  * LIKE/ILIKE 에 사용자 글자를 넣을 때 — '%'·'_'·'\' 를 글자 그대로 맞추게 이스케이프(PostgreSQL 기본 이스케이프 문자 '\').
- * 이메일 같은 '같은 값' 찾기는 likeExact, 부분 검색은 likeContains.
+ * 부분 검색(likeContains)에만 쓴다 — 이메일 같은 '같은 값' 찾기는 LIKE 를 쓰지 않는다(email-lookup.ts, 정확 일치).
  * PostgREST 는 like 값의 '*' 를 '%' 로 바꾸므로 '*' 는 뺀다(아이디·이메일에 쓰이지 않음).
  */
 export function escapeLike(s: string): string {
   return s.replace(/\*/g, "").replace(/[\\%_]/g, (m) => "\\" + m);
 }
 
-export const likeExact = (s: string) => escapeLike(s);
 export const likeContains = (s: string) => `%${escapeLike(s)}%`;
 
 /**
