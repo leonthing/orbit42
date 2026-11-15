@@ -779,6 +779,31 @@ struct PostDetailView: View {
                         .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
                         .padding(.horizontal, 16)
                 }
+                if post.mine && post.isDraft && !post.hidden {
+                    // 임시 저장 글 — 바로 올리기(전체 공개). 메뉴를 찾지 않아도 되게(PO 11/15)
+                    HStack(spacing: 10) {
+                        Label("임시 저장한 글이에요. 나에게만 보여요.", systemImage: "lock.fill")
+                            .font(.footnote)
+                            .foregroundStyle(Theme.secondaryText)
+                        Spacer(minLength: 0)
+                        Button {
+                            Task { await setPublic(true) }
+                        } label: {
+                            Text(working ? "올리는 중…" : "올리기")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 16)
+                                .frame(minHeight: 40)
+                                .background(Theme.accent, in: Capsule())
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(working)
+                        .accessibilityIdentifier("publishDraft")
+                    }
+                    .padding(12)
+                    .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
+                    .padding(.horizontal, 16)
+                }
                 if !post.photos.isEmpty {
                     photoPager(post)
                 }
@@ -804,7 +829,8 @@ struct PostDetailView: View {
                             .accessibilityIdentifier("postDate")
                     }
                     if post.isPinned {
-                        Label("링크 페이지 맨 위에 고정한 글", systemImage: "pin.fill")
+                        // 방문자에게는 짧게 — '링크 페이지 맨 위'는 글쓴이용 설명(PO 11/15)
+                        Label(post.mine ? "링크 페이지 맨 위에 고정한 글" : "고정한 글", systemImage: "pin.fill")
                             .font(.caption)
                             .foregroundStyle(Theme.secondaryText)
                     }
@@ -852,8 +878,9 @@ struct PostDetailView: View {
                         Spacer(minLength: 0)
                     }
                     .padding(.top, 4)
-                    if post.isPublic && !post.hidden && post.shareable == false {
-                        Text("공개 전이라 다른 사람에게는 아직 안 열려요.")
+                    // 날짜는 서버 상수(POSTS_PUBLIC_FROM) 한 곳에서 — 공개 스위치가 켜지면 서버가 null 을 보내 사라진다
+                    if post.mine, post.isPublic, !post.hidden, post.shareable == false, let notice = post.publicNotice, !notice.isEmpty {
+                        Text(notice)
                             .font(.caption)
                             .foregroundStyle(Theme.secondaryText)
                     }
@@ -874,7 +901,9 @@ struct PostDetailView: View {
                 }
                 .padding(.horizontal, 16)
             }
-            .padding(.vertical, 12)
+            .padding(.top, 12)
+            // 떠 있는 탭 막대 위로 하트·공유·예약하기가 다 보이게(PO 11/15)
+            .padding(.bottom, 96)
             .readableWidth()
         }
         .refreshable { await load() }

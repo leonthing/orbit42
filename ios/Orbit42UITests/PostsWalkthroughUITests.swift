@@ -71,23 +71,21 @@ final class PostsWalkthroughUITests: XCTestCase {
         XCTAssertTrue(app.buttons["postMenu"].waitForExistence(timeout: 20))
         sleep(2)
         shot(app, "i08-임시저장글-상세")
-        app.buttons["postMenu"].tap()
-        sleep(1)
-        shot(app, "i09-임시저장글-메뉴")
-        app.buttons["고치기"].firstMatch.tap()
-        XCTAssertTrue(app.textFields["postTitle"].waitForExistence(timeout: 10))
-        sleep(2)
-        shot(app, "i10-다시열기")
-        let vis = app.segmentedControls["postVisibility"].buttons["전체 공개"]
-        for _ in 0..<4 where !vis.isHittable { app.swipeUp() }
-        vis.tap()
-        shot(app, "i11-전체공개로")
-        app.buttons["savePost"].tap()
+        // PO 11/15: 임시 저장 글 화면에서 바로 '올리기'
+        let publish = app.buttons["publishDraft"]
+        XCTAssertTrue(publish.waitForExistence(timeout: 10), "임시 저장 글에 올리기 버튼 없음")
+        publish.tap()
+        XCTAssertTrue(publish.waitForNonExistence(timeout: 20), "올린 뒤에도 올리기 버튼이 남음")
         XCTAssertTrue(app.buttons["postMenu"].waitForExistence(timeout: 30))
         sleep(3)
         shot(app, "i12-올린글-상세")
         app.swipeUp()
-        shot(app, "i13-올린글-본문")
+        app.swipeUp()
+        XCTAssertTrue(app.staticTexts["11월 27일부터 다른 분들께 보여요."].waitForExistence(timeout: 5), "공개 전 안내 날짜 없음")
+        let like = app.buttons["postLike"]
+        XCTAssertTrue(like.exists)
+        XCTAssertLessThan(like.frame.maxY, app.frame.height - 90, "맨 아래로 내려도 하트가 탭 막대에 가림")
+        shot(app, "i13-올린글-맨아래")
         app.swipeDown()
         app.buttons["postMenu"].tap()
         let pin = app.buttons["링크 페이지 맨 위에 고정"]
@@ -127,6 +125,9 @@ final class PostsWalkthroughUITests: XCTestCase {
         let like = app.buttons["postLike"]
         XCTAssertTrue(like.waitForExistence(timeout: 15))
         sleep(2)
+        XCTAssertTrue(app.staticTexts["고정한 글"].exists, "방문자에게 '고정한 글' 아님")
+        XCTAssertFalse(app.staticTexts["링크 페이지 맨 위에 고정한 글"].exists)
+        XCTAssertFalse(app.staticTexts["11월 27일부터 다른 분들께 보여요."].exists, "방문자에게 글쓴이용 공개 전 안내")
         shot(app, "i20-방문자-상세")
         like.tap()
         sleep(2)

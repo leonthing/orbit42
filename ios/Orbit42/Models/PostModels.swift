@@ -52,6 +52,8 @@ struct Post: Decodable, Identifiable, Hashable, Sendable {
     let url: String?
     /// 지금 남이 이 주소를 열 수 있는지(공개 스위치 켜짐 + 공개) — 아니면 "공개 전" 안내
     let shareable: Bool?
+    /// 공개 스위치가 꺼진 동안 공개 글 안내("11월 27일부터 다른 분들께 보여요.") — 서버 상수, 켜지면 nil
+    let publicNotice: String?
     /// 상세에서만 — 예약하기 버튼 주소
     let bookingUrl: String?
 
