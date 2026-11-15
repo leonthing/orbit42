@@ -13,6 +13,9 @@ struct CardsHomeView: View {
     @State private var askRevokeAll = false
     @State private var askDisconnect = false
     @State private var counts = CardFixCounter.counts
+    @State private var undos = CardsUndo.all()
+    @State private var askUndo: CardsUndo.Item?
+    @State private var undoNotice: String?
 
     var body: some View {
         List {
@@ -55,6 +58,28 @@ struct CardsHomeView: View {
                 ProgressView()
             }
 
+            if !undos.isEmpty && store.status?.connected == true {
+                Section {
+                    ForEach(undos) { u in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(u.name).lineLimit(1)
+                                Text("\(u.kind == "created" ? "새로 만듦" : "갱신") · \(u.at.formatted(date: .abbreviated, time: .shortened))")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Button("되돌리기") { askUndo = u }
+                                .buttonStyle(.bordered)
+                                .accessibilityIdentifier("cardsUndo")
+                        }
+                    }
+                } header: {
+                    Text("최근 저장")
+                } footer: {
+                    Text("최근 \(CardsUndo.limit)건까지 되돌릴 수 있어요. 저장한 뒤에 그 연락처를 고쳤으면 되돌리지 않아요. 되돌릴 정보는 이 기기에만 있어요.")
+                }
+            }
+
             if (counts["_cards"] ?? 0) > 0 {
                 Section {
                     LabeledContent("저장한 명함", value: "\(counts["_cards"] ?? 0)장")
@@ -70,8 +95,24 @@ struct CardsHomeView: View {
             }
         }
         .navigationTitle("명함 → 구글 연락처")
-        .task { await store.refresh(); counts = CardFixCounter.counts }
-        .onAppear { counts = CardFixCounter.counts }
+        .task { await store.refresh(); counts = CardFixCounter.counts; undos = CardsUndo.all() }
+        .onAppear { counts = CardFixCounter.counts; undos = CardsUndo.all() }
+        .confirmationDialog(askUndo.map { "\($0.name) 저장을 되돌릴까요?" } ?? "", isPresented: Binding(get: { askUndo != nil }, set: { if !$0 { askUndo = nil } }), titleVisibility: .visible, presenting: askUndo) { u in
+            Button("되돌리기", role: .destructive) {
+                Task {
+                    switch await store.undo(u) {
+                    case .done: undoNotice = u.kind == "created" ? "연락처와 명함 사진을 지웠어요." : "갱신 전으로 되돌렸어요."
+                    case .changed(let m), .failed(let m): undoNotice = m
+                    }
+                    undos = CardsUndo.all()
+                }
+            }
+        } message: { u in
+            Text(u.kind == "created" ? "방금 만든 연락처와 Drive 명함 사진을 지워요." : "갱신 전 값으로 되돌리고, 이번에 붙인 Card 라벨과 Drive 명함 사진을 지워요.")
+        }
+        .alert("알림", isPresented: Binding(get: { undoNotice != nil }, set: { if !$0 { undoNotice = nil } })) {
+            Button("확인", role: .cancel) {}
+        } message: { Text(undoNotice ?? "") }
         .fullScreenCover(isPresented: $showScanner) {
             CardScannerView { pages in
                 showScanner = false
@@ -91,7 +132,7 @@ struct CardsHomeView: View {
             }
         }
         .navigationDestination(item: $confirm) { input in
-            CardConfirmView(input: input) { confirm = nil; counts = CardFixCounter.counts }
+            CardConfirmView(input: input) { confirm = nil; counts = CardFixCounter.counts; undos = CardsUndo.all() }
         }
         .confirmationDialog("명함 연결을 해제할까요?", isPresented: $askDisconnect, titleVisibility: .visible) {
             Button("해제", role: .destructive) { Task { await store.disconnect(revokeAll: false) } }
@@ -180,6 +221,8 @@ struct CardConfirmView: View {
     @State private var saving = false
     @State private var notice: String?
     @State private var savedText: String?
+    @State private var savedUndo: UUID?
+    @State private var undoing = false
     @State private var searchTask: Task<Void, Never>?
     @Environment(\.dismiss) private var dismiss
 
@@ -309,6 +352,9 @@ struct CardConfirmView: View {
         } message: { Text(notice ?? "") }
         .alert("저장했어요", isPresented: Binding(get: { savedText != nil }, set: { if !$0 { savedText = nil } })) {
             Button("확인") { finished(); dismiss() }
+            if savedUndo != nil {
+                Button("방금 저장 되돌리기", role: .destructive) { Task { await undoNow() } }
+            }
         } message: { Text(savedText ?? "") }
     }
 
@@ -400,8 +446,9 @@ struct CardConfirmView: View {
         let draft = draftForSave
         let sug = pick == "create" ? CardSuggested(kind: "create", resourceName: nil) : CardSuggested(kind: "update", resourceName: pick)
         switch await CardsStore.shared.save(draft, choice: sug, seen: candidates.map(\.resourceName), photos: input.pages) {
-        case .saved(let kind, let name):
+        case .saved(let kind, let name, let undoID):
             CardFixCounter.record(parsed: input.parsed, saved: draft)
+            savedUndo = undoID
             savedText = kind == "updated" ? "\(name) 연락처를 갱신했어요." : "\(name) 연락처를 만들었어요."
         case .recheck(let msg, let cands):
             apply(candidates: cands, suggested: nil)
@@ -409,6 +456,21 @@ struct CardConfirmView: View {
             notice = msg
         case .failed(let msg):
             notice = msg
+        }
+    }
+
+    /// 저장 직후 '되돌리기' — 되돌리면 이 화면에 그대로 남아 고쳐서 다시 저장할 수 있다
+    private func undoNow() async {
+        guard let id = savedUndo, let item = CardsUndo.item(id) else { return }
+        undoing = true
+        defer { undoing = false }
+        savedUndo = nil
+        switch await CardsStore.shared.undo(item) {
+        case .done:
+            notice = item.kind == "created" ? "방금 만든 연락처와 명함 사진을 지웠어요. 고쳐서 다시 저장할 수 있어요." : "갱신 전으로 되돌렸어요. 고쳐서 다시 저장할 수 있어요."
+            scheduleSearch(immediate: true)
+        case .changed(let m), .failed(let m):
+            notice = m
         }
     }
 }

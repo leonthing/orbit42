@@ -199,6 +199,21 @@ final class APIClient {
         return (http.statusCode, data)
     }
 
+    /// JSON 본문 POST — 응답 상태와 본문을 그대로(명함 되돌리기: 저장 응답의 undo 를 손대지 않고 돌려보낸다)
+    func postRaw(_ path: String, json: Data) async throws -> (status: Int, data: Data) {
+        var request = request(path: path, method: "POST")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 30
+        request.httpBody = json
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        if http.statusCode == 401 {
+            SessionExpiry.note(request)
+            throw APIError.unauthorized(message: "로그인이 필요해요.")
+        }
+        return (http.statusCode, data)
+    }
+
     // MARK: - 내부
 
     private func request(path: String, method: String) -> URLRequest {

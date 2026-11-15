@@ -29,7 +29,7 @@ private struct CardMatchBody: Encodable { let card: CardDraft; let recent: [Stri
 private struct CardDisconnectBody: Encodable { let revokeAll: Bool }
 
 enum CardSaveOutcome {
-    case saved(kind: String, name: String)
+    case saved(kind: String, name: String, undoID: UUID?)
     case recheck(message: String, candidates: [CardCandidate])
     case failed(String)
 }
@@ -152,7 +152,8 @@ final class CardsStore {
             )
             if status == 200, let r = try? JSONDecoder().decode(CardSaveResponse.self, from: data), r.ok {
                 if r.kind == "created", let rn = r.resourceName { CardsRecent.remember(rn, d) }
-                return .saved(kind: r.kind ?? "", name: r.name ?? d.name)
+                let undoID = CardsUndo.add(kind: r.kind ?? "", name: r.name ?? d.name, response: data)
+                return .saved(kind: r.kind ?? "", name: r.name ?? d.name, undoID: undoID)
             }
             let c = try? JSONDecoder().decode(CardSaveConflict.self, from: data)
             if status == 409, c?.reason == "new_candidates" {
@@ -168,6 +169,81 @@ final class CardsStore {
             return .failed("저장하지 못했어요. 네트워크를 확인해 주세요.")
         }
     }
+
+    // MARK: 방금 저장 되돌리기
+
+    enum UndoOutcome { case done, changed(String), failed(String) }
+
+    func undo(_ item: CardsUndo.Item) async -> UndoOutcome {
+        guard let raw = CardsUndo.payload(item.id) else { return .failed("되돌릴 내용이 이 기기에 없어요.") }
+        var body = Data(#"{"undo":"#.utf8)
+        body.append(raw)
+        body.append(Data("}".utf8))
+        do {
+            let (status, data) = try await api.postRaw("/api/v1/cards/undo", json: body)
+            let msg = (try? JSONDecoder().decode(CardSaveConflict.self, from: data))?.error
+            switch status {
+            case 200:
+                CardsUndo.remove(item.id)
+                if item.kind == "created" { CardsRecent.forget(item.resourceName) }
+                return .done
+            case 409 where String(data: data, encoding: .utf8)?.contains("\"changed\"") == true:
+                CardsUndo.remove(item.id)
+                return .changed(msg ?? "저장한 뒤에 이 연락처가 바뀌어서 되돌리지 않았어요.")
+            case 409:
+                await refresh()
+                return .failed(msg ?? "구글 연락처 연결이 필요해요.")
+            default:
+                return .failed(msg ?? "되돌리지 못했어요. (오류 \(status))")
+            }
+        } catch let e as APIError {
+            return .failed(e.errorDescription ?? "되돌리지 못했어요.")
+        } catch {
+            return .failed("되돌리지 못했어요. 네트워크를 확인해 주세요.")
+        }
+    }
+}
+
+/// 방금 저장 되돌리기(PO 11/15) — 저장 응답의 undo(갱신 전 값 포함)를 기기에만 최근 10건 둔다. 서버에는 남기지 않는다.
+enum CardsUndo {
+    private static let key = "cards.undo.v1"
+    static let limit = 10
+
+    struct Item: Codable, Identifiable, Hashable {
+        let id: UUID
+        let kind: String
+        let name: String
+        let resourceName: String
+        let at: Date
+        let undo: Data
+        static func == (a: Item, b: Item) -> Bool { a.id == b.id }
+        func hash(into h: inout Hasher) { h.combine(id) }
+    }
+
+    static func all() -> [Item] {
+        guard let data = UserDefaults.standard.data(forKey: key) else { return [] }
+        return (try? JSONDecoder().decode([Item].self, from: data)) ?? []
+    }
+
+    private static func store(_ items: [Item]) {
+        if let data = try? JSONEncoder().encode(Array(items.prefix(limit))) { UserDefaults.standard.set(data, forKey: key) }
+    }
+
+    /// 저장 응답에서 undo 만 떼어 그대로 둔다(모양을 바꾸지 않고 서버에 돌려준다)
+    @discardableResult
+    static func add(kind: String, name: String, response: Data) -> UUID? {
+        guard let obj = try? JSONSerialization.jsonObject(with: response) as? [String: Any],
+              let undo = obj["undo"] as? [String: Any],
+              let rn = undo["resourceName"] as? String,
+              let raw = try? JSONSerialization.data(withJSONObject: undo) else { return nil }
+        let item = Item(id: UUID(), kind: kind, name: name, resourceName: rn, at: Date(), undo: raw)
+        store([item] + all())
+        return item.id
+    }
+
+    static func item(_ id: UUID) -> Item? { all().first { $0.id == id } }
+    static func payload(_ id: UUID) -> Data? { item(id)?.undo }
+    static func remove(_ id: UUID) { store(all().filter { $0.id != id }) }
 }
 
 /// 앱이 최근에 만든 연락처(최근 50건) — 구글 검색 색인이 새 연락처를 늦게 잡는 것을 메운다.
@@ -194,6 +270,11 @@ enum CardsRecent {
         var items = load().filter { $0.rn != rn }
         items.insert(Item(rn: rn, keys: keys(d), at: Date()), at: 0)
         if let data = try? JSONEncoder().encode(Array(items.prefix(50))) { UserDefaults.standard.set(data, forKey: key) }
+    }
+
+    static func forget(_ rn: String) {
+        let items = load().filter { $0.rn != rn }
+        if let data = try? JSONEncoder().encode(items) { UserDefaults.standard.set(data, forKey: key) }
     }
 
     static func matching(_ d: CardDraft) -> [String] {
