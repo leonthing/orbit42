@@ -282,3 +282,79 @@ function squash(s: string): string {
 export function needsCardGroup(p: GPerson, group: string): boolean {
   return !(p.memberships ?? []).some((m) => m.contactGroupMembership?.contactGroupResourceName === group);
 }
+
+// ── 방금 저장 되돌리기(PO 11/15) ──────────────────────────────────────────────
+
+const UPDATE_KEYS = ["names", "organizations", "phoneNumbers", "emailAddresses", "addresses", "urls", "biographies"] as const;
+type UpdateKey = (typeof UPDATE_KEYS)[number];
+
+/** 구글이 읽기 전용으로 붙이는 값(되돌려 쓸 때 빼야 하는 것) */
+const OUTPUT_ONLY = new Set(["metadata", "formattedType", "canonicalForm", "displayName", "displayNameLastFirst", "formattedProtocol"]);
+
+/** 갱신 전 값(되돌리기용) — 갱신이 건드리는 칸만, 구글 읽기 전용 값은 빼고. 없던 칸은 [](되돌릴 때 비운다) */
+export function writableSnapshot(p: GPerson): Pick<GPerson, UpdateKey> {
+  const out: Record<string, unknown[]> = {};
+  for (const k of UPDATE_KEYS) {
+    out[k] = ((p as Record<string, unknown>)[k] as Record<string, unknown>[] | undefined ?? []).map((e) =>
+      Object.fromEntries(Object.entries(e ?? {}).filter(([key, v]) => !OUTPUT_ONLY.has(key) && v !== undefined && v !== null)),
+    );
+  }
+  return out as Pick<GPerson, UpdateKey>;
+}
+
+/**
+ * 갱신이 건드리는 칸의 지문 — 저장 직후와 되돌릴 때 같으면 '그 사이 아무도 안 고쳤다'.
+ * 구글이 읽어 준 값끼리만 비교한다(번호는 숫자만, 메일은 소문자, 나머지는 공백 정리).
+ */
+export function fieldsFingerprint(p: GPerson): string {
+  const t = (s: unknown) => String(s ?? "").trim().replace(/\s+/g, " ");
+  const n = p.names?.map((x) => {
+    const r = x as Record<string, unknown>;
+    return ["givenName", "familyName", "middleName", "honorificPrefix", "honorificSuffix"].map((k) => t(r[k])).join("|");
+  });
+  const v = {
+    n,
+    o: p.organizations?.map((x) => [t(x.name), t(x.title), t(x.department)].join("|")),
+    p: p.phoneNumbers?.map((x) => normPhone(x.value ?? "")),
+    e: p.emailAddresses?.map((x) => normEmail(x.value ?? "")),
+    a: p.addresses?.map((x) => t(x.formattedValue || x.streetAddress)),
+    u: p.urls?.map((x) => t(x.value)),
+    b: p.biographies?.map((x) => t(x.value)),
+  };
+  return JSON.stringify(v, (_k, val) => (Array.isArray(val) && val.length === 0 ? undefined : val));
+}
+
+/** 앱이 맡겨 둔 되돌리기 정보 */
+export type CardUndo = {
+  kind: "created" | "updated";
+  resourceName: string;
+  /** 저장 직후 지문 — 되돌릴 때 다르면(그 사이 고침) 손대지 않는다 */
+  after: string;
+  /** 이번 저장으로 올린 Drive 사진 */
+  fileIds: string[];
+  /** 이번 저장으로 붙인 Card 라벨(갱신일 때만) */
+  groupAdded: string | null;
+  /** 갱신 전 값(갱신일 때만) */
+  before: Pick<GPerson, UpdateKey> | null;
+};
+
+/** 앱이 돌려준 되돌리기 정보 검사 — 모양이 다르면 null */
+export function parseUndo(raw: unknown): CardUndo | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  if (r.kind !== "created" && r.kind !== "updated") return null;
+  if (typeof r.resourceName !== "string" || !/^people\/[\w-]+$/.test(r.resourceName)) return null;
+  if (typeof r.after !== "string" || r.after.length > 20000) return null;
+  const fileIds = Array.isArray(r.fileIds) ? r.fileIds : [];
+  if (fileIds.length > 2 || !fileIds.every((x) => typeof x === "string" && /^[\w-]{10,200}$/.test(x))) return null;
+  const groupAdded = r.groupAdded ?? null;
+  if (groupAdded !== null && (typeof groupAdded !== "string" || !/^contactGroups\/[\w-]+$/.test(groupAdded))) return null;
+  let before: CardUndo["before"] = null;
+  if (r.kind === "updated") {
+    if (!r.before || typeof r.before !== "object") return null;
+    const b = r.before as Record<string, unknown>;
+    if (!UPDATE_KEYS.every((k) => Array.isArray(b[k]) && (b[k] as unknown[]).every((e) => e && typeof e === "object"))) return null;
+    before = writableSnapshot(b as GPerson);
+  }
+  return { kind: r.kind, resourceName: r.resourceName, after: r.after, fileIds: fileIds as string[], groupAdded: groupAdded as string | null, before };
+}

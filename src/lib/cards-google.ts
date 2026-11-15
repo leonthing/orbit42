@@ -13,6 +13,9 @@ import {
   buildUpdate,
   needsCardGroup,
   UPDATE_FIELDS,
+  fieldsFingerprint,
+  writableSnapshot,
+  type CardUndo,
 } from "@/lib/cards-match";
 
 /**
@@ -240,7 +243,7 @@ export type CardPhoto = { side: "앞" | "뒤"; data: Buffer; mime: string };
 export type SaveChoice = { kind: "create" } | { kind: "update"; resourceName: string };
 
 export type SaveResult =
-  | { ok: true; kind: "created" | "updated"; resourceName: string; name: string }
+  | { ok: true; kind: "created" | "updated"; resourceName: string; name: string; undo: CardUndo }
   | { ok: false; reason: "new_candidates"; candidates: Candidate[] }
   | { ok: false; reason: "not_candidate" };
 
@@ -264,6 +267,7 @@ export async function saveCard(
 ): Promise<SaveResult> {
   const c = await connect(userId);
   const uploaded: string[] = [];
+  let written = false;
   const drive = google.drive({ version: "v3", auth: c.auth });
   try {
     const cands = await matchCard(userId, card, recent);
@@ -291,8 +295,13 @@ export async function saveCard(
     const opts = { photoLinks: links, today, cardGroup: group };
 
     if (choice.kind === "create") {
-      const r = await c.people.people.createContact({ requestBody: buildCreate(card, opts) as people_v1.Schema$Person, personFields: "names" });
-      return { ok: true, kind: "created", resourceName: r.data.resourceName!, name: r.data.names?.[0]?.displayName ?? card.name };
+      const r = await c.people.people.createContact({ requestBody: buildCreate(card, opts) as people_v1.Schema$Person, personFields: READ_MASK });
+      written = true;
+      const rn = r.data.resourceName!;
+      return {
+        ok: true, kind: "created", resourceName: rn, name: r.data.names?.[0]?.displayName ?? card.name,
+        undo: { kind: "created", resourceName: rn, after: fieldsFingerprint(r.data as GPerson), fileIds: uploaded, groupAdded: null, before: null },
+      };
     }
     // 갱신: 최신 etag 로 다시 읽고 쓴다
     const fresh = await c.people.people.get({ resourceName: choice.resourceName, personFields: READ_MASK });
@@ -300,18 +309,74 @@ export async function saveCard(
     const r = await c.people.people.updateContact({
       resourceName: choice.resourceName,
       updatePersonFields: UPDATE_FIELDS,
-      personFields: "names",
+      personFields: READ_MASK,
       requestBody: body as people_v1.Schema$Person,
     });
+    written = true;
+    let groupAdded: string | null = null;
     if (needsCardGroup(fresh.data as GPerson, group)) {
-      await c.people.contactGroups.members.modify({
-        resourceName: group,
-        requestBody: { resourceNamesToAdd: [choice.resourceName] },
+      // 연락처는 이미 써졌다 — 라벨만 실패하면 저장은 그대로 두고 기록만(사진도 지우지 않음: 메모에 링크가 있다)
+      await c.people.contactGroups.members
+        .modify({ resourceName: group, requestBody: { resourceNamesToAdd: [choice.resourceName] } })
+        .then(() => { groupAdded = group; })
+        .catch((e) => logCardsError("group add", e));
+    }
+    return {
+      ok: true, kind: "updated", resourceName: choice.resourceName, name: r.data.names?.[0]?.displayName ?? card.name,
+      undo: {
+        kind: "updated", resourceName: choice.resourceName, after: fieldsFingerprint(r.data as GPerson),
+        fileIds: uploaded, groupAdded, before: writableSnapshot(fresh.data as GPerson),
+      },
+    };
+  } catch (e) {
+    // 연락처를 쓰기 전에 실패했을 때만 올린 사진을 지운다
+    if (!written) for (const id of uploaded) await drive.files.delete({ fileId: id }).catch(() => undefined);
+    return handleGoogleError(userId, e);
+  }
+}
+
+export type UndoResult = { ok: true } | { ok: false; reason: "changed" };
+
+/**
+ * 방금 저장 되돌리기. 저장 직후와 지금이 같을 때만(그 사이 Leo가 고쳤으면 손대지 않는다).
+ *  - 새로 만든 것: 연락처를 지우고 올린 사진도 지운다.
+ *  - 갱신한 것: 갱신 전 값으로 다시 쓰고, 이번에 붙인 Card 라벨을 떼고, 올린 사진을 지운다.
+ */
+export async function undoCard(userId: string, u: CardUndo): Promise<UndoResult> {
+  const c = await connect(userId);
+  const drive = google.drive({ version: "v3", auth: c.auth });
+  try {
+    const cur = await c.people.people
+      .get({ resourceName: u.resourceName, personFields: READ_MASK })
+      .then((r) => r.data as GPerson)
+      .catch((e) => {
+        if (Number((e as { response?: { status?: number } })?.response?.status) === 404) return null;
+        throw e;
+      });
+    if (cur && fieldsFingerprint(cur) !== u.after) return { ok: false, reason: "changed" };
+    if (u.kind === "created") {
+      if (cur) await c.people.people.deleteContact({ resourceName: u.resourceName });
+    } else {
+      if (!cur) return { ok: false, reason: "changed" };
+      await c.people.people.updateContact({
+        resourceName: u.resourceName,
+        updatePersonFields: UPDATE_FIELDS,
+        personFields: "names",
+        requestBody: { ...u.before, etag: cur.etag } as people_v1.Schema$Person,
+      });
+      if (u.groupAdded) {
+        await c.people.contactGroups.members
+          .modify({ resourceName: u.groupAdded, requestBody: { resourceNamesToRemove: [u.resourceName] } })
+          .catch((e) => logCardsError("group remove", e));
+      }
+    }
+    for (const id of u.fileIds) {
+      await drive.files.delete({ fileId: id }).catch((e) => {
+        if (Number((e as { response?: { status?: number } })?.response?.status) !== 404) logCardsError("photo delete", e);
       });
     }
-    return { ok: true, kind: "updated", resourceName: choice.resourceName, name: r.data.names?.[0]?.displayName ?? card.name };
+    return { ok: true };
   } catch (e) {
-    for (const id of uploaded) await drive.files.delete({ fileId: id }).catch(() => undefined);
     return handleGoogleError(userId, e);
   }
 }
