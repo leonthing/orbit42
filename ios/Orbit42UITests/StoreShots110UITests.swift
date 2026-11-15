@@ -33,6 +33,17 @@ final class StoreShots110UITests: XCTestCase {
         tile.tap()
         XCTAssertTrue(app.buttons["postLike"].waitForExistence(timeout: 15))
         sleep(6) // 사진 불러오기
+        // PO 11/15: '하린님에게 예약하기'가 탭 막대에 가리지 않게 조금 올린 상태로(관성 없이 끌기)
+        let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.62))
+        from.press(forDuration: 0.15, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: CGFloat(Double(env["SHOT_LIFT"] ?? "0.52") ?? 0.52))))
+        sleep(2)
+        let book = app.buttons["postBook"]
+        XCTAssertTrue(book.exists, "예약하기 버튼 없음")
+        let bar = app.tabBars.firstMatch
+        if bar.exists && bar.frame.minY > app.frame.midY {
+            XCTAssertLessThan(book.frame.maxY, bar.frame.minY - 12, "예약하기가 탭 막대에 가림")
+        }
+        XCTAssertLessThan(book.frame.maxY, app.frame.height * 0.95, "예약하기가 화면 아래 끝에 붙음")
         let shot = app.screenshot()
         let a = XCTAttachment(screenshot: shot); a.name = "posts"; a.lifetime = .keepAlways; add(a)
         if let dir = env["SHOT_DIR"] {
