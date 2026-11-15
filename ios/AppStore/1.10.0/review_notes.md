@@ -6,7 +6,7 @@
 - 운영 `POSTS_PREVIEW_USER_IDS` = leokim·appreview·도윤(demodoyun)·서연(demoseoyeon). `POSTS_PUBLIC` 없음(꺼짐) → **appreview로 로그인하면 글·사진이 열리고**, 도윤·서연의 글도 보인다(미리보기 계정끼리).
 - 신고는 message_reports(kind=post)로 들어가고 운영자 알림 → /admin/reports 에서 처리(1.9.0 때 만든 목록이 글 신고도 보여 줌).
 - 차단은 상대 프로필 '…' → '차단 해제'로 되돌릴 수 있다(앱 PersonProfileView).
-- 빌드 51(feat/1.10.0-ios-posts 4ab… 로컬 아카이브)에는 명함 코드·카메라 권한 문구가 없다(strings 0건, VisionKit 링크 없음, NSCameraUsageDescription 없음).
+- 빌드 51(feat/1.10.0-ios-posts 468ba1b, 로컬 아카이브 ios/build/Orbit42-1.10.0-51.xcarchive)에는 명함 코드·카메라 권한 문구가 없다(strings 0건, VisionKit 링크 없음, NSCameraUsageDescription 없음).
 
 ## 제출하는 날 할 일 (데모 데이터 — PO 지시로 지금은 0)
 - 도윤 계정에 **전체 공개 글 1개**(가상 사진 3장 + 서식 있는 본문, 링크 페이지 고정) — 심사자가 하트·신고·차단을 눌러 볼 대상.
