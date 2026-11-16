@@ -166,10 +166,9 @@ export async function deleteMyAccount() {
   // 탈퇴 시 연결된 Google 계정의 권한도 회수한다 (Google 사용자 데이터 삭제 정책).
   {
     const { revokeGoogleToken } = await import("@/lib/google");
-    const { data: tok } = await db.from("users").select("google_refresh_token").eq("id", user.id).single();
-    await revokeGoogleToken((tok as { google_refresh_token: string | null } | null)?.google_refresh_token);
-    const { data: extras } = await db.from("google_accounts").select("refresh_token").eq("user_id", user.id);
-    for (const e of (extras ?? []) as Array<{ refresh_token: string | null }>) {
+    const { readPrimaryGoogleTokens, readExtraGoogleAccounts } = await import("@/lib/google-tokens");
+    await revokeGoogleToken((await readPrimaryGoogleTokens(user.id as string))?.google_refresh_token);
+    for (const e of await readExtraGoogleAccounts(user.id as string)) {
       await revokeGoogleToken(e.refresh_token);
     }
   }

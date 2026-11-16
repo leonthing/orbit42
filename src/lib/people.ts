@@ -831,14 +831,15 @@ export async function getOrbit(userId: string): Promise<OrbitResponse> {
 
   const { data: me } = await db
     .from("users")
-    .select("people_import_enabled, people_synced_at, google_refresh_token")
+    .select("people_import_enabled, people_synced_at")
     .eq("id", userId)
     .single();
   const s = me as {
     people_import_enabled: boolean;
     people_synced_at: string | null;
-    google_refresh_token: string | null;
   } | null;
+  const { primaryGoogleConnected } = await import("@/lib/google-tokens");
+  const googleConnected = await primaryGoogleConnected(userId);
 
   const [{ count: following }, { count: followers }] = await Promise.all([
     db.from("follows").select("id", { count: "exact", head: true }).eq("follower_id", userId),
@@ -853,7 +854,7 @@ export async function getOrbit(userId: string): Promise<OrbitResponse> {
     archived,
     nudges,
     importEnabled: !!s?.people_import_enabled,
-    googleConnected: !!s?.google_refresh_token,
+    googleConnected,
     syncedAt: s?.people_synced_at ?? null,
   };
 }

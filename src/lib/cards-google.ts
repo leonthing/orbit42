@@ -4,6 +4,15 @@ import { getAdminClient } from "@/lib/supabase";
 import { logCardsError } from "@/lib/cards-log";
 import { getOAuth2Client, revokeGoogleToken, deleteExtraGoogleAccount } from "@/lib/google";
 import {
+  clearPrimaryGoogleTokens,
+  readCardGoogleRefresh,
+  readCardGoogleTokens,
+  readExtraGoogleAccounts,
+  readPrimaryGoogleTokens,
+  upsertCardGoogleTokens,
+  writeCardGoogleTokens,
+} from "@/lib/google-tokens";
+import {
   type CardFields,
   type GPerson,
   type Candidate,
@@ -64,19 +73,14 @@ export async function saveCardTokens(userId: string, tokens: Tokens) {
     logCardsError("about", e);
   }
   const db = getAdminClient();
-  const { data: prev } = await db.from("card_google_tokens").select("refresh_token, email").eq("user_id", userId).maybeSingle();
-  const row = {
-    user_id: userId,
+  const { data: prev } = await db.from("card_google_tokens").select("email").eq("user_id", userId).maybeSingle();
+  const { error } = await upsertCardGoogleTokens(userId, { ...tokens, refresh_token: tokens.refresh_token }, {
     email,
-    access_token: tokens.access_token ?? null,
-    refresh_token: tokens.refresh_token,
-    token_expiry: tokens.expiry_date ? new Date(tokens.expiry_date).toISOString() : null,
     scope: tokens.scope ?? null,
     updated_at: new Date().toISOString(),
     // 다른 구글 계정으로 다시 연결하면 폴더·그룹은 그 계정에서 새로 찾는다
     ...(prev && prev.email !== email ? { drive_folder_id: null, card_group_resource: null } : {}),
-  };
-  const { error } = await db.from("card_google_tokens").upsert(row, { onConflict: "user_id" });
+  });
   if (error) throw error;
   return { email };
 }
@@ -92,8 +96,7 @@ export async function cardStatus(userId: string): Promise<{ connected: boolean; 
  */
 export async function disconnectCards(userId: string, revokeAll: boolean) {
   const db = getAdminClient();
-  const { data } = await db.from("card_google_tokens").select("refresh_token").eq("user_id", userId).maybeSingle();
-  if (revokeAll && data?.refresh_token) await revokeGoogleToken(data.refresh_token);
+  if (revokeAll) await revokeGoogleToken(await readCardGoogleRefresh(userId));
   await db.from("card_google_tokens").delete().eq("user_id", userId);
 }
 
@@ -102,7 +105,6 @@ export async function disconnectCards(userId: string, revokeAll: boolean) {
  * 다른 구글 계정의 연결은 살아 있으므로, 실제로 갱신이 거절(invalid_grant)되는 것만 지운다.
  */
 export async function clearRevokedCalendarTokens(userId: string) {
-  const db = getAdminClient();
   const dead = async (refresh: string | null | undefined) => {
     if (!refresh) return false;
     const a = getOAuth2Client();
@@ -111,12 +113,9 @@ export async function clearRevokedCalendarTokens(userId: string) {
   };
   // 회수는 비동기로 퍼지므로 잠깐 기다린다
   await new Promise((r) => setTimeout(r, 1500));
-  const { data: u } = await db.from("users").select("google_refresh_token").eq("id", userId).single();
-  if (await dead(u?.google_refresh_token)) {
-    await db.from("users").update({ google_access_token: null, google_refresh_token: null, google_token_expiry: null }).eq("id", userId);
-  }
-  const { data: extras } = await db.from("google_accounts").select("id, refresh_token").eq("user_id", userId);
-  for (const x of extras ?? []) if (await dead(x.refresh_token)) await deleteExtraGoogleAccount(x.id, userId).catch(() => undefined);
+  const primary = await readPrimaryGoogleTokens(userId);
+  if (await dead(primary?.google_refresh_token)) await clearPrimaryGoogleTokens(userId);
+  for (const x of await readExtraGoogleAccounts(userId)) if (await dead(x.refresh_token)) await deleteExtraGoogleAccount(x.id, userId).catch(() => undefined);
 }
 
 type Conn = {
@@ -128,12 +127,7 @@ type Conn = {
 export class CardsNotConnected extends Error {}
 
 async function connect(userId: string): Promise<Conn> {
-  const db = getAdminClient();
-  const { data } = await db
-    .from("card_google_tokens")
-    .select("access_token, refresh_token, token_expiry, drive_folder_id, card_group_resource")
-    .eq("user_id", userId)
-    .maybeSingle();
+  const data = await readCardGoogleTokens(userId);
   if (!data?.refresh_token) throw new CardsNotConnected();
   const auth = getOAuth2Client();
   auth.setCredentials({
@@ -142,15 +136,7 @@ async function connect(userId: string): Promise<Conn> {
     expiry_date: data.token_expiry ? new Date(data.token_expiry).getTime() : undefined,
   });
   auth.on("tokens", (t) => {
-    void db
-      .from("card_google_tokens")
-      .update({
-        access_token: t.access_token,
-        token_expiry: t.expiry_date ? new Date(t.expiry_date).toISOString() : undefined,
-        ...(t.refresh_token ? { refresh_token: t.refresh_token } : {}),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("user_id", userId)
+    void writeCardGoogleTokens(userId, t)
       .then(({ error }) => error && logCardsError("token persist", { name: "DbError", code: error.code }));
   });
   return { auth, people: google.people({ version: "v1", auth }), row: data };

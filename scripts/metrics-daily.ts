@@ -4,6 +4,7 @@
  * 내부 계정(INTERNAL)은 '외부' 값에서 뺀다. 개인 식별 정보는 출력하지 않는다.
  */
 import { getAdminClient } from "@/lib/supabase";
+import { usersWithPrimaryGoogle } from "@/lib/google-tokens";
 
 const INTERNAL = ["leokim", "appreview", "leotaurus13"]; // Leo 본인·심사 데모·leotaurus13(10/25 Leo 테스트 구글 계정으로 재가입). 시드 데모 5명은 10/22 삭제
 
@@ -13,16 +14,16 @@ const INTERNAL = ["leokim", "appreview", "leotaurus13"]; // Leo 본인·심사 �
   const { data: internalRows } = await db.from("users").select("id").in("username", INTERNAL);
   const internal = new Set((internalRows ?? []).map((r) => r.id as string));
 
-  const allUsers: { id: string; created_at: string; google_refresh_token: string | null; first_link_shared_at: string | null }[] = [];
+  const allUsers: { id: string; created_at: string; first_link_shared_at: string | null }[] = [];
   for (let from = 0; ; from += 1000) {
-    const { data } = await db.from("users").select("id, created_at, google_refresh_token, first_link_shared_at").range(from, from + 999);
+    const { data } = await db.from("users").select("id, created_at, first_link_shared_at").range(from, from + 999);
     allUsers.push(...((data ?? []) as typeof allUsers));
     if (!data || data.length < 1000) break;
   }
   const ext = allUsers.filter((u) => !internal.has(u.id));
   const { data: extraGoogle } = await db.from("google_accounts").select("user_id");
   const googleIds = new Set([
-    ...allUsers.filter((u) => u.google_refresh_token).map((u) => u.id),
+    ...Array.from(await usersWithPrimaryGoogle()),
     ...(extraGoogle ?? []).map((r) => r.user_id as string),
   ]);
 

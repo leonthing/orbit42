@@ -1,5 +1,14 @@
 import { google } from "googleapis";
 import { getAdminClient } from "@/lib/supabase";
+import {
+  insertExtraGoogleAccount,
+  readExtraGoogleAccounts,
+  readExtraGoogleRefresh,
+  readPrimaryGoogleTokens,
+  writeExtraGoogleAccess,
+  writePrimaryGoogleTokens,
+  type ExtraGoogleAccount,
+} from "@/lib/google-tokens";
 
 const SCOPES = [
   // 최소 권한: 일정 읽기·쓰기는 calendar.events 하나로 충분하다(읽기 포함).
@@ -91,17 +100,7 @@ function withTimeout<T>(promise: Promise<T>, ms = GOOGLE_TIMEOUT_MS): Promise<T>
 }
 
 export async function getGoogleTokens(userId: string) {
-  const db = getAdminClient();
-  // abortSignal 을 붙이면 Next 서버 컴포넌트의 요청 메모이제이션에서 빠진다 —
-  // 같은 렌더 안에서 갱신 후 다시 읽을 때 처음(만료된) 값을 돌려받아 refresh 가
-  // 300초 동안 반복되던 문제(버그-5)
-  const { data } = await db
-    .from("users")
-    .select("google_access_token, google_refresh_token, google_token_expiry")
-    .eq("id", userId)
-    .abortSignal(new AbortController().signal)
-    .single();
-  return data;
+  return readPrimaryGoogleTokens(userId);
 }
 
 /** OAuth 연결 직후 — 토큰 저장 + 캘린더 목록 동기화 (콜백 전용) */
@@ -121,18 +120,7 @@ async function persistGoogleTokens(
   userId: string,
   tokens: { access_token?: string | null; refresh_token?: string | null; expiry_date?: number | null }
 ) {
-  const db = getAdminClient();
-  await db
-    .from("users")
-    .update({
-      google_access_token: tokens.access_token,
-      google_refresh_token: tokens.refresh_token || undefined,
-      google_token_expiry: tokens.expiry_date
-        ? new Date(tokens.expiry_date).toISOString()
-        : undefined,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", userId);
+  await writePrimaryGoogleTokens(userId, tokens);
 }
 
 /**
@@ -220,23 +208,10 @@ export async function getAuthenticatedCalendar(userId: string) {
 
 // ---------- Multi-account support ----------
 
-export type ExtraGoogleAccount = {
-  id: string;
-  user_id: string;
-  email: string | null;
-  access_token: string | null;
-  refresh_token: string;
-  token_expiry: string | null;
-};
+export type { ExtraGoogleAccount };
 
 export async function listExtraGoogleAccounts(userId: string): Promise<ExtraGoogleAccount[]> {
-  const db = getAdminClient();
-  const { data } = await db
-    .from("google_accounts")
-    .select("id, user_id, email, access_token, refresh_token, token_expiry")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: true });
-  return (data ?? []) as ExtraGoogleAccount[];
+  return readExtraGoogleAccounts(userId);
 }
 
 export async function saveExtraGoogleAccount(
@@ -244,22 +219,7 @@ export async function saveExtraGoogleAccount(
   tokens: { access_token?: string | null; refresh_token?: string | null; expiry_date?: number | null },
   email: string | null,
 ) {
-  if (!tokens.refresh_token) return null;
-  const db = getAdminClient();
-  const { data } = await db
-    .from("google_accounts")
-    .insert({
-      user_id: userId,
-      email,
-      access_token: tokens.access_token ?? null,
-      refresh_token: tokens.refresh_token,
-      token_expiry: tokens.expiry_date
-        ? new Date(tokens.expiry_date).toISOString()
-        : null,
-    })
-    .select("id")
-    .single();
-  return data?.id ?? null;
+  return insertExtraGoogleAccount(userId, tokens, email);
 }
 
 /**
@@ -295,13 +255,7 @@ export async function revokeGoogleToken(token: string | null | undefined) {
 
 export async function deleteExtraGoogleAccount(accountId: string, userId: string) {
   const db = getAdminClient();
-  const { data } = await db
-    .from("google_accounts")
-    .select("refresh_token")
-    .eq("id", accountId)
-    .eq("user_id", userId)
-    .maybeSingle();
-  await revokeGoogleToken((data as { refresh_token: string | null } | null)?.refresh_token);
+  await revokeGoogleToken(await readExtraGoogleRefresh(accountId, userId));
   await db.from("google_accounts").delete().eq("id", accountId).eq("user_id", userId);
 }
 
@@ -314,17 +268,7 @@ async function clientForExtraAccount(account: ExtraGoogleAccount) {
   if (account.token_expiry && new Date(account.token_expiry) < new Date()) {
     try {
       const { credentials } = await withTimeout(client.refreshAccessToken());
-      const db = getAdminClient();
-      await db
-        .from("google_accounts")
-        .update({
-          access_token: credentials.access_token ?? null,
-          token_expiry: credentials.expiry_date
-            ? new Date(credentials.expiry_date).toISOString()
-            : null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", account.id);
+      await writeExtraGoogleAccess(account, credentials);
       client.setCredentials(credentials);
     } catch {
       return null;

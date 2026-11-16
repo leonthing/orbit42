@@ -1,5 +1,5 @@
 import { apiSession, apiUserId } from "@/lib/api-auth";
-import { getAdminClient } from "@/lib/supabase";
+import { primaryGoogleConnected } from "@/lib/google-tokens";
 import { listExtraGoogleAccounts } from "@/lib/google";
 
 export const dynamic = "force-dynamic";
@@ -15,14 +15,13 @@ export async function GET(request: Request) {
     return Response.json({ error: "사용자를 찾을 수 없어요." }, { status: 404 });
   }
 
-  const db = getAdminClient();
-  const [{ data: user }, extras] = await Promise.all([
-    db.from("users").select("google_refresh_token").eq("id", userId).single(),
+  const [connected, extras] = await Promise.all([
+    primaryGoogleConnected(userId),
     listExtraGoogleAccounts(userId),
   ]);
 
   return Response.json({
-    connected: Boolean(user?.google_refresh_token),
+    connected,
     extraAccounts: extras.map((a) => ({ email: a.email })),
   });
 }

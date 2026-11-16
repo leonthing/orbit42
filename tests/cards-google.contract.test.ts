@@ -9,8 +9,10 @@
  * 실행: npx tsx --tsconfig tsconfig.json --test tests/cards-google.contract.test.ts
  */
 import test from "node:test";
+import { randomBytes } from "node:crypto";
 import assert from "node:assert/strict";
 import { google } from "googleapis";
+import { Gaxios } from "gaxios";
 import type { CardFields, GPerson, CardUndo } from "../src/lib/cards-match";
 
 process.env.NEXT_PUBLIC_SUPABASE_URL = "http://fake-supabase.test";
@@ -102,6 +104,7 @@ class Fake {
     let bodyText = "";
     const b = init.body ?? (req ? await req.text() : undefined);
     if (typeof b === "string") bodyText = b;
+    else if (b instanceof URLSearchParams) bodyText = b.toString();
     else if (b instanceof Uint8Array) bodyText = Buffer.from(b).toString("utf8");
     else if (b && typeof (b as unknown as AsyncIterable<unknown>)[Symbol.asyncIterator] === "function") {
       const chunks: Buffer[] = [];
@@ -112,6 +115,11 @@ class Fake {
     const auth = new Headers(init.headers ?? req?.headers ?? {}).get("authorization") ?? "";
 
     if (url.host === "fake-supabase.test") return this.rest(method, path, url.searchParams, bodyText, new Headers(init.headers ?? {}));
+    if (url.host === "oauth2.googleapis.com" && path === "/token") {
+      const form = new URLSearchParams(bodyText);
+      if (form.get("grant_type") !== "refresh_token" || !form.get("refresh_token")?.startsWith("rt-")) return this.json(400, { error: "invalid_grant" });
+      return this.json(200, { access_token: "at-refreshed", expires_in: 3600, token_type: "Bearer" });
+    }
     if (url.host === "oauth2.googleapis.com" && path === "/revoke") {
       this.revoked.push(url.searchParams.get("token") ?? "");
       return this.json(200, {});
@@ -247,7 +255,7 @@ class Fake {
     const table = path.replace(/^\/rest\/v1\//, "");
     const rows = this.db[table];
     if (!rows) return this.json(404, { message: "no table " + table });
-    const filters = Array.from(q.entries()).filter(([k]) => !["select", "on_conflict", "columns"].includes(k));
+    const filters = Array.from(q.entries()).filter(([k]) => !["select", "on_conflict", "columns", "order"].includes(k));
     const match = (r: Row) => filters.every(([k, v]) => v.startsWith("eq.") && String(r[k]) === v.slice(3));
     const one = (h.get("accept") ?? "").includes("vnd.pgrst.object");
     const reply = (list: Row[]) => {
@@ -289,6 +297,11 @@ let M: typeof import("../src/lib/cards-match");
 test.before(async () => {
   globalThis.fetch = fake.fetch as typeof fetch;
   google.options({ fetchImplementation: fake.fetch as never });
+  // OAuth2 토큰 갱신은 googleapis 옵션을 안 타고 자체 Gaxios(node-fetch)로 나간다 — 그것도 가짜로
+  const req = Gaxios.prototype.request;
+  Gaxios.prototype.request = function (this: Gaxios, opts: Parameters<typeof req>[0] = {}) {
+    return req.call(this, { ...opts, fetchImplementation: fake.fetch as never });
+  } as typeof req;
   G = await import("../src/lib/cards-google");
   M = await import("../src/lib/cards-match");
 });
@@ -622,4 +635,42 @@ test("연결 안 됨: 아무 요청 없이 CardsNotConnected", async () => {
   fake.db.card_google_tokens = [];
   await assert.rejects(G.saveCard(USER, card(), { kind: "create" }, [], photos()), G.CardsNotConnected);
   assert.deepEqual(writes(), []);
+});
+
+// ── 토큰 암호화(GOOGLE_TOKEN_KEY 켜짐, PO 11/16) ───────────────────────────────
+
+test("암호화 켜짐: 저장은 암호문만, 명함 저장·자동 갱신·회수는 같은 모듈로 풀어서", async () => {
+  const T = await import("../src/lib/google-tokens");
+  process.env.GOOGLE_TOKEN_KEY = randomBytes(32).toString("base64");
+  try {
+    // 연결 직후 저장 → 암호문
+    fake.db.card_google_tokens = [];
+    await G.saveCardTokens(USER, { access_token: "at-new", refresh_token: "rt-card2", expiry_date: Date.now() - 1000, scope: "x" });
+    const row = fake.db.card_google_tokens[0];
+    assert.ok(T.isSealed(row.access_token as string) && T.isSealed(row.refresh_token as string), "평문 저장");
+    assert.ok(!JSON.stringify(fake.db).includes("rt-card2"));
+    // 만료 → 자동 갱신 → 새 access 토큰도 암호문으로
+    const r = await G.saveCard(USER, card(), { kind: "create" }, [], []);
+    assert.equal(r.ok, true);
+    assert.ok(fake.log.some((l) => l.startsWith("POST oauth2.googleapis.com/token")), "갱신 안 함");
+    await new Promise((res) => setTimeout(res, 50)); // tokens 이벤트 저장은 기다리지 않는다
+    const after = fake.db.card_google_tokens[0];
+    assert.ok(T.isSealed(after.access_token as string));
+    assert.equal(T.openToken(after.access_token as string, "card_google_tokens", "access", USER), "at-refreshed");
+    // 회수는 풀어서 원래 토큰으로
+    await G.disconnectCards(USER, true);
+    assert.deepEqual(fake.revoked, ["rt-card2"]);
+  } finally {
+    delete process.env.GOOGLE_TOKEN_KEY;
+  }
+});
+
+test("키가 없는데 암호문 행: 연결 없음으로(요청 없음), 행은 지우지 않음", async () => {
+  const T = await import("../src/lib/google-tokens");
+  process.env.GOOGLE_TOKEN_KEY = randomBytes(32).toString("base64");
+  fake.db.card_google_tokens[0].refresh_token = T.sealToken("rt-card", "card_google_tokens", "refresh", USER);
+  delete process.env.GOOGLE_TOKEN_KEY;
+  await assert.rejects(G.saveCard(USER, card(), { kind: "create" }, [], photos()), G.CardsNotConnected);
+  assert.deepEqual(writes(), []);
+  assert.equal(fake.db.card_google_tokens.length, 1);
 });
