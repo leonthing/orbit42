@@ -674,3 +674,38 @@ test("키가 없는데 암호문 행: 연결 없음으로(요청 없음), 행은
   assert.deepEqual(writes(), []);
   assert.equal(fake.db.card_google_tokens.length, 1);
 });
+
+test("읽은 김에 암호화: 키 있으면 평문 행이 암호문으로(풀면 같은 값), 키 없으면 그대로", async () => {
+  const T = await import("../src/lib/google-tokens");
+  // 키 없음 → 바뀌지 않음
+  await G.matchCard(USER, card());
+  assert.equal(fake.db.card_google_tokens[0].refresh_token, "rt-card");
+  assert.equal(fake.db.users[0].google_refresh_token, "rt-cal");
+  process.env.GOOGLE_TOKEN_KEY = randomBytes(32).toString("base64");
+  try {
+    await G.matchCard(USER, card());
+    const row = fake.db.card_google_tokens[0];
+    assert.ok(T.isSealed(row.refresh_token as string) && T.isSealed(row.access_token as string));
+    assert.equal(T.openToken(row.refresh_token as string, "card_google_tokens", "refresh", USER), "rt-card");
+    const p = await T.readPrimaryGoogleTokens(USER);
+    assert.equal(p?.google_refresh_token, "rt-cal");
+    assert.ok(T.isSealed(fake.db.users[0].google_refresh_token as string) && T.isSealed(fake.db.users[0].google_access_token as string));
+    // 조건부: 읽은 뒤 다른 값으로 바뀐 칸은 덮지 않는다(가짜 DB 의 eq 조건)
+    fake.db.google_accounts.push({ id: "ga-9", user_id: USER, email: null, access_token: "at-x", refresh_token: "rt-x", token_expiry: null });
+    const before = fake.fetch;
+    fake.fetch = async (input: unknown, init: RequestInit = {}) => {
+      if (String(input).includes("/google_accounts") && (init.method ?? "GET") === "PATCH") fake.db.google_accounts[0].refresh_token = "rt-newer";
+      return before(input, init as never);
+    };
+    globalThis.fetch = fake.fetch as typeof fetch;
+    try {
+      await T.readExtraGoogleAccounts(USER);
+    } finally {
+      fake.fetch = before;
+      globalThis.fetch = before as typeof fetch;
+    }
+    assert.equal(fake.db.google_accounts[0].refresh_token, "rt-newer", "그 사이 바뀐 토큰을 덮음");
+  } finally {
+    delete process.env.GOOGLE_TOKEN_KEY;
+  }
+});

@@ -13,6 +13,7 @@ import { getAdminClient } from "@/lib/supabase";
  * 옛 v1 값은 GOOGLE_TOKEN_KEY 로 계속 풀린다(convertAllGoogleTokens 로 일괄 재암호화).
  *
  * 전환기: 읽을 때 평문·암호문 둘 다 받는다. 쓸 때는 키가 있으면 암호문만.
+ * 키가 있는 서버는 평문 행을 읽는 순간 그 칸을 암호문으로 바꿔 둔다(upgradeOnRead) — 키가 Vercel 밖으로 안 나가도 변환된다.
  * 키가 없으면(로컬·운영 env 추가 전) 예전처럼 평문으로 쓴다 — 키 없는 서버도 그대로 돈다.
  */
 
@@ -103,6 +104,31 @@ function open(v: string | null | undefined, table: Table, field: Field, userId: 
   }
 }
 
+/**
+ * 읽은 김에 암호문으로(PO 11/16 B안) — 키가 있고 값이 평문일 때만.
+ * 조건부 갱신: 그 칸이 방금 읽은 평문 그대로일 때만 바꾼다(그 사이 갱신된 새 토큰은 덮지 않음).
+ * 실패해도 읽기는 그대로 성공. 로그엔 표·칸만.
+ */
+async function upgradeOnRead(
+  table: Table,
+  match: Record<string, string>,
+  userId: string,
+  cols: { col: string; field: Field; value: string | null | undefined }[],
+) {
+  if (!googleTokenEncryptionOn()) return;
+  for (const c of cols) {
+    if (!c.value || isSealed(c.value)) continue;
+    try {
+      let q = getAdminClient().from(table).update({ [c.col]: sealToken(c.value, table, c.field, userId) });
+      for (const [k, v] of Object.entries(match)) q = q.eq(k, v);
+      const { error } = await q.eq(c.col, c.value);
+      if (error) throw new Error(error.code ?? "db");
+    } catch (e) {
+      console.error("google token upgrade failed", { table, col: c.col, reason: (e as Error).message });
+    }
+  }
+}
+
 type TokenSet = { access_token?: string | null; refresh_token?: string | null; expiry_date?: number | null };
 
 // ───────── 기본 구글 계정(users.google_*) ─────────
@@ -124,6 +150,10 @@ export async function readPrimaryGoogleTokens(userId: string): Promise<PrimaryGo
     .abortSignal(new AbortController().signal)
     .single();
   if (!data) return null;
+  await upgradeOnRead("users", { id: userId }, userId, [
+    { col: "google_access_token", field: "access", value: data.google_access_token },
+    { col: "google_refresh_token", field: "refresh", value: data.google_refresh_token },
+  ]);
   return {
     google_access_token: open(data.google_access_token, "users", "access", userId),
     google_refresh_token: open(data.google_refresh_token, "users", "refresh", userId),
@@ -191,6 +221,10 @@ export async function readExtraGoogleAccounts(userId: string): Promise<ExtraGoog
     const refresh = open(r.refresh_token, "google_accounts", "refresh", r.user_id);
     // 풀 수 없는 행은 연결 없는 것으로 친다(목록·동기화에서 빠짐). 행은 지우지 않는다.
     if (!refresh) continue;
+    await upgradeOnRead("google_accounts", { id: r.id }, r.user_id, [
+      { col: "access_token", field: "access", value: r.access_token },
+      { col: "refresh_token", field: "refresh", value: r.refresh_token },
+    ]);
     out.push({ ...r, refresh_token: refresh, access_token: open(r.access_token, "google_accounts", "access", r.user_id) });
   }
   return out;
@@ -232,7 +266,9 @@ export async function readExtraGoogleRefresh(accountId: string, userId: string):
     .eq("id", accountId)
     .eq("user_id", userId)
     .maybeSingle();
-  return open((data as { refresh_token: string | null } | null)?.refresh_token, "google_accounts", "refresh", userId);
+  const v = (data as { refresh_token: string | null } | null)?.refresh_token;
+  await upgradeOnRead("google_accounts", { id: accountId, user_id: userId }, userId, [{ col: "refresh_token", field: "refresh", value: v }]);
+  return open(v, "google_accounts", "refresh", userId);
 }
 
 // ───────── 명함(card_google_tokens) ─────────
@@ -252,6 +288,10 @@ export async function readCardGoogleTokens(userId: string): Promise<CardTokenRow
     .eq("user_id", userId)
     .maybeSingle();
   if (!data) return null;
+  await upgradeOnRead("card_google_tokens", { user_id: userId }, userId, [
+    { col: "access_token", field: "access", value: data.access_token },
+    { col: "refresh_token", field: "refresh", value: data.refresh_token },
+  ]);
   return {
     ...(data as CardTokenRow),
     access_token: open(data.access_token, "card_google_tokens", "access", userId),
@@ -261,6 +301,7 @@ export async function readCardGoogleTokens(userId: string): Promise<CardTokenRow
 
 export async function readCardGoogleRefresh(userId: string): Promise<string | null> {
   const { data } = await getAdminClient().from("card_google_tokens").select("refresh_token").eq("user_id", userId).maybeSingle();
+  await upgradeOnRead("card_google_tokens", { user_id: userId }, userId, [{ col: "refresh_token", field: "refresh", value: data?.refresh_token }]);
   return open(data?.refresh_token, "card_google_tokens", "refresh", userId);
 }
 
