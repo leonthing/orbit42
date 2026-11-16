@@ -82,3 +82,20 @@ test("키 바꾸기: v2 로 쓰고 옛 v1 도 풀림", () => {
   assert.equal(m.openToken(neu, "google_accounts", "refresh", U), "1//new");
   reset();
 });
+
+test("짧은 태그 거부: 앞 4·8·12바이트만 남긴 태그, 빈 태그, iv 길이 다름", () => {
+  reset();
+  process.env.GOOGLE_TOKEN_KEY = KEY1;
+  const s = m.sealToken("1//refresh", "users", "refresh", U);
+  const [iv, tag, ct] = s.slice(3).split(".");
+  const tagBuf = Buffer.from(tag, "base64url");
+  assert.equal(tagBuf.length, 16);
+  for (const n of [4, 8, 12, 0]) {
+    const short = `v1:${iv}.${tagBuf.subarray(0, n).toString("base64url")}.${ct}`;
+    assert.throws(() => m.openToken(short, "users", "refresh", U), m.GoogleTokenDecryptError, `태그 ${n}바이트`);
+  }
+  const iv16 = Buffer.concat([Buffer.from(iv, "base64url"), Buffer.alloc(4)]).toString("base64url");
+  assert.throws(() => m.openToken(`v1:${iv16}.${tag}.${ct}`, "users", "refresh", U), m.GoogleTokenDecryptError);
+  assert.equal(m.openToken(s, "users", "refresh", U), "1//refresh");
+  reset();
+});

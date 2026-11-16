@@ -19,9 +19,12 @@ import { getAdminClient } from "@/lib/supabase";
 type Table = "users" | "google_accounts" | "card_google_tokens";
 type Field = "access" | "refresh";
 
+const VERSIONED = /^v\d+:/;
 const PREFIX = /^(v\d+):([A-Za-z0-9_-]+)\.([A-Za-z0-9_-]+)\.([A-Za-z0-9_-]*)$/;
 
 export class GoogleTokenDecryptError extends Error {}
+
+const TAG_BYTES = 16;
 
 function keyFor(version: string): Buffer | null {
   const raw = version === "v1" ? process.env.GOOGLE_TOKEN_KEY : process.env[`GOOGLE_TOKEN_KEY_${version.toUpperCase()}`];
@@ -41,7 +44,8 @@ export function googleTokenEncryptionOn(): boolean {
 }
 
 export function isSealed(value: string | null | undefined): boolean {
-  return typeof value === "string" && PREFIX.test(value);
+  // 구글 토큰("ya29.", "1//")은 "v숫자:" 로 시작하지 않는다 — 접두사가 있으면 암호문(모양이 틀리면 풀 때 거부)
+  return typeof value === "string" && VERSIONED.test(value);
 }
 
 function aad(table: Table, field: Field, userId: string) {
@@ -55,7 +59,7 @@ export function sealToken(value: string, table: Table, field: Field, userId: str
   const key = keyFor(version);
   if (!key) return value;
   const iv = randomBytes(12);
-  const cipher = createCipheriv("aes-256-gcm", key, iv);
+  const cipher = createCipheriv("aes-256-gcm", key, iv, { authTagLength: TAG_BYTES });
   cipher.setAAD(aad(table, field, userId));
   const ct = Buffer.concat([cipher.update(value, "utf8"), cipher.final()]);
   const tag = cipher.getAuthTag();
@@ -64,15 +68,20 @@ export function sealToken(value: string, table: Table, field: Field, userId: str
 
 /** 저장값 → 평문. 평문 행은 그대로 돌려준다. 키가 없거나 변조됐으면 GoogleTokenDecryptError. */
 export function openToken(stored: string, table: Table, field: Field, userId: string): string {
+  if (!VERSIONED.test(stored)) return stored; // 예전 평문 행
   const m = PREFIX.exec(stored);
-  if (!m) return stored; // 예전 평문 행
+  if (!m) throw new GoogleTokenDecryptError("malformed");
   const [, version, ivB, tagB, ctB] = m;
   const key = keyFor(version);
   if (!key) throw new GoogleTokenDecryptError(`no key for ${version}`);
+  const iv = Buffer.from(ivB, "base64url");
+  const tag = Buffer.from(tagB, "base64url");
+  // 짧은 태그를 받아 주면 위조가 쉬워진다 — iv 12·태그 16바이트만
+  if (iv.length !== 12 || tag.length !== TAG_BYTES) throw new GoogleTokenDecryptError("bad iv/tag length");
   try {
-    const decipher = createDecipheriv("aes-256-gcm", key, Buffer.from(ivB, "base64url"));
+    const decipher = createDecipheriv("aes-256-gcm", key, iv, { authTagLength: TAG_BYTES });
     decipher.setAAD(aad(table, field, userId));
-    decipher.setAuthTag(Buffer.from(tagB, "base64url"));
+    decipher.setAuthTag(tag);
     return Buffer.concat([decipher.update(Buffer.from(ctB, "base64url")), decipher.final()]).toString("utf8");
   } catch {
     throw new GoogleTokenDecryptError("google token decrypt failed");
