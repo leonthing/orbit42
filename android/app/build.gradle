@@ -27,11 +27,11 @@ def twaManifest = [
     name: 'Orbit42', // The application name.
     launcherName: 'Orbit42', // The name shown on the Android Launcher.
     themeColor: '#F2F2F7', // The color used for the status bar.
-    themeColorDark: '#F2F2F7', // The color used for the dark status bar.
+    themeColorDark: '#1A1A1F', // The color used for the dark status bar.
     navigationColor: '#F2F2F7', // The color used for the navigation bar.
-    navigationColorDark: '#F2F2F7', // The color used for the dark navbar.
+    navigationColorDark: '#1A1A1F', // The color used for the dark navbar.
     navigationDividerColor: '#F2F2F7', // The navbar divider color.
-    navigationDividerColorDark: '#F2F2F7', // The dark navbar divider color.
+    navigationDividerColorDark: '#1A1A1F', // The dark navbar divider color.
     backgroundColor: '#F2F2F7', // The color used for the splash screen background.
     enableNotifications: false, // Set to true to enable notification delegation.
     // Every shortcut must include the following fields:
@@ -57,8 +57,8 @@ android {
         applicationId "org.orbit42.app"
         minSdkVersion 24
         targetSdkVersion 36
-        versionCode 1
-        versionName ""
+        versionCode 2
+        versionName "1.0.1"
 
         // The name for the application
         resValue "string", "appName", twaManifest.name

@@ -6,11 +6,11 @@
   "display": "standalone",
   "orientation": "default",
   "themeColor": "#F2F2F7",
-  "themeColorDark": "#F2F2F7",
+  "themeColorDark": "#1A1A1F",
   "navigationColor": "#F2F2F7",
-  "navigationColorDark": "#F2F2F7",
+  "navigationColorDark": "#1A1A1F",
   "navigationDividerColor": "#F2F2F7",
-  "navigationDividerColorDark": "#F2F2F7",
+  "navigationDividerColorDark": "#1A1A1F",
   "backgroundColor": "#F2F2F7",
   "enableNotifications": false,
   "startUrl": "/calendar",
@@ -21,8 +21,7 @@
     "path": "/Users/leokim/.orbit42-android/upload.jks",
     "alias": "orbit42-upload"
   },
-  "appVersionName": "1.0.0",
-  "appVersionCode": 1,
+  "appVersionCode": 2,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://orbit42.org/manifest.webmanifest",
@@ -35,5 +34,6 @@
   "isChromeOSOnly": false,
   "isMetaQuest": false,
   "fullScopeUrl": "https://orbit42.org/",
-  "minSdkVersion": 24
+  "minSdkVersion": 24,
+  "appVersion": "1.0.1"
 }
