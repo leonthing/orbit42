@@ -95,6 +95,7 @@ function NavLink({
   collapsed,
   onClick,
   badge = 0,
+  dot = false,
 }: {
   href: string;
   label: string;
@@ -103,6 +104,8 @@ function NavLink({
   collapsed: boolean;
   onClick: () => void;
   badge?: number;
+  /** 숫자 없이 점만(읽지 않은 대화) */
+  dot?: boolean;
 }) {
   return (
     <Link
@@ -117,11 +120,14 @@ function NavLink({
     >
       <span className={`relative ${active ? "text-navy-400" : "text-charcoal-500"}`}>
         {icon}
-        {badge > 0 && collapsed && (
+        {(badge > 0 || dot) && collapsed && (
           <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-navy-400" />
         )}
       </span>
       <span className={`flex-1 ${collapsed ? "hidden" : ""}`}>{label}</span>
+      {!collapsed && badge === 0 && dot && (
+        <span className="h-2 w-2 rounded-full bg-red-600" aria-label="읽지 않은 대화" />
+      )}
       {!collapsed && badge > 0 && (
         <span className="rounded-full bg-navy-500 px-1.5 py-0.5 text-2xs font-bold text-white">
           {badge > 99 ? "99+" : badge}
@@ -179,8 +185,12 @@ export function Sidebar({
       <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-3">
         {NAV_ITEMS.map((item) => {
           const href = `/${username}${item.href}`;
+          const under = (p: string) => pathname === p || pathname.startsWith(p + "/");
           const isActive =
-            pathname === href || pathname.startsWith(href + "/");
+            item.href === ""
+              ? pathname === href
+              : item.match.some((m) => under(`/${username}${m}`)) ||
+                (item.href === "/bookings" && under("/messages"));
           return (
             <NavLink
               key={item.label}
@@ -191,6 +201,7 @@ export function Sidebar({
               collapsed={collapsed}
               onClick={close}
               badge={item.href === "/bookings" ? bookingsBadge : 0}
+              dot={item.href === "/bookings" && dmOpen && unreadMessages > 0}
             />
           );
         })}
@@ -203,14 +214,6 @@ export function Sidebar({
         )}
 
         <NavLink
-          href={`/${username}`}
-          label="내 프로필"
-          icon={icons.user}
-          active={pathname === `/${username}`}
-          collapsed={collapsed}
-          onClick={close}
-        />
-        <NavLink
           href="/explore"
           label="탐색"
           icon={icons.users}
@@ -218,17 +221,6 @@ export function Sidebar({
           collapsed={collapsed}
           onClick={close}
         />
-        {dmOpen && (
-          <NavLink
-            href="/messages"
-            label="메시지"
-            icon={icons.chat}
-            active={pathname === "/messages" || pathname.startsWith("/messages/")}
-            collapsed={collapsed}
-            onClick={close}
-            badge={unreadMessages}
-          />
-        )}
         <NavLink
           href="/feed"
           label="피드"
@@ -255,6 +247,14 @@ export function Sidebar({
 
       {/* Bottom: Feedback + Collapse */}
       <div className="border-t border-charcoal-800/40 p-2 space-y-1">
+        <NavLink
+          href={`/${username}/settings`}
+          label="설정"
+          icon={icons.cog}
+          active={pathname === `/${username}/settings` || pathname.startsWith(`/${username}/settings/`)}
+          collapsed={collapsed}
+          onClick={close}
+        />
         <FeedbackBox collapsed={collapsed} loggedIn />
         <button
           onClick={() => setCollapsed(!collapsed)}

@@ -68,7 +68,10 @@ export function TimeAssetDashboard({
   summary,
   goals,
   username,
+  ratings,
 }: {
+  /** 만족도 카드 — 데스크톱에서 휴대폰·iOS 순서(번 돈 → 판매 → 지난주 → 만족도)대로 격자 안에 넣는다 */
+  ratings?: React.ReactNode;
   summary: TimeAssetSummary;
   goals: Array<{
     calendarId: string;
@@ -157,6 +160,10 @@ export function TimeAssetDashboard({
       {/* 이번 주 판매 현황 */}
       {funnel && <FunnelCard funnel={funnel} username={username} className="max-md:hidden" />}
 
+      {/* 지난주 리포트 · 만족도 — 휴대폰·iOS 와 같은 순서(11/21 묶음 나) */}
+      <LastWeekCard report={report} className="max-md:hidden" />
+      {ratings && <div className="max-md:hidden">{ratings}</div>}
+
       {/* 목표 */}
       {goals.length > 0 && (
         <Card title="목표">
@@ -235,8 +242,6 @@ export function TimeAssetDashboard({
         </Card>
       )}
 
-      {/* 지난주 리포트 */}
-      <LastWeekCard report={report} className="max-md:hidden" />
 
       {/* 이번 주 시간 사용 (버킷) */}
       <Card title="이번 주 시간 사용">

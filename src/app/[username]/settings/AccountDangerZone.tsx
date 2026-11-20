@@ -40,7 +40,7 @@ export function VerifyEmailBanner({
                 링크를 눌러주세요.
               </>
             ) : (
-              "Settings에서 이메일을 먼저 등록해주세요."
+              "설정의 프로필에서 이메일을 먼저 등록해 주세요."
             )}
           </p>
         </div>

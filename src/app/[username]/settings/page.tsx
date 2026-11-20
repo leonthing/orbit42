@@ -38,15 +38,17 @@ import { cardsOpenFor } from "@/lib/cards-access";
 export const metadata: Metadata = { title: "설정" };
 export const dynamic = "force-dynamic";
 
+// 이름은 휴대폰 설정 목록·iOS 와 같은 말(11/21 묶음 나). 순서는 아래 섹션이 놓인 순서(스크롤 위치 표시가 따라감).
 const SECTIONS = [
   { id: "profile", label: "프로필" },
-  { id: "google", label: "Google" },
-  { id: "calendars", label: "캘린더" },
+  { id: "google", label: "Google 캘린더" },
+  { id: "link-theme", label: "공개 링크 테마" },
+  { id: "calendars", label: "내 캘린더" },
   { id: "work-hours", label: "근무시간" },
   { id: "payment", label: "결제 안내" },
-  { id: "locations", label: "장소" },
-  { id: "referral", label: "추천" },
-  { id: "notifications", label: "알림" },
+  { id: "locations", label: "이동시간 버퍼" },
+  { id: "referral", label: "친구 초대" },
+  { id: "notifications", label: "알림 설정" },
   { id: "theme", label: "화면 모드" },
   { id: "integrations", label: "연동 토큰" },
   { id: "account", label: "계정" },

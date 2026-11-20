@@ -56,8 +56,8 @@ export default function LifeCalendarView({
         <svg className="h-12 w-12 text-charcoal-700" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
         </svg>
-        <p className="mt-4 text-sm text-charcoal-400">Life Calendar를 보려면 생년월일을 설정해주세요</p>
-        <p className="mt-1 text-xs text-charcoal-600">Settings에서 생년월일을 입력할 수 있습니다</p>
+        <p className="mt-4 text-sm text-charcoal-400">라이프 캘린더를 보려면 생년월일을 입력해 주세요</p>
+        <p className="mt-1 text-xs text-charcoal-600">설정의 프로필에서 생년월일을 입력할 수 있어요</p>
       </div>
     );
   }

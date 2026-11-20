@@ -167,12 +167,9 @@ export default async function InsightsPage({
           summary={assetSummary}
           goals={goals}
           username={params.username}
+          ratings={<RatingsCard summary={ratings} calendars={ratingCalendars} />}
         />
       )}
-
-      <div className="max-md:hidden">
-        <RatingsCard summary={ratings} calendars={ratingCalendars} />
-      </div>
 
       <h2 className="pt-2 text-sm font-semibold text-charcoal-400">주간 상세</h2>
 

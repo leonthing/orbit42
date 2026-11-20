@@ -20,8 +20,8 @@ const DISMISS_KEY = "orbit42:onboarding-dismissed";
  */
 export function OnboardingChecklist({ steps }: { steps: OnboardingStep[] }) {
   const [dismissed, setDismissed] = useState(false);
-  // 모바일에서는 접어 둔다 — 캘린더가 홈이 되면서 이 카드가 펼쳐져 있으면
-  // 화면의 절반 이상을 먹고 정작 일정이 안 보인다. 데스크톱은 늘 펼친다.
+  // 늘 접어 둔다 — 펼쳐져 있으면 캘린더 첫 화면을 1/4~절반 먹는다.
+  // 휴대폰(묶음 A)에 이어 데스크톱도 한 줄(11/21 묶음 나: 1280 에서 달력 5주 이상).
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
@@ -40,9 +40,9 @@ export function OnboardingChecklist({ steps }: { steps: OnboardingStep[] }) {
 
   return (
     <>
-    {/* 휴대폰·접힘: 한 줄(약 56px) — 캘린더 첫 화면을 덜 먹게(웹 점검 11/20, 묶음 A) */}
+    {/* 접힘: 한 줄(약 56px) — 캘린더 첫 화면을 덜 먹게(휴대폰 11/20 묶음 A, 데스크톱 11/21 묶음 나) */}
     {!expanded && (
-      <div className="flex items-center gap-1 rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 py-1 pl-3 pr-1 sm:hidden">
+      <div className="flex items-center gap-1 rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 py-1 pl-3 pr-1">
         <span className="shrink-0 rounded-full bg-navy-500/10 px-2 py-0.5 text-xs font-semibold text-navy-500 tabular-nums">
           {doneCount}/{steps.length}
         </span>
@@ -82,7 +82,7 @@ export function OnboardingChecklist({ steps }: { steps: OnboardingStep[] }) {
         </button>
       </div>
     )}
-    <div className={`rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 p-4 sm:p-5 ${expanded ? "" : "max-sm:hidden"}`}>
+    <div className={`rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 p-4 sm:p-5 ${expanded ? "" : "hidden"}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-sm font-semibold text-charcoal-100">
@@ -98,7 +98,7 @@ export function OnboardingChecklist({ steps }: { steps: OnboardingStep[] }) {
           onClick={() => setExpanded((v) => !v)}
           aria-expanded={expanded}
           aria-label={expanded ? "접기" : "전체 보기"}
-          className="flex items-center justify-center rounded-lg p-1 text-charcoal-600 hover:bg-charcoal-800/50 hover:text-charcoal-300 max-md:h-11 max-md:w-11 sm:hidden"
+          className="flex items-center justify-center rounded-lg p-1 text-charcoal-600 hover:bg-charcoal-800/50 hover:text-charcoal-300 max-md:h-11 max-md:w-11"
         >
           <svg
             className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`}
@@ -127,7 +127,7 @@ export function OnboardingChecklist({ steps }: { steps: OnboardingStep[] }) {
         />
       </div>
 
-      <ul className={`mt-4 space-y-2 ${expanded ? "block" : "hidden sm:block"}`}>
+      <ul className="mt-4 space-y-2">
         {steps.map((s) =>
           s.done ? (
             <li

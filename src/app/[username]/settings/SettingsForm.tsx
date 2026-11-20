@@ -238,7 +238,7 @@ export function SettingsForm({
               onChange={(e) => setBirthDate(e.target.value)}
               className={`${inputClass} max-w-[10rem] sm:max-w-xs`}
             />
-            <p className="mt-1 text-xs text-charcoal-500">Life Calendar에 사용됩니다</p>
+            <p className="mt-1 text-xs text-charcoal-500">라이프 캘린더에 쓰여요</p>
           </div>
 
           <div>

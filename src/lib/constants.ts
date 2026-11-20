@@ -34,13 +34,13 @@ export function slotTypeLabel(t: string | null | undefined): string {
 }
 
 export const NAV_ITEMS = [
-  // 1:1 세션을 파는 사람의 하루 순서: 일정 → 들어온 예약 → 내 예약 링크 → 사람 → 리포트
-  { href: "/calendar", label: "캘린더", icon: "calendar" },
-  { href: "/bookings", label: "예약", icon: "schedule" },
-  { href: "/slots", label: "예약 링크", icon: "clock" },
-  { href: "/people", label: "오르빗", icon: "users" },
-  { href: "/insights", label: "리포트", icon: "chart" },
-  { href: "/settings", label: "설정", icon: "cog" },
+  // 휴대폰 아래 탭·iOS 1.10.0 과 같은 5개·같은 순서(11/21 묶음 나). 예약 링크·대화는 예약 안 세그먼트,
+  // 설정은 메뉴 맨 아래. match 는 이 메뉴를 강조할 하위 주소(예약 링크·대화도 '예약').
+  { href: "/calendar", label: "캘린더", icon: "calendar", match: ["/calendar"] },
+  { href: "/bookings", label: "예약", icon: "schedule", match: ["/bookings", "/slots"] },
+  { href: "/people", label: "오르빗", icon: "users", match: ["/people"] },
+  { href: "/insights", label: "리포트", icon: "chart", match: ["/insights"] },
+  { href: "", label: "프로필", icon: "user", match: [] },
 ] as const;
 
 /** 사이드바 '더보기' — 쓰는 사람만 쓰는 메뉴는 아래로 (주소는 그대로 살아 있다) */
