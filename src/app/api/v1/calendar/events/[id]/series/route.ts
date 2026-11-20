@@ -1,3 +1,4 @@
+import { googleErrorSummary } from "@/lib/google-error";
 import { apiUserId } from "@/lib/api-auth";
 import { getAdminClient } from "@/lib/supabase";
 import { nativeSeriesInfo, googleSeriesInfo } from "@/lib/recurrence-write";
@@ -37,7 +38,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
       attendeeCount: info.attendeeCount,
     });
   } catch (err) {
-    console.error("api event series", err);
+    console.error("api event series", googleErrorSummary(err));
     return Response.json({ error: "반복 정보를 읽지 못했어요." }, { status: 400 });
   }
 }

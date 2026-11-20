@@ -2,6 +2,7 @@
  * 예약에 딸린 호스트의 Google 일정을 지운다. slots.ts 는 "use server" 라 여기 두지
  * 않으면 클라이언트에서 부를 수 있는 server action 이 되어 버린다 — 그래서 분리했다.
  */
+import { googleErrorSummary } from "@/lib/google-error";
 import { getAdminClient } from "@/lib/supabase";
 import { getAuthenticatedCalendar } from "@/lib/google";
 
@@ -47,6 +48,6 @@ export async function removeBookingCalendarEvent(bookingId: string) {
       .update({ google_event_id: null })
       .eq("id", bookingId);
   } catch (err) {
-    console.error("removeBookingCalendarEvent", err);
+    console.error("removeBookingCalendarEvent", googleErrorSummary(err));
   }
 }

@@ -1,4 +1,5 @@
 // 일반 서버 모듈 — 서버 액션 아님(보안-6). 클라이언트용은 *-actions.ts
+import { googleErrorSummary } from "@/lib/google-error";
 import { revalidatePath } from "next/cache";
 import { guestBookingsSince } from "@/lib/email-lookup";
 import { changeBookingListState, type BookingListChange } from "@/lib/booking-list-state";
@@ -1666,7 +1667,7 @@ export async function updateBookingStatus(
           });
         }
       } catch (err) {
-        console.error("confirm google status patch", err);
+        console.error("confirm google status patch", googleErrorSummary(err));
       }
     }
   }
@@ -1848,7 +1849,7 @@ async function moveBookingTo(args: {
         }
       }
     } catch (err) {
-      console.error("moveBookingTo calendar patch", err);
+      console.error("moveBookingTo calendar patch", googleErrorSummary(err));
     }
   }
 

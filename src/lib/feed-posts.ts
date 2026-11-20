@@ -1,4 +1,5 @@
 // 일반 서버 모듈 — 서버 액션 아님(보안-6). 클라이언트용은 *-actions.ts
+import { googleErrorSummary } from "@/lib/google-error";
 import { revalidatePath } from "next/cache";
 import { getAdminClient } from "@/lib/supabase";
 import { requireUserId } from "@/lib/db";
@@ -128,7 +129,7 @@ export async function createFeedPost(formData: FormData) {
           .eq("id", inserted.id);
       }
     } catch (err) {
-      console.error("feed_post gcal insert failed", err);
+      console.error("feed_post gcal insert failed", googleErrorSummary(err));
       // Don't fail the whole post — surface a soft warning.
       return {
         success: true,

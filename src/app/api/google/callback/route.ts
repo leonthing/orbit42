@@ -1,3 +1,4 @@
+import { googleErrorSummary } from "@/lib/google-error";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import {
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest) {
       }
       return NextResponse.redirect(new URL("/calendar", request.url));
     } catch (err) {
-      console.error("google signin", err);
+      console.error("google signin", googleErrorSummary(err));
       return NextResponse.redirect(
         new URL("/?error=google_auth_failed", request.url),
       );
@@ -77,7 +78,7 @@ export async function GET(request: NextRequest) {
         `orbit42://signin?token=${encodeURIComponent(token)}${res.created ? "&new=1" : ""}`,
       );
     } catch (err) {
-      console.error("google mobile signin", err);
+      console.error("google mobile signin", googleErrorSummary(err));
       return fail("exchange_failed");
     }
   }
@@ -123,7 +124,7 @@ export async function GET(request: NextRequest) {
       }
       return NextResponse.redirect("orbit42://google-connected");
     } catch (err) {
-      console.error("mobile google connect", err);
+      console.error("mobile google connect", googleErrorSummary(err));
       return fail("exchange_failed");
     }
   }
@@ -179,7 +180,7 @@ export async function GET(request: NextRequest) {
     const redirectPath = returnTo ? `/${username}/${returnTo}` : `/${username}/calendar`;
     return NextResponse.redirect(new URL(redirectPath, request.url));
   } catch (error) {
-    console.error("Google OAuth error:", error);
+    console.error("Google OAuth error:", googleErrorSummary(error));
     return NextResponse.redirect(
       new URL(`/${username}/settings?error=google_auth_failed`, request.url),
     );

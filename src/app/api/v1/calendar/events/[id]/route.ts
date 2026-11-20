@@ -1,3 +1,4 @@
+import { googleErrorSummary } from "@/lib/google-error";
 import { deleteEarningsForEvents } from "@/lib/event-earnings-cleanup";
 import { apiSession, apiUserId } from "@/lib/api-auth";
 import { getAdminClient } from "@/lib/supabase";
@@ -293,7 +294,7 @@ export async function PATCH(
     return Response.json({ ok: true });
   } catch (err) {
     // updateEvent 는 Supabase 내부 메시지를 그대로 던지므로 노출하지 않는다.
-    console.error("api event patch", err);
+    console.error("api event patch", googleErrorSummary(err));
     return Response.json(
       { error: "일정을 수정하지 못했어요. 이미 삭제된 일정일 수 있어요." },
       { status: 400 },
@@ -389,7 +390,7 @@ export async function DELETE(
     }
     return Response.json({ ok: true });
   } catch (err) {
-    console.error("api event delete", err);
+    console.error("api event delete", googleErrorSummary(err));
     return Response.json(
       { error: "일정을 삭제하지 못했어요. 이미 삭제된 일정일 수 있어요." },
       { status: 400 },

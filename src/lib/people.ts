@@ -9,6 +9,7 @@
  *     새로 찾은 사람은 'suggested' 로 두어 사용자가 고르게 한다.
  */
 
+import { googleErrorSummary } from "@/lib/google-error";
 import { getAdminClient } from "@/lib/supabase";
 import {
   getAuthenticatedCalendar,
@@ -544,7 +545,7 @@ async function fetchGoogleAttendeeEvents(
           pageToken = res.data.nextPageToken ?? undefined;
           if (!pageToken) break;
         } catch (err) {
-          console.error("people google sync", err);
+          console.error("people google sync", googleErrorSummary(err));
           break;
         }
       }

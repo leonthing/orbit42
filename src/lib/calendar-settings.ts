@@ -1,4 +1,5 @@
 // 일반 서버 모듈 — 서버 액션 아님(보안-6). 클라이언트용은 *-actions.ts
+import { googleErrorSummary } from "@/lib/google-error";
 import { revalidatePath } from "next/cache";
 import { getAdminClient } from "@/lib/supabase";
 import { requireUserId, getUserId } from "@/lib/db";
@@ -68,7 +69,7 @@ export async function createGoogleCalendar(args: {
     calendarId = res.data.id || "";
     if (!calendarId) throw new Error("no calendar id");
   } catch (err) {
-    console.error("calendars.insert", err);
+    console.error("calendars.insert", googleErrorSummary(err));
     return { error: "Google 캘린더 생성에 실패했습니다." };
   }
 

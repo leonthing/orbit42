@@ -6,6 +6,7 @@
  * one implementation. Callers are responsible for resolving a trusted userId.
  */
 
+import { googleErrorSummary } from "@/lib/google-error";
 import type { calendar_v3 } from "googleapis";
 import { getAdminClient } from "@/lib/supabase";
 import {
@@ -201,7 +202,7 @@ export async function addGoogleAttendees(
     });
     return { attendees: googleAttendees(updated) };
   } catch (err) {
-    console.error("addGoogleAttendees", err);
+    console.error("addGoogleAttendees", googleErrorSummary(err));
     return { error: "구글 캘린더에 참석자를 추가하지 못했어요. 권한이나 네트워크를 확인해 주세요." };
   }
 }
@@ -419,7 +420,7 @@ export async function listEventsForUser(
       }));
     }
   } catch (err) {
-    console.error("Google Calendar fetch error:", err);
+    console.error("Google Calendar fetch error:", googleErrorSummary(err));
   }
 
   // 구글 일정의 좌표·이동시간·기념일 — Orbit42 기록이 우선(구글에는 쓰지 않음), 없으면 예전에 구글에 들어간 값을 읽기만 한다.
@@ -833,7 +834,7 @@ export async function moveEventToCalendar(
       });
       createdId = res.data.id;
     } catch (err) {
-      console.error("moveEvent local→google insert", err);
+      console.error("moveEvent local→google insert", googleErrorSummary(err));
       return { error: "Google에 일정을 만들지 못했어요." };
     }
     if (!createdId) return { error: "Google에 일정을 만들지 못했어요." };
@@ -877,7 +878,7 @@ export async function moveEventToCalendar(
         destination: target.google_calendar_id,
       });
     } catch (err) {
-      console.error("moveEvent google→google", err);
+      console.error("moveEvent google→google", googleErrorSummary(err));
       return { error: "Google 캘린더 간 이동에 실패했어요." };
     }
     // 바뀐 필드만 부분 patch (updateGoogleEvent 와 같은 매핑). 좌표·이동시간은 Orbit42 에만, 구글의 예전 orbit42* 는 이때 지운다
@@ -921,7 +922,7 @@ export async function moveEventToCalendar(
     });
     g = res.data;
   } catch (err) {
-    console.error("moveEvent google→local get", err);
+    console.error("moveEvent google→local get", googleErrorSummary(err));
     return { error: "Google 일정을 읽지 못했어요." };
   }
   const allDay = !!g.start?.date;
@@ -969,7 +970,7 @@ export async function moveEventToCalendar(
     });
   } catch (err) {
     // 구글 원본 삭제 실패 → 로컬 사본 제거해 중복을 막고 이동 취소.
-    console.error("moveEvent google→local delete", err);
+    console.error("moveEvent google→local delete", googleErrorSummary(err));
     await db.from("events").delete().eq("id", inserted.id);
     return { error: "Google 일정을 삭제하지 못해 이동을 취소했어요." };
   }

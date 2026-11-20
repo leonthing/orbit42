@@ -1,3 +1,4 @@
+import { googleErrorSummary } from "@/lib/google-error";
 import { google } from "googleapis";
 import { getAdminClient } from "@/lib/supabase";
 import {
@@ -110,7 +111,7 @@ export async function saveGoogleTokens(
 ) {
   await persistGoogleTokens(userId, tokens);
   await syncGoogleCalendarsToDb(userId).catch((err) =>
-    console.error("syncGoogleCalendarsToDb", err),
+    console.error("syncGoogleCalendarsToDb", googleErrorSummary(err)),
   );
 }
 
@@ -249,7 +250,7 @@ export async function revokeGoogleToken(token: string | null | undefined) {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
     });
   } catch (err) {
-    console.error("revokeGoogleToken", err);
+    console.error("revokeGoogleToken", googleErrorSummary(err));
   }
 }
 
