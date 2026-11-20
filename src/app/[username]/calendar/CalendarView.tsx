@@ -89,7 +89,10 @@ function parseWeekItemId(
 // ─── Helpers ────────────────────────────────────────────────
 
 
-type ViewMode = "life" | "year" | "quarter" | "month" | "week";
+type ViewMode = "life" | "year" | "quarter" | "month" | "week" | "day";
+const VIEW_KEY = "orbit42.calendarView";
+const VIEW_MODES: ViewMode[] = ["life", "year", "quarter", "month", "week", "day"];
+const isPhone = () => window.matchMedia("(max-width: 767px)").matches;
 
 /** ISO 8601 week number (Monday-start) */
 function getISOWeekNumber(date: Date): number {
@@ -250,10 +253,6 @@ export default function CalendarView({
   });
   const [showCalendarPicker, setShowCalendarPicker] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("week");
-  // 모바일은 iOS 앱처럼 월 달력 + 선택한 날의 일정으로 시작한다.
-  useEffect(() => {
-    if (window.matchMedia("(max-width: 767px)").matches) setViewMode("month");
-  }, []);
   const [quarter, setQuarter] = useState(getQuarterForMonth(initialMonth));
   const [weekDays, setWeekDays] = useState<WeekDay[]>(initialWeekDays);
   const [invites, setInvites] = useState<InviteView[]>([]);
@@ -489,14 +488,37 @@ export default function CalendarView({
     [year, fetchMultiMonthEvents],
   );
 
+  // 하루 보기(휴대폰): 하루씩. 주가 바뀌면 주 띠·격자용 weekDays 를 다시 받는다.
+  const goToDate = useCallback(
+    (d: Date) => {
+      const inWeek = weekDays.some((w) => isSameDay(new Date(w.date), d));
+      if (d.getFullYear() !== year || d.getMonth() !== month) fetchEvents(d.getFullYear(), d.getMonth());
+      setYear(d.getFullYear());
+      setMonth(d.getMonth());
+      setSelectedDay(d.getDate());
+      if (!inWeek) refetchWeekDays(d);
+    },
+    [weekDays, year, month, fetchEvents, refetchWeekDays],
+  );
+
+  const navigateDay = useCallback(
+    (dir: -1 | 1) => {
+      const d = new Date(year, month, selectedDay ?? today.getDate());
+      d.setDate(d.getDate() + dir);
+      goToDate(d);
+    },
+    [year, month, selectedDay, today, goToDate],
+  );
+
   const navigate = useCallback(
     (dir: -1 | 1) => {
-      if (viewMode === "month") navigateMonth(dir);
+      if (viewMode === "day") navigateDay(dir);
+      else if (viewMode === "month") navigateMonth(dir);
       else if (viewMode === "week") navigateWeek(dir);
       else if (viewMode === "quarter") navigateQuarter(dir);
       else navigateYear(dir);
     },
-    [viewMode, navigateMonth, navigateWeek, navigateQuarter, navigateYear],
+    [viewMode, navigateDay, navigateMonth, navigateWeek, navigateQuarter, navigateYear],
   );
 
   const goToToday = useCallback(() => {
@@ -514,22 +536,28 @@ export default function CalendarView({
       fetchEvents(t.getFullYear(), t.getMonth());
       // Week grid renders from weekDays state — without this the header
       // label jumps to today's week but the grid stays on the old week.
-      if (viewMode === "week") {
+      if (viewMode === "week" || viewMode === "day") {
         refetchWeekDays(new Date(t.getFullYear(), t.getMonth(), t.getDate()));
       }
     }
   }, [viewMode, fetchEvents, fetchMultiMonthEvents, refetchWeekDays]);
 
   const switchView = useCallback(
-    (mode: ViewMode) => {
+    (mode: ViewMode, save = true) => {
       setViewMode(mode);
+      // 고른 보기를 기억한다 — 다음에 열 때 기기 기본값보다 먼저(묶음 B)
+      if (save) {
+        try {
+          localStorage.setItem(VIEW_KEY, mode);
+        } catch {}
+      }
       if (mode === "year") {
         fetchMultiMonthEvents(year, Array.from({ length: 12 }, (_, i) => i));
       } else if (mode === "quarter") {
         const q = getQuarterForMonth(month);
         setQuarter(q);
         fetchMultiMonthEvents(year, getQuarterMonths(q));
-      } else if (mode === "week") {
+      } else if (mode === "week" || mode === "day") {
         if (!selectedDay) setSelectedDay(today.getDate());
         fetchEvents(year, month);
         refetchWeekDays(new Date(year, month, selectedDay ?? today.getDate()));
@@ -539,6 +567,21 @@ export default function CalendarView({
     },
     [year, month, today, selectedDay, fetchEvents, fetchMultiMonthEvents, refetchWeekDays],
   );
+
+  // 처음 보기: 저장한 보기가 있으면 그것, 없으면 휴대폰은 iOS 처럼 하루 보기(시간축 + 주 띠),
+  // 데스크톱은 주 보기 그대로. 하루 보기는 휴대폰 전용이라 데스크톱에서는 주 보기로 연다.
+  useEffect(() => {
+    let saved: string | null = null;
+    try {
+      saved = localStorage.getItem(VIEW_KEY);
+    } catch {}
+    const phone = isPhone();
+    let mode: ViewMode | null = VIEW_MODES.includes(saved as ViewMode) ? (saved as ViewMode) : null;
+    if (mode === "day" && !phone) mode = "week";
+    if (!mode) mode = phone ? "day" : "week";
+    if (mode !== "week") switchView(mode, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── URL `?d=YYYY-MM-DD` jump (from sidebar mini calendar) ──
   useEffect(() => {
@@ -817,6 +860,10 @@ export default function CalendarView({
   const getHeaderLabel = () => {
     if (viewMode === "year") return `${year}년`;
     if (viewMode === "quarter") return `${year}년 Q${quarter + 1}`;
+    if (viewMode === "day") {
+      const d = new Date(year, month, selectedDay ?? today.getDate());
+      return d.toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "short" });
+    }
     if (viewMode === "week") {
       const weekDates = getWeekDates(year, month, selectedDay ?? today.getDate(), weekStart);
       const first = weekDates[0];
@@ -834,6 +881,7 @@ export default function CalendarView({
     if (viewMode === "year") return year === t.getFullYear();
     if (viewMode === "quarter") return year === t.getFullYear() && quarter === getQuarterForMonth(t.getMonth());
     if (viewMode === "month") return isCurrentMonth;
+    if (viewMode === "day") return isSameDay(new Date(year, month, selectedDay ?? t.getDate()), t);
     // week
     const weekDates = getWeekDates(year, month, selectedDay ?? today.getDate(), weekStart);
     return weekDates.some(
@@ -852,12 +900,13 @@ export default function CalendarView({
           ["quarter", "분기"],
           ["month", "월"],
           ["week", "주"],
+          ["day", "일"],
         ] as const
       ).map(([mode, label]) => (
         <button
           key={mode}
           onClick={() => switchView(mode)}
-          className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium transition-colors max-md:min-h-11 max-md:min-w-11 ${
+          className={`${mode === "day" ? "md:hidden " : ""}shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium transition-colors max-md:min-h-11 max-md:min-w-11 ${
             viewMode === mode
               ? "bg-navy-500 text-white"
               : "text-charcoal-400 hover:text-charcoal-200"
@@ -1427,6 +1476,60 @@ export default function CalendarView({
           />
         </div>
       )}
+
+      {viewMode === "day" && (() => {
+        // 휴대폰 하루 보기(묶음 B): 위에 그 주 띠(요일·날짜·일정 점), 아래 하루 시간축.
+        const sel = new Date(year, month, selectedDay ?? today.getDate());
+        const dayData = displayWeekDays.find((d) => isSameDay(new Date(d.date), sel));
+        const dayOnly: WeekDay[] = [dayData ?? { date: sel, isToday: isSameDay(sel, new Date()), items: [] }];
+        return (
+          <div className="flex min-h-[calc(100dvh-220px)] flex-1 flex-col gap-2">
+            <div className="grid grid-cols-7 gap-1" role="tablist" aria-label="이번 주">
+              {displayWeekDays.map((d) => {
+                const date = new Date(d.date);
+                const active = isSameDay(date, sel);
+                const has = d.items.length > 0;
+                const dow = date.getDay();
+                return (
+                  <button
+                    key={date.toISOString()}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    aria-label={date.toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "long" })}
+                    onClick={() => goToDate(date)}
+                    className={`flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-xl text-sm transition-colors ${
+                      active ? "bg-navy-500 text-white" : "text-charcoal-200 hover:bg-charcoal-800/40"
+                    }`}
+                  >
+                    <span className={`text-xs ${active ? "text-white/80" : dow === 0 ? "text-red-400" : "text-charcoal-500"}`}>
+                      {date.toLocaleDateString("ko-KR", { weekday: "short" })}
+                    </span>
+                    <span
+                      className={`font-semibold tabular-nums ${
+                        !active && d.isToday ? "inline-flex h-6 w-6 items-center justify-center rounded-full ring-2 ring-navy-400" : ""
+                      }`}
+                    >
+                      {date.getDate()}
+                    </span>
+                    <span className={`h-1 w-1 rounded-full ${has ? (active ? "bg-white" : "bg-navy-400") : "bg-transparent"}`} />
+                  </button>
+                );
+              })}
+            </div>
+            <WeekCalendar
+              username={username}
+              days={dayOnly}
+              viewerIsOwner={viewerIsOwner}
+              completedKeys={completed}
+              onToggleComplete={handleToggleComplete}
+              onEventClick={(item) => setDetailEvent(item)}
+              onEmptyClick={viewerIsOwner ? (date, h, m) => openCreateAt(date, h, m) : undefined}
+              emptyMessage={viewerIsOwner ? "이날은 일정이 없어요. 빈 시간을 누르면 일정을 만들 수 있어요." : "이날 공개된 일정이나 예약 가능한 시간이 없어요."}
+            />
+          </div>
+        );
+      })()}
 
       {detailEvent && (
         <EventDetailModal

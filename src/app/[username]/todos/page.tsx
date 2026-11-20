@@ -6,11 +6,12 @@ import { listTodos } from "@/lib/todos";
 import { v190OpenFor } from "@/lib/dm-flags";
 import { EmptyState } from "@/components/EmptyState";
 import { TodoChecklist } from "./TodoChecklist";
+import { TodoComposer } from "./TodoComposer";
 
 export const metadata: Metadata = { title: "할 일" };
 export const dynamic = "force-dynamic";
 
-/** 할 일 (1.9.0, 웹은 목록과 체크만 — 만들기·고치기는 앱에서) */
+/** 할 일 (1.9.0) — 웹도 만들기·고치기·지우기(묶음 B, 11/20). 일정에서 후속 할 일 만들기는 앱에서. */
 export default async function TodosPage({ params }: { params: { username: string } }) {
   const session = await getSession();
   if (!session) redirect("/login");
@@ -30,9 +31,10 @@ export default async function TodosPage({ params }: { params: { username: string
   return (
     <div className="max-w-2xl">
       <h1 className="mb-1 text-xl font-semibold text-charcoal-100">할 일</h1>
-      <p className="mb-5 text-xs text-charcoal-500">할 일 만들기·고치기는 앱에서 할 수 있어요. 여기서는 체크만 해요.</p>
+      <p className="mb-4 text-xs text-charcoal-500">할 일을 누르면 고치거나 지울 수 있어요.</p>
+      <TodoComposer />
       {groups.length === 0 ? (
-        <EmptyState title="할 일이 없어요" body="앱의 일정 상세에서 '+ 할 일'을 누르거나, 일정을 완료로 표시하면 후속 할 일을 적을 수 있어요." />
+        <EmptyState title="할 일이 없어요" body="위 칸에 적어 추가하거나, 앱의 일정 상세에서 '+ 할 일'을 누르면 후속 할 일을 적을 수 있어요." />
       ) : (
         <div className="space-y-6">
           {groups.map((g) => (
