@@ -106,7 +106,7 @@ export function EarnCard({
                   </>
                 )}
               </div>
-              <span className={`text-[10px] leading-none ${current ? "font-semibold text-charcoal-200" : "text-charcoal-500"}`}>{barLabel(period, t.key)}</span>
+              <span className={`text-[10px] leading-none ${current ? "font-semibold text-charcoal-200" : "text-charcoal-400"}`}>{barLabel(period, t.key)}</span>
             </div>
           );
         })}

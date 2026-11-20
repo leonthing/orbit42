@@ -145,7 +145,7 @@ export function TimeAssetDashboard({
                     />
                   ))}
                 </div>
-                <span className="text-3xs text-charcoal-600">
+                <span className="text-3xs text-charcoal-500">
                   {Number(entry.key.split("-")[1])}월
                 </span>
               </div>

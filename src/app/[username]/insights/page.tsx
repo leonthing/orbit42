@@ -269,7 +269,7 @@ export default async function InsightsPage({
                     <div className="flex items-baseline justify-between gap-2">
                       <p className="truncate text-sm text-charcoal-200">
                         {c.label}
-                        <span className="ml-2 text-2xs uppercase tracking-wider text-charcoal-600">
+                        <span className="ml-2 text-2xs uppercase tracking-wider text-charcoal-500">
                           {PURPOSE_GROUP_LABEL[c.group]}
                         </span>
                       </p>
@@ -407,7 +407,7 @@ function Stat({
       >
         {value}
       </p>
-      {hint && <p className="mt-0.5 truncate text-2xs text-charcoal-600">{hint}</p>}
+      {hint && <p className="mt-0.5 truncate text-2xs text-charcoal-500">{hint}</p>}
     </div>
   );
 }

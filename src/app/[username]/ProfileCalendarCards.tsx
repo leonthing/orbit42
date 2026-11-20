@@ -112,7 +112,7 @@ export async function ProfileCalendarCards({
                   {cal.name as string}
                 </span>
                 {cal.visibility === "private" && (
-                  <span className="ml-auto text-2xs text-charcoal-600">비공개</span>
+                  <span className="ml-auto text-2xs text-charcoal-500">비공개</span>
                 )}
               </div>
               {cal.goal_title && (

@@ -240,7 +240,7 @@ export function BookingChatButton({ bookingId, open, onToggle }: { bookingId: st
     >
       대화
       {n > 0 && (
-        <span className="rounded-full bg-red-500 px-1.5 text-2xs font-semibold leading-4 text-white">{n}</span>
+        <span className="rounded-full bg-red-600 px-1.5 text-2xs font-semibold leading-4 text-white">{n}</span>
       )}
     </button>
   );

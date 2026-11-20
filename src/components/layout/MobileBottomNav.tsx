@@ -108,7 +108,7 @@ export function MobileBottomNav({
               {it.icon}
               {it.label === "예약" && bookingsBadge > 0 && (
                 <span
-                  className="absolute -right-2 -top-1 min-w-[16px] rounded-full bg-red-500 px-1 text-center text-tab font-bold leading-4 text-white"
+                  className="absolute -right-2 -top-1 min-w-[16px] rounded-full bg-red-600 px-1 text-center text-tab font-bold leading-4 text-white"
                   aria-label={`답할 예약 ${bookingsBadge}건`}
                 >
                   {bookingsBadge > 99 ? "99+" : bookingsBadge}
