@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
+import { AppPortalScope } from "@/components/AppPortalScope";
 import { useRouter } from "next/navigation";
 import { toggleReaction } from "@/lib/reactions-actions";
 import {
@@ -120,6 +121,7 @@ export function ReactionStrip({
       {pickerOpen &&
         typeof document !== "undefined" &&
         createPortal(
+<AppPortalScope>
           <>
             <div
               className="fixed inset-0 z-40"
@@ -144,7 +146,8 @@ export function ReactionStrip({
                 </button>
               ))}
             </div>
-          </>,
+          </>
+</AppPortalScope>,
           document.body,
         )}
     </div>

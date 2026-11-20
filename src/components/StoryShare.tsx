@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createPortal } from "react-dom";
+import { AppPortalScope } from "@/components/AppPortalScope";
 import { buttonClasses } from "@/components/PendingButton";
 import { useToast } from "@/components/Toast";
 import { STORY_TEMPLATES } from "@/lib/story-templates";
@@ -34,7 +35,9 @@ export function StoryShareButton({
       {open &&
         typeof document !== "undefined" &&
         createPortal(
-          <StoryShareModal imagePath={imagePath} linkUrl={linkUrl} fileName={fileName} onClose={() => setOpen(false)} />,
+<AppPortalScope>
+          <StoryShareModal imagePath={imagePath} linkUrl={linkUrl} fileName={fileName} onClose={() => setOpen(false)} />
+</AppPortalScope>,
           document.body,
         )}
     </>

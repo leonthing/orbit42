@@ -9,7 +9,8 @@ const config: Config = {
     "./src/components/**/*.{js,ts,jsx,tsx}",
     "./src/app/**/*.{js,ts,jsx,tsx}",
   ],
-  darkMode: "class",
+  // dark: 는 앱 화면(AppShell)과 앱에서 띄운 겹친 화면 안에서만(묶음 5) — 공개 링크·로그인·랜딩·약관은 그대로
+  darkMode: ["variant", "&:where(.dark [data-app-shell] *, .dark [data-app-shell-portal] *)"],
   theme: {
     extend: {
       colors: {

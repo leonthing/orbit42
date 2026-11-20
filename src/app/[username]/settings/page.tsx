@@ -47,7 +47,7 @@ const SECTIONS = [
   { id: "locations", label: "장소" },
   { id: "referral", label: "추천" },
   { id: "notifications", label: "알림" },
-  { id: "theme", label: "테마" },
+  { id: "theme", label: "화면 모드" },
   { id: "integrations", label: "연동 토큰" },
   { id: "account", label: "계정" },
   { id: "danger", label: "계정 삭제" },

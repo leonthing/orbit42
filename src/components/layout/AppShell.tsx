@@ -1,3 +1,4 @@
+import { ThemeColorSync } from "@/components/layout/ThemeColorSync";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { v190OpenFor } from "@/lib/dm-flags";
 import { TopBar } from "@/components/layout/TopBar";
@@ -49,6 +50,7 @@ export async function AppShell({
   return (
     <MobileMenuProvider>
       <div data-app-shell className="flex h-dvh overflow-hidden bg-[rgb(var(--bg-base))]">
+        <ThemeColorSync />
         <Sidebar username={viewerUsername} unreadMessages={unreadMessages} bookingsBadge={bookingsBadge} weekStart={weekStart} dmOpen={v190OpenFor(viewerId)} postsOpen={postsOpen} />
         <div className="flex flex-1 flex-col overflow-hidden">
           <TopBar

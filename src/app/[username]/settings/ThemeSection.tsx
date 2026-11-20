@@ -41,7 +41,7 @@ export function ThemeSection() {
   return (
     <section className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/40">
       <div className="border-b border-charcoal-800/40 px-5 py-3">
-        <h2 className="text-sm font-semibold text-charcoal-200">테마</h2>
+        <h2 className="text-sm font-semibold text-charcoal-200">화면 모드</h2>
       </div>
       <div className="flex gap-3 p-5">
         {options.map((opt) => (

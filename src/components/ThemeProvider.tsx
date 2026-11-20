@@ -7,14 +7,15 @@ type Theme = "light" | "dark" | "system";
 const ThemeContext = createContext<{
   theme: Theme;
   setTheme: (t: Theme) => void;
-}>({ theme: "light", setTheme: () => {} });
+}>({ theme: "system", setTheme: () => {} });
 
 export function useTheme() {
   return useContext(ThemeContext);
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("light");
+  // 기본은 '시스템'(묶음 5, PO 11/21) — 기기가 다크면 앱 화면도 다크
+  const [theme, setThemeState] = useState<Theme>("system");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {

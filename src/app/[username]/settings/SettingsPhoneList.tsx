@@ -1,7 +1,7 @@
 "use client";
 
 // 휴대폰 설정 — iOS 처럼 목록 → 하위 화면(?tab=…). 웹에만 있던 탐색·서비스 메뉴·로그아웃도 여기로(PO 11/21).
-// 화면 모드(다크)는 묶음 5에서 켤 때 넣는다.
+// 화면 모드(시스템·라이트·다크)는 iOS 처럼 '알림·화면' 묶음에(묶음 5).
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -39,8 +39,11 @@ export function SettingsPhoneList({ username, cardsOpen }: { username: string; c
       ],
     },
     {
-      title: "알림",
-      rows: [{ label: "알림 설정", href: t("notifications") }],
+      title: "알림·화면",
+      rows: [
+        { label: "알림 설정", href: t("notifications") },
+        { label: "화면 모드", href: t("theme"), sub: "시스템 설정 따름 · 라이트 · 다크" },
+      ],
     },
     {
       title: "정보·지원",

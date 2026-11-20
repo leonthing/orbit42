@@ -70,6 +70,8 @@ export const metadata: Metadata = {
   },
 };
 
+const THEME_BOOT = `(function(){try{var m=localStorage.getItem("orbit42-theme")||"system";var d=m==="dark"||(m==="system"&&window.matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d);}catch(e){}})();`;
+
 export default function RootLayout({
   children,
 }: {
@@ -81,6 +83,12 @@ export default function RootLayout({
       className={`${pretendard.variable} ${inter.variable}`}
       suppressHydrationWarning
     >
+      <head>
+        {/* 화면 모드(묶음 5): 첫 그림 전에 html.dark 를 정해 번쩍임을 막는다. 기본은 '시스템'.
+            다크 색은 앱 화면(AppShell) 안에만 걸린다 — 공개 링크·로그인·랜딩·약관은 그대로(globals.css·tailwind 설정). */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
+        <meta name="theme-color" content="#F2F2F7" />
+      </head>
       <body className="font-sans antialiased">
         <ThemeProvider>
           <ConfirmProvider>

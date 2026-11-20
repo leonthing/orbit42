@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { slotTypeLabel } from "@/lib/constants";
 import { createPortal } from "react-dom";
+import { AppPortalScope } from "@/components/AppPortalScope";
 import {
   createContext,
   useCallback,
@@ -109,6 +110,7 @@ function SlotPanelDrawer({
   if (!mounted) return null;
 
   return createPortal(
+<AppPortalScope>
     <div className="fixed inset-0 z-[100] flex">
       <button
         type="button"
@@ -171,7 +173,8 @@ function SlotPanelDrawer({
           )}
         </div>
       </aside>
-    </div>,
+    </div>
+</AppPortalScope>,
     document.body,
   );
 }
