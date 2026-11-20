@@ -520,7 +520,7 @@ function Greeting({ name }: { name: string }) {
   }, []);
   if (!now) return <div className="h-[104px]" aria-hidden />;
   return (
-    <div className="pt-1">
+    <div className="pt-1" data-volatile>
       <p className="text-sm font-medium text-charcoal-500">
         {now.toLocaleDateString("ko-KR", { timeZone: TZ, month: "long", day: "numeric", weekday: "long" })}
       </p>

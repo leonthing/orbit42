@@ -12,15 +12,22 @@ export function HashToTab() {
   const pathname = usePathname();
   const params = useSearchParams();
   useEffect(() => {
-    if (!window.matchMedia("(max-width: 767px)").matches) return;
-    const hash = window.location.hash.slice(1);
-    if (!hash || params.get("tab")) return;
-    const el = document.getElementById(hash);
-    const section = el?.closest("section[id]") as HTMLElement | null;
-    const tab = section?.id ?? hash;
-    const q = new URLSearchParams(params.toString());
-    q.set("tab", tab);
-    router.replace(`${pathname}?${q.toString()}#${hash}`);
+    const go = () => {
+      if (!window.matchMedia("(max-width: 767px)").matches) return;
+      const hash = window.location.hash.slice(1);
+      if (!hash) return;
+      const el = document.getElementById(hash);
+      const section = el?.closest("section[id]") as HTMLElement | null;
+      const tab = section?.id ?? hash;
+      if (params.get("tab") === tab) return;
+      const q = new URLSearchParams(params.toString());
+      q.set("tab", tab);
+      router.replace(`${pathname}?${q.toString()}#${hash}`);
+    };
+    go();
+    // 설정 화면에 있는 채로 해시만 바뀌는 경우(같은 페이지 안 링크)도
+    window.addEventListener("hashchange", go);
+    return () => window.removeEventListener("hashchange", go);
   }, [router, pathname, params]);
   return null;
 }

@@ -353,6 +353,7 @@ function NowLine() {
   const top = (min - START_MIN) * PX_PER_MIN;
   return (
     <div
+      data-volatile
       className="pointer-events-none absolute inset-x-0 z-20 border-t-2 border-navy-400/80"
       style={{ top }}
     >
