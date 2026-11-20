@@ -26,13 +26,13 @@ def twaManifest = [
     launchUrl: '/calendar', // The start path for the TWA. Must be relative to the domain.
     name: 'Orbit42', // The application name.
     launcherName: 'Orbit42', // The name shown on the Android Launcher.
-    themeColor: '#0A0A0F', // The color used for the status bar.
-    themeColorDark: '#0A0A0F', // The color used for the dark status bar.
-    navigationColor: '#FFFFFF', // The color used for the navigation bar.
-    navigationColorDark: '#0A0A0F', // The color used for the dark navbar.
-    navigationDividerColor: '#000000', // The navbar divider color.
-    navigationDividerColorDark: '#000000', // The dark navbar divider color.
-    backgroundColor: '#FFFFFF', // The color used for the splash screen background.
+    themeColor: '#F2F2F7', // The color used for the status bar.
+    themeColorDark: '#F2F2F7', // The color used for the dark status bar.
+    navigationColor: '#F2F2F7', // The color used for the navigation bar.
+    navigationColorDark: '#F2F2F7', // The color used for the dark navbar.
+    navigationDividerColor: '#F2F2F7', // The navbar divider color.
+    navigationDividerColorDark: '#F2F2F7', // The dark navbar divider color.
+    backgroundColor: '#F2F2F7', // The color used for the splash screen background.
     enableNotifications: false, // Set to true to enable notification delegation.
     // Every shortcut must include the following fields:
     // - name: String that will show up in the shortcut.
