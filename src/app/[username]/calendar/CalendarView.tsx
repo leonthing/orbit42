@@ -549,7 +549,7 @@ export default function CalendarView({
     (mode: ViewMode, save = true) => {
       setViewMode(mode);
       // 고른 보기를 기억한다 — 다음에 열 때 기기 기본값보다 먼저(묶음 B)
-      if (save) {
+      if (save && (!isPhone() || mode === "month" || mode === "day")) {
         try {
           localStorage.setItem(VIEW_KEY, mode);
         } catch {}
@@ -581,7 +581,9 @@ export default function CalendarView({
     const phone = isPhone();
     let mode: ViewMode | null = VIEW_MODES.includes(saved as ViewMode) ? (saved as ViewMode) : null;
     if (mode === "day" && !phone) mode = "week";
-    if (!mode) mode = phone ? "day" : "week";
+    // 휴대폰은 iOS 처럼 월/하루만 기억하고 기본은 월(PO 11/21). 라이프·분기는 휴대폰에서 숨김(Leo).
+    if (phone && mode !== "month" && mode !== "day") mode = null;
+    if (!mode) mode = phone ? "month" : "week";
     if (mode !== "week") switchView(mode, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -675,7 +677,11 @@ export default function CalendarView({
   const dayListRef = useRef<HTMLDivElement>(null);
   const pickMonthDay = (day: number) => {
     const phone = typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches;
-    // 휴대폰은 같은 날을 다시 눌러도 풀지 않는다(오늘이 미리 골라져 있어 첫 탭에 목록이 사라졌다)
+    // 휴대폰: iOS 처럼 고른 날을 다시 누르면 주 보기(주 띠 + 목록)로
+    if (phone && day === selectedDay) {
+      switchView("week");
+      return;
+    }
     const next = !phone && day === selectedDay ? null : day;
     setSelectedDay(next);
     if (next && phone) {
@@ -944,6 +950,133 @@ export default function CalendarView({
     });
   }, [weekDays, viewerIsOwner, invites]);
 
+  // 주 띠(요일·날짜·일정 점) — 휴대폰 하루·주 보기 위(iOS 와 같게)
+  const renderWeekStrip = (sel: Date) => (
+            <div className="grid grid-cols-7 gap-1" role="tablist" aria-label="이번 주">
+              {displayWeekDays.map((d) => {
+                const date = new Date(d.date);
+                const active = isSameDay(date, sel);
+                const has = d.items.length > 0;
+                const dow = date.getDay();
+                return (
+                  <button
+                    key={date.toISOString()}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    aria-label={date.toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "long" })}
+                    onClick={() => goToDate(date)}
+                    className={`flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-xl text-sm transition-colors ${
+                      active ? "bg-navy-500 text-white" : "text-charcoal-200 hover:bg-charcoal-800/40"
+                    }`}
+                  >
+                    <span className={`text-xs ${active ? "text-white/80" : dow === 0 ? "text-red-400" : "text-charcoal-500"}`}>
+                      {date.toLocaleDateString("ko-KR", { weekday: "short" })}
+                    </span>
+                    <span
+                      className={`font-semibold tabular-nums ${
+                        !active && d.isToday ? "inline-flex h-6 w-6 items-center justify-center rounded-full ring-2 ring-navy-400" : ""
+                      }`}
+                    >
+                      {date.getDate()}
+                    </span>
+                    <span className={`h-1 w-1 rounded-full ${has ? (active ? "bg-white" : "bg-navy-400") : "bg-transparent"}`} />
+                  </button>
+                );
+              })}
+            </div>
+  );
+
+  // 고른 날의 일정 목록 — 월 보기 옆(데스크톱)·아래(휴대폰), 휴대폰 주 보기(주 띠 + 목록)에서 같이 쓴다
+  const selectedDayCard = (
+            <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 p-5">
+              {selectedDay ? (
+                <>
+                  <div className="mb-4 flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-charcoal-200">
+                      {month + 1}월 {selectedDay}일
+                    </h3>
+                    <button
+                      onClick={() => openCreateForm(selectedDay)}
+                      className="rounded-lg bg-navy-500 px-2.5 py-1 text-xs font-medium text-white hover:bg-navy-400 max-md:min-h-11 max-md:px-3.5"
+                    >
+                      + 추가
+                    </button>
+                  </div>
+                  {selectedDayEvents.length === 0 &&
+                  selectedDayInvites.length === 0 ? (
+                    <p className="text-sm text-charcoal-600">일정이 없습니다</p>
+                  ) : (
+                    <>
+                      {selectedDayEvents.length > 0 && (
+                        <EventList
+                          events={selectedDayEvents}
+                          onOpen={(ev) => {
+                            const item = eventToWeekItem(ev);
+                            if (item) setDetailEvent(item);
+                            else if (ev.source !== "google") openEditForm(ev);
+                          }}
+                          onEdit={openEditForm}
+                          onDelete={handleDelete}
+                          completed={completed}
+                          onToggleComplete={handleToggleComplete}
+                        />
+                      )}
+                      {selectedDayInvites.length > 0 && (
+                        <ul className="mt-3 space-y-2">
+                          {selectedDayInvites.map((inv) => (
+                            <li
+                              key={inv.id}
+                              className="rounded-lg border border-dashed border-purple-500/40 bg-purple-500/[0.06] p-3"
+                            >
+                              <p className="truncate text-sm font-medium text-charcoal-200">
+                                {inv.title}
+                              </p>
+                              <p className="mt-0.5 text-xs text-charcoal-500">
+                                {inv.all_day
+                                  ? "종일"
+                                  : `${formatTime(inv.start_at)} - ${formatTime(inv.end_at)}`}{" "}
+                                · {inv.inviterName ?? "누군가"}님의 초대
+                              </p>
+                              {inv.status === "invited" ? (
+                                <div className="mt-2 flex gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      respondToInvite(inv.id, "accepted")
+                                    }
+                                    className="rounded-lg bg-navy-500 px-2.5 py-1 text-2xs font-medium text-white hover:bg-navy-400"
+                                  >
+                                    수락
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      respondToInvite(inv.id, "declined")
+                                    }
+                                    className="rounded-lg border border-charcoal-700 px-2.5 py-1 text-2xs text-charcoal-400 hover:text-charcoal-200"
+                                  >
+                                    거절
+                                  </button>
+                                </div>
+                              ) : (
+                                <p className="mt-1 text-2xs text-green-400">
+                                  수락함
+                                </p>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </>
+                  )}
+                </>
+              ) : (
+                <p className="text-sm text-charcoal-600">날짜를 선택하세요</p>
+              )}
+            </div>
+  );
+
   // 날짜 이동 — 예전엔 툴바 아래 별도 줄이었다. 한 줄로 합쳐 캘린더에 높이를 넘긴다.
   const dateNav = (
     <div className="flex items-center gap-1">
@@ -984,7 +1117,15 @@ export default function CalendarView({
           사이드바에서 이미 현재 위치를 알 수 있어 지우고 높이를 격자에 넘겼다. */}
       <div className="flex flex-wrap items-center gap-2 sm:gap-3">
         <div className="hidden sm:block">{viewTabs}</div>
-        {viewMode !== "life" && dateNav}
+        {viewMode !== "life" && <div className="max-sm:hidden">{dateNav}</div>}
+        {/* 휴대폰 머리(iOS 와 같게, PO 11/21): [오늘] … [필터][할 일][월/하루][+] */}
+        <button
+          type="button"
+          onClick={goToToday}
+          className="h-11 rounded-full bg-charcoal-800/50 px-4 text-sm font-medium text-charcoal-200 sm:hidden"
+        >
+          오늘
+        </button>
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
           {myCalendars.length > 0 ? (
             <div className="relative">
@@ -1101,8 +1242,36 @@ export default function CalendarView({
               Google Calendar 연동
             </a>
           ) : null}
+          {viewerIsOwner && (
+            <a
+              href={`/${username}/todos`}
+              aria-label="할 일"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-charcoal-300 hover:bg-charcoal-800/50 sm:hidden"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75h11.25M9 12h11.25M9 17.25h11.25M3.75 6.75l1 1 2-2M3.75 12l1 1 2-2M3.75 17.25l1 1 2-2" />
+              </svg>
+            </a>
+          )}
+          <button
+            type="button"
+            onClick={() => switchView(viewMode === "day" ? "month" : "day")}
+            aria-label={viewMode === "day" ? "월 보기" : "하루 보기"}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-charcoal-300 hover:bg-charcoal-800/50 sm:hidden"
+          >
+            {viewMode === "day" ? (
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+              </svg>
+            ) : (
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6h16.5M3.75 6v12A2.25 2.25 0 0 0 6 20.25h12A2.25 2.25 0 0 0 20.25 18V6M8.25 10.5h7.5M8.25 14.25h4.5" />
+              </svg>
+            )}
+          </button>
           <button
             onClick={() => openCreateForm()}
+            aria-label="새 일정"
             className="rounded-lg bg-navy-500 px-3 py-2 text-sm font-medium text-white hover:bg-navy-400 max-md:h-11 max-md:min-w-11 sm:px-4"
           >
             <span className="sm:hidden">+</span>
@@ -1111,8 +1280,43 @@ export default function CalendarView({
         </div>
       </div>
 
-      {/* Mobile-only tabs row — desktop renders them inline in the header */}
-      <div className="sm:hidden">{viewTabs}</div>
+      {/* 휴대폰 날짜 줄(iOS): 월 '‹ 2026년 · 2026년 11월 · ‹ ›', 하루·주 '‹ 11월 · 11월 21일 (토) · ‹ ›'.
+          왼쪽 '‹ 2026년'은 연 보기, '‹ 11월'은 월 보기로 올라간다. 탭 줄은 없다. */}
+      {viewMode !== "life" && viewMode !== "quarter" && (
+        <div className="-my-2 flex items-center gap-1 sm:hidden" data-testid="phoneDateRow">
+          <div className="w-20 shrink-0">
+            {(viewMode === "month" || viewMode === "day" || viewMode === "week") && (
+              <button
+                type="button"
+                onClick={() => switchView(viewMode === "month" ? "year" : "month")}
+                aria-label={viewMode === "month" ? "연간 보기" : "월 보기로"}
+                className="flex h-11 items-center gap-0.5 text-sm font-medium text-navy-500"
+              >
+                <span aria-hidden>‹</span>
+                {viewMode === "month" ? `${year}년` : `${month + 1}월`}
+              </button>
+            )}
+          </div>
+          <h2 className="min-w-0 flex-1 truncate text-center text-base font-semibold text-charcoal-100">
+            {viewMode === "week"
+              ? (() => {
+                  // iOS: '11월 16일 ~ 11월 22일'
+                  const wd = getWeekDates(year, month, selectedDay ?? today.getDate(), weekStart);
+                  const f = (d: Date) => `${d.getMonth() + 1}월 ${d.getDate()}일`;
+                  return `${f(wd[0])} ~ ${f(wd[6])}`;
+                })()
+              : getHeaderLabel()}
+          </h2>
+          <div className="flex w-20 shrink-0 justify-end">
+            <button type="button" onClick={() => navigate(-1)} aria-label="이전" className="inline-flex h-11 w-10 items-center justify-center text-lg text-navy-500">
+              ‹
+            </button>
+            <button type="button" onClick={() => navigate(1)} aria-label="다음" className="inline-flex h-11 w-10 items-center justify-center text-lg text-navy-500">
+              ›
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 아직 답하지 않은 초대 — 캘린더에도 점선으로 뜨지만, 답을 기다리는
           일은 눈에 먼저 걸려야 한다. */}
@@ -1367,100 +1571,22 @@ export default function CalendarView({
 
           {/* Sidebar: Selected Day Events */}
           <div ref={dayListRef} className="space-y-4 max-md:scroll-mt-16">
-            <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 p-5">
-              {selectedDay ? (
-                <>
-                  <div className="mb-4 flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-charcoal-200">
-                      {month + 1}월 {selectedDay}일
-                    </h3>
-                    <button
-                      onClick={() => openCreateForm(selectedDay)}
-                      className="rounded-lg bg-navy-500 px-2.5 py-1 text-xs font-medium text-white hover:bg-navy-400 max-md:min-h-11 max-md:px-3.5"
-                    >
-                      + 추가
-                    </button>
-                  </div>
-                  {selectedDayEvents.length === 0 &&
-                  selectedDayInvites.length === 0 ? (
-                    <p className="text-sm text-charcoal-600">일정이 없습니다</p>
-                  ) : (
-                    <>
-                      {selectedDayEvents.length > 0 && (
-                        <EventList
-                          events={selectedDayEvents}
-                          onOpen={(ev) => {
-                            const item = eventToWeekItem(ev);
-                            if (item) setDetailEvent(item);
-                            else if (ev.source !== "google") openEditForm(ev);
-                          }}
-                          onEdit={openEditForm}
-                          onDelete={handleDelete}
-                          completed={completed}
-                          onToggleComplete={handleToggleComplete}
-                        />
-                      )}
-                      {selectedDayInvites.length > 0 && (
-                        <ul className="mt-3 space-y-2">
-                          {selectedDayInvites.map((inv) => (
-                            <li
-                              key={inv.id}
-                              className="rounded-lg border border-dashed border-purple-500/40 bg-purple-500/[0.06] p-3"
-                            >
-                              <p className="truncate text-sm font-medium text-charcoal-200">
-                                {inv.title}
-                              </p>
-                              <p className="mt-0.5 text-xs text-charcoal-500">
-                                {inv.all_day
-                                  ? "종일"
-                                  : `${formatTime(inv.start_at)} - ${formatTime(inv.end_at)}`}{" "}
-                                · {inv.inviterName ?? "누군가"}님의 초대
-                              </p>
-                              {inv.status === "invited" ? (
-                                <div className="mt-2 flex gap-1">
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      respondToInvite(inv.id, "accepted")
-                                    }
-                                    className="rounded-lg bg-navy-500 px-2.5 py-1 text-2xs font-medium text-white hover:bg-navy-400"
-                                  >
-                                    수락
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      respondToInvite(inv.id, "declined")
-                                    }
-                                    className="rounded-lg border border-charcoal-700 px-2.5 py-1 text-2xs text-charcoal-400 hover:text-charcoal-200"
-                                  >
-                                    거절
-                                  </button>
-                                </div>
-                              ) : (
-                                <p className="mt-1 text-2xs text-green-400">
-                                  수락함
-                                </p>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </>
-                  )}
-                </>
-              ) : (
-                <p className="text-sm text-charcoal-600">날짜를 선택하세요</p>
-              )}
-            </div>
+            {selectedDayCard}
           </div>
         </div>
       )}
 
       {viewMode === "week" && (
+        // 휴대폰 주 보기는 iOS 처럼 시간 격자 없이 '주 띠 + 그날 목록'(PO 11/21). 격자는 데스크톱 전용.
+        <div className="space-y-3 md:hidden" data-testid="phoneWeek">
+          {renderWeekStrip(new Date(year, month, selectedDay ?? today.getDate()))}
+          {selectedDayCard}
+        </div>
+      )}
+
+      {viewMode === "week" && (
         // min-h-0 이 없으면 flex 자식이 콘텐츠 높이만큼 부풀어 스크롤이 안 잡힌다.
-        // 휴대폰: 남는 높이만 쓰면 표가 8~13시(약 290px)로 눌린다 → 화면 높이에 맞춘 최소 높이(묶음 A)
-        <div className="flex min-h-0 flex-1 flex-col max-md:min-h-[calc(100dvh-200px)]">
+        <div className="flex min-h-0 flex-1 flex-col max-md:hidden">
           <WeekCalendar
             username={username}
             days={displayWeekDays}
@@ -1489,39 +1615,7 @@ export default function CalendarView({
         const dayOnly: WeekDay[] = [dayData ?? { date: sel, isToday: isSameDay(sel, new Date()), items: [] }];
         return (
           <div className="flex min-h-[calc(100dvh-220px)] flex-1 flex-col gap-2">
-            <div className="grid grid-cols-7 gap-1" role="tablist" aria-label="이번 주">
-              {displayWeekDays.map((d) => {
-                const date = new Date(d.date);
-                const active = isSameDay(date, sel);
-                const has = d.items.length > 0;
-                const dow = date.getDay();
-                return (
-                  <button
-                    key={date.toISOString()}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    aria-label={date.toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "long" })}
-                    onClick={() => goToDate(date)}
-                    className={`flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-xl text-sm transition-colors ${
-                      active ? "bg-navy-500 text-white" : "text-charcoal-200 hover:bg-charcoal-800/40"
-                    }`}
-                  >
-                    <span className={`text-xs ${active ? "text-white/80" : dow === 0 ? "text-red-400" : "text-charcoal-500"}`}>
-                      {date.toLocaleDateString("ko-KR", { weekday: "short" })}
-                    </span>
-                    <span
-                      className={`font-semibold tabular-nums ${
-                        !active && d.isToday ? "inline-flex h-6 w-6 items-center justify-center rounded-full ring-2 ring-navy-400" : ""
-                      }`}
-                    >
-                      {date.getDate()}
-                    </span>
-                    <span className={`h-1 w-1 rounded-full ${has ? (active ? "bg-white" : "bg-navy-400") : "bg-transparent"}`} />
-                  </button>
-                );
-              })}
-            </div>
+            {renderWeekStrip(sel)}
             <WeekCalendar
               username={username}
               days={dayOnly}
