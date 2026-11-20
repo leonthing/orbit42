@@ -1690,11 +1690,13 @@ export default function CalendarView({
 
       {viewMode === "day" && (() => {
         // 휴대폰 하루 보기(묶음 B): 위에 그 주 띠(요일·날짜·일정 점), 아래 하루 시간축.
+        // 높이를 '최소'가 아니라 정해 둬야 시간축이 안에서 스크롤되고 8시부터 열린다 — 휴대폰 AppShell 이
+        // 내용만큼 늘어나게 바뀐(묶음 2) 뒤 최소 높이만 주면 24시간이 통째로 펼쳐졌다.
         const sel = new Date(year, month, selectedDay ?? today.getDate());
         const dayData = displayWeekDays.find((d) => isSameDay(new Date(d.date), sel));
         const dayOnly: WeekDay[] = [dayData ?? { date: sel, isToday: isSameDay(sel, new Date()), items: [] }];
         return (
-          <div className="flex min-h-[calc(100dvh-220px)] flex-1 flex-col gap-2">
+          <div className="flex h-[calc(100dvh-200px)] min-h-[420px] flex-col gap-2">
             {renderWeekStrip(sel)}
             {viewerIsOwner && (
               <DayTodoStrip date={`${sel.getFullYear()}-${String(sel.getMonth() + 1).padStart(2, "0")}-${String(sel.getDate()).padStart(2, "0")}`} />
