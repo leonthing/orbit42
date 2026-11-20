@@ -1,0 +1,11 @@
+# 빌드 산출물·캐시 — 저장소에 넣지 않음. 서명 키는 저장소 밖(~/.orbit42-android/)
+.gradle/
+build/
+app/build/
+local.properties
+*.apk
+*.aab
+*.idsig
+*.jks
+*.keystore
+keystore.env
