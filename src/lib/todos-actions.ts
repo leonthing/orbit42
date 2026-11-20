@@ -3,7 +3,7 @@
 // 클라이언트가 부르는 서버 액션은 여기서만(보안-6·7): 세션으로 본인을 정하고, 바꾸는 칸은 정해 둔 것만(done·title·dueDate).
 import { getSession } from "@/lib/auth";
 import { userIdOf } from "@/lib/dm";
-import { createTodos, deleteTodo, updateTodo, type Todo } from "@/lib/todos";
+import { createTodos, dayTodos, deleteTodo, followUpsOf, linkFollowUp, updateTodo, type FollowUps, type Todo } from "@/lib/todos";
 
 export async function toggleTodo(id: string, done: boolean): Promise<{ ok: true } | { error: string }> {
   if (typeof id !== "string" || typeof done !== "boolean") return { error: "잘못된 요청이에요." };
@@ -46,5 +46,48 @@ export async function removeTodo(todoId: string): Promise<{ ok: true } | { error
   const id = await me();
   if (!id) return { error: "로그인이 필요해요." };
   const r = await deleteTodo(id, todoId);
+  return "error" in r ? { error: r.error } : { ok: true };
+}
+
+// ── 캘린더와 엮인 할 일(웹 묶음 1b, iOS 와 같은 흐름) — 모두 세션 본인 것만 ──
+
+const isStr = (v: unknown, max = 2000): v is string => typeof v === "string" && v.length > 0 && v.length <= max;
+
+/** 하루 보기 할 일 띠 — 그날 기한 + (오늘이면) 기한 지난 미완료 수 */
+export async function dayTodosFor(date: string): Promise<{ todos: Todo[]; overdue: number } | { error: string }> {
+  if (!isStr(date, 10) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return { error: "잘못된 요청이에요." };
+  const id = await me();
+  if (!id) return { error: "로그인이 필요해요." };
+  const r = await dayTodos(id, date);
+  return "error" in r ? { error: r.error } : r;
+}
+
+/** 일정 상세 '후속' — 원래 일정·후속 일정·묶인 할 일 */
+export async function followUpsFor(eventId: string): Promise<FollowUps | { error: string }> {
+  if (!isStr(eventId, 1200)) return { error: "잘못된 요청이에요." };
+  const id = await me();
+  if (!id) return { error: "로그인이 필요해요." };
+  const r = await followUpsOf(id, eventId);
+  return "error" in r ? { error: r.error } : r;
+}
+
+/** 일정에 묶인 할 일 만들기 — 후속 [할 일]·완료 뒤 묻기·메모 '-' 줄 */
+export async function addEventTodos(eventId: string, titles: string[], dueDate: string | null = null): Promise<{ todos: Todo[] } | { error: string }> {
+  if (!isStr(eventId, 1200) || !Array.isArray(titles) || titles.length === 0 || titles.length > 30 || !titles.every((t) => typeof t === "string")) {
+    return { error: "잘못된 요청이에요." };
+  }
+  if (dueDate !== null && (typeof dueDate !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(dueDate))) return { error: "잘못된 요청이에요." };
+  const id = await me();
+  if (!id) return { error: "로그인이 필요해요." };
+  const r = await createTodos(id, { items: titles.map((title) => ({ title, dueDate })), sourceEventKey: eventId });
+  return "error" in r ? { error: r.error } : r;
+}
+
+/** 후속 일정 연결 — 두 일정 모두 본인 것이어야 한다(lib 이 확인) */
+export async function linkFollowUpEvent(sourceId: string, targetId: string): Promise<{ ok: true } | { error: string }> {
+  if (!isStr(sourceId, 1200) || !isStr(targetId, 1200)) return { error: "잘못된 요청이에요." };
+  const id = await me();
+  if (!id) return { error: "로그인이 필요해요." };
+  const r = await linkFollowUp(id, sourceId, targetId);
   return "error" in r ? { error: r.error } : { ok: true };
 }

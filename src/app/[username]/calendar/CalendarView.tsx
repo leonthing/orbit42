@@ -35,6 +35,9 @@ import {
 import LifeCalendarViewExternal from "./LifeCalendarView";
 import type { LifeMemory } from "./life-actions";
 import { WeekCalendar } from "@/components/WeekCalendar";
+import { AfterCompletionSheet, ASK_FOLLOW_UP_KEY, DayTodoStrip, FollowUpSection, Hearts, RatingRow } from "./EventFollowUps";
+import { myRatings, setMyRating } from "@/lib/annotation-actions";
+import { linkFollowUpEvent } from "@/lib/todos-actions";
 import type { WeekDay, WeekItem } from "@/lib/profile-week";
 import type { Calendar } from "@/lib/calendars-types";
 import { useConfirm } from "@/components/ConfirmDialog";
@@ -357,6 +360,67 @@ export default function CalendarView({
       });
     }
   }, [completed]);
+
+  // ── 만족도·후속(웹 묶음 1b, iOS 와 같은 흐름) ──
+  const [ratings, setRatings] = useState<Record<string, number>>({});
+  const [afterDone, setAfterDone] = useState<{ id: string; title: string } | null>(null);
+  const [ratePrompt, setRatePrompt] = useState<{ id: string; title: string } | null>(null);
+  const [followUpSource, setFollowUpSource] = useState<string | null>(null);
+  const [followUpRefresh, setFollowUpRefresh] = useState(0);
+  const rateOf = (id: string) => ratings[toEventKey(id)] ?? null;
+  const setRatingLocal = useCallback((id: string, v: number | null) => {
+    const k = toEventKey(id);
+    setRatings((r) => {
+      const n = { ...r };
+      if (v == null) delete n[k];
+      else n[k] = v;
+      return n;
+    });
+  }, []);
+  const rate = useCallback(async (id: string, v: number | null) => {
+    setRatingLocal(id, v);
+    const res = await setMyRating(id, v);
+    if ("error" in res) toast.error(res.error);
+  }, [toast, setRatingLocal]);
+  const askFollowUp = () => {
+    try {
+      return localStorage.getItem(ASK_FOLLOW_UP_KEY) !== "0";
+    } catch {
+      return true;
+    }
+  };
+  // 목록·격자에서 체크 → iOS 하루 보기처럼 잠깐 만족도 하트 줄
+  const completeFromList = useCallback(async (id: string) => {
+    const wasDone = completed.has(normalizeEventKey(id));
+    await handleToggleComplete(id);
+    if (!wasDone && viewerIsOwner && !id.startsWith(INVITE_PREFIX)) {
+      const title =
+        events.find((e) => toEventKey(e.id) === toEventKey(id))?.title ??
+        weekDays.flatMap((d) => d.items).find((i) => toEventKey(i.id) === toEventKey(id))?.title ??
+        "";
+      setRatePrompt({ id, title });
+    }
+  }, [completed, handleToggleComplete, viewerIsOwner, events, weekDays]);
+  useEffect(() => {
+    if (!viewerIsOwner) return;
+    const ids = [
+      ...events.map((e) => e.id),
+      ...weekDays.flatMap((d) => d.items.filter((i) => i.kind === "event").map((i) => i.id)),
+    ];
+    if (ids.length === 0) return;
+    let cancelled = false;
+    myRatings(Array.from(new Set(ids.map(toEventKey))).slice(0, 1000)).then((r) => {
+      if (!cancelled) setRatings(r);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [events, weekDays, viewerIsOwner]);
+  useEffect(() => {
+    if (!ratePrompt) return;
+    const t = setTimeout(() => setRatePrompt(null), 4000);
+    return () => clearTimeout(t);
+  }, [ratePrompt]);
 
   const refetchWeekDays = useCallback(
     (anchor: Date, cals?: string[]) => {
@@ -749,6 +813,7 @@ export default function CalendarView({
     setShowForm(false);
     setEditingEvent(null);
     setPendingParticipants([]);
+    setFollowUpSource(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -794,6 +859,13 @@ export default function CalendarView({
         }
       } else {
         const created = await createEvent(input);
+        // [후속 일정]으로 연 폼이면 원래 일정의 후속으로 잇는다
+        if (followUpSource) {
+          const linked = await linkFollowUpEvent(followUpSource, created.id);
+          if ("error" in linked) toast.error(linked.error);
+          setFollowUpSource(null);
+          setFollowUpRefresh((n) => n + 1);
+        }
         const failed = await invitePending(created);
         if (failed.length > 0) {
           // 일정은 살아 있다. 저장된 일정 모드로 넘겨, 붙은 사람은 그대로 두고
@@ -1019,7 +1091,8 @@ export default function CalendarView({
                           onEdit={openEditForm}
                           onDelete={handleDelete}
                           completed={completed}
-                          onToggleComplete={handleToggleComplete}
+                          ratings={ratings}
+                          onToggleComplete={completeFromList}
                         />
                       )}
                       {selectedDayInvites.length > 0 && (
@@ -1592,7 +1665,7 @@ export default function CalendarView({
             days={displayWeekDays}
             viewerIsOwner={viewerIsOwner}
             completedKeys={completed}
-            onToggleComplete={handleToggleComplete}
+            onToggleComplete={completeFromList}
             onEventClick={(item) => setDetailEvent(item)}
             onEmptyClick={
               viewerIsOwner
@@ -1616,12 +1689,15 @@ export default function CalendarView({
         return (
           <div className="flex min-h-[calc(100dvh-220px)] flex-1 flex-col gap-2">
             {renderWeekStrip(sel)}
+            {viewerIsOwner && (
+              <DayTodoStrip date={`${sel.getFullYear()}-${String(sel.getMonth() + 1).padStart(2, "0")}-${String(sel.getDate()).padStart(2, "0")}`} />
+            )}
             <WeekCalendar
               username={username}
               days={dayOnly}
               viewerIsOwner={viewerIsOwner}
               completedKeys={completed}
-              onToggleComplete={handleToggleComplete}
+              onToggleComplete={completeFromList}
               onEventClick={(item) => setDetailEvent(item)}
               onEmptyClick={viewerIsOwner ? (date, h, m) => openCreateAt(date, h, m) : undefined}
               emptyMessage={viewerIsOwner ? "이날은 일정이 없어요. 빈 시간을 누르면 일정을 만들 수 있어요." : "이날 공개된 일정이나 예약 가능한 시간이 없어요."}
@@ -1629,6 +1705,42 @@ export default function CalendarView({
           </div>
         );
       })()}
+
+      {afterDone && (
+        <AfterCompletionSheet
+          eventId={afterDone.id}
+          title={afterDone.title}
+          onClose={(n) => {
+            setAfterDone(null);
+            if (n > 0) setFollowUpRefresh((x) => x + 1);
+          }}
+          onNewFollowUpEvent={() => {
+            setFollowUpSource(afterDone.id);
+            setAfterDone(null);
+            setDetailEvent(null);
+            openCreateForm();
+          }}
+        />
+      )}
+
+      {ratePrompt && (
+        // iOS 하루 보기: 체크하면 블록 위에 하트 줄이 잠깐 — 웹은 탭 막대 위에 띄운다
+        <div
+          role="dialog"
+          aria-label="만족도"
+          data-testid="ratePrompt"
+          className="fixed inset-x-0 bottom-[calc(6rem+env(safe-area-inset-bottom))] z-50 mx-auto flex w-fit max-w-[calc(100%-2rem)] items-center gap-2 rounded-full border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] py-1 pl-4 pr-2 shadow-2xl md:bottom-8"
+        >
+          <span className="max-w-[8rem] truncate text-sm text-charcoal-300">{ratePrompt.title || "만족도"}</span>
+          <Hearts
+            value={rateOf(ratePrompt.id)}
+            onPick={(v) => {
+              rate(ratePrompt.id, v);
+              setTimeout(() => setRatePrompt(null), 600);
+            }}
+          />
+        </div>
+      )}
 
       {detailEvent && (
         <EventDetailModal
@@ -1653,7 +1765,24 @@ export default function CalendarView({
           }
           isCompleted={completed.has(normalizeEventKey(detailEvent.id))}
           canToggleComplete={!!viewerIsOwner}
-          onToggleComplete={() => handleToggleComplete(detailEvent.id)}
+          onToggleComplete={async () => {
+            const wasDone = completed.has(normalizeEventKey(detailEvent.id));
+            await handleToggleComplete(detailEvent.id);
+            // iOS: 완료하면 '후속으로 할 일이 있나요?'(이 기기에서 끌 수 있음)
+            if (!wasDone && viewerIsOwner && askFollowUp()) setAfterDone({ id: detailEvent.id, title: detailEvent.title });
+          }}
+          rating={rateOf(detailEvent.id)}
+          onRate={(v) => setRatingLocal(detailEvent.id, v)}
+          followUpRefresh={followUpRefresh}
+          onNewFollowUpEvent={
+            viewerIsOwner
+              ? () => {
+                  setFollowUpSource(detailEvent.id);
+                  setDetailEvent(null);
+                  openCreateForm();
+                }
+              : undefined
+          }
           onEdit={() => {
             if (detailEvent.kind !== "event") return;
             const parsed = parseWeekItemId(detailEvent.id);
@@ -2046,6 +2175,9 @@ export default function CalendarView({
           }}
         />
       )}
+      {/* 휴대폰: 이 상자의 내용이 높이를 넘쳐 main 의 아래 여백이 스크롤 범위에 안 들어간다 —
+          마지막 일정이 탭 막대 뒤에 갇히지 않게 여백을 안에 둔다(11/21) */}
+      <div className="h-24 shrink-0 md:hidden" aria-hidden />
     </div>
   );
 }
@@ -2269,9 +2401,11 @@ function EventList({
   onEdit,
   onDelete,
   completed,
+  ratings,
   onToggleComplete,
 }: {
   events: Event[];
+  ratings?: Record<string, number>;
   /** 제목·시간을 누르면 상세(휴대폰은 아래 시트) — 없으면 누를 수 없다 */
   onOpen?: (event: Event) => void;
   onEdit: (event: Event) => void;
@@ -2341,6 +2475,11 @@ function EventList({
                 >
                   {ev.title}
                 </p>
+                {ratings?.[toEventKey(ev.id)] != null && (
+                  <span className="shrink-0 text-xs text-pink-500" aria-label={`만족도 ${ratings[toEventKey(ev.id)]}`}>
+                    ♥ {ratings[toEventKey(ev.id)]}
+                  </span>
+                )}
                 {ev.source === "google" && (
                   <span className="shrink-0 rounded bg-blue-500/10 px-1 py-0.5 text-2xs text-blue-400">G</span>
                 )}
@@ -2618,7 +2757,15 @@ function EventDetailModal({
   onEdit,
   onDelete,
   onClose,
+  rating = null,
+  onRate,
+  onNewFollowUpEvent,
+  followUpRefresh = 0,
 }: {
+  rating?: number | null;
+  onRate?: (v: number | null) => void;
+  onNewFollowUpEvent?: () => void;
+  followUpRefresh?: number;
   item: WeekItem;
   /** 같은 일정의 원본 — 장소·메모처럼 주간 아이템에 없는 값을 얻는 데 쓴다. */
   fullEvent?: Event | null;
@@ -2734,6 +2881,19 @@ function EventDetailModal({
           <p className="mt-4 whitespace-pre-wrap rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 p-3 text-xs text-charcoal-300">
             {invite.description}
           </p>
+        )}
+
+        {canToggleComplete && !isInvite && isCompleted && onRate && (
+          <RatingRow eventId={item.id} value={rating} onChange={onRate} />
+        )}
+
+        {canToggleComplete && !isInvite && (
+          <FollowUpSection
+            eventId={item.id}
+            description={fullEvent?.description ?? null}
+            onNewFollowUpEvent={onNewFollowUpEvent}
+            refreshKey={followUpRefresh}
+          />
         )}
 
         {canToggleComplete && !isInvite && (
