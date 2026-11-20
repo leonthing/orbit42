@@ -23,3 +23,13 @@ export function googleErrorSummary(err: unknown): string {
 export function isDateOnly(v: string | null | undefined): boolean {
   return typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
 }
+
+/**
+ * 외부 호출(Resend·OAuth fetch 등) 오류를 로그용으로 — 상태 코드와 메시지만. 요청·응답 본문은 남기지 않는다.
+ */
+export function errorSummary(err: unknown): string {
+  const e = err as { name?: string; message?: string; status?: number; statusCode?: number; code?: number | string; response?: { status?: number } };
+  const status = e?.response?.status ?? e?.statusCode ?? e?.status ?? e?.code ?? "?";
+  const msg = typeof err === "string" ? err : e?.message ?? e?.name ?? "unknown";
+  return `status=${status} ${msg}`.slice(0, 300);
+}

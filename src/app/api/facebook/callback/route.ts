@@ -1,3 +1,4 @@
+import { errorSummary } from "@/lib/google-error";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { exchangeFacebookCode, getFacebookPages, saveFacebookTokens } from "@/lib/social";
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
       }
       return NextResponse.redirect("orbit42://social-connected?provider=facebook");
     } catch (err) {
-      console.error("Facebook OAuth error (mobile):", err);
+      console.error("Facebook OAuth error (mobile):", errorSummary(err));
       return NextResponse.redirect("orbit42://social-error?provider=facebook");
     }
   }
@@ -79,7 +80,7 @@ export async function GET(request: NextRequest) {
       : `/${username}/settings?success=facebook_connected`;
     return NextResponse.redirect(new URL(redirectPath, request.url));
   } catch (error) {
-    console.error("Facebook OAuth error:", error);
+    console.error("Facebook OAuth error:", errorSummary(error));
     return NextResponse.redirect(
       new URL(`/${username}/settings?error=facebook_auth_failed`, request.url)
     );

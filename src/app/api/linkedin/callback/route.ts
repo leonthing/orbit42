@@ -1,3 +1,4 @@
+import { errorSummary } from "@/lib/google-error";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { exchangeLinkedInCode, getLinkedInProfile, saveLinkedInTokens } from "@/lib/social";
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
       await saveLinkedInTokens(mobile.userId, tokens, profile || undefined);
       return NextResponse.redirect("orbit42://social-connected?provider=linkedin");
     } catch (err) {
-      console.error("LinkedIn OAuth error (mobile):", err);
+      console.error("LinkedIn OAuth error (mobile):", errorSummary(err));
       return NextResponse.redirect("orbit42://social-error?provider=linkedin");
     }
   }
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
       : `/${username}/settings?success=linkedin_connected`;
     return NextResponse.redirect(new URL(redirectPath, request.url));
   } catch (error) {
-    console.error("LinkedIn OAuth error:", error);
+    console.error("LinkedIn OAuth error:", errorSummary(error));
     return NextResponse.redirect(
       new URL(`/${username}/settings?error=linkedin_auth_failed`, request.url)
     );

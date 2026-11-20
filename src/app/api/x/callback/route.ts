@@ -1,3 +1,4 @@
+import { errorSummary } from "@/lib/google-error";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { exchangeXCode, saveXTokens } from "@/lib/social";
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
       await saveXTokens(mobile.userId, tokens, xUsername);
       return NextResponse.redirect("orbit42://social-connected?provider=x");
     } catch (err) {
-      console.error("X OAuth error (mobile):", err);
+      console.error("X OAuth error (mobile):", errorSummary(err));
       return NextResponse.redirect("orbit42://social-error?provider=x");
     }
   }
@@ -88,7 +89,7 @@ export async function GET(request: NextRequest) {
       : `/${username}/settings?success=x_connected`;
     return NextResponse.redirect(new URL(redirectPath, request.url));
   } catch (error) {
-    console.error("X OAuth error:", error);
+    console.error("X OAuth error:", errorSummary(error));
     return NextResponse.redirect(
       new URL(`/${username}/settings?error=x_auth_failed`, request.url)
     );

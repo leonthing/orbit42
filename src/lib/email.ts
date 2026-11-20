@@ -1,3 +1,4 @@
+import { errorSummary } from "@/lib/google-error";
 import { Resend } from "resend";
 import {
   renderEmail,
@@ -33,23 +34,20 @@ async function send(to: string, subject: string, html: string) {
   const r = client();
   if (!r) {
     // Dev fallback — log so we don't lose the flow.
-    console.warn("[email] RESEND_API_KEY not set; would have sent:", {
-      to,
-      subject,
-    });
-    console.warn(html);
+    // 받는 사람·본문은 찍지 않는다(개인정보) — 제목과 받는 사람 수만(PO 11/21)
+    console.warn("[email] RESEND_API_KEY not set; would have sent:", { subject, recipients: 1 });
     return { ok: true, dev: true };
   }
   try {
     // Resend SDK 는 실패를 던지지 않고 error 로 돌려준다 — 보지 않으면 실패도 성공처럼 보인다
     const { error } = await r.emails.send({ from: FROM, to, subject, html });
     if (error) {
-      console.error("resend send", error);
+      console.error("resend send", errorSummary(error));
       return { ok: false };
     }
     return { ok: true };
   } catch (err) {
-    console.error("resend send", err);
+    console.error("resend send", errorSummary(err));
     return { ok: false };
   }
 }
@@ -454,8 +452,7 @@ export async function sendFeedbackEmail(args: {
   const subject = `[Orbit42] 피드백: ${label}${suffix}`;
   const r = client();
   if (!r) {
-    console.warn("[email] feedback would have been sent:", { to, subject });
-    console.warn(html);
+    console.warn("[email] feedback would have been sent:", { subject, recipients: Array.isArray(to) ? to.length : 1 });
     return { ok: true, dev: true };
   }
   try {
@@ -468,7 +465,7 @@ export async function sendFeedbackEmail(args: {
     });
     return { ok: true };
   } catch (err) {
-    console.error("resend feedback", err);
+    console.error("resend feedback", errorSummary(err));
     return { ok: false };
   }
 }
