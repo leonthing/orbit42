@@ -37,7 +37,8 @@ export function TopBar({
   };
 
   return (
-    <header className="relative flex h-12 shrink-0 items-center justify-between px-4 md:border-b md:border-charcoal-800/40 md:px-6">
+    // 캘린더(휴대폰)는 iOS 처럼 제목·도구가 한 줄 — 그 줄(CalendarView)이 알림까지 가지므로 공통 제목 줄은 숨긴다(PO 11/21 안 A)
+    <header className={`relative flex h-12 shrink-0 items-center justify-between px-4 md:border-b md:border-charcoal-800/40 md:px-6 ${/^\/[^/]+\/calendar\/?$/.test(pathname) ? "max-md:hidden" : ""}`}>
       {/* 모바일: iOS 내비게이션 바처럼 가운데 제목 (메뉴는 하단 탭·프로필 탭에서) */}
       <p className="pointer-events-none absolute inset-x-16 text-center text-title font-semibold text-charcoal-50 md:hidden">
         {mobileTitle}

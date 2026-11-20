@@ -211,7 +211,7 @@ export default async function InsightsPage({
       </section>
 
       {hasWorkingHours && (
-        <section className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5">
+        <section className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5 max-md:rounded-2xl max-md:p-4">
           <div className="flex items-baseline justify-between">
             <h2 className="text-sm font-semibold text-charcoal-200">
               근무시간 활용도
@@ -359,7 +359,7 @@ export default async function InsightsPage({
         </div>
       </section>
 
-      <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5 text-xs text-charcoal-500">
+      <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5 text-xs text-charcoal-500 max-md:rounded-2xl max-md:p-4">
         <p>
           카테고리는 각 캘린더의 <strong className="text-charcoal-300">용도</strong>
           에 따라 자동으로 구분돼요.{" "}
@@ -389,7 +389,7 @@ function Stat({
   accent?: string;
 }) {
   return (
-    <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-3 sm:p-4">
+    <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-3 sm:p-4 max-md:rounded-2xl">
       <div className="flex items-center gap-1.5">
         {accent && (
           <span

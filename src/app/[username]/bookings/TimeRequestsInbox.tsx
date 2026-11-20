@@ -53,7 +53,7 @@ export function TimeRequestsInbox({ requests }: { requests: TimeRequestRow[] }) 
         {requests.map((r) => (
           <li
             key={r.id}
-            className="rounded-xl border border-navy-400/30 bg-navy-400/5 p-4"
+            className="rounded-xl border border-navy-400/30 bg-navy-400/5 p-4 max-md:rounded-2xl"
           >
             <div className="flex items-start gap-3">
               {r.requester && (

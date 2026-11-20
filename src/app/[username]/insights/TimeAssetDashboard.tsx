@@ -36,7 +36,7 @@ export function Card({
   className?: string;
 }) {
   return (
-    <section className={`rounded-xl border border-charcoal-800/50 bg-[rgb(var(--bg-surface))] p-5 ${className}`}>
+    <section className={`rounded-xl border border-charcoal-800/50 bg-[rgb(var(--bg-surface))] p-5  max-md:rounded-2xl max-md:p-4${className}`}>
       {(title || action) && (
         <div className="mb-3 flex items-center justify-between">
           {title && (

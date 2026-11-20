@@ -919,6 +919,8 @@ export async function bookSlot(args: {
     .eq("id", args.slotId)
     .single();
   if (!slot || !slot.active) return { error: "지금은 예약할 수 없는 링크예요." };
+  // 자기 예약 링크는 예약할 수 없다 — 화면(iOS 는 시간 닫기, 웹은 주인 미리보기)뿐 아니라 서버에서도(PO 11/21)
+  if (guestId && guestId === slot.host_id) return { error: "내 예약 링크는 예약할 수 없어요." };
   // 남의 주소로 메일 폭탄·호스트 받은편지함 도배 막기(보안-8) — DB 로 세서 서버가 여러 대여도 지켜진다
   {
     const email = (args.guest_email ?? "").trim().toLowerCase();

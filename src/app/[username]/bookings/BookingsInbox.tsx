@@ -485,7 +485,7 @@ function HostSection({
             return (
               <li
                 key={b.id}
-                className={`rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-4 ${
+                className={`rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-4  max-md:rounded-2xl${
                   muted ? "opacity-70" : ""
                 }`}
               >
@@ -688,7 +688,7 @@ function GuestSection({
             return (
               <li
                 key={b.id}
-                className={`rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-4 ${
+                className={`rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-4  max-md:rounded-2xl${
                   muted ? "opacity-70" : ""
                 }`}
               >

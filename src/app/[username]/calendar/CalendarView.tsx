@@ -35,6 +35,7 @@ import {
 import LifeCalendarViewExternal from "./LifeCalendarView";
 import type { LifeMemory } from "./life-actions";
 import { WeekCalendar } from "@/components/WeekCalendar";
+import { NotificationBell } from "@/components/layout/NotificationBell";
 import { AfterCompletionSheet, ASK_FOLLOW_UP_KEY, DayTodoStrip, FollowUpSection, Hearts, RatingRow } from "./EventFollowUps";
 import { myRatings, setMyRating } from "@/lib/annotation-actions";
 import { linkFollowUpEvent } from "@/lib/todos-actions";
@@ -198,7 +199,13 @@ export default function CalendarView({
   myCalendars = [],
   viewerIsOwner = false,
   weekStart = "mon",
+  todoCount = 0,
+  unreadNotifications = 0,
 }: {
+  /** 휴대폰 도구 줄 '할 일' 배지(오늘 기한 + 지난 미완료) */
+  todoCount?: number;
+  /** 휴대폰 도구 줄 알림 배지 — 캘린더에서는 공통 제목 줄을 숨기고 이 줄이 알림을 가진다 */
+  unreadNotifications?: number;
   /** 주 시작 요일 — 보는 사람의 설정 */
   weekStart?: WeekStart;
   username: string;
@@ -1068,7 +1075,7 @@ export default function CalendarView({
 
   // 고른 날의 일정 목록 — 월 보기 옆(데스크톱)·아래(휴대폰), 휴대폰 주 보기(주 띠 + 목록)에서 같이 쓴다
   const selectedDayCard = (
-            <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 p-5">
+            <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 p-5 max-md:rounded-2xl max-md:p-4">
               {selectedDay ? (
                 <>
                   <div className="mb-4 flex items-center justify-between">
@@ -1195,23 +1202,25 @@ export default function CalendarView({
       {/* 한 줄 툴바 — 뷰 전환 · 날짜 이동 · 캘린더 선택 · 새 일정.
           "캘린더 / 일정 및 시간 관리" 제목과 날짜 줄이 각각 한 줄씩 먹고 있었는데,
           사이드바에서 이미 현재 위치를 알 수 있어 지우고 높이를 격자에 넘겼다. */}
-      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+      <div className="flex flex-wrap items-center gap-2 max-sm:flex-nowrap max-sm:gap-1 sm:gap-3">
         <div className="hidden sm:block">{viewTabs}</div>
         {viewMode !== "life" && <div className="max-sm:hidden">{dateNav}</div>}
         {/* 휴대폰 머리(iOS 와 같게, PO 11/21): [오늘] … [필터][할 일][월/하루][+] */}
         <button
           type="button"
           onClick={goToToday}
-          className="h-11 rounded-full bg-charcoal-800/50 px-4 text-sm font-medium text-charcoal-200 sm:hidden"
+          className="h-11 shrink-0 rounded-full bg-charcoal-800/50 px-3 text-sm font-medium text-charcoal-200 sm:hidden"
         >
           오늘
         </button>
-        <div className="ml-auto flex items-center gap-2 sm:gap-3">
+        <h1 className="min-w-0 truncate text-title font-semibold text-charcoal-50 sm:hidden">캘린더</h1>
+        <div className="ml-auto flex items-center gap-2 max-sm:gap-0 sm:gap-3">
           {myCalendars.length > 0 ? (
             <div className="relative">
               <button
                 onClick={() => setShowCalendarPicker(!showCalendarPicker)}
-                className="flex items-center gap-1.5 rounded-lg border border-charcoal-800 bg-charcoal-900/40 px-3 py-2 text-xs font-medium text-charcoal-200 hover:border-charcoal-700 max-md:min-h-11"
+                aria-label="캘린더 고르기"
+                className="flex items-center gap-1.5 rounded-lg border border-charcoal-800 bg-charcoal-900/40 px-3 py-2 text-xs font-medium text-charcoal-200 hover:border-charcoal-700 max-md:min-h-11 max-sm:h-11 max-sm:w-11 max-sm:justify-center max-sm:border-0 max-sm:bg-transparent max-sm:px-0"
               >
                 <span className="inline-flex -space-x-1">
                   {myCalendars
@@ -1228,7 +1237,7 @@ export default function CalendarView({
                 <span className="hidden sm:inline">
                   캘린더 {selectedCalendars.length}개
                 </span>
-                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <svg className="h-3 w-3 max-sm:hidden" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                 </svg>
               </button>
@@ -1325,9 +1334,14 @@ export default function CalendarView({
           {viewerIsOwner && (
             <a
               href={`/${username}/todos`}
-              aria-label="할 일"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-charcoal-300 hover:bg-charcoal-800/50 sm:hidden"
+              aria-label={todoCount > 0 ? `할 일 ${todoCount}개` : "할 일"}
+              className="relative inline-flex h-11 w-11 items-center justify-center rounded-lg text-charcoal-300 hover:bg-charcoal-800/50 sm:hidden"
             >
+              {todoCount > 0 && (
+                <span className="absolute right-1 top-1.5 min-w-4 rounded-full bg-red-500 px-1 text-center text-[10px] font-semibold leading-4 text-white" aria-hidden>
+                  {todoCount > 99 ? "99+" : todoCount}
+                </span>
+              )}
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" aria-hidden>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75h11.25M9 12h11.25M9 17.25h11.25M3.75 6.75l1 1 2-2M3.75 12l1 1 2-2M3.75 17.25l1 1 2-2" />
               </svg>
@@ -1352,11 +1366,16 @@ export default function CalendarView({
           <button
             onClick={() => openCreateForm()}
             aria-label="새 일정"
-            className="rounded-lg bg-navy-500 px-3 py-2 text-sm font-medium text-white hover:bg-navy-400 max-md:h-11 max-md:min-w-11 sm:px-4"
+            className="rounded-lg bg-navy-500 px-3 py-2 text-sm font-medium text-white hover:bg-navy-400 max-md:h-11 max-md:min-w-11 max-sm:inline-flex max-sm:w-11 max-sm:items-center max-sm:justify-center max-sm:bg-transparent max-sm:px-0 max-sm:text-navy-500 sm:px-4"
           >
-            <span className="sm:hidden">+</span>
+            <svg className="h-6 w-6 sm:hidden" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
             <span className="hidden sm:inline">+ 새 일정</span>
           </button>
+          <div className="sm:hidden">
+            <NotificationBell initialUnread={unreadNotifications} />
+          </div>
         </div>
       </div>
 
@@ -1460,7 +1479,7 @@ export default function CalendarView({
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           {/* Month Calendar Grid */}
           {/* 모바일은 iOS 처럼 촘촘한 월 달력(주차·제목 없이 점) + 아래 선택한 날 목록 */}
-          <div className="rounded-2xl bg-[rgb(var(--bg-surface))] p-2 md:rounded-xl md:border md:border-charcoal-800/60 md:bg-charcoal-900/40 md:p-5">
+          <div className="rounded-2xl bg-[rgb(var(--bg-surface))] p-2 md:rounded-xl md:border md:border-charcoal-800/60 md:bg-charcoal-900/40 md:p-5 max-md:rounded-2xl">
             {/* Day headers with week number column */}
             <div className="grid grid-cols-7 gap-0.5 md:grid-cols-[2rem_repeat(7,minmax(0,1fr))] md:gap-1">
               <div className="py-2 text-center text-2xs font-medium text-charcoal-600 max-md:hidden">W</div>
@@ -2333,7 +2352,7 @@ function QuickEditPopover({
       />
       <div
         ref={ref}
-        className="fixed z-50 w-[280px] rounded-xl border border-charcoal-800/70 bg-[rgb(var(--bg-base))] p-4 shadow-2xl"
+        className="fixed z-50 w-[280px] rounded-xl border border-charcoal-800/70 bg-[rgb(var(--bg-base))] p-4 shadow-2xl max-md:rounded-2xl"
         style={{
           left: pos?.left ?? anchor.x,
           top: pos?.top ?? anchor.y,
@@ -2676,7 +2695,7 @@ function QuarterView({
         return (
           <div
             key={monthIdx}
-            className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 p-4"
+            className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 p-4 max-md:rounded-2xl"
           >
             <h3
               className={`mb-3 text-center text-sm font-semibold ${

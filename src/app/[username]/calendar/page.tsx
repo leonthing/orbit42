@@ -69,6 +69,11 @@ export default async function CalendarPage({
     if (me) todoCount = await todoCountForMorning(me).catch(() => 0);
   }
 
+  // 휴대폰 도구 줄의 알림 배지(공통 제목 줄을 숨기므로)
+  const unreadNotifications = session
+    ? await (await import("@/lib/notifications")).unreadNotificationCount().catch(() => 0)
+    : 0;
+
   return (
     <SlotPanelProvider username={params.username}>
       {/* 체크리스트와 캘린더를 한 flex 컬럼에 둔다. 캘린더에 h-full 을 주면
@@ -76,9 +81,14 @@ export default async function CalendarPage({
       <div className="flex h-full flex-col gap-4">
         {/* 홈이 캘린더로 옮겨오면서 시작하기 체크리스트도 함께 이주했다.
             내 캘린더일 때만 보여준다 (남의 캘린더에서는 의미 없음). */}
-        {isOwner && <OnboardingSection />}
+        {/* 휴대폰: 시작하기 줄은 달력·목록 아래 맨 끝으로(iOS, PO 11/21 안 B) — 하루·주 보기도 같다 */}
+        {isOwner && (
+          <div className="max-md:order-last">
+            <OnboardingSection />
+          </div>
+        )}
         {todoCount > 0 && (
-          <Link href={`/${params.username}/todos`} className="inline-flex items-center self-start rounded-lg border border-charcoal-800/60 px-3 py-1.5 text-xs text-charcoal-300 hover:text-charcoal-100 max-md:min-h-11">
+          <Link href={`/${params.username}/todos`} className="inline-flex items-center self-start rounded-lg border border-charcoal-800/60 px-3 py-1.5 text-xs text-charcoal-300 hover:text-charcoal-100 max-md:hidden">
             할 일 {todoCount} →
           </Link>
         )}
@@ -95,6 +105,8 @@ export default async function CalendarPage({
           myCalendars={isOwner ? myCalendars : []}
           viewerIsOwner={isOwner}
           weekStart={weekStartPref}
+          todoCount={todoCount}
+          unreadNotifications={unreadNotifications}
         />
       </div>
     </SlotPanelProvider>

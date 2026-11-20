@@ -278,7 +278,7 @@ function ImportOptIn({ googleConnected }: { googleConnected: boolean }) {
   const toast = useToast();
   const [pending, start] = useTransition();
   return (
-    <div className="rounded-2xl border border-navy-400/30 bg-navy-500/5 p-5">
+    <div className="rounded-2xl border border-navy-400/30 bg-navy-500/5 p-5 max-md:p-4">
       <p className="text-base font-bold text-charcoal-50">캘린더에서 만난 사람 찾기</p>
       <p className="mt-1.5 text-sm leading-relaxed text-charcoal-400">
         최근 6개월 미팅의 참석자 이름과 이메일로 관계 지도를 만들어요. 찾은 사람은 바로 넣지 않고

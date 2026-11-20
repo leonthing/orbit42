@@ -101,7 +101,7 @@ export async function ProfileCalendarCards({
             <Link
               key={cal.id as string}
               href={`/${username}/c?calendar=${cal.id}`}
-              className="rounded-xl border border-charcoal-800/50 bg-[rgb(var(--bg-surface))] p-4 transition-colors hover:border-charcoal-700"
+              className="rounded-xl border border-charcoal-800/50 bg-[rgb(var(--bg-surface))] p-4 transition-colors hover:border-charcoal-700 max-md:rounded-2xl"
             >
               <div className="flex items-center gap-2">
                 <span
