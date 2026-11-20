@@ -22,7 +22,11 @@ export type SearchResult = {
   }[];
 };
 
-export async function searchAll(q: string): Promise<SearchResult> {
+/**
+ * 비공개 프로필(is_private)은 사람 결과와 그 사람의 예약 링크 결과에서 뺀다 — iOS 설정 문구
+ * '검색과 프로필 조회, 다른 사람의 오르빗에서 숨겨져요'와 같은 약속(11/21). 본인(viewer)은 예외.
+ */
+export async function searchAll(q: string, viewer?: string | null): Promise<SearchResult> {
   const query = q.trim();
   if (query.length < 1) return { users: [], slots: [] };
   const db = getAdminClient();
@@ -35,7 +39,7 @@ export async function searchAll(q: string): Promise<SearchResult> {
   const [usersRes, slotsRes] = await Promise.all([
     db
       .from("users")
-      .select("username, display_name, avatar_url, bio, interests")
+      .select("username, display_name, avatar_url, bio, interests, is_private")
       .or(`username.ilike.${quoted},display_name.ilike.${quoted}`)
       .limit(20),
     db
@@ -48,7 +52,8 @@ export async function searchAll(q: string): Promise<SearchResult> {
       .limit(20),
   ]);
 
-  const users = (usersRes.data ?? []).map((u) => ({
+  const visible = (u: { username: unknown; is_private?: unknown }) => !u.is_private || u.username === viewer;
+  const users = (usersRes.data ?? []).filter(visible).map((u) => ({
     username: u.username as string,
     display_name: (u.display_name as string | null) ?? null,
     avatar_url: (u.avatar_url as string | null) ?? null,
@@ -67,9 +72,9 @@ export async function searchAll(q: string): Promise<SearchResult> {
   if (hostIds.length > 0) {
     const { data: hosts } = await db
       .from("users")
-      .select("id, username, display_name, avatar_url")
+      .select("id, username, display_name, avatar_url, is_private")
       .in("id", hostIds);
-    for (const h of hosts ?? []) {
+    for (const h of (hosts ?? []).filter(visible)) {
       hostMap.set(h.id as string, {
         username: h.username as string,
         display_name: (h.display_name as string | null) ?? null,

@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     return Response.json({ users: [], slots: [] });
   }
 
-  let result = await searchAll(q);
+  let result = await searchAll(q, session.username);
 
   // 결과 사용자들의 비공개 여부 + 나와의 차단 관계를 한 번에 조회해 필터.
   const myId = await apiUserId(request);

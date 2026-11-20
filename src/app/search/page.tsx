@@ -13,9 +13,9 @@ export default async function SearchPage({
   searchParams: { q?: string };
 }) {
   const q = (searchParams.q ?? "").trim();
-  const raw = q ? await searchAll(q) : { users: [], slots: [] };
-  // 데모 계정은 내부 계정의 검색에서만 (개선-33)
+  // 데모 계정은 내부 계정의 검색에서만 (개선-33), 비공개 프로필은 본인 것만(searchAll)
   const viewer = (await getSession())?.username ?? null;
+  const raw = q ? await searchAll(q, viewer) : { users: [], slots: [] };
   const result = {
     users: withoutDemo(raw.users, (u) => u.username, viewer),
     slots: withoutDemo(raw.slots, (s) => s.host.username, viewer),

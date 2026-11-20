@@ -440,7 +440,7 @@ export async function searchPeopleToInvite(
     getSession(),
     import("@/lib/search"),
   ]);
-  const { users } = await searchAll(query);
+  const { users } = await searchAll(query, session?.username);
   return users
     .filter((u) => u.username !== session?.username)
     .slice(0, 6)
