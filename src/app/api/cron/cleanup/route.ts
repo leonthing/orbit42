@@ -1,3 +1,4 @@
+import { errorSummary } from "@/lib/log-safe";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getAdminClient } from "@/lib/supabase";
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
     await db.rpc("cleanup_auth_tokens");
   } catch (err) {
     tokensOk = false;
-    console.error("cleanup_auth_tokens", err);
+    console.error("cleanup_auth_tokens", errorSummary(err));
   }
   // 시효 지난 예약 시간 변경 제안 정리 — 토큰 정리와 독립적으로 돈다.
   const { expired } = await expireStaleReschedules();
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
   try {
     chats = await cleanupChats();
   } catch (err) {
-    console.error("cleanupChats", err);
+    console.error("cleanupChats", errorSummary(err));
   }
   // 1:1 대화(1.9.0): 수락 안 된 요청 30일, 둘 다 나간 방, 마지막 메시지 1년
   let dm: { requests: number; left: number; old: number } | null = null;
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
     const { cleanupDm } = await import("@/lib/dm");
     dm = await cleanupDm();
   } catch (err) {
-    console.error("cleanupDm", err);
+    console.error("cleanupDm", errorSummary(err));
   }
   // 횟수 제한 기록(보안-8): 가장 긴 창이 하루라 이틀 지난 것은 지운다. 표가 없으면(마이그레이션 전) 조용히 넘긴다.
   {
@@ -60,7 +61,7 @@ export async function GET(request: NextRequest) {
     const { cleanupBookingEvents } = await import("@/lib/booking-events");
     bookingEvents = await cleanupBookingEvents();
   } catch (err) {
-    console.error("cleanupBookingEvents", err);
+    console.error("cleanupBookingEvents", errorSummary(err));
   }
   // 앱 글·사진(1.10.0): 사진을 다 올리지 못하고 떠나 하루 넘게 비어 있는 글과 그 폴더
   let emptyPosts = 0;
@@ -68,7 +69,7 @@ export async function GET(request: NextRequest) {
     const { cleanupEmptyAppPosts } = await import("@/lib/posts");
     emptyPosts = await cleanupEmptyAppPosts();
   } catch (err) {
-    console.error("cleanupEmptyAppPosts", err);
+    console.error("cleanupEmptyAppPosts", errorSummary(err));
   }
   if (!tokensOk) {
     return NextResponse.json(

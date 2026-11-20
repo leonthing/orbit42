@@ -1,4 +1,5 @@
 // 일반 서버 모듈 — 서버 액션 아님(보안-6). 클라이언트용은 *-actions.ts
+import { errorSummary } from "@/lib/log-safe";
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth";
 import { getAdminClient } from "@/lib/supabase";
@@ -60,7 +61,7 @@ export async function adminDeleteUser(userId: string) {
     const { deleteChatsForUser } = await import("@/lib/booking-chat");
     await deleteChatsForUser(userId);
   } catch (err) {
-    console.error("admin delete chats", err);
+    console.error("admin delete chats", errorSummary(err));
   }
   // 알림은 users 외래 키가 없어 따로 지운다(처리방침: 탈퇴하면 삭제, 11/13)
   {
@@ -69,7 +70,7 @@ export async function adminDeleteUser(userId: string) {
   }
   const { error } = await db.from("users").delete().eq("id", userId);
   if (error) {
-    console.error("adminDeleteUser", error);
+    console.error("adminDeleteUser", errorSummary(error));
     return { error: "삭제에 실패했어요." };
   }
   // 올린 사진 파일 — 계정 행을 지운 뒤에. 실패해도 삭제는 끝난 것으로 두고 로그만 남긴다.

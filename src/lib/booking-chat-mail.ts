@@ -1,3 +1,4 @@
+import { errorSummary } from "@/lib/log-safe";
 import { getAdminClient } from "@/lib/supabase";
 import { type ChatBooking, type ChatRole, type ChatThreadRow } from "@/lib/booking-chat";
 
@@ -60,7 +61,7 @@ export async function runChatMailDigest(now = Date.now(), opts: { onlyBookingId?
       try {
         if (await emailOne(b, t, recipient, now)) sent++;
       } catch (err) {
-        console.error("[chat-mail]", err);
+        console.error("[chat-mail]", errorSummary(err));
       }
     }
   }

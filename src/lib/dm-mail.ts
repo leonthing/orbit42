@@ -1,3 +1,4 @@
+import { errorSummary } from "@/lib/log-safe";
 import { getAdminClient } from "@/lib/supabase";
 import { shouldEmail } from "@/lib/booking-chat-mail";
 import { sideOf, type DmRow } from "@/lib/dm";
@@ -32,7 +33,7 @@ export async function runDmMailDigest(now = Date.now(), opts: { onlyConversation
       try {
         if (await emailOne(c, side, now)) sent++;
       } catch (err) {
-        console.error("[dm-mail]", err);
+        console.error("[dm-mail]", errorSummary(err));
       }
     }
   }

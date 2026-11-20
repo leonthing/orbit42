@@ -6,6 +6,7 @@
  * 토스/뱅크샐러드의 자산 홈처럼 "시간이 곧 자산"을 명확히 보여주는 게 목적.
  */
 
+import { errorSummary } from "@/lib/log-safe";
 import { getAdminClient } from "@/lib/supabase";
 import { fetchTimeBlocks, weekStartMonday } from "@/lib/insights";
 import type { CalendarPurpose } from "@/lib/calendar-settings-types";
@@ -135,7 +136,7 @@ export async function saveSleepHours(userId: string, hoursPerDay: number) {
     })
     .eq("id", userId);
   if (error) {
-    console.error("saveSleepHours", error);
+    console.error("saveSleepHours", errorSummary(error));
     return { error: "저장에 실패했어요." };
   }
   return { ok: true as const };
@@ -184,7 +185,7 @@ export async function setEventBucket(
       { onConflict: "user_id,event_key" },
     );
   if (error) {
-    console.error("setEventBucket", error);
+    console.error("setEventBucket", errorSummary(error));
     return { error: "저장에 실패했어요." };
   }
   return { ok: true as const };
@@ -236,7 +237,7 @@ export async function setEventEarning(
       { onConflict: "user_id,event_key" },
     );
   if (error) {
-    console.error("setEventEarning", error);
+    console.error("setEventEarning", errorSummary(error));
     return { error: "저장에 실패했어요." };
   }
   return { ok: true as const };
@@ -266,7 +267,7 @@ export async function saveBucketMap(
     })
     .eq("id", userId);
   if (error) {
-    console.error("saveBucketMap", error);
+    console.error("saveBucketMap", errorSummary(error));
     return { error: "저장에 실패했어요." };
   }
   return { ok: true as const };
@@ -320,7 +321,7 @@ export async function upsertIncomeEntry(
     { onConflict: "user_id,month" },
   );
   if (error) {
-    console.error("upsertIncomeEntry", error);
+    console.error("upsertIncomeEntry", errorSummary(error));
     return { error: "저장에 실패했어요." };
   }
   return { ok: true as const };
@@ -353,7 +354,7 @@ export async function saveIncomeSettings(
     })
     .eq("id", userId);
   if (error) {
-    console.error("saveIncomeSettings", error);
+    console.error("saveIncomeSettings", errorSummary(error));
     return { error: "저장에 실패했어요." };
   }
   return { ok: true as const };
@@ -1086,7 +1087,7 @@ export async function getTimeAssetSummary(
         unsoldValueKrw,
       };
     } catch (err) {
-      console.error("funnel compute", err);
+      console.error("funnel compute", errorSummary(err));
     }
   }
 

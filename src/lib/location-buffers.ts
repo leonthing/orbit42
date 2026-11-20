@@ -1,4 +1,5 @@
 // 일반 서버 모듈 — 서버 액션 아님(보안-6). 클라이언트용은 *-actions.ts
+import { errorSummary } from "@/lib/log-safe";
 import { revalidatePath } from "next/cache";
 import { getAdminClient } from "@/lib/supabase";
 import { requireUserId } from "@/lib/db";
@@ -43,7 +44,7 @@ export async function createLocationBuffer(args: {
     if (error.message.includes("duplicate")) {
       return { error: "같은 이름의 장소가 이미 있어요." };
     }
-    console.error("createLocationBuffer", error);
+    console.error("createLocationBuffer", errorSummary(error));
     return { error: "생성에 실패했어요." };
   }
   revalidatePath("/", "layout");

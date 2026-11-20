@@ -8,6 +8,7 @@
  * 초대는 즉시 접근 권한을 주고 알림으로 알린다 (구글 캘린더 공유와 같은 방식).
  */
 
+import { errorSummary } from "@/lib/log-safe";
 import { getAdminClient } from "@/lib/supabase";
 
 export type MemberRole = "editor" | "viewer";
@@ -184,7 +185,7 @@ export async function addMember(
   });
   if (error) {
     if (error.message.includes("duplicate")) return { error: "이미 함께 쓰고 있어요." };
-    console.error("addMember", error);
+    console.error("addMember", errorSummary(error));
     return { error: "공유에 실패했어요." };
   }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { errorSummary } from "@/lib/log-safe";
 import { useEffect } from "react";
 import { buttonClasses } from "@/components/PendingButton";
 
@@ -23,7 +24,7 @@ export function RouteError({
   body?: string;
 }) {
   useEffect(() => {
-    console.error("[route error]", error);
+    console.error("[route error]", errorSummary(error));
   }, [error]);
 
   return (

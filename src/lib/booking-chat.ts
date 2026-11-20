@@ -1,3 +1,4 @@
+import { errorSummary } from "@/lib/log-safe";
 import { getAdminClient } from "@/lib/supabase";
 import { MANAGE_GRACE_MS } from "@/lib/guest-manage";
 
@@ -252,13 +253,13 @@ export async function sendChatMessage(args: {
   try {
     await upsertChatNotification(b, recipient, fromLabel, args.senderId);
   } catch (err) {
-    console.error("[chat] notify", err);
+    console.error("[chat] notify", errorSummary(err));
   }
   try {
     const { pushChatMessage } = await import("@/lib/booking-chat-push");
     await pushChatMessage(b, recipient);
   } catch (err) {
-    console.error("[chat] push", err);
+    console.error("[chat] push", errorSummary(err));
   }
 
   return { ok: true, message: { id: msg.id as string, role: args.role, mine: true, body: text, createdAt: at } };
@@ -322,7 +323,7 @@ export async function reportChatMessage(args: {
       }
     }
   } catch (err) {
-    console.error("[chat] report notify", err);
+    console.error("[chat] report notify", errorSummary(err));
   }
   return { ok: true as const };
 }

@@ -1,4 +1,5 @@
 // 일반 서버 모듈 — 서버 액션 아님(보안-6). 클라이언트용은 *-actions.ts
+import { errorSummary } from "@/lib/log-safe";
 import { googleErrorSummary } from "@/lib/google-error";
 import { revalidatePath } from "next/cache";
 import { getAdminClient } from "@/lib/supabase";
@@ -63,7 +64,7 @@ export async function createFeedPost(formData: FormData) {
       .from(BUCKET)
       .upload(key, buf, { contentType: f.type, upsert: false });
     if (upErr) {
-      console.error("upload err", upErr);
+      console.error("upload err", errorSummary(upErr));
       return { error: "사진 업로드에 실패했습니다." };
     }
     const { data: pub } = db.storage.from(BUCKET).getPublicUrl(key);
@@ -86,7 +87,7 @@ export async function createFeedPost(formData: FormData) {
     .select("id")
     .single();
   if (error || !inserted) {
-    console.error("feed_posts insert", error);
+    console.error("feed_posts insert", errorSummary(error));
     return { error: "게시에 실패했습니다." };
   }
 
@@ -173,7 +174,7 @@ export async function shareEventToFeed(args: {
     attached_event_id: args.event_id,
   });
   if (error) {
-    console.error("shareEventToFeed", error);
+    console.error("shareEventToFeed", errorSummary(error));
     return { error: "공유에 실패했습니다." };
   }
   revalidatePath("/feed");

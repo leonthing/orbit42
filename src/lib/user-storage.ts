@@ -13,6 +13,7 @@
  * 실패해도 던지지 않는다 — 탈퇴는 끝나야 하므로, 실패한 폴더만 로그에 남긴다.
  */
 
+import { errorSummary } from "@/lib/log-safe";
 import { getAdminClient } from "@/lib/supabase";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -41,7 +42,7 @@ export async function deleteUserStorage(userId: string): Promise<{ removed: numb
       removed += await removeTree(db, bucket, prefix, 0);
     } catch (e) {
       failed.push(`${bucket}/${prefix}`);
-      console.error("delete user storage", bucket, prefix, e);
+      console.error("delete user storage", bucket, prefix, errorSummary(e));
     }
   }
   return { removed, failed };

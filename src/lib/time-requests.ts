@@ -1,4 +1,5 @@
 // 일반 서버 모듈 — 서버 액션 아님(보안-6). 클라이언트용은 *-actions.ts
+import { errorSummary } from "@/lib/log-safe";
 import { googleErrorSummary } from "@/lib/google-error";
 import { revalidatePath } from "next/cache";
 import { getAdminClient } from "@/lib/supabase";
@@ -67,7 +68,7 @@ export async function createTimeRequest(
     preferred_times: input.preferred_times?.trim().slice(0, 500) || null,
   });
   if (error) {
-    console.error("createTimeRequest", error);
+    console.error("createTimeRequest", errorSummary(error));
     return { error: "요청 전송에 실패했어요." };
   }
 
@@ -108,7 +109,7 @@ export async function createTimeRequest(
       });
     }
   } catch (err) {
-    console.error("createTimeRequest notify", err);
+    console.error("createTimeRequest notify", errorSummary(err));
   }
 
   revalidatePath("/", "layout");
@@ -210,7 +211,7 @@ export async function acceptTimeRequest(requestId: string, startAtIso: string) {
     .select("id, title")
     .single();
   if (slotErr || !slot) {
-    console.error("acceptTimeRequest slot insert", slotErr);
+    console.error("acceptTimeRequest slot insert", errorSummary(slotErr));
     return { error: "수락 처리에 실패했어요." };
   }
 
@@ -229,7 +230,7 @@ export async function acceptTimeRequest(requestId: string, startAtIso: string) {
     .select("id")
     .single();
   if (bookErr || !booking) {
-    console.error("acceptTimeRequest booking insert", bookErr);
+    console.error("acceptTimeRequest booking insert", errorSummary(bookErr));
     return { error: "예약 생성에 실패했어요." };
   }
 
@@ -305,7 +306,7 @@ export async function acceptTimeRequest(requestId: string, startAtIso: string) {
       });
     }
   } catch (err) {
-    console.error("acceptTimeRequest notify", err);
+    console.error("acceptTimeRequest notify", errorSummary(err));
   }
 
   revalidatePath("/", "layout");
@@ -345,7 +346,7 @@ export async function declineTimeRequest(requestId: string) {
       actorId: userId,
     });
   } catch (err) {
-    console.error("declineTimeRequest notify", err);
+    console.error("declineTimeRequest notify", errorSummary(err));
   }
 
   revalidatePath("/", "layout");

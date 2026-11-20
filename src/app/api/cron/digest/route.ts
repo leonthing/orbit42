@@ -1,3 +1,4 @@
+import { errorSummary } from "@/lib/log-safe";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getAdminClient } from "@/lib/supabase";
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest) {
     .eq("email_verified", true)
     .not("email", "is", null);
   if (error) {
-    console.error("digest cron users", error);
+    console.error("digest cron users", errorSummary(error));
     return NextResponse.json({ error: "db_error" }, { status: 500 });
   }
 
@@ -105,7 +106,7 @@ export async function GET(request: NextRequest) {
       });
       sent++;
     } catch (err) {
-      console.error("digest cron user", u.username, err);
+      console.error("digest cron user", u.username, errorSummary(err));
     }
   }
 

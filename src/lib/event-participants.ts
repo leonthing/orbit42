@@ -5,6 +5,7 @@
  * 상대 캘린더 표시용으로 일정 스냅샷(title/start/end)을 행에 함께 저장한다.
  */
 
+import { errorSummary } from "@/lib/log-safe";
 import { getAdminClient } from "@/lib/supabase";
 import { idForEmail } from "@/lib/email-lookup";
 
@@ -149,7 +150,7 @@ export async function addParticipantByUsername(
     if (error.message.includes("duplicate")) {
       return { error: "이미 초대한 사람이에요." };
     }
-    console.error("addParticipant", error);
+    console.error("addParticipant", errorSummary(error));
     return { error: "초대에 실패했어요." };
   }
 
@@ -193,7 +194,7 @@ export async function addParticipantByUsername(
       });
     }
   } catch (err) {
-    console.error("event_invite email", err);
+    console.error("event_invite email", errorSummary(err));
   }
   return { ok: true };
 }
@@ -239,7 +240,7 @@ export async function addParticipantByEmail(
     if (error.message.includes("duplicate")) {
       return { error: "이미 초대한 이메일이에요." };
     }
-    console.error("addParticipantByEmail", error);
+    console.error("addParticipantByEmail", errorSummary(error));
     return { error: "초대에 실패했어요." };
   }
 
@@ -307,7 +308,7 @@ export async function syncParticipantSnapshots(
       .eq("owner_id", ownerId)
       .eq("event_key", eventKey);
     if (error) {
-      console.error("syncParticipantSnapshots update", error);
+      console.error("syncParticipantSnapshots update", errorSummary(error));
       return;
     }
 
@@ -385,7 +386,7 @@ export async function syncParticipantSnapshots(
       });
     }
   } catch (err) {
-    console.error("syncParticipantSnapshots", err);
+    console.error("syncParticipantSnapshots", errorSummary(err));
   }
 }
 
@@ -402,7 +403,7 @@ export async function rekeyParticipants(
     .update({ event_key: newKey })
     .eq("owner_id", ownerId)
     .eq("event_key", oldKey);
-  if (error) console.error("rekeyParticipants", error);
+  if (error) console.error("rekeyParticipants", errorSummary(error));
 }
 
 export async function removeParticipant(

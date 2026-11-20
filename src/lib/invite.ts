@@ -1,4 +1,5 @@
 // 일반 서버 모듈 — 서버 액션 아님(보안-6). 클라이언트용은 *-actions.ts
+import { errorSummary } from "@/lib/log-safe";
 import { getAdminClient } from "@/lib/supabase";
 import { currentUsername } from "@/lib/renamed-usernames";
 
@@ -65,7 +66,7 @@ export async function seedNewUser(
       });
     }
   } catch (err) {
-    console.error("seedNewUser welcome email", err);
+    console.error("seedNewUser welcome email", errorSummary(err));
   }
 }
 
@@ -142,7 +143,7 @@ export async function applyReferralIfPresent(
       });
     }
   } catch (err) {
-    console.error("referral notify inviter", err);
+    console.error("referral notify inviter", errorSummary(err));
   }
 
   return {

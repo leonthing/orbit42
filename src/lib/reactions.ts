@@ -1,4 +1,5 @@
 // 일반 서버 모듈 — 서버 액션 아님(보안-6). 클라이언트용은 *-actions.ts
+import { errorSummary } from "@/lib/log-safe";
 import { revalidatePath } from "next/cache";
 import { getAdminClient } from "@/lib/supabase";
 import { getUserId } from "@/lib/db";
@@ -51,7 +52,7 @@ export async function toggleReaction(
       const { notifyReaction } = await import("@/lib/reaction-notify");
       await notifyReaction(userId, target_type, target_id, emoji);
     } catch (err) {
-      console.error("reaction notify", err);
+      console.error("reaction notify", errorSummary(err));
     }
   }
 

@@ -1,4 +1,5 @@
 // 일반 서버 모듈 — 서버 액션 아님(보안-6). 클라이언트용은 *-actions.ts
+import { errorSummary } from "@/lib/log-safe";
 import { cookies, headers } from "next/headers";
 import { idForEmail } from "@/lib/email-lookup";
 import { auditOauthLogin } from "@/lib/oauth-audit";
@@ -210,7 +211,7 @@ async function oauthLoginOrSignup(profile: {
     p_display_name: profile.displayName || username,
   });
   if (createErr) {
-    console.error("oauth signup create_user", createErr);
+    console.error("oauth signup create_user", errorSummary(createErr));
     return { error: "회원가입에 실패했어요." };
   }
 

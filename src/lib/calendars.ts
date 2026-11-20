@@ -1,4 +1,5 @@
 // 일반 서버 모듈 — 서버 액션 아님(보안-6). 클라이언트용은 *-actions.ts
+import { errorSummary } from "@/lib/log-safe";
 import { googleErrorSummary } from "@/lib/google-error";
 import { revalidatePath } from "next/cache";
 import { pickKeys } from "@/lib/pick-keys";
@@ -85,7 +86,7 @@ export async function createNativeCalendar(args: {
     .select("id")
     .single();
   if (error) {
-    console.error("createNativeCalendar", error);
+    console.error("createNativeCalendar", errorSummary(error));
     return { error: "생성에 실패했습니다." };
   }
   revalidatePath("/", "layout");
@@ -127,7 +128,7 @@ export async function createGoogleLinkedCalendar(args: {
     google_calendar_id: calendarId,
   });
   if (error) {
-    console.error("calendars insert", error);
+    console.error("calendars insert", errorSummary(error));
     return { error: "설정 저장에 실패했습니다." };
   }
   revalidatePath("/", "layout");

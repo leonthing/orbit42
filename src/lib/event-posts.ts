@@ -6,6 +6,7 @@
  * (로컬 uuid / "gcal_<id>") — 캘린더 이동 시 migrateEventKeys 로 함께 이관된다.
  */
 
+import { errorSummary } from "@/lib/log-safe";
 import { randomUUID } from "node:crypto";
 import { getAdminClient } from "@/lib/supabase";
 
@@ -159,7 +160,7 @@ export async function addEventPostImages(
       .from(BUCKET)
       .upload(key, buf, { contentType: f.type, upsert: false });
     if (upErr) {
-      console.error("event-post upload", upErr);
+      console.error("event-post upload", errorSummary(upErr));
       return { error: "업로드에 실패했어요." };
     }
     urls.push(db.storage.from(BUCKET).getPublicUrl(key).data.publicUrl);
@@ -285,7 +286,7 @@ export async function withGoogleEventInfo(ownerUserId: string, posts: EventPost[
       if (e.source === "google") info.set(e.id, { title: e.title, start_at: e.start_at, end_at: e.end_at, all_day: e.all_day });
     }
   } catch (e) {
-    console.error("timelog google info", e);
+    console.error("timelog google info", errorSummary(e));
   }
   return posts.map((p) => {
     const found = isGoogleEventKey(p.event_key) ? info.get(p.event_key) : undefined;

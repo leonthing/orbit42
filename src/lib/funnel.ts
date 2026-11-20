@@ -1,3 +1,4 @@
+import { errorSummary } from "@/lib/log-safe";
 import { waitUntil } from "@vercel/functions";
 import { getAdminClient } from "@/lib/supabase";
 import type { FunnelRef } from "@/lib/funnel-ref";
@@ -86,7 +87,7 @@ export function recordFunnel(args: {
         if (refErr) console.error("recordFunnel ref", refErr.message);
       }
     } catch (err) {
-      console.error("recordFunnel", err);
+      console.error("recordFunnel", errorSummary(err));
     }
   })();
   try {

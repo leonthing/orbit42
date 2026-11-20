@@ -1,3 +1,4 @@
+import { errorSummary } from "@/lib/log-safe";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { isAuthorizedCron } from "@/lib/cron-auth";
@@ -15,7 +16,7 @@ export async function GET(request: NextRequest) {
     const { runDmMailDigest } = await import("@/lib/dm-mail");
     dm = await runDmMailDigest();
   } catch (err) {
-    console.error("[dm-mail]", err);
+    console.error("[dm-mail]", errorSummary(err));
   }
   return NextResponse.json({ ok: true, sent, dm });
 }

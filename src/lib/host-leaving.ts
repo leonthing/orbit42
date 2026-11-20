@@ -1,3 +1,4 @@
+import { errorSummary } from "@/lib/log-safe";
 import { getAdminClient } from "@/lib/supabase";
 
 // "use server" 파일(account·admin)에 두면 브라우저에서 부를 수 있는 서버 액션이 되므로 일반 서버 모듈에 둔다.
@@ -35,12 +36,12 @@ export async function notifyGuestsBeforeHostLeaves(hostId: string) {
         else sent++;
       } catch (err) {
         failed++;
-        console.error("[account-delete] guest cancel email", b.id, err);
+        console.error("[account-delete] guest cancel email", b.id, errorSummary(err));
       }
     }
     // 메일 주소·이름은 남기지 않는다
     console.info(`[account-delete] host-left cancel emails sent=${sent} failed=${failed} bookings=${rows.length}`);
   } catch (err) {
-    console.error("[account-delete] notify guests", err);
+    console.error("[account-delete] notify guests", errorSummary(err));
   }
 }

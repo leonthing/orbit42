@@ -1,4 +1,5 @@
 // 일반 서버 모듈 — 서버 액션 아님(보안-6). 클라이언트용은 *-actions.ts
+import { errorSummary } from "@/lib/log-safe";
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth";
 import { getAdminClient } from "@/lib/supabase";
@@ -43,7 +44,7 @@ export async function createNotification(args: {
       actor_id: args.actorId ?? null,
     });
   } catch (err) {
-    console.error("createNotification", err);
+    console.error("createNotification", errorSummary(err));
   }
 }
 

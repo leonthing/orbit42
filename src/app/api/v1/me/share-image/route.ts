@@ -1,3 +1,4 @@
+import { errorSummary } from "@/lib/log-safe";
 import { randomUUID } from "node:crypto";
 import { apiSession, apiUserId } from "@/lib/api-auth";
 import { getAdminClient } from "@/lib/supabase";
@@ -67,7 +68,7 @@ export async function POST(request: Request) {
     .from(BUCKET)
     .upload(key, buf, { contentType: file.type, upsert: false });
   if (upErr) {
-    console.error("share image upload", upErr);
+    console.error("share image upload", errorSummary(upErr));
     return Response.json({ error: "업로드에 실패했어요." }, { status: 400 });
   }
   const url = db.storage.from(BUCKET).getPublicUrl(key).data.publicUrl;

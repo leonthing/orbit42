@@ -1,3 +1,4 @@
+import { errorSummary } from "@/lib/log-safe";
 import { getAdminClient } from "@/lib/supabase";
 import { sendBookingReminderEmail } from "@/lib/email";
 import { emailAllowed } from "@/lib/notification-prefs";
@@ -93,7 +94,7 @@ async function runKind(kind: Kind, now: Date, onlyIds?: string[]): Promise<numbe
   if (onlyIds) query = query.in("id", onlyIds);
   const { data, error } = await query;
   if (error) {
-    console.error("reminders cron select", kind, error);
+    console.error("reminders cron select", kind, errorSummary(error));
     return null;
   }
 
@@ -184,7 +185,7 @@ async function sendOne(kind: Kind, b: DueBooking, now: Date) {
       logSend(kind, b.guest_id ? "guest" : "guest-no-account", b, r.ok);
     }
   } catch (err) {
-    console.error("reminders cron email", kind, err);
+    console.error("reminders cron email", kind, errorSummary(err));
   }
 
   // 가입한 양쪽에 앱 알림
@@ -209,7 +210,7 @@ async function sendOne(kind: Kind, b: DueBooking, now: Date) {
       });
     }
   } catch (err) {
-    console.error("reminders cron notification", kind, err);
+    console.error("reminders cron notification", kind, errorSummary(err));
   }
 }
 

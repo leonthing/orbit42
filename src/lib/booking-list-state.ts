@@ -1,3 +1,4 @@
+import { errorSummary } from "@/lib/log-safe";
 import { getAdminClient } from "@/lib/supabase";
 
 /**
@@ -56,7 +57,7 @@ export async function changeBookingListState(
         : { archived_by_guest: change === "archive" };
   const { error } = await db.from("bookings").update(patch).eq("id", bookingId);
   if (error) {
-    console.error(`booking ${change}`, error);
+    console.error(`booking ${change}`, errorSummary(error));
     return { error: FAIL_ERRORS[change], status: 400 };
   }
   return { ok: true };

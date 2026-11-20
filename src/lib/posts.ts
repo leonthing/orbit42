@@ -1,6 +1,7 @@
 // 일반 서버 모듈 — 서버 액션 아님. 글·사진(1.10.0) 앱 API 의 본체 (/api/v1/posts/*).
 // 설계: 업무기록/설계_1.10.0_블로그사진.md. 글은 blog_posts(origin 'app'), 사진은 post_photos + 비공개 버킷.
 // 시험 기간: 보는 사람·쓰는 사람 모두 허용 목록(posts-access)만. 웹 공개 경로에는 'app' 글이 나가지 않는다.
+import { errorSummary } from "@/lib/log-safe";
 import { randomBytes, randomUUID } from "crypto";
 import { getAdminClient } from "@/lib/supabase";
 import { rateLimitDb } from "@/lib/rate-limit";
@@ -461,7 +462,7 @@ async function notifyFollowersOfNewPost(authorId: string, postId: string) {
       await createNotification({ userId: uid, type: "new_post", title: `${name}님이 새 글을 올렸어요`, body: null, link, actorId: authorId });
     }
   } catch (e) {
-    console.error("[posts] notify followers", e);
+    console.error("[posts] notify followers", errorSummary(e));
   }
 }
 
@@ -473,7 +474,7 @@ export async function deletePost(me: string, id: string) {
   try {
     await removePhotoFolder(`${me}/${id}`);
   } catch (e) {
-    console.error("[posts] delete folder", e);
+    console.error("[posts] delete folder", errorSummary(e));
     return { error: "사진을 지우지 못했어요. 잠시 후 다시 시도해 주세요." } as PostErr;
   }
   await db().from("reactions").delete().eq("target_type", "post").eq("target_id", likeTarget(id));
@@ -678,7 +679,7 @@ export async function reportPost(me: string, id: string, reason: unknown) {
         await createNotification({ userId: u.id as string, type: "booking_message_report", title: "글 신고가 들어왔어요", body: null, link: "/admin/reports" });
     }
   } catch (err) {
-    console.error("[posts] report notify", err);
+    console.error("[posts] report notify", errorSummary(err));
   }
   return { ok: true as const };
 }

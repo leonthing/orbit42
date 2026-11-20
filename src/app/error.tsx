@@ -1,5 +1,6 @@
 "use client";
 
+import { errorSummary } from "@/lib/log-safe";
 import { useEffect } from "react";
 import Link from "next/link";
 import { buttonClasses } from "@/components/PendingButton";
@@ -13,7 +14,7 @@ export default function Error({
 }) {
   useEffect(() => {
     // Surface to the browser console; swap for Sentry/observability later.
-    console.error("[render error]", error);
+    console.error("[render error]", errorSummary(error));
   }, [error]);
 
   return (

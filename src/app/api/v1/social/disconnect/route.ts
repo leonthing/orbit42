@@ -1,3 +1,4 @@
+import { errorSummary } from "@/lib/log-safe";
 import { apiSession, apiUserId } from "@/lib/api-auth";
 import { getAdminClient } from "@/lib/supabase";
 
@@ -52,7 +53,7 @@ export async function POST(request: Request) {
     .update({ ...cols, updated_at: new Date().toISOString() })
     .eq("id", userId);
   if (error) {
-    console.error("social disconnect", error);
+    console.error("social disconnect", errorSummary(error));
     return Response.json({ error: "해제에 실패했어요." }, { status: 400 });
   }
   return Response.json({ ok: true });

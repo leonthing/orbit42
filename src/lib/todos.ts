@@ -7,6 +7,7 @@
  * - 한도: 아직 안 한 할 일 1000개, 하루 새로 300개, 한 번에 30줄.
  * - 시행일(11/20) 전에는 v190Open() 이 false 라 모두 거절한다.
  */
+import { errorSummary } from "@/lib/log-safe";
 import { getAdminClient } from "@/lib/supabase";
 import { V190_CLOSED_MESSAGE, v190OpenFor } from "@/lib/dm-flags";
 import { toEventKey, normalizeEventKey } from "@/lib/event-key";
@@ -160,7 +161,7 @@ export async function forgetEventLinks(userId: string, rawKey: string) {
     await db().from("event_follow_ups").delete().eq("user_id", userId).or(`source_key.eq.${key},target_key.eq.${key}`);
     await db().from("todos").update({ source_event_key: null }).eq("user_id", userId).eq("source_event_key", key);
   } catch (err) {
-    console.error("[todos] forget links", err);
+    console.error("[todos] forget links", errorSummary(err));
   }
 }
 
@@ -171,7 +172,7 @@ export async function forgetSeriesLinks(userId: string, seriesId: string) {
     await db().from("event_follow_ups").delete().eq("user_id", userId).or(`source_key.like.${seriesId}*,target_key.like.${seriesId}*`);
     await db().from("todos").update({ source_event_key: null }).eq("user_id", userId).like("source_event_key", `${seriesId}%`);
   } catch (err) {
-    console.error("[todos] forget series", err);
+    console.error("[todos] forget series", errorSummary(err));
   }
 }
 
@@ -210,7 +211,7 @@ export async function migrateTodoKeys(userId: string, rawOld: string, rawNew: st
     await db().from("event_follow_ups").update({ source_key: newKey }).eq("user_id", userId).eq("source_key", oldKey);
     await db().from("event_follow_ups").update({ target_key: newKey }).eq("user_id", userId).eq("target_key", oldKey);
   } catch (err) {
-    console.error("[todos] migrate keys", err);
+    console.error("[todos] migrate keys", errorSummary(err));
   }
 }
 

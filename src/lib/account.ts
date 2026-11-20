@@ -1,4 +1,5 @@
 // 일반 서버 모듈 — 서버 액션 아님(보안-6). 클라이언트용은 *-actions.ts
+import { errorSummary } from "@/lib/log-safe";
 import { cookies } from "next/headers";
 import { idForEmail } from "@/lib/email-lookup";
 import { randomBytes } from "node:crypto";
@@ -144,7 +145,7 @@ export async function resetPassword(token: string, newPassword: string) {
     p_new_password: newPassword,
   });
   if (error) {
-    console.error("reset_password_for_user", error);
+    console.error("reset_password_for_user", errorSummary(error));
     return { error: "비밀번호 변경에 실패했어요." };
   }
   return { success: true };
@@ -184,7 +185,7 @@ export async function deleteMyAccount() {
     const { deleteChatsForUser } = await import("@/lib/booking-chat");
     await deleteChatsForUser(user.id as string);
   } catch (err) {
-    console.error("delete account chats", err);
+    console.error("delete account chats", errorSummary(err));
   }
 
   // 알림은 users 외래 키가 없어 따로 지운다(처리방침: 탈퇴하면 삭제, 11/13)
@@ -194,7 +195,7 @@ export async function deleteMyAccount() {
   }
   const { error } = await db.from("users").delete().eq("id", user.id);
   if (error) {
-    console.error("delete account", error);
+    console.error("delete account", errorSummary(error));
     return { error: "탈퇴 처리에 실패했어요." };
   }
   // 올린 사진 파일 — 계정 행을 지운 뒤에(행 삭제가 실패하면 파일도 그대로 둔다).

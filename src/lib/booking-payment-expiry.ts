@@ -1,3 +1,4 @@
+import { errorSummary } from "@/lib/log-safe";
 import { getAdminClient } from "@/lib/supabase";
 import { createNotification } from "@/lib/notifications";
 import { removeBookingCalendarEvent } from "@/lib/booking-calendar";
@@ -23,7 +24,7 @@ export async function expireUnpaidBookings(): Promise<{ expired: number }> {
     .lte("payment_due_at", nowIso)
     .limit(200);
   if (error) {
-    console.error("expireUnpaidBookings select", error);
+    console.error("expireUnpaidBookings select", errorSummary(error));
     return { expired: 0 };
   }
 
@@ -65,7 +66,7 @@ export async function expireUnpaidBookings(): Promise<{ expired: number }> {
         link: `/${b.host?.username ?? ""}/bookings`,
       });
     } catch (err) {
-      console.error("expireUnpaidBookings host notify", err);
+      console.error("expireUnpaidBookings host notify", errorSummary(err));
     }
     if (b.guest_id) {
       try {
@@ -77,7 +78,7 @@ export async function expireUnpaidBookings(): Promise<{ expired: number }> {
           link: `/bookings`,
         });
       } catch (err) {
-        console.error("expireUnpaidBookings guest notify", err);
+        console.error("expireUnpaidBookings guest notify", errorSummary(err));
       }
     }
     const to = b.guest_email;
@@ -90,7 +91,7 @@ export async function expireUnpaidBookings(): Promise<{ expired: number }> {
           hostLabel: b.host?.display_name || b.host?.username || "Host",
         });
       } catch (err) {
-        console.error("expireUnpaidBookings guest email", err);
+        console.error("expireUnpaidBookings guest email", errorSummary(err));
       }
     }
   }

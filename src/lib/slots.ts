@@ -1,4 +1,5 @@
 // 일반 서버 모듈 — 서버 액션 아님(보안-6). 클라이언트용은 *-actions.ts
+import { errorSummary } from "@/lib/log-safe";
 import { googleErrorSummary } from "@/lib/google-error";
 import { revalidatePath } from "next/cache";
 import { guestBookingsSince } from "@/lib/email-lookup";
@@ -456,7 +457,7 @@ export async function createSlot(input: SlotInput) {
       slot.slug as string,
     );
   } catch (err) {
-    console.error("notifyFollowersOfNewSlot", err);
+    console.error("notifyFollowersOfNewSlot", errorSummary(err));
   }
 
   revalidatePath("/", "layout");
@@ -1150,7 +1151,7 @@ export async function bookSlot(args: {
       actorId: guestId,
     });
   } catch (err) {
-    console.error("host booking_received notification", err);
+    console.error("host booking_received notification", errorSummary(err));
   }
 
   // Email to host.
@@ -1171,7 +1172,7 @@ export async function bookSlot(args: {
       });
     }
   } catch (err) {
-    console.error("host booking_received email", err);
+    console.error("host booking_received email", errorSummary(err));
   }
 
   // 계좌이체 흐름이면 게스트에게 바로 입금 안내 메일을 보낸다.
@@ -1188,7 +1189,7 @@ export async function bookSlot(args: {
         managePath: await (await import("@/lib/guest-manage")).ensureManagePath(booking.id as string),
       });
     } catch (err) {
-      console.error("guest payment instructions email", err);
+      console.error("guest payment instructions email", errorSummary(err));
     }
   }
 
@@ -1209,7 +1210,7 @@ export async function bookSlot(args: {
         });
       }
     } catch (err) {
-      console.error("guest booking_confirmed email", err);
+      console.error("guest booking_confirmed email", errorSummary(err));
     }
 
     // Guest is a registered user — ping their bell too.
@@ -1225,7 +1226,7 @@ export async function bookSlot(args: {
           actorId: slot.host_id as string,
         });
       } catch (err) {
-        console.error("guest booking_confirmed notification", err);
+        console.error("guest booking_confirmed notification", errorSummary(err));
       }
     }
   }
@@ -1368,7 +1369,7 @@ export async function bookSlot(args: {
       }
     }
   } catch (err) {
-    console.error("Calendar mirror for booking failed:", err);
+    console.error("Calendar mirror for booking failed:", errorSummary(err));
   }
 
   revalidatePath("/", "layout");
@@ -1712,7 +1713,7 @@ export async function updateBookingStatus(
           });
         }
       } catch (err) {
-        console.error("booking status email", err);
+        console.error("booking status email", errorSummary(err));
       }
     }
     // Guest in-app notification (if a registered user).
@@ -1740,7 +1741,7 @@ export async function updateBookingStatus(
           actorId: booking.host_id as string,
         });
       } catch (err) {
-        console.error("booking status notification", err);
+        console.error("booking status notification", errorSummary(err));
       }
     }
   }
@@ -1800,7 +1801,7 @@ async function moveBookingTo(args: {
     })
     .eq("id", booking.id);
   if (error) {
-    console.error("moveBookingTo update", error);
+    console.error("moveBookingTo update", errorSummary(error));
     return { error: "변경에 실패했어요." };
   }
 
@@ -2024,7 +2025,7 @@ export async function rescheduleBookingAsGuest(
       });
     }
   } catch (err) {
-    console.error("rescheduleMyBooking notify", err);
+    console.error("rescheduleMyBooking notify", errorSummary(err));
   }
 
   revalidatePath("/", "layout");
@@ -2133,7 +2134,7 @@ export async function proposeRescheduleAsHost(
           decided: true,
         });
       } catch (err) {
-        console.error("proposeRescheduleAsHost mail", err);
+        console.error("proposeRescheduleAsHost mail", errorSummary(err));
       }
     }
     revalidatePath("/", "layout");
@@ -2153,7 +2154,7 @@ export async function proposeRescheduleAsHost(
     .eq("id", bookingId)
     .eq("host_id", userId);
   if (error) {
-    console.error("proposeRescheduleAsHost", error);
+    console.error("proposeRescheduleAsHost", errorSummary(error));
     return { error: "제안에 실패했어요." };
   }
 
@@ -2191,7 +2192,7 @@ export async function proposeRescheduleAsHost(
       });
     }
   } catch (err) {
-    console.error("proposeRescheduleAsHost notify", err);
+    console.error("proposeRescheduleAsHost notify", errorSummary(err));
   }
 
   revalidatePath("/", "layout");
@@ -2281,7 +2282,7 @@ export async function proposeRescheduleAsGuest(
     .eq("id", bookingId)
     .eq("guest_id", userId);
   if (error) {
-    console.error("proposeRescheduleAsGuest", error);
+    console.error("proposeRescheduleAsGuest", errorSummary(error));
     return { error: "제안을 보내지 못했어요." };
   }
 
@@ -2342,7 +2343,7 @@ export async function proposeRescheduleAsGuest(
         .eq("id", bookingId);
     }
   } catch (err) {
-    console.error("proposeRescheduleAsGuest notify", err);
+    console.error("proposeRescheduleAsGuest notify", errorSummary(err));
   }
 
   revalidatePath("/", "layout");
@@ -2424,7 +2425,7 @@ export async function respondToReschedule(
         actorId: userId,
       });
     } catch (err) {
-      console.error("respondToReschedule decline notify", err);
+      console.error("respondToReschedule decline notify", errorSummary(err));
     }
     revalidatePath("/", "layout");
     return { success: true as const };
@@ -2487,7 +2488,7 @@ export async function respondToReschedule(
       });
     }
   } catch (err) {
-    console.error("respondToReschedule accept notify", err);
+    console.error("respondToReschedule accept notify", errorSummary(err));
   }
 
   revalidatePath("/", "layout");
@@ -2534,7 +2535,7 @@ export async function withdrawReschedule(
     .eq("id", bookingId)
     .eq("reschedule_by", userId);
   if (error) {
-    console.error("withdrawReschedule", error);
+    console.error("withdrawReschedule", errorSummary(error));
     return { error: "처리에 실패했어요." };
   }
 
@@ -2563,7 +2564,7 @@ export async function withdrawReschedule(
         actorId: userId,
       });
     } catch (err) {
-      console.error("withdrawReschedule notify", err);
+      console.error("withdrawReschedule notify", errorSummary(err));
     }
   }
 
@@ -2641,7 +2642,7 @@ export async function cancelBookingAsGuest(
         actorId: (booking.guest_id as string | null) ?? null,
       });
     } catch (err) {
-      console.error("cancelMyBooking notification", err);
+      console.error("cancelMyBooking notification", errorSummary(err));
     }
     const { emailAllowed } = await import("@/lib/notification-prefs");
     if (host?.email && (await emailAllowed(booking.host_id as string, "booking_canceled"))) {
@@ -2657,7 +2658,7 @@ export async function cancelBookingAsGuest(
       });
     }
   } catch (err) {
-    console.error("cancelMyBooking email", err);
+    console.error("cancelMyBooking email", errorSummary(err));
   }
 
   revalidatePath("/", "layout");

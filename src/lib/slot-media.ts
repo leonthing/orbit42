@@ -1,5 +1,6 @@
 "use server";
 
+import { errorSummary } from "@/lib/log-safe";
 import { randomUUID } from "node:crypto";
 import { getAdminClient } from "@/lib/supabase";
 import { requireUserId } from "@/lib/db";
@@ -46,7 +47,7 @@ export async function uploadSlotImages(
       .from(BUCKET)
       .upload(key, buf, { contentType: f.type, upsert: false });
     if (upErr) {
-      console.error("slot-media upload", upErr);
+      console.error("slot-media upload", errorSummary(upErr));
       return { error: "업로드에 실패했어요." };
     }
     const { data: pub } = db.storage.from(BUCKET).getPublicUrl(key);

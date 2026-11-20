@@ -8,6 +8,7 @@
  * - 알림: 앱 안 알림 + 푸시(60초 간격, "새 메시지가 있어요"). 메일은 5분 cron(본문 없이). 요청은 앱 안 알림만.
  * - 시행일(11/20) 전에는 v190Open() 이 false 라 모든 함수가 거절한다.
  */
+import { errorSummary } from "@/lib/log-safe";
 import { getAdminClient } from "@/lib/supabase";
 import { V190_CLOSED_MESSAGE, v190Open, v190OpenFor, v190OpenPair } from "@/lib/dm-flags";
 
@@ -440,7 +441,7 @@ async function notifyNewMessage(me: string, other: string, c: DmRow, otherSide: 
     await createNotification({ userId: other, type: "direct_message", title: `${label}님의 새 메시지`, body: null, link: `/messages/${c.id}`, actorId: me });
     await pushDm(other, c, otherSide, now.getTime());
   } catch (err) {
-    console.error("[dm] notify", err);
+    console.error("[dm] notify", errorSummary(err));
   }
 }
 
@@ -545,7 +546,7 @@ export async function reportDm(me: string, id: string, messageId: string, reason
       }
     }
   } catch (err) {
-    console.error("[dm] report notify", err);
+    console.error("[dm] report notify", errorSummary(err));
   }
   return { ok: true as const };
 }

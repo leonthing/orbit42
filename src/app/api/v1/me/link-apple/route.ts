@@ -1,3 +1,4 @@
+import { errorSummary } from "@/lib/log-safe";
 import { apiSession, apiUserId } from "@/lib/api-auth";
 import { verifyAppleIdentityToken } from "@/lib/apple-auth";
 import { getAdminClient } from "@/lib/supabase";
@@ -54,7 +55,7 @@ export async function POST(request: Request) {
     .update({ apple_sub: identity.sub, updated_at: new Date().toISOString() })
     .eq("id", userId);
   if (error) {
-    console.error("link-apple", error);
+    console.error("link-apple", errorSummary(error));
     return Response.json({ error: "연결에 실패했어요." }, { status: 400 });
   }
   return Response.json({ ok: true, appleLinked: true });

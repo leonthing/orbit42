@@ -1,4 +1,5 @@
 // 일반 서버 모듈 — 서버 액션 아님(보안-6). 클라이언트용은 *-actions.ts
+import { errorSummary } from "@/lib/log-safe";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { getAdminClient } from "@/lib/supabase";
@@ -78,7 +79,7 @@ export async function submitFeedback(args: {
     .select("id")
     .single();
   if (error) {
-    console.error("feedback insert", error);
+    console.error("feedback insert", errorSummary(error));
     return { error: "저장에 실패했어요." };
   }
 
@@ -95,7 +96,7 @@ export async function submitFeedback(args: {
       },
     });
   } catch (err) {
-    console.error("feedback email", err);
+    console.error("feedback email", errorSummary(err));
   }
 
   try {
@@ -125,7 +126,7 @@ export async function submitFeedback(args: {
       }
     }
   } catch (err) {
-    console.error("feedback notify", err);
+    console.error("feedback notify", errorSummary(err));
   }
 
   void inserted;

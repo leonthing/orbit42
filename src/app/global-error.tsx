@@ -1,5 +1,6 @@
 "use client";
 
+import { errorSummary } from "@/lib/log-safe";
 import { useEffect } from "react";
 
 // global-error replaces the root layout, so it must render its own
@@ -13,7 +14,7 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("[global error]", error);
+    console.error("[global error]", errorSummary(error));
   }, [error]);
 
   return (

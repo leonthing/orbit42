@@ -1,3 +1,4 @@
+import { errorSummary } from "@/lib/log-safe";
 /**
  * Sign in with Apple — server-side identity token verification.
  *
@@ -111,7 +112,7 @@ export async function verifyAppleIdentityToken(
         payload.email_verified === true || payload.email_verified === "true",
     };
   } catch (err) {
-    console.error("verifyAppleIdentityToken", err);
+    console.error("verifyAppleIdentityToken", errorSummary(err));
     return null;
   }
 }

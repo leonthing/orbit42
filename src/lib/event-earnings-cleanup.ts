@@ -1,3 +1,4 @@
+import { errorSummary } from "@/lib/log-safe";
 import { getAdminClient } from "@/lib/supabase";
 import { parseOccurrenceId } from "@/lib/recurrence";
 
@@ -22,7 +23,7 @@ export async function deleteEarningsForEvents(
     if ("keys" in target) await clearGoogleMetaForKeys(userId, target.keys.filter((k) => k.startsWith("gcal_")));
     else if ("googleMasterId" in target) await clearGoogleMetaForSeries(userId, target.googleMasterId);
   } catch (err) {
-    console.error("deleteEarningsForEvents travel", err);
+    console.error("deleteEarningsForEvents travel", errorSummary(err));
   }
   try {
     let keys: string[];
@@ -60,8 +61,8 @@ export async function deleteEarningsForEvents(
       .delete()
       .eq("user_id", userId)
       .in("event_key", keys);
-    if (error) console.error("deleteEarningsForEvents", error);
+    if (error) console.error("deleteEarningsForEvents", errorSummary(error));
   } catch (err) {
-    console.error("deleteEarningsForEvents", err);
+    console.error("deleteEarningsForEvents", errorSummary(err));
   }
 }

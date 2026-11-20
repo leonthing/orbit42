@@ -1,4 +1,5 @@
 // 일반 서버 모듈 — 서버 액션 아님(보안-6). 클라이언트용은 *-actions.ts
+import { errorSummary } from "@/lib/log-safe";
 import { revalidatePath } from "next/cache";
 import { getAdminClient } from "@/lib/supabase";
 import { requireUserId } from "@/lib/db";
@@ -58,7 +59,7 @@ export async function addBookingReview(
     if ((error.code as string) === "23505") {
       return { error: "이미 후기를 남긴 예약이에요." };
     }
-    console.error("addBookingReview", error);
+    console.error("addBookingReview", errorSummary(error));
     return { error: "후기 등록에 실패했어요." };
   }
 
@@ -90,7 +91,7 @@ export async function addBookingReview(
       actorId: userId,
     });
   } catch (err) {
-    console.error("addBookingReview notify", err);
+    console.error("addBookingReview notify", errorSummary(err));
   }
 
   revalidatePath("/", "layout");

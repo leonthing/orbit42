@@ -1,4 +1,5 @@
 // 일반 서버 모듈 — 서버 액션 아님(보안-6). 클라이언트용은 *-actions.ts
+import { errorSummary } from "@/lib/log-safe";
 import { randomUUID } from "node:crypto";
 import { getAdminClient } from "@/lib/supabase";
 import { requireUserId } from "@/lib/db";
@@ -42,7 +43,7 @@ export async function uploadBlogImage(
     .from(BUCKET)
     .upload(key, buf, { contentType: f.type, upsert: false });
   if (upErr) {
-    console.error("blog-media upload", upErr);
+    console.error("blog-media upload", errorSummary(upErr));
     return { error: "업로드에 실패했어요." };
   }
   const { data: pub } = db.storage.from(BUCKET).getPublicUrl(key);

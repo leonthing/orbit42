@@ -1,4 +1,5 @@
 // 일반 서버 모듈 — 서버 액션 아님(보안-6). 클라이언트용은 *-actions.ts
+import { errorSummary } from "@/lib/log-safe";
 import { googleErrorSummary } from "@/lib/google-error";
 import { revalidatePath } from "next/cache";
 import { getAdminClient } from "@/lib/supabase";
@@ -83,7 +84,7 @@ export async function createGoogleCalendar(args: {
     color_override: args.color ?? null,
   });
   if (error) {
-    console.error("user_calendar_settings.insert", error);
+    console.error("user_calendar_settings.insert", errorSummary(error));
     return { error: "설정 저장에 실패했습니다." };
   }
 

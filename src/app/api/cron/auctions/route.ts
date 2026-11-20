@@ -1,3 +1,4 @@
+import { errorSummary } from "@/lib/log-safe";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getAdminClient } from "@/lib/supabase";
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
     .eq("active", true)
     .lt("auction_ends_at", nowIso);
   if (error) {
-    console.error("auctions cron select", error);
+    console.error("auctions cron select", errorSummary(error));
     return NextResponse.json({ error: "db_error" }, { status: 500 });
   }
 
@@ -80,7 +81,7 @@ export async function GET(request: NextRequest) {
       .select("id")
       .single();
     if (bookErr || !booking) {
-      console.error("auctions cron booking insert", bookErr);
+      console.error("auctions cron booking insert", errorSummary(bookErr));
       continue;
     }
 
@@ -134,7 +135,7 @@ export async function GET(request: NextRequest) {
         });
       }
     } catch (err) {
-      console.error("auctions cron email", err);
+      console.error("auctions cron email", errorSummary(err));
     }
 
     finalized++;

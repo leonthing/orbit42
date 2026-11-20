@@ -1,4 +1,5 @@
 // 일반 서버 모듈 — 서버 액션 아님(보안-6). 클라이언트용은 *-actions.ts
+import { errorSummary } from "@/lib/log-safe";
 import { revalidatePath } from "next/cache";
 import { getAdminClient } from "@/lib/supabase";
 import { requireUserId } from "@/lib/db";
@@ -51,7 +52,7 @@ export async function createNativeEvent(args: {
     all_day: args.all_day ?? false,
   });
   if (error) {
-    console.error("createNativeEvent", error);
+    console.error("createNativeEvent", errorSummary(error));
     return { error: "등록에 실패했습니다." };
   }
   revalidatePath("/", "layout");

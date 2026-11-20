@@ -1,3 +1,4 @@
+import { errorSummary } from "@/lib/log-safe";
 import { getAdminClient } from "@/lib/supabase";
 import { createNotification } from "@/lib/notifications";
 
@@ -31,7 +32,7 @@ export async function expireStaleReschedules(): Promise<{
     )
     .limit(200);
   if (error) {
-    console.error("expireStaleReschedules select", error);
+    console.error("expireStaleReschedules select", errorSummary(error));
     return { expired: 0 };
   }
 
@@ -51,7 +52,7 @@ export async function expireStaleReschedules(): Promise<{
       .eq("id", b.id)
       .eq("reschedule_created_at", b.reschedule_created_at as string);
     if (clearErr) {
-      console.error("expireStaleReschedules clear", b.id, clearErr);
+      console.error("expireStaleReschedules clear", b.id, errorSummary(clearErr));
       continue;
     }
     expired += 1;
@@ -76,7 +77,7 @@ export async function expireStaleReschedules(): Promise<{
         link: `/bookings`,
       });
     } catch (err) {
-      console.error("expireStaleReschedules notify", b.id, err);
+      console.error("expireStaleReschedules notify", b.id, errorSummary(err));
     }
   }
   return { expired };
