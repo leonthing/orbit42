@@ -203,6 +203,16 @@ function UnifiedScroll({
     // 08:00 라벨은 선 가운데에 걸려 있어(-translate-y-1/2) 딱 맞춰 내리면 머리줄에 반쯤 가린다 — 12px 덜 내린다(감사 7).
     if (ref.current) ref.current.scrollTop = 8 * ROW_HEIGHT - 12;
   }, []);
+  // 휴대폰(한 화면 3일): 월요일부터 열면 오늘이 화면 밖일 수 있다 → 이번 주면 오늘, 아니면 그 주 첫날로 맞춘다(웹 점검 11/20, 묶음 A).
+  const weekKey = days[0]?.date.toISOString() ?? "";
+  const todayIdx = days.findIndex((d) => d.isToday);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || el.scrollWidth <= el.clientWidth + 1) return;
+    const col = (el.scrollWidth - 44) / Math.max(days.length, 1);
+    el.scrollLeft = todayIdx > 0 ? Math.round(todayIdx * col) : 0;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekKey, todayIdx]);
   const hasAllDay = positionedByDay.some((col) => col.some((i) => i.allDay));
   return (
     <div

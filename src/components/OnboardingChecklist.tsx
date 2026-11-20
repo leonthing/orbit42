@@ -33,8 +33,56 @@ export function OnboardingChecklist({ steps }: { steps: OnboardingStep[] }) {
 
   const nextStep = steps.find((s) => !s.done);
 
+  const dismiss = () => {
+    sessionStorage.setItem(DISMISS_KEY, "1");
+    setDismissed(true);
+  };
+
   return (
-    <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 p-4 sm:p-5">
+    <>
+    {/* 휴대폰·접힘: 한 줄(약 56px) — 캘린더 첫 화면을 덜 먹게(웹 점검 11/20, 묶음 A) */}
+    {!expanded && (
+      <div className="flex items-center gap-1 rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 py-1 pl-3 pr-1 sm:hidden">
+        <span className="shrink-0 rounded-full bg-navy-500/10 px-2 py-0.5 text-xs font-semibold text-navy-500 tabular-nums">
+          {doneCount}/{steps.length}
+        </span>
+        {nextStep ? (
+          <Link
+            href={nextStep.href}
+            className="flex min-h-11 min-w-0 flex-1 items-center gap-1 text-sm font-medium text-charcoal-200 hover:text-charcoal-100"
+          >
+            <span className="truncate">시작하기 · {nextStep.label}</span>
+            <svg className="h-3.5 w-3.5 shrink-0 text-charcoal-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+            </svg>
+          </Link>
+        ) : (
+          <span className="min-w-0 flex-1 truncate text-sm font-medium text-charcoal-200">Orbit42 시작하기</span>
+        )}
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          aria-expanded={false}
+          aria-label="전체 보기"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-charcoal-600 hover:bg-charcoal-800/50 hover:text-charcoal-300"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          onClick={dismiss}
+          aria-label="체크리스트 숨기기"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-charcoal-600 hover:bg-charcoal-800/50 hover:text-charcoal-300"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    )}
+    <div className={`rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 p-4 sm:p-5 ${expanded ? "" : "max-sm:hidden"}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-sm font-semibold text-charcoal-100">
@@ -61,10 +109,7 @@ export function OnboardingChecklist({ steps }: { steps: OnboardingStep[] }) {
         </button>
         <button
           type="button"
-          onClick={() => {
-            sessionStorage.setItem(DISMISS_KEY, "1");
-            setDismissed(true);
-          }}
+          onClick={dismiss}
           aria-label="체크리스트 숨기기"
           className="flex items-center justify-center rounded-lg p-1 text-charcoal-600 hover:bg-charcoal-800/50 hover:text-charcoal-300 max-md:h-11 max-md:w-11"
         >
@@ -81,20 +126,6 @@ export function OnboardingChecklist({ steps }: { steps: OnboardingStep[] }) {
           style={{ width: `${(doneCount / steps.length) * 100}%` }}
         />
       </div>
-
-      {/* 접힌 모바일에서는 다음 할 일 한 줄만 보여준다 */}
-      {nextStep && !expanded && (
-        <Link
-          href={nextStep.href}
-          className="mt-1.5 flex min-h-11 items-center gap-2 text-sm font-medium text-charcoal-200 hover:text-charcoal-100 sm:hidden"
-        >
-          <span className="h-4 w-4 shrink-0 rounded-full border border-charcoal-700" />
-          다음: {nextStep.label}
-          <svg className="h-3.5 w-3.5 text-charcoal-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-          </svg>
-        </Link>
-      )}
 
       <ul className={`mt-4 space-y-2 ${expanded ? "block" : "hidden sm:block"}`}>
         {steps.map((s) =>
@@ -127,5 +158,6 @@ export function OnboardingChecklist({ steps }: { steps: OnboardingStep[] }) {
         )}
       </ul>
     </div>
+    </>
   );
 }

@@ -599,6 +599,46 @@ export default function CalendarView({
     [calendarColorMap],
   );
 
+  /** 월 보기 목록의 일정 → 주간 상세와 같은 상세 창 입력. 구글 일정은 캘린더를 못 찾으면 null */
+  const eventToWeekItem = useCallback(
+    (ev: Event): WeekItem | null => {
+      let id: string;
+      if (ev.source === "google") {
+        const gcal = myCalendars.find((c) => c.id === ev.calendar_id)?.google_calendar_id;
+        if (!gcal) return null;
+        id = `${gcal}::${ev.id.startsWith("gcal_") ? ev.id.slice(5) : ev.id}`;
+      } else {
+        id = `native:${ev.id}`;
+      }
+      return {
+        kind: "event",
+        id,
+        start_at: ev.start_at,
+        end_at: ev.end_at,
+        all_day: ev.all_day,
+        title: ev.title,
+        color: getEventColor(ev),
+        tentative: !!ev.tentative,
+        travel_min: ev.travel_min ?? null,
+      };
+    },
+    [myCalendars, getEventColor],
+  );
+
+  // 휴대폰: 날짜를 고르면 그날 목록이 달력 아래(첫 화면 밖)에 붙으므로 그 목록까지 내려 준다
+  const dayListRef = useRef<HTMLDivElement>(null);
+  const pickMonthDay = (day: number) => {
+    const phone = typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches;
+    // 휴대폰은 같은 날을 다시 눌러도 풀지 않는다(오늘이 미리 골라져 있어 첫 탭에 목록이 사라졌다)
+    const next = !phone && day === selectedDay ? null : day;
+    setSelectedDay(next);
+    if (next && phone) {
+      requestAnimationFrame(() =>
+        dayListRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      );
+    }
+  };
+
   // ── Form ──
 
   const openCreateForm = (day?: number, forYear?: number, forMonth?: number) => {
@@ -1136,14 +1176,12 @@ export default function CalendarView({
                       key={i}
                       role={day ? "button" : undefined}
                       tabIndex={day ? 0 : undefined}
-                      onClick={() =>
-                        day && setSelectedDay(day === selectedDay ? null : day)
-                      }
+                      onClick={() => day && pickMonthDay(day)}
                       onKeyDown={(e) => {
                         if (!day) return;
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          setSelectedDay(day === selectedDay ? null : day);
+                          pickMonthDay(day);
                         }
                       }}
                       className={`flex h-14 flex-col items-center rounded-lg p-1 text-left text-sm transition-colors md:h-28 md:items-stretch md:p-1.5 ${
@@ -1274,7 +1312,7 @@ export default function CalendarView({
           </div>
 
           {/* Sidebar: Selected Day Events */}
-          <div className="space-y-4">
+          <div ref={dayListRef} className="space-y-4 max-md:scroll-mt-16">
             <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 p-5">
               {selectedDay ? (
                 <>
@@ -1297,6 +1335,11 @@ export default function CalendarView({
                       {selectedDayEvents.length > 0 && (
                         <EventList
                           events={selectedDayEvents}
+                          onOpen={(ev) => {
+                            const item = eventToWeekItem(ev);
+                            if (item) setDetailEvent(item);
+                            else if (ev.source !== "google") openEditForm(ev);
+                          }}
                           onEdit={openEditForm}
                           onDelete={handleDelete}
                           completed={completed}
@@ -1362,7 +1405,8 @@ export default function CalendarView({
 
       {viewMode === "week" && (
         // min-h-0 이 없으면 flex 자식이 콘텐츠 높이만큼 부풀어 스크롤이 안 잡힌다.
-        <div className="flex min-h-0 flex-1 flex-col">
+        // 휴대폰: 남는 높이만 쓰면 표가 8~13시(약 290px)로 눌린다 → 화면 높이에 맞춘 최소 높이(묶음 A)
+        <div className="flex min-h-0 flex-1 flex-col max-md:min-h-[calc(100dvh-200px)]">
           <WeekCalendar
             username={username}
             days={displayWeekDays}
@@ -2016,12 +2060,15 @@ function QuickEditPopover({
 
 function EventList({
   events,
+  onOpen,
   onEdit,
   onDelete,
   completed,
   onToggleComplete,
 }: {
   events: Event[];
+  /** 제목·시간을 누르면 상세(휴대폰은 아래 시트) — 없으면 누를 수 없다 */
+  onOpen?: (event: Event) => void;
   onEdit: (event: Event) => void;
   onDelete: (eventId: string) => void;
   completed: Set<string>;
@@ -2062,7 +2109,23 @@ function EventList({
                 )}
               </span>
             </button>
-            <div className="min-w-0 flex-1">
+            <div
+              className={`min-w-0 flex-1 ${onOpen ? "cursor-pointer" : ""}`}
+              role={onOpen ? "button" : undefined}
+              tabIndex={onOpen ? 0 : undefined}
+              aria-label={onOpen ? `${ev.title} 상세 보기` : undefined}
+              onClick={onOpen ? () => onOpen(ev) : undefined}
+              onKeyDown={
+                onOpen
+                  ? (e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onOpen(ev);
+                      }
+                    }
+                  : undefined
+              }
+            >
               <div className="flex items-center gap-1.5">
                 <p
                   className={`text-sm font-medium truncate ${
@@ -2382,13 +2445,19 @@ function EventDetailModal({
     });
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm max-md:items-end max-md:p-0"
       onClick={onClose}
     >
+      {/* 휴대폰: 아래에서 올라오는 시트(iOS 일정 상세와 같은 자리) · 데스크톱: 가운데 창 */}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${item.title} 상세`}
+        data-testid="eventDetail"
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] p-5 shadow-2xl"
+        className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] p-5 shadow-2xl max-md:max-h-[88dvh] max-md:max-w-none max-md:rounded-b-none max-md:rounded-t-2xl max-md:border-x-0 max-md:border-b-0 max-md:pb-[calc(1.25rem+env(safe-area-inset-bottom))]"
       >
+        <div className="mx-auto -mt-2 mb-3 h-1 w-10 rounded-full bg-charcoal-700 md:hidden" aria-hidden />
         <div className="flex items-start gap-3">
           <span
             className="mt-1 inline-block h-3 w-3 shrink-0 rounded-sm"
@@ -2439,6 +2508,22 @@ function EventDetailModal({
             )}
           </div>
         </div>
+
+        {!isInvite && (fullEvent?.location || fullEvent?.description) && (
+          <div className="mt-4 space-y-2">
+            {fullEvent?.location && (
+              <p className="text-sm text-charcoal-300">📍 {fullEvent.location}</p>
+            )}
+            {fullEvent?.description && (
+              <div>
+                <p className="mb-1 text-xs font-medium text-charcoal-500">메모</p>
+                <p className="whitespace-pre-wrap rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 p-3 text-sm text-charcoal-300">
+                  {fullEvent.description}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         {isInvite && invite?.description && (
           <p className="mt-4 whitespace-pre-wrap rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 p-3 text-xs text-charcoal-300">
