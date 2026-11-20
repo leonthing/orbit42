@@ -1,5 +1,6 @@
 "use server";
 
+import { googleErrorSummary, isDateOnly } from "@/lib/google-error";
 import { inclusiveAllDayEndToGoogle } from "@/lib/calendar-events";
 
 import { pickKeys } from "@/lib/pick-keys";
@@ -247,7 +248,10 @@ export async function updateGoogleEvent(
     // 종일↔시간을 바꿀 때(all_day 를 보냈을 때)는 반대쪽 칸을 null 로 비운다 — 구글 patch 는 start/end 안의
     // 칸을 합쳐서 남기므로, 안 비우면 date 와 dateTime 이 같이 남아 "Invalid start time" 으로 거절된다(개선-34 실측).
     const switching = input.all_day !== undefined;
-    if (input.all_day) {
+    // all_day 를 안 보냈어도 시작·끝이 날짜만이면 종일로 쓴다 — iOS 수정 화면은 종일 여부가 그대로면
+    // allDay 를 빼고 날짜만 보내서, dateTime:"2026-11-23" 으로 구글이 400 을 냈다(11/21).
+    const allDay = input.all_day ?? (isDateOnly(input.start_at) && isDateOnly(input.end_at));
+    if (allDay) {
       body.start = { date: input.start_at.split("T")[0], ...(switching && { dateTime: null, timeZone: null }) };
       // Orbit42 종일 끝은 그날 포함, 구글은 다음 날 — 하루 더해서 쓴다
       body.end = { date: inclusiveAllDayEndToGoogle(input.end_at.split("T")[0]), ...(switching && { dateTime: null, timeZone: null }) };
@@ -275,7 +279,7 @@ export async function updateGoogleEvent(
     );
     return { ok: true };
   } catch (err) {
-    console.error("updateGoogleEvent", err);
+    console.error("updateGoogleEvent", googleErrorSummary(err));
     return { error: "Google 일정 수정에 실패했어요. 권한이 있는지 확인해주세요." };
   }
 }
@@ -292,7 +296,7 @@ export async function deleteGoogleEvent(
     await deleteEarningsForEvents(userId, { keys: [`gcal_${eventId}`] });
     return { ok: true };
   } catch (err) {
-    console.error("deleteGoogleEvent", err);
+    console.error("deleteGoogleEvent", googleErrorSummary(err));
     return { error: "Google 일정 삭제에 실패했어요. 권한이 있는지 확인해주세요." };
   }
 }
