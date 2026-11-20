@@ -61,7 +61,24 @@ export function PeopleView({
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-4 pb-16">
-      <header className="flex items-end justify-between gap-3 pt-1">
+      {/* 휴대폰: iOS 오르빗 머리 — 늘 보이는 검색칸 → 날짜 → 큰 인사 → '나를 중심으로…' (묶음 4) */}
+      <div className="space-y-3 md:hidden" data-testid="orbitPhoneHeader">
+        <form action="/search" className="relative">
+          <svg aria-hidden className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-charcoal-500" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15Z" />
+          </svg>
+          <input
+            name="q"
+            type="search"
+            enterKeyHint="search"
+            placeholder="이름, @아이디, 예약 링크 제목"
+            aria-label="검색"
+            className="h-11 w-full rounded-xl bg-charcoal-800/50 pl-9 pr-3 text-base text-charcoal-100 placeholder:text-charcoal-500"
+          />
+        </form>
+        <Greeting name={me.name} />
+      </div>
+      <header className="flex items-end justify-between gap-3 pt-1 max-md:hidden">
         <div className="min-w-0">
           <h1 className="max-md:hidden text-2xl font-bold tracking-tight text-charcoal-50">오르빗</h1>
           <p className="mt-1 text-sm text-charcoal-400">나를 중심으로, 시간을 함께 쓰는 사람들</p>
@@ -482,5 +499,35 @@ function PlusIcon({ small = false }: { small?: boolean }) {
     <svg className={small ? "h-3.5 w-3.5" : "h-4 w-4"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
       <path strokeLinecap="round" d="M12 5v14M5 12h14" />
     </svg>
+  );
+}
+
+function greetingText(d: Date) {
+  const h = Number(d.toLocaleString("en-US", { timeZone: TZ, hour: "numeric", hourCycle: "h23" }));
+  if (h >= 5 && h < 11) return "좋은 아침이에요";
+  if (h >= 11 && h < 17) return "좋은 오후예요";
+  if (h >= 17 && h < 22) return "좋은 저녁이에요";
+  return "편안한 밤이에요";
+}
+
+/** iOS PeopleOrbitSection 의 인사 머리와 같은 문구(시간대별) */
+function Greeting({ name }: { name: string }) {
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => {
+    setNow(new Date());
+    const t = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+  if (!now) return <div className="h-[104px]" aria-hidden />;
+  return (
+    <div className="pt-1">
+      <p className="text-sm font-medium text-charcoal-500">
+        {now.toLocaleDateString("ko-KR", { timeZone: TZ, month: "long", day: "numeric", weekday: "long" })}
+      </p>
+      <h1 className="mt-1 whitespace-pre-line text-[30px] font-bold leading-tight tracking-tight text-charcoal-50">
+        {`${greetingText(now)},\n${name ? `${name}님` : "반가워요"}`}
+      </h1>
+      <p className="mt-1 text-sm text-charcoal-500">나를 중심으로, 요즘 만나는 사람들</p>
+    </div>
   );
 }

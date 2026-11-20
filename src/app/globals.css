@@ -118,3 +118,14 @@
 .post-body pre code { @apply bg-transparent p-0; }
 .post-body hr { @apply my-6 border-charcoal-800/60; }
 .post-body strong { @apply text-charcoal-50; }
+
+/* 휴대폰 글자(웹 iOS 대조 묶음 4, 11/21): 웹은 11px(2xs)을 261곳에 써서 iOS(caption2 71곳)보다 빽빽했다.
+   휴대폰에서만 2xs 를 iOS caption(12pt)으로 한 단계 키운다. xs(13)·sm(15)은 이미 iOS 와 같다. 3xs(달력 격자)는 그대로. */
+@layer utilities {
+  @media (max-width: 767px) {
+    .text-2xs {
+      font-size: 0.75rem;
+      line-height: 1rem;
+    }
+  }
+}
