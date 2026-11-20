@@ -96,6 +96,7 @@ export function PublicLinkProfile({
   rating,
   totalBookings,
   themeKey,
+  canvas,
   customLinks = [],
   photoPosts = [],
 }: {
@@ -115,6 +116,8 @@ export function PublicLinkProfile({
   rating: { average: number; count: number } | null;
   totalBookings: number;
   themeKey: string | null;
+  /** 앱 화면(AppShell) 안에서 그릴 때 테마 바탕을 직접 깐다 — 주인의 '내 공개 페이지 보기'(로그인 안 한 손님 기준이라 loggedIn=false) */
+  canvas?: boolean;
   /** 호스트가 고른 직접 링크 (개선-46) — 이미 http/https 만 걸러져 온다 */
   customLinks?: CustomLink[];
   /** 글·사진(1.10.0) 최근 공개 글 6개 — 볼 수 없거나 0개면 빈 배열(칸 없음) */
@@ -143,7 +146,7 @@ export function PublicLinkProfile({
       // 이 영역에 직접 테마 캔버스를 칠하고, 셸 안쪽 여백(px-4 py-4 sm:px-5 md:px-6 md:py-5)만큼 넓혀 테두리가 안 보이게.
       // (전엔 라이트 모드에서 어두운 테마의 밝은 글자가 흰 바탕에 놓여 이름·소개가 안 보였다)
       className={loggedIn ? "-mx-4 -my-4 min-h-[calc(100%+2rem)] px-4 py-4 sm:-mx-5 sm:px-5 md:-mx-6 md:-my-5 md:min-h-[calc(100%+2.5rem)] md:px-6 md:py-5" : undefined}
-      style={{ color: theme.text, ...(loggedIn ? { backgroundColor: theme.canvas } : {}) }}
+      style={{ color: theme.text, ...(loggedIn || canvas ? { backgroundColor: theme.canvas } : {}) }}
     >
       {/*
         배경은 body 에 직접 칠한다. 고정 레이어(z-index)로는 셸 배경에 가려질 수

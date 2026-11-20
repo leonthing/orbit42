@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { BookingChatButton, BookingChatPanel, ChatUnreadProvider } from "@/components/BookingChat";
 import { updateBookingStatus, cancelMyBooking, rescheduleMyBooking, refreshBookableOptions, proposeRescheduleAsHost, proposeRescheduleAsGuest, respondToReschedule, withdrawReschedule, changeMyBookingListState } from "@/lib/slots-actions";
 import type { BookingRow, GuestBookingRow, BookableOption } from "@/lib/slots";
+import { bookingsTabs } from "./tabs";
 import { Segmented } from "@/components/Segmented";
 import { addBookingReview } from "@/lib/reviews-actions";
 import { useToast } from "@/components/Toast";
@@ -48,7 +49,14 @@ export default function BookingsInbox({
   hostArchived = [],
   guestArchived = [],
   reviewedBookingIds = [],
+  dmOpen = false,
+  hostTop,
+  timeRequestCount = 0,
 }: {
+  dmOpen?: boolean;
+  /** 받은 예약 맨 위(시간 요청) — iOS 는 받은 예약 안 첫 섹션 */
+  hostTop?: React.ReactNode;
+  timeRequestCount?: number;
   username: string;
   hostBookings: BookingRow[];
   guestBookings: GuestBookingRow[];
@@ -59,7 +67,7 @@ export default function BookingsInbox({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const searchParams = useSearchParams();
-  const [tab, setTab] = useState<Tab | "slots">(
+  const [tab, setTab] = useState<Tab | "slots" | "chats">(
     searchParams.get("tab") === "guest" || searchParams.get("tab") === "host"
       ? (searchParams.get("tab") as Tab)
       : hostBookings.length === 0 && guestBookings.length > 0 ? "guest" : "host",
@@ -141,8 +149,8 @@ export default function BookingsInbox({
 
   return (
     <ChatUnreadProvider>
-    <div className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-4">
+    <div className="flex flex-col gap-6 max-md:gap-4">
+      <header className="flex flex-wrap items-end justify-between gap-4 max-md:hidden">
         <div>
           <h1 className="max-md:hidden text-2xl font-bold text-charcoal-100">예약</h1>
           <p className="mt-1 text-sm text-charcoal-500">
@@ -158,19 +166,33 @@ export default function BookingsInbox({
         )}
       </header>
 
-      {/* iOS 예약 탭과 같은 한 줄 세 칸 — 예약 링크는 같은 탭의 세 번째 칸 */}
+      {/* 휴대폰: iOS 처럼 세그먼트가 맨 위, 그 아래 요약 한 줄 */}
+      {tab === "host" && (
+        <p className="order-2 text-sm text-charcoal-500 md:hidden" data-testid="bookingsSummary">
+          {timeRequestCount > 0 && (
+            <>
+              시간 요청 <span className="font-semibold text-amber-500">{timeRequestCount}</span>
+              {" · "}
+            </>
+          )}
+          승인 대기 <span className={`font-semibold ${pendingCount > 0 ? "text-amber-500" : "text-charcoal-300"}`}>{pendingCount}</span>
+          {" · "}예정 <span className="font-semibold text-charcoal-300">{confirmedCount}</span>
+        </p>
+      )}
+
+      {/* iOS 예약 탭과 같은 한 줄 — 받은 예약 · 내가 한 예약 · 대화 · 예약 링크 */}
       <Segmented
+        className="max-md:order-1"
         value={tab}
-        onChange={(v) => v !== "slots" && setTab(v)}
-        items={[
-          { value: "host", label: "받은 예약" },
-          { value: "guest", label: "내가 한 예약" },
-          { value: "slots", label: "예약 링크", href: `/${username}/slots` },
-        ]}
+        onChange={(v) => (v === "host" || v === "guest") && setTab(v)}
+        items={bookingsTabs(username, dmOpen).map((t) =>
+          t.value === "host" || t.value === "guest" ? { value: t.value, label: t.label } : t,
+        )}
       />
 
       {tab === "host" ? (
-        <>
+        <div className="order-3 space-y-6">
+          {hostTop}
           <HostSection
             title="예정된 예약"
             rows={upcoming}
@@ -202,9 +224,9 @@ export default function BookingsInbox({
               onListChange={changeListState}
             />
           </ArchiveDrawer>
-        </>
+        </div>
       ) : (
-        <>
+        <div className="order-3 space-y-6">
           <GuestSection
             title="예정된 예약"
             rows={guestUpcoming}
@@ -242,7 +264,7 @@ export default function BookingsInbox({
               onListChange={changeListState}
             />
           </ArchiveDrawer>
-        </>
+        </div>
       )}
     </div>
     </ChatUnreadProvider>
@@ -441,6 +463,8 @@ function HostSection({
   // 예약 대화 — 버튼은 다른 버튼과 한 줄, 패널은 카드 아래 전체 폭(감사 10). ?chat=<id> 로 들어오면 열린 채로
   const chatParam = useSearchParams().get("chat");
   const [chatId, setChatId] = useState<string | null>(chatParam);
+  // 휴대폰: iOS 카드처럼 주 버튼(수락·거절·완료 처리)만 두고 나머지는 '⋯' 안으로
+  const [moreId, setMoreId] = useState<string | null>(null);
   return (
     <section className="space-y-3">
       {/* 보관함 안에서는 위의 '보관함 (n)' 줄이 제목 역할 */}
@@ -466,8 +490,10 @@ function HostSection({
                 }`}
               >
                 {/* 좁은 폭에서는 버튼을 아래 줄로 — 정보 칸이 넓게 (1.8.0 손질) */}
-                <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-4 gap-y-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
-                  <DateStamp iso={b.scheduled_at} />
+                <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-4 gap-y-3 max-md:grid-cols-1 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
+                  <div className="max-md:hidden">
+                    <DateStamp iso={b.scheduled_at} />
+                  </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="truncate text-sm font-semibold text-charcoal-100">
@@ -523,7 +549,7 @@ function HostSection({
                       </div>
                     )}
                     {b.message && (
-                      <p className="mt-2 rounded-lg bg-charcoal-800/40 px-3 py-2 text-xs leading-relaxed text-charcoal-400">
+                      <p className="mt-2 rounded-lg bg-charcoal-800/40 px-3 py-2 text-xs leading-relaxed text-charcoal-400 max-md:line-clamp-2">
                         {b.message}
                       </p>
                     )}
@@ -534,12 +560,12 @@ function HostSection({
                       />
                     )}
                   </div>
-                  <div className="col-span-2 flex flex-wrap gap-1 empty:hidden sm:col-span-1 sm:flex-col">
+                  <div className="col-span-2 flex flex-wrap gap-1 empty:hidden max-md:col-span-1 max-md:gap-2 sm:col-span-1 sm:flex-col">
                     {b.status === "pending" && end > new Date() && (
                       <button
                         onClick={() => update(b.id, "confirmed")}
                         disabled={pending}
-                        className="rounded-lg bg-emerald-600 px-3 py-1 text-xs max-md:min-h-11 font-semibold text-white hover:bg-emerald-500 disabled:opacity-60"
+                        className="rounded-lg bg-emerald-600 px-3 py-1 text-xs max-md:min-h-11 max-md:flex-1 max-md:text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-60"
                       >
                         {b.payment_status === "awaiting" ? "입금 확인 · 확정" : "수락"}
                       </button>
@@ -553,7 +579,7 @@ function HostSection({
                               reschedulingId === b.id ? null : b.id,
                             )
                           }
-                          className="rounded-lg border border-charcoal-700 px-3 py-1 text-xs max-md:min-h-11 text-charcoal-400 hover:border-navy-400/60 hover:text-navy-400"
+                          className={`rounded-lg border border-charcoal-700 px-3 py-1 text-xs max-md:min-h-11 text-charcoal-400 hover:border-navy-400/60 hover:text-navy-400 ${moreId === b.id ? "" : "max-md:hidden"}`}
                         >
                           시간 변경
                         </button>
@@ -563,28 +589,44 @@ function HostSection({
                       <button
                         onClick={() => update(b.id, "canceled")}
                         disabled={pending}
-                        className="rounded-lg border border-charcoal-700 px-3 py-1 text-xs max-md:min-h-11 text-charcoal-400 hover:border-navy-400/60 hover:text-navy-400"
+                        className={`rounded-lg border border-charcoal-700 px-3 py-1 text-xs max-md:min-h-11 text-charcoal-400 hover:border-navy-400/60 hover:text-navy-400 ${
+                          b.status === "pending" ? "max-md:flex-1 max-md:border-red-500/40 max-md:text-sm max-md:text-red-500" : moreId === b.id ? "" : "max-md:hidden"
+                        }`}
                       >
-                        취소
+                        {b.status === "pending" ? "거절" : "취소"}
                       </button>
                     )}
                     {b.status === "confirmed" && (
                       <button
                         onClick={() => update(b.id, "completed")}
                         disabled={pending}
-                        className="rounded-lg border border-charcoal-700 px-3 py-1 text-xs max-md:min-h-11 text-charcoal-400 hover:border-charcoal-600 hover:text-charcoal-200"
+                        className={`rounded-lg border border-charcoal-700 px-3 py-1 text-xs max-md:min-h-11 text-charcoal-400 hover:border-charcoal-600 hover:text-charcoal-200 ${
+                          end <= new Date() ? "max-md:rounded-full max-md:border-navy-500/40 max-md:text-navy-500" : moreId === b.id ? "" : "max-md:hidden"
+                        }`}
                       >
-                        완료
+                        <span className="md:hidden">{end <= new Date() ? "완료 처리" : "완료"}</span>
+                        <span className="max-md:hidden">완료</span>
                       </button>
                     )}
                     {listMode && onListChange && isFinished(b.status, b.scheduled_at) && (
-                      <ListStateButtons
-                        mode={listMode}
-                        disabled={pending}
-                        onChange={(change) => onListChange(b.id, change)}
-                      />
+                      <span className={moreId === b.id ? "contents" : "contents max-md:hidden"}>
+                        <ListStateButtons
+                          mode={listMode}
+                          disabled={pending}
+                          onChange={(change) => onListChange(b.id, change)}
+                        />
+                      </span>
                     )}
                     <BookingChatButton bookingId={b.id} open={chatId === b.id} onToggle={() => setChatId(chatId === b.id ? null : b.id)} />
+                    <button
+                      type="button"
+                      onClick={() => setMoreId(moreId === b.id ? null : b.id)}
+                      aria-label={moreId === b.id ? "다른 동작 접기" : "다른 동작"}
+                      aria-expanded={moreId === b.id}
+                      className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-charcoal-700 text-charcoal-400 md:hidden"
+                    >
+                      ⋯
+                    </button>
                   </div>
                 </div>
                 {/* 제안 배너는 행 전체 폭 — 모바일에서 버튼 열 옆 좁은 칸에 갇히지 않게 (개선-29 손질) */}

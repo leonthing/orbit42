@@ -9,11 +9,15 @@ type Props = {
   text?: string;
   /** Small variant — icon-only button for dense card UIs. */
   compact?: boolean;
+  /** 버튼 글자(기본 '공유') */
+  label?: string;
+  /** 휴대폰 프로필 [프로필 편집][프로필 공유] 처럼 칸을 꽉 채우는 알약 버튼 */
+  wide?: boolean;
 };
 
 type Target = "x" | "facebook" | "linkedin" | "instagram" | "copy";
 
-export function ShareMenu({ url, title, text, compact }: Props) {
+export function ShareMenu({ url, title, text, compact, label = "공유", wide }: Props) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState<Target | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -74,13 +78,17 @@ export function ShareMenu({ url, title, text, compact }: Props) {
   };
 
   return (
-    <div className="relative inline-block" ref={rootRef}>
+    <div className={wide ? "relative block" : "relative inline-block"} ref={rootRef}>
       <button
         type="button"
         onClick={share}
-        className={buttonClasses({ variant: "secondary", iconOnly: compact })}
-        aria-label="공유"
-        title="공유"
+        className={
+          wide
+            ? "flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full bg-navy-500/15 text-sm font-medium text-navy-600 dark:text-navy-300"
+            : buttonClasses({ variant: "secondary", iconOnly: compact })
+        }
+        aria-label={label}
+        title={label}
       >
         <svg
           className="h-4 w-4"
@@ -96,7 +104,7 @@ export function ShareMenu({ url, title, text, compact }: Props) {
             d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z"
           />
         </svg>
-        {!compact && <span>공유</span>}
+        {!compact && <span>{label}</span>}
       </button>
 
       {open && (

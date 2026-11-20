@@ -24,6 +24,9 @@ import {
   DeleteAccountSection,
 } from "./AccountDangerZone";
 import { SectionNav } from "./SectionNav";
+import { SettingsPhoneList } from "./SettingsPhoneList";
+import { HashToTab } from "./HashToTab";
+import Link from "next/link";
 import { PaymentInstructionsForm } from "./PaymentInstructionsForm";
 import { WeekStartPicker } from "./WeekStartPicker";
 import { normalizeWeekStart } from "@/lib/week-start";
@@ -61,8 +64,11 @@ export default async function SettingsPage({
   searchParams,
 }: {
   params: { username: string };
-  searchParams?: { error?: string };
+  searchParams?: { error?: string; tab?: string };
 }) {
+  // 휴대폰: iOS 처럼 목록(탭 없음) → 하위 화면(?tab=구역). 구글 연결 오류로 돌아오면 Google 화면으로.
+  const tab = searchParams?.tab ?? (searchParams?.error?.startsWith("google") ? "google" : undefined);
+  const ph = (id: string) => (tab === id ? "" : "max-md:hidden");
   const googleError = GOOGLE_ERRORS[searchParams?.error ?? ""] ?? null;
   const profile = await getProfile(params.username);
   if (!profile) notFound();
@@ -88,10 +94,18 @@ export default async function SettingsPage({
 
   return (
     <div className="w-full min-w-0 max-w-5xl">
-      <div className="mb-5">
+      <HashToTab />
+      <div className="mb-5 max-md:hidden">
         <h1 className="max-md:hidden text-2xl font-bold text-charcoal-100">설정</h1>
         <p className="mt-1 text-sm text-charcoal-500">계정 및 프로필 설정</p>
       </div>
+      {tab ? (
+        <Link href={`/${params.username}/settings`} className="mb-3 inline-flex min-h-11 items-center gap-1 text-sm font-medium text-navy-500 md:hidden">
+          ‹ 설정
+        </Link>
+      ) : (
+        <SettingsPhoneList username={params.username} cardsOpen={cardsOpenFor(userId)} />
+      )}
 
       {!profile.email_verified && (
         <div className="mb-5">
@@ -100,13 +114,15 @@ export default async function SettingsPage({
       )}
 
       <div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
-        <SectionNav items={SECTIONS} />
+        <div className="max-md:hidden">
+          <SectionNav items={SECTIONS} />
+        </div>
 
         <div className="min-w-0 flex-1 space-y-6">
           {/* 프로필: 사진 + 소개·학력·경력·관심사·SNS 를 한자리에.
               예전엔 사진만 여기 있고 나머지는 "계정" 섹션에 있어서, 소개를
               고치려는 사람이 프로필을 눌러도 찾을 수 없었다. */}
-          <section id="profile" className="scroll-mt-16 space-y-6">
+          <section id="profile" className={`scroll-mt-16 space-y-6 ${ph("profile")}`}>
             <AvatarUploader
               initialUrl={(profile.avatar_url as string | null) ?? null}
               name={profile.display_name || profile.username}
@@ -126,7 +142,7 @@ export default async function SettingsPage({
             />
           </section>
 
-          <section id="google" className="scroll-mt-16">
+          <section id="google" className={`scroll-mt-16 ${ph("google")}`}>
             {googleError && (
               <p role="alert" className="mb-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-500">
                 {googleError}
@@ -155,51 +171,51 @@ export default async function SettingsPage({
             )}
           </section>
 
-          <section id="link-theme" className="scroll-mt-16">
+          <section id="link-theme" className={`scroll-mt-16 ${ph("link-theme")}`}>
             <LinkThemePicker
               username={params.username}
               current={(profile?.link_theme as string | null) ?? null}
             />
           </section>
 
-          <section id="calendars" className="scroll-mt-16 space-y-6">
+          <section id="calendars" className={`scroll-mt-16 space-y-6 ${ph("calendars")}`}>
             <WeekStartPicker initial={weekStart} />
             <MyCalendars initial={myCalendars} googleConnected={googleConnected} />
           </section>
 
-          <section id="work-hours" className="scroll-mt-16">
+          <section id="work-hours" className={`scroll-mt-16 ${ph("work-hours")}`}>
             <WorkHoursForm initial={workHours} />
           </section>
 
-          <section id="payment" className="scroll-mt-16">
+          <section id="payment" className={`scroll-mt-16 ${ph("payment")}`}>
             <PaymentInstructionsForm initial={paymentInstructions} />
           </section>
 
-          <section id="locations" className="scroll-mt-16">
+          <section id="locations" className={`scroll-mt-16 ${ph("locations")}`}>
             <LocationBuffersForm initial={locationBuffers} />
           </section>
 
-          <section id="referral" className="scroll-mt-16">
+          <section id="referral" className={`scroll-mt-16 ${ph("referral")}`}>
             <ReferralLink username={profile.username} />
           </section>
 
-          <section id="notifications" className="scroll-mt-16">
+          <section id="notifications" className={`scroll-mt-16 ${ph("notifications")}`}>
             <NotificationPrefs initial={notifPrefs} />
           </section>
 
-          <section id="theme" className="scroll-mt-16">
+          <section id="theme" className={`scroll-mt-16 ${ph("theme")}`}>
             <ThemeSection />
           </section>
 
-          <section id="integrations" className="scroll-mt-16">
+          <section id="integrations" className={`scroll-mt-16 ${ph("integrations")}`}>
             <IntegrationTokens initial={patRows} />
           </section>
 
-          <section id="account" className="scroll-mt-16">
+          <section id="account" className={`scroll-mt-16 ${ph("account")}`}>
             <PasswordForm username={profile.username} />
           </section>
 
-          <section id="danger" className="scroll-mt-16">
+          <section id="danger" className={`scroll-mt-16 ${ph("danger")}`}>
             <DeleteAccountSection username={profile.username} />
           </section>
         </div>

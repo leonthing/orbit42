@@ -6,6 +6,7 @@ import { listLocationBuffers } from "@/lib/location-buffers";
 import { isGoogleCalendarConnected } from "../calendar/actions";
 import SlotsManager from "./SlotsManager";
 import { getUserId } from "@/lib/db";
+import { v190OpenFor } from "@/lib/dm-flags";
 import { getAdminClient } from "@/lib/supabase";
 
 export const metadata: Metadata = { title: "예약 링크" };
@@ -43,6 +44,7 @@ export default async function SlotsPage({ params }: { params: { username: string
       locationPresets={locationPresets.map((p) => p.name)}
       googleConnected={googleConnected}
       hasPaymentInstructions={hasPaymentInstructions}
+      dmOpen={v190OpenFor(userId)}
     />
   );
 }

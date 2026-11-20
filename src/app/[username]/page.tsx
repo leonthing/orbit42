@@ -17,7 +17,7 @@ import { getHostRating } from "@/lib/reviews";
 import { ProfileAvatar } from "./ProfileAvatar";
 import { FollowButton } from "./FollowButton";
 import { MessageButton, type DmButtonState } from "./MessageButton";
-import { v190Open, v190OpenFor } from "@/lib/dm-flags";
+import { v190Open } from "@/lib/dm-flags";
 import { TimeRequestButton } from "./TimeRequestButton";
 import { BlockMenu } from "./BlockMenu";
 import { isBlocked } from "@/lib/blocks";
@@ -33,7 +33,6 @@ import { ProfileCalendarCards } from "./ProfileCalendarCards";
 import { PublicLinkProfile } from "./PublicLinkProfile";
 import { displayCustomLinks } from "@/lib/custom-links";
 import { ProfileTabs } from "./ProfileTabs";
-import { MobileProfileLinks } from "./MobileProfileLinks";
 import { ShareMenu } from "@/components/ShareMenu";
 import { StoryShareButton } from "@/components/StoryShare";
 import { JsonLd } from "@/components/JsonLd";
@@ -82,8 +81,10 @@ export async function generateMetadata({
 
 export default async function PublicProfile({
   params,
+  searchParams,
 }: {
   params: { username: string };
+  searchParams?: { view?: string };
 }) {
   const profile = await getProfile(params.username);
   if (!profile) notFound();
@@ -121,6 +122,9 @@ export default async function PublicProfile({
   );
 
   const isOwner = session?.username === params.username;
+  // '내 공개 페이지 보기'(iOS) — 주인이 손님 화면을 그대로 본다. 로그인 안 한 손님 기준(공개 글만), 방문 집계 안 함.
+  const guestPreview = isOwner && searchParams?.view === "guest";
+  const asVisitor = !isOwner || guestPreview;
   // 글·사진 칸(1.10.0) — 시험 기간에는 허용 목록 계정으로 로그인한 방문자에게만, 공개 스위치 뒤엔 누구나
   let photoPosts: Awaited<ReturnType<typeof import("@/lib/posts").listPostsForWeb>> = [];
   // 블로그 카드: 옛 마크다운 글(origin 'web') 공개 글이 있을 때 (전엔 feed_posts 개수로 판단해 안 보였다)
@@ -131,11 +135,11 @@ export default async function PublicProfile({
   if (session) viewerUid = ((await db.from("users").select("id").eq("username", session.username).maybeSingle()).data?.id as string | undefined) ?? null;
   {
     const { postsVisibleTo, postsOpenFor } = await import("@/lib/posts-access");
-    postsUnified = isOwner ? postsOpenFor(viewerUid) : postsVisibleTo(viewerUid);
+    postsUnified = guestPreview ? postsVisibleTo(null) : isOwner ? postsOpenFor(viewerUid) : postsVisibleTo(viewerUid);
   }
-  if (!isOwner && authorId) {
+  if (asVisitor && authorId) {
     const { listPostsForWeb } = await import("@/lib/posts");
-    const viewerId = viewerUid;
+    const viewerId = guestPreview ? null : viewerUid;
     const [pp, wp] = await Promise.all([
       listPostsForWeb(viewerId, authorId, 7), // 고정 글 1 + 칸 6
       db.from("blog_posts").select("id", { count: "exact", head: true }).eq("user_id", authorId).eq("origin", "web").eq("published", true),
@@ -153,7 +157,7 @@ export default async function PublicProfile({
     }
   }
   // 링크트리형 화면에서 "캘린더 보기" 카드를 띄울지 — 방문자에게 보이는 캘린더가 있는지
-  const hasPublicCalendar = !isOwner
+  const hasPublicCalendar = asVisitor
     ? (await listVisibleCalendars(params.username)).length > 0
     : false;
 
@@ -244,12 +248,21 @@ export default async function PublicProfile({
 
   // 방문자에게는 SNS 바이오에 걸어두기 좋은 링크트리형 화면을 보여준다.
   // (소유자는 아래의 대시보드 화면을 그대로 쓴다)
-  if (!isOwner) {
+  if (asVisitor) {
     return (
       <>
         <JsonLd data={[personSchema, breadcrumbSchema]} />
-        {/* 방문 흐름 ① 링크(프로필) 페이지 열람 — 본인 제외, 횟수만 (개선-32) */}
-        <FunnelBeacon step="profile_view" hostUsername={params.username} />
+        {guestPreview ? (
+          <div className="mb-3 flex items-center justify-between rounded-xl bg-navy-500/10 px-4 py-2 text-sm text-navy-600 dark:text-navy-300" data-testid="guestPreviewHint">
+            손님에게 이렇게 보여요
+            <Link href={`/${params.username}`} className="min-h-9 py-2 font-semibold">
+              돌아가기
+            </Link>
+          </div>
+        ) : (
+          /* 방문 흐름 ① 링크(프로필) 페이지 열람 — 본인 제외, 횟수만 (개선-32) */
+          <FunnelBeacon step="profile_view" hostUsername={params.username} />
+        )}
         <PublicLinkProfile
           username={params.username}
           displayName={profile.display_name || profile.username}
@@ -272,11 +285,12 @@ export default async function PublicProfile({
           hasPosts={hasWebPosts && photoPosts.length === 0}
           postsLabel={postsUnified ? "글·사진" : "블로그"}
           photoPosts={photoPosts.map(toGridPost)}
-          loggedIn={!!session}
-          viewerFollowing={viewerFollowing}
+          loggedIn={guestPreview ? false : !!session}
+          viewerFollowing={guestPreview ? false : viewerFollowing}
           rating={hostRating}
           totalBookings={value?.total_bookings ?? 0}
           themeKey={(profile.link_theme as string | null) ?? null}
+          canvas={guestPreview}
           customLinks={displayCustomLinks((profile as { custom_links?: unknown }).custom_links)}
         />
       </>
@@ -286,6 +300,8 @@ export default async function PublicProfile({
   return (
     <div className="space-y-6">
       <JsonLd data={[personSchema, breadcrumbSchema]} />
+      {/* 휴대폰(주인): iOS 처럼 머리 카드 안에 이름·소개·태그·팔로잉/팔로워 */}
+      <div className="space-y-6 max-md:space-y-3 max-md:rounded-2xl max-md:bg-[rgb(var(--bg-surface))] max-md:p-4">
       {/* Identity block: avatar + name/handle/stats, actions on their own row */}
       <header className="space-y-4">
         <div className="flex min-w-0 items-center gap-3 sm:gap-4">
@@ -338,7 +354,7 @@ export default async function PublicProfile({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className={`flex flex-wrap items-center gap-2 ${isOwner ? "max-md:hidden" : ""}`}>
           {!isOwner && (
             <>
               <FollowButton
@@ -426,9 +442,74 @@ export default async function PublicProfile({
         </section>
       )}
 
-      {isOwner && <MobileProfileLinks username={params.username} dmOpen={v190OpenFor(authorId)} postsOpen={postsUnified} />}
+      </div>
+
+      {/* 휴대폰(주인) — iOS 1.10.0 프로필 순서: [프로필 편집][프로필 공유] → 내 공개 페이지 보기 → 타임라인 → 글·사진 → 내 캘린더 → 내 예약 링크.
+          탐색·서비스 메뉴·로그아웃은 설정 목록으로 옮겼다(PO 11/21). 아래 홈/예약 링크/포스트 탭은 휴대폰에서 숨김. */}
+      {isOwner && (
+        <div className="space-y-3 md:hidden" data-testid="phoneProfile">
+          <div className="grid grid-cols-2 gap-2">
+            <Link
+              href={`/${params.username}/settings?tab=profile`}
+              className="flex min-h-11 items-center justify-center gap-1.5 rounded-full bg-charcoal-800/50 text-sm font-medium text-charcoal-100"
+            >
+              ✎ 프로필 편집
+            </Link>
+            <ShareMenu
+              url={profileUrl}
+              title={`${profile.display_name || profile.username} (@${profile.username}) | Orbit42`}
+              text={profile.bio || `${profile.display_name || profile.username}님의 시간을 Orbit42에서 예약해보세요`}
+              label="프로필 공유"
+              wide
+            />
+          </div>
+          {[
+            { href: `/${params.username}?view=guest`, icon: "👁", label: "내 공개 페이지 보기", sub: "링크를 받은 사람에게 보이는 화면" },
+            { href: `/${params.username}/timeline`, icon: "🗂", label: "타임라인", sub: "완료한 일정과 팔로잉의 기록" },
+            ...(postsUnified
+              ? [{ href: `/${params.username}/blog`, icon: "🖼", label: "글·사진", sub: "작업 사진과 소식을 올려요" }]
+              : []),
+          ].map((r) => (
+            <Link key={r.href} href={r.href} className="flex min-h-14 items-center gap-3 rounded-2xl bg-[rgb(var(--bg-surface))] px-4 py-3">
+              <span aria-hidden className="text-lg">{r.icon}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold text-charcoal-100">{r.label}</span>
+                <span className="block truncate text-xs text-charcoal-500">{r.sub}</span>
+              </span>
+              <span aria-hidden className="text-charcoal-500">›</span>
+            </Link>
+          ))}
+          {/* '내 캘린더 · 관리' 머리는 ProfileCalendarCards 가 그린다 */}
+          <div className="pt-2">
+            <ProfileCalendarCards username={params.username} isOwner />
+          </div>
+          <h2 className="pt-2 text-sm font-semibold text-charcoal-400">내 예약 링크</h2>
+          {slots.length === 0 ? (
+            <Link href={`/${params.username}/slots`} className="block rounded-2xl bg-[rgb(var(--bg-surface))] px-4 py-6 text-center text-sm text-charcoal-500">
+              아직 열어 둔 시간이 없어요 · 예약 링크 만들기
+            </Link>
+          ) : (
+            <ul className="divide-y divide-charcoal-800/40 overflow-hidden rounded-2xl bg-[rgb(var(--bg-surface))]">
+              {slots.map((sl) => (
+                <li key={sl.slug}>
+                  <Link href={`/${params.username}/slots`} className="flex min-h-14 items-center gap-3 px-4 py-3">
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium text-charcoal-100">{sl.title}</span>
+                      <span className="block text-xs text-charcoal-500">
+                        {sl.duration_min}분 · {sl.price_cents > 0 ? `₩${Math.round(sl.price_cents / 100).toLocaleString("ko-KR")}` : "무료"}
+                      </span>
+                    </span>
+                    <span aria-hidden className="text-charcoal-500">›</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       {isOwner ? (
+        <div className="max-md:hidden">
         <ProfileTabs
           tabs={[
             { key: "overview", label: "홈" },
@@ -566,6 +647,7 @@ export default async function PublicProfile({
             )
           }
         />
+        </div>
       ) : (
         <>
           {slots.length > 0 && (
@@ -614,7 +696,7 @@ export default async function PublicProfile({
         </>
       )}
 
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className={`grid gap-3 md:grid-cols-2 ${isOwner ? "max-md:hidden" : ""}`}>
         <Link
           href={`/${params.username}/c`}
           className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5 hover:border-charcoal-700"
@@ -636,7 +718,7 @@ export default async function PublicProfile({
       </div>
 
       {experience.length > 0 && (
-        <section className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30">
+        <section className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 max-md:hidden">
           <div className="border-b border-charcoal-800/40 px-5 py-3">
             <h2 className="text-sm font-semibold text-charcoal-200">경력</h2>
           </div>
@@ -693,7 +775,7 @@ export default async function PublicProfile({
       )}
 
       {education.length > 0 && (
-        <section className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30">
+        <section className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 max-md:hidden">
           <div className="border-b border-charcoal-800/40 px-5 py-3">
             <h2 className="text-sm font-semibold text-charcoal-200">학력</h2>
           </div>

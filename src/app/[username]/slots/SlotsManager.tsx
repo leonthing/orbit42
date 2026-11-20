@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { SITE } from "@/lib/constants";
 import { Segmented } from "@/components/Segmented";
+import { bookingsTabs } from "../bookings/tabs";
 import { StoryShareButton } from "@/components/StoryShare";
 import { slotTypeLabel } from "@/lib/constants";
 import { useState, useTransition } from "react";
@@ -43,7 +44,9 @@ export default function SlotsManager({
   locationPresets,
   googleConnected,
   hasPaymentInstructions,
+  dmOpen = false,
 }: {
+  dmOpen?: boolean;
   username: string;
   initial: Row[];
   myCalendars: Calendar[];
@@ -80,9 +83,7 @@ export default function SlotsManager({
       <Segmented
         value="slots"
         items={[
-          { value: "host", label: "받은 예약", href: `/${username}/bookings?tab=host` },
-          { value: "guest", label: "내가 한 예약", href: `/${username}/bookings?tab=guest` },
-          { value: "slots", label: "예약 링크", href: `/${username}/slots` },
+          ...bookingsTabs(username, dmOpen),
         ]}
       />
       <header className="flex flex-wrap items-start justify-between gap-4">
