@@ -19,7 +19,10 @@ import {
 import { getValueStats } from "@/lib/value-stats";
 import { getTimeAssetSummary } from "@/lib/time-asset";
 import { listCalendarGoals } from "@/lib/calendar-goals";
-import { TimeAssetDashboard } from "./TimeAssetDashboard";
+import { FunnelCard, LastWeekCard, TimeAssetDashboard } from "./TimeAssetDashboard";
+import { EarnCard, MoreToggle, RatingsCard } from "./ReportPhone";
+import { ratingSummary } from "@/lib/event-annotations";
+import { listMyCalendars } from "@/lib/calendars";
 import { getProfile } from "@/lib/auth";
 import { TimeAssetCard } from "./TimeAssetCard";
 
@@ -83,7 +86,7 @@ export default async function InsightsPage({
   const isCurrent = weekKey(weekStart) === weekKey(thisWeek);
 
   const workHours = await getWorkHours(userId);
-  const [insights, trend, valueStats, profile, assetSummary, goals] =
+  const [insights, trend, valueStats, profile, assetSummary, goals, ratings, myCalendars] =
     await Promise.all([
       getWeekInsights(userId, weekStart, workHours),
       getWeeklyTrend(userId, 4, workHours, new Date()),
@@ -91,7 +94,10 @@ export default async function InsightsPage({
       getProfile(params.username),
       getTimeAssetSummary(userId, params.username).catch(() => null),
       listCalendarGoals(userId).catch(() => []),
+      ratingSummary(userId).catch(() => null),
+      listMyCalendars().catch(() => []),
     ]);
+  const ratingCalendars = myCalendars.map((c) => ({ id: c.id, name: c.name, color: c.color }));
 
   const hasWorkingHours = insights.working_hours_total > 0;
   const utilization = hasWorkingHours
@@ -113,6 +119,20 @@ export default async function InsightsPage({
 
   return (
     <div className="space-y-6">
+      {/* 휴대폰: iOS 리포트 순서 — 번 돈(주/월/년) → 판매 현황 → 지난주 리포트 → 만족도 → 더 보기 */}
+      {assetSummary && (
+        <div className="space-y-3 md:hidden" data-testid="reportPhoneTop">
+          <EarnCard
+            periods={assetSummary.business.periods}
+            hasSalary={assetSummary.business.salary?.monthlyKrw != null}
+            monthLabel={assetSummary.business.monthLabel}
+          />
+          {assetSummary.business.funnel && <FunnelCard funnel={assetSummary.business.funnel} username={params.username} />}
+          <LastWeekCard report={assetSummary.report} />
+          <RatingsCard summary={ratings} calendars={ratingCalendars} />
+        </div>
+      )}
+      <MoreToggle>
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="max-md:hidden text-2xl font-bold text-charcoal-100">리포트</h1>
@@ -149,6 +169,10 @@ export default async function InsightsPage({
           username={params.username}
         />
       )}
+
+      <div className="max-md:hidden">
+        <RatingsCard summary={ratings} calendars={ratingCalendars} />
+      </div>
 
       <h2 className="pt-2 text-sm font-semibold text-charcoal-400">주간 상세</h2>
 
@@ -348,6 +372,7 @@ export default async function InsightsPage({
           하면 과거 일정도 반영돼요.
         </p>
       </div>
+      </MoreToggle>
     </div>
   );
 }

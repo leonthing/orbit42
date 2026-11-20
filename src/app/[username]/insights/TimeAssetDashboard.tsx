@@ -24,17 +24,19 @@ function hours(value: number) {
   return `${Math.round(value * 10) / 10}`;
 }
 
-function Card({
+export function Card({
   title,
   action,
   children,
+  className = "",
 }: {
   title?: string;
   action?: React.ReactNode;
   children: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <section className="rounded-xl border border-charcoal-800/50 bg-[rgb(var(--bg-surface))] p-5">
+    <section className={`rounded-xl border border-charcoal-800/50 bg-[rgb(var(--bg-surface))] p-5 ${className}`}>
       {(title || action) && (
         <div className="mb-3 flex items-center justify-between">
           {title && (
@@ -86,17 +88,13 @@ export function TimeAssetDashboard({
   const monthStat = business.periods.month;
   const maxEarn = Math.max(1, ...monthStat.trend.map((e) => e.krw));
   const funnel = business.funnel;
-  const soldRatio =
-    funnel && funnel.openHours + funnel.bookedHours > 0
-      ? funnel.bookedHours / (funnel.openHours + funnel.bookedHours)
-      : 0;
   const report = summary.report;
   const year = summary.yearRemaining;
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       {/* 이번 달 시간으로 번 돈 — 앱 리포트와 같은 세 갈래·합계 (1.8.0) */}
-      <Card title="이번 달 시간으로 번 돈">
+      <Card title="이번 달 시간으로 번 돈" className="max-md:hidden">
         <p className="text-3xl font-bold tracking-tight text-charcoal-100">
           {won(monthStat.totalKrw)}
         </p>
@@ -157,45 +155,7 @@ export function TimeAssetDashboard({
       </Card>
 
       {/* 이번 주 판매 현황 */}
-      {funnel && (
-        <Card
-          title="이번 주 판매 현황"
-          action={
-            <span
-              className={`text-xs font-semibold ${soldRatio > 0 ? "text-emerald-400" : "text-charcoal-500"}`}
-            >
-              {Math.round(soldRatio * 100)}% 판매
-            </span>
-          }
-        >
-          <Bar ratio={soldRatio} color="rgb(52 211 153)" />
-          <div className="mt-3 flex items-start justify-between text-sm">
-            <div>
-              <p className="text-xs text-charcoal-500">열린 시간</p>
-              <p className="font-semibold text-charcoal-100">
-                {hours(funnel.openHours)}시간
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-charcoal-500">예약됨</p>
-              <p className="font-semibold text-charcoal-100">
-                {hours(funnel.bookedHours)}시간 · {won(funnel.bookedKrw)}
-              </p>
-            </div>
-          </div>
-          {funnel.unsoldValueKrw > 0 && (
-            <p className="mt-3 flex items-center justify-between gap-2 text-xs text-amber-400">
-              아직 안 팔린 시간 {won(funnel.unsoldValueKrw)}어치
-              <Link
-                href={`/${username}`}
-                className="rounded-full bg-navy-500/15 px-2.5 py-1 font-semibold text-navy-400"
-              >
-                프로필 공유
-              </Link>
-            </p>
-          )}
-        </Card>
-      )}
+      {funnel && <FunnelCard funnel={funnel} username={username} className="max-md:hidden" />}
 
       {/* 목표 */}
       {goals.length > 0 && (
@@ -276,33 +236,7 @@ export function TimeAssetDashboard({
       )}
 
       {/* 지난주 리포트 */}
-      <Card title="지난주 리포트">
-        <dl className="space-y-2 text-sm">
-          {report.earnedKrw != null && (
-            <ReportRow
-              label="수입"
-              value={won(report.earnedKrw)}
-              delta={report.deltaEarnedKrw}
-              positiveIsGood
-              format={won}
-            />
-          )}
-          <ReportRow
-            label="투자 시간"
-            value={`${hours(report.investHours)}시간`}
-            delta={report.deltaInvestHours}
-            positiveIsGood
-            format={(v) => `${hours(v)}시간`}
-          />
-          <ReportRow
-            label="잃어버린 시간"
-            value={`${hours(report.lostHours)}시간`}
-            delta={report.deltaLostHours}
-            positiveIsGood={false}
-            format={(v) => `${hours(v)}시간`}
-          />
-        </dl>
-      </Card>
+      <LastWeekCard report={report} className="max-md:hidden" />
 
       {/* 이번 주 시간 사용 (버킷) */}
       <Card title="이번 주 시간 사용">
@@ -416,5 +350,94 @@ function ReportRow({
         )}
       </dd>
     </div>
+  );
+}
+
+type Summary = TimeAssetSummary;
+
+/** 이번 주 판매 현황 — 리포트 휴대폰 첫 카드들(iOS 순서)과 데스크톱 격자에서 같이 쓴다 */
+export function FunnelCard({
+  funnel,
+  username,
+  className = "",
+}: {
+  funnel: NonNullable<Summary["business"]["funnel"]>;
+  username: string;
+  className?: string;
+}) {
+  const soldRatio =
+    funnel.openHours + funnel.bookedHours > 0 ? funnel.bookedHours / (funnel.openHours + funnel.bookedHours) : 0;
+  return (
+        <Card
+          className={className}
+          title="이번 주 판매 현황"
+          action={
+            <span
+              className={`text-xs font-semibold ${soldRatio > 0 ? "text-emerald-400" : "text-charcoal-500"}`}
+            >
+              {Math.round(soldRatio * 100)}% 판매
+            </span>
+          }
+        >
+          <Bar ratio={soldRatio} color="rgb(52 211 153)" />
+          <div className="mt-3 flex items-start justify-between text-sm">
+            <div>
+              <p className="text-xs text-charcoal-500">열린 시간</p>
+              <p className="font-semibold text-charcoal-100">
+                {hours(funnel.openHours)}시간
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-charcoal-500">예약됨</p>
+              <p className="font-semibold text-charcoal-100">
+                {hours(funnel.bookedHours)}시간 · {won(funnel.bookedKrw)}
+              </p>
+            </div>
+          </div>
+          {funnel.unsoldValueKrw > 0 && (
+            <p className="mt-3 flex items-center justify-between gap-2 text-xs text-amber-400">
+              아직 안 팔린 시간 {won(funnel.unsoldValueKrw)}어치
+              <Link
+                href={`/${username}`}
+                className="rounded-full bg-navy-500/15 px-2.5 py-1 font-semibold text-navy-400"
+              >
+                프로필 공유
+              </Link>
+            </p>
+          )}
+        </Card>
+  );
+}
+
+/** 지난주 리포트 */
+export function LastWeekCard({ report, className = "" }: { report: Summary["report"]; className?: string }) {
+  return (
+      <Card title="지난주 리포트" className={className}>
+        <dl className="space-y-2 text-sm">
+          {report.earnedKrw != null && (
+            <ReportRow
+              label="수입"
+              value={won(report.earnedKrw)}
+              delta={report.deltaEarnedKrw}
+              positiveIsGood
+              format={won}
+            />
+          )}
+          <ReportRow
+            label="투자 시간"
+            value={`${hours(report.investHours)}시간`}
+            delta={report.deltaInvestHours}
+            positiveIsGood
+            format={(v) => `${hours(v)}시간`}
+          />
+          <ReportRow
+            label="잃어버린 시간"
+            value={`${hours(report.lostHours)}시간`}
+            delta={report.deltaLostHours}
+            positiveIsGood={false}
+            format={(v) => `${hours(v)}시간`}
+          />
+        </dl>
+      </Card>
   );
 }

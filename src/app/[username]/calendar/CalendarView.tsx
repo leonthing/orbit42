@@ -96,6 +96,12 @@ type ViewMode = "life" | "year" | "quarter" | "month" | "week" | "day";
 const VIEW_KEY = "orbit42.calendarView";
 const VIEW_MODES: ViewMode[] = ["life", "year", "quarter", "month", "week", "day"];
 const isPhone = () => window.matchMedia("(max-width: 767px)").matches;
+/** 휴대폰에서 달을 옮길 때 고를 날 — 이번 달이면 오늘, 아니면 1일. 데스크톱은 예전처럼 비움(null). */
+function phoneDefaultDay(y: number, m: number): number | null {
+  if (typeof window === "undefined" || !isPhone()) return null;
+  const t = new Date();
+  return t.getFullYear() === y && t.getMonth() === m ? t.getDate() : 1;
+}
 
 /** ISO 8601 week number (Monday-start) */
 function getISOWeekNumber(date: Date): number {
@@ -503,7 +509,8 @@ export default function CalendarView({
       }
       setYear(newYear);
       setMonth(newMonth);
-      setSelectedDay(null);
+      // 휴대폰은 iOS 처럼 늘 한 날을 골라 둔다(이번 달이면 오늘, 아니면 1일) — 아래 목록이 비지 않게
+      setSelectedDay(phoneDefaultDay(newYear, newMonth));
       fetchEvents(newYear, newMonth);
     },
     [month, year, fetchEvents],
@@ -1858,7 +1865,7 @@ export default function CalendarView({
           onMonthClick={(m) => {
             setMonth(m);
             setViewMode("month");
-            setSelectedDay(null);
+            setSelectedDay(phoneDefaultDay(year, m));
             fetchEvents(year, m);
           }}
         />
@@ -2175,9 +2182,6 @@ export default function CalendarView({
           }}
         />
       )}
-      {/* 휴대폰: 이 상자의 내용이 높이를 넘쳐 main 의 아래 여백이 스크롤 범위에 안 들어간다 —
-          마지막 일정이 탭 막대 뒤에 갇히지 않게 여백을 안에 둔다(11/21) */}
-      <div className="h-24 shrink-0 md:hidden" aria-hidden />
     </div>
   );
 }

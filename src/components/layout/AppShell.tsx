@@ -68,8 +68,10 @@ export async function AppShell({
             }
           >
             {/* h-full 이라야 캘린더처럼 "화면을 채우는" 페이지가 flex-1 로
-                남은 높이를 가져갈 수 있다. 짧은 페이지에는 영향이 없다. */}
-            <div className="h-full w-full px-4 py-4 sm:px-5 md:px-6 md:py-5">
+                남은 높이를 가져갈 수 있다(데스크톱). 휴대폰은 h-full 이면 긴 내용이 이 상자를 넘쳐
+                main 의 아래 여백(탭 막대 자리)이 내용 뒤에 붙지 않아 마지막 줄이 탭 막대 뒤에 갇혔다 —
+                휴대폰은 내용만큼 늘어나게(min-h-full) 한다(11/21). */}
+            <div className="h-full w-full px-4 py-4 max-md:h-auto max-md:min-h-full sm:px-5 md:px-6 md:py-5">
               {children}
             </div>
           </main>
