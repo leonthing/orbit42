@@ -963,7 +963,7 @@ function ActionTile({
       className={`flex items-center justify-center rounded-lg border px-2 py-2.5 text-center text-xs font-medium transition-colors ${
         highlight
           ? "border-navy-400/40 bg-navy-400/10 text-navy-600 hover:bg-navy-400/20 dark:text-navy-300"
-          : "border-charcoal-800/60 bg-charcoal-900/30 text-charcoal-700 hover:border-charcoal-700 hover:text-charcoal-100 dark:text-charcoal-300"
+          : "border-charcoal-800/60 bg-charcoal-900/30 text-charcoal-300 hover:border-charcoal-700 hover:text-charcoal-100"
       }`}
     >
       {label}

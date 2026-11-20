@@ -33,7 +33,7 @@ export function VerifyEmailBanner({
           <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
             이메일 확인이 필요해요
           </p>
-          <p className="mt-0.5 text-xs text-amber-800/80 dark:text-amber-200/80">
+          <p className="mt-0.5 text-xs text-amber-800 dark:text-amber-200/80">
             {email ? (
               <>
                 <span className="font-medium">{email}</span>로 보낸 확인 메일의
