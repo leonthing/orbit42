@@ -381,6 +381,9 @@ export default function CalendarView({
   );
 
   const today = useMemo(() => new Date(), []);
+  // 일정을 만들고·고치고·지운 뒤 주·하루 보기 격자도 다시 받는다. weekDays 는 처음 서버 값으로만
+  // 채워지고 router.refresh() 로는 바뀌지 않아, 새 일정이 격자에 안 보였다(TWA 점검 11/20).
+  const refreshWeek = () => refetchWeekDays(new Date(year, month, selectedDay ?? today.getDate()));
   const isCurrentMonth = year === today.getFullYear() && month === today.getMonth();
   const days = getCalendarDays(year, month, weekStart);
 
@@ -792,6 +795,7 @@ export default function CalendarView({
           const data = await getEvents(year, month, selectedCalendars);
           setEvents(data);
           router.refresh();
+          refreshWeek();
           setEditingEvent(created);
           setPendingParticipants([]);
           toast.error(
@@ -804,6 +808,7 @@ export default function CalendarView({
       setEvents(data);
       // Also refresh week view data so the detail modal reflects latest.
       router.refresh();
+      refreshWeek();
       closeForm();
     });
   };
@@ -1614,6 +1619,7 @@ export default function CalendarView({
             setDetailEvent(null);
             await fetchEvents(year, month);
             router.refresh();
+            refreshWeek();
           }}
           onClose={() => setDetailEvent(null)}
         />
@@ -1931,6 +1937,7 @@ export default function CalendarView({
             setQuickEdit(null);
             await fetchEvents(year, month);
             router.refresh();
+            refreshWeek();
           }}
           onOpenFull={() => {
             const ev = quickEdit.event;
@@ -1941,6 +1948,7 @@ export default function CalendarView({
             setQuickEdit(null);
             await fetchEvents(year, month);
             router.refresh();
+            refreshWeek();
           }}
         />
       )}
