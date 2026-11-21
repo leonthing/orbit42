@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LineIcon } from "@/components/LineIcon";
 import { PostOwnerMenu } from "@/components/posts/PostOwnerMenu";
 
 export type GridPost = {
@@ -53,12 +54,12 @@ export function PhotoPostGrid({
                 </span>
               )}
               <span className="absolute right-1.5 top-1.5 flex gap-1 text-2xs font-semibold text-white drop-shadow">
-                {p.pinned && <span aria-label="고정됨">📌</span>}
+                {p.pinned && <LineIcon name="pin" label="고정됨" className="h-3.5 w-3.5" />}
                 {p.photoCount > 1 && <span aria-label={`사진 ${p.photoCount}장`}>⧉</span>}
                 {p.draft ? (
                   <span className="rounded bg-black/60 px-1">임시 저장</span>
                 ) : (
-                  !p.isPublic && <span aria-label="나만 보기">🔒</span>
+                  !p.isPublic && <LineIcon name="lock" label="나만 보기" className="h-3.5 w-3.5" />
                 )}
                 {p.hidden && <span aria-label="숨겨짐">⊘</span>}
               </span>

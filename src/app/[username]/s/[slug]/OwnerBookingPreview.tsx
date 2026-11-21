@@ -1,5 +1,6 @@
 "use client";
 
+import { LineIcon } from "@/components/LineIcon";
 import { useEffect, useState } from "react";
 import { refreshBookableOptions } from "@/lib/slots-actions";
 import type { BookableOption } from "@/lib/slots";
@@ -70,7 +71,7 @@ export default function OwnerBookingPreview({
                       : "border-charcoal-800/60 bg-charcoal-800/20 text-charcoal-300 hover:border-charcoal-700"
                   }`}
                 >
-                  📍 {loc}
+                  <LineIcon name="mapPin" /> {loc}
                 </button>
               );
             })}

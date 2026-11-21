@@ -1,5 +1,6 @@
 "use client";
 
+import { LineIcon } from "@/components/LineIcon";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { bookSlot, refreshBookableOptions } from "@/lib/slots-actions";
@@ -223,7 +224,7 @@ export default function BookingForm({
             <p className="mt-0.5 text-xs text-charcoal-400">{whenLabel}</p>
           )}
           {selectedLocation && (
-            <p className="mt-0.5 text-xs text-charcoal-400">📍 {selectedLocation}</p>
+            <p className="mt-0.5 text-xs text-charcoal-400"><LineIcon name="mapPin" /> {selectedLocation}</p>
           )}
           <p className="mt-3 text-xs text-charcoal-500">
             {payment
@@ -317,7 +318,7 @@ export default function BookingForm({
                       : "border-charcoal-800/60 bg-charcoal-800/20 text-charcoal-300 hover:border-charcoal-700"
                   }`}
                 >
-                  📍 {loc}
+                  <LineIcon name="mapPin" /> {loc}
                 </button>
               );
             })}

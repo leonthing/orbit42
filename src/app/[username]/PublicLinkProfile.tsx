@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LineIcon } from "@/components/LineIcon";
 import { AppStoreAwareLink } from "@/components/AppStoreAwareLink";
 import { FollowButton } from "./FollowButton";
 import type { SocialLinks } from "@/lib/auth";
@@ -340,7 +341,7 @@ export function PublicLinkProfile({
                 )}
                 <span className="flex min-w-0 flex-1 flex-col justify-center gap-1 px-4 py-3">
                   <span className="text-2xs font-semibold" style={{ color: theme.accent }}>
-                    📌 고정한 글
+                    <LineIcon name="pin" /> 고정한 글
                   </span>
                   <span className="line-clamp-2 text-sm font-semibold">{photoPosts[0].title || photoPosts[0].body.replace(/[#>*_~`[\]()-]/g, "").slice(0, 60) || "사진 글"}</span>
                 </span>
