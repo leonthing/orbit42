@@ -1,6 +1,7 @@
 import { hiddenFrom, PRIVATE_PROFILE_METADATA } from "@/lib/profile-privacy";
 import { PrivateProfileScreen } from "@/components/PrivateProfileScreen";
 import { safeSocialLinks } from "@/lib/social-links";
+import { socialIconFor } from "@/components/SocialIcon";
 import { toGridPost } from "@/components/posts/PhotoPostGrid";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -438,21 +439,29 @@ export default async function PublicProfile({
               ))}
             </div>
           )}
+          {/* iOS 프로필 소셜 줄과 같게: 단색 아이콘, 34px 동그라미(은은한 채움), 누르는 영역 44px(11/21 Leo) */}
           {Object.values(socialLinks).some(Boolean) && (
-            <div className="flex flex-wrap gap-2">
+            <div className="-ml-[5px] flex flex-wrap items-center" data-testid="profileSocials">
               {Object.entries(socialLinks)
                 .filter(([, v]) => !!v)
-                .map(([k, v]) => (
-                  <a
-                    key={k}
-                    href={v as string}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-lg border border-charcoal-300 bg-charcoal-800/20 px-3 py-1.5 text-xs font-semibold text-charcoal-200 transition-colors hover:border-navy-400/70 hover:text-navy-400 dark:border-charcoal-700 dark:hover:text-navy-300"
-                  >
-                    {k.charAt(0).toUpperCase() + k.slice(1)}
-                  </a>
-                ))}
+                .map(([k, v]) => {
+                  const { label, icon } = socialIconFor(k, v as string);
+                  return (
+                    <a
+                      key={k}
+                      href={v as string}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={label}
+                      title={label}
+                      className="group flex h-11 w-11 items-center justify-center"
+                    >
+                      <span className="flex h-[34px] w-[34px] items-center justify-center rounded-full bg-black/[0.08] text-navy-500 transition-colors group-hover:bg-black/[0.14] dark:bg-white/[0.08] dark:text-navy-300 dark:group-hover:bg-white/[0.14] [&>svg]:h-[18px] [&>svg]:w-[18px]">
+                        {icon}
+                      </span>
+                    </a>
+                  );
+                })}
             </div>
           )}
         </section>
