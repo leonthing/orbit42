@@ -15,6 +15,19 @@ export default async function Image({
 }) {
   const profile = await getProfile(params.username);
 
+  // 비공개: 세션이 없는 공유 미리보기라 늘 일반 Orbit42 카드(이름·사진·소개·숫자 0) — lib/profile-privacy
+  if (profile?.is_private) {
+    return new ImageResponse(
+      (
+        <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#0a0a0f", color: "#f5f5f5" }}>
+          <div style={{ fontSize: 72, fontWeight: 700 }}>Orbit42</div>
+          <div style={{ marginTop: 16, fontSize: 32, color: "#a3a3a3" }}>시간을 거래하는 링크 페이지</div>
+        </div>
+      ),
+      { ...size },
+    );
+  }
+
   // 사용자가 직접 올린 공유 헤더 이미지가 있으면 명함 카드 대신 그 이미지로.
   const customShareImage = (profile?.share_image_url as string | null) || null;
   if (customShareImage) {

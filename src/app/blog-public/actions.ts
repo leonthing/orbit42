@@ -27,6 +27,8 @@ export async function getPublishedPosts(username: string) {
     .from("users")
     .select("id, username, display_name, bio, social_links")
     .eq("username", username)
+    // 비공개 프로필은 블로그 서브도메인(목록·글·RSS·OG)에 안 나간다 — 세션이 없는 주소라 본인 포함 모두에게(lib/profile-privacy)
+    .or("is_private.is.null,is_private.eq.false")
     .single();
 
   if (!user) return null;
@@ -55,6 +57,8 @@ export async function getPublishedPost(username: string, slug: string) {
     .from("users")
     .select("id, username, display_name, bio, social_links")
     .eq("username", username)
+    // 비공개 프로필은 블로그 서브도메인(목록·글·RSS·OG)에 안 나간다 — 세션이 없는 주소라 본인 포함 모두에게(lib/profile-privacy)
+    .or("is_private.is.null,is_private.eq.false")
     .single();
 
   if (!user) return null;

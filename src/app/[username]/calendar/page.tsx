@@ -1,3 +1,5 @@
+import { hiddenFrom } from "@/lib/profile-privacy";
+import { PrivateProfileScreen } from "@/components/PrivateProfileScreen";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getEvents, isGoogleCalendarConnected } from "./actions";
@@ -40,6 +42,9 @@ export default async function CalendarPage({
       getLifeMemories().catch(() => [] as LifeMemory[]),
       getSession().catch(() => null),
     ]);
+
+  // 비공개: 남·손님이 남의 캘린더 주소를 열면 그 사람의 일정·생년월일 대신 '비공개 프로필이에요'
+  if (hiddenFrom(profile, session?.username)) return <PrivateProfileScreen />;
 
   const myCalendars = await listMyCalendars().catch(() => []);
 

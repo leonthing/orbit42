@@ -1,3 +1,5 @@
+import { hiddenFrom, hiddenUsername, PRIVATE_PROFILE_METADATA } from "@/lib/profile-privacy";
+import { PrivateProfileScreen } from "@/components/PrivateProfileScreen";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -47,7 +49,11 @@ function PhotoSection({ username, posts, isOwner, canWrite }: { username: string
   );
 }
 
-export const metadata: Metadata = { title: "글" };
+export async function generateMetadata({ params }: { params: { username: string } }): Promise<Metadata> {
+  // 비공개: 남·손님에게는 noindex 메타(lib/profile-privacy)
+  if (await hiddenUsername(params.username, (await getSession())?.username)) return PRIVATE_PROFILE_METADATA;
+  return { title: "글" };
+}
 export const dynamic = "force-dynamic";
 
 export default async function BlogPage({
@@ -72,6 +78,7 @@ export default async function BlogPage({
 
   const profile = await getProfile(params.username);
   if (!profile) notFound();
+  if (hiddenFrom(profile, session?.username)) return <PrivateProfileScreen />;
 
   const authorId = await idOf(params.username);
   const [posts, photoPosts] = await Promise.all([

@@ -1,3 +1,5 @@
+import { hiddenUsername, PRIVATE_PROFILE_METADATA } from "@/lib/profile-privacy";
+import { PrivateProfileScreen } from "@/components/PrivateProfileScreen";
 import { PostBody } from "@/components/posts/PostBody";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -36,6 +38,7 @@ export async function generateMetadata({
 }: {
   params: { username: string; postId: string };
 }): Promise<Metadata> {
+  if (await hiddenUsername(params.username, (await getSession())?.username)) return PRIVATE_PROFILE_METADATA;
   const data = await getPublicPostBySlug(params.username, params.postId);
   if (!data) {
     const a = await appPost(params.username, params.postId);
@@ -63,6 +66,8 @@ export default async function PublicPostPage({
 }: {
   params: { username: string; postId: string };
 }) {
+  // 비공개: 남·손님에게 글 제목·본문·이름 0 (lib/profile-privacy)
+  if (await hiddenUsername(params.username, (await getSession())?.username)) return <PrivateProfileScreen />;
   const data = await getPublicPostBySlug(params.username, params.postId);
   if (!data) {
     const a = await appPost(params.username, params.postId);

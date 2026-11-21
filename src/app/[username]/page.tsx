@@ -1,3 +1,5 @@
+import { hiddenFrom, PRIVATE_PROFILE_METADATA } from "@/lib/profile-privacy";
+import { PrivateProfileScreen } from "@/components/PrivateProfileScreen";
 import { safeSocialLinks } from "@/lib/social-links";
 import { toGridPost } from "@/components/posts/PhotoPostGrid";
 import type { Metadata } from "next";
@@ -55,6 +57,8 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const profile = await getProfile(params.username);
   if (!profile) return { title: "찾을 수 없음" };
+  // 비공개: 남·손님에게는 이름·소개 없는 메타 + noindex (lib/profile-privacy)
+  if (hiddenFrom(profile, (await getSession())?.username)) return PRIVATE_PROFILE_METADATA;
   const name = profile.display_name || profile.username;
   const title = name;
   const description = profile.bio || `${name}'s orbit on Orbit42`;
@@ -88,6 +92,13 @@ export default async function PublicProfile({
 }) {
   const profile = await getProfile(params.username);
   if (!profile) notFound();
+  {
+    // 비공개: 남·손님에게는 '비공개 프로필이에요'만(이름·사진·소개·링크 0). 본인의 '손님으로 보기' 미리보기도 같은 화면.
+    const s = await getSession();
+    if (hiddenFrom(profile, s?.username) || (profile.is_private && searchParams?.view === "guest")) {
+      return <PrivateProfileScreen />;
+    }
+  }
 
   const [session, stats, viewerFollowing, slots, value, viewerBlocked] =
     await Promise.all([
@@ -299,6 +310,11 @@ export default async function PublicProfile({
 
   return (
     <div className="space-y-6">
+      {isOwner && profile.is_private && (
+        <p className="rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-4 py-2.5 text-sm text-charcoal-300" data-testid="privateOwnerNote">
+          지금 비공개라 다른 사람에게는 안 보여요. 직접 공유한 예약 링크는 계속 동작해요.
+        </p>
+      )}
       <JsonLd data={[personSchema, breadcrumbSchema]} />
       {/* 휴대폰(주인): iOS 처럼 머리 카드 안에 이름·소개·태그·팔로잉/팔로워 */}
       <div className="space-y-6 max-md:space-y-3 max-md:rounded-2xl max-md:bg-[rgb(var(--bg-surface))] max-md:p-4">

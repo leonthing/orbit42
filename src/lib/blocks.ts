@@ -93,3 +93,15 @@ export async function isBlockedEitherWay(
     .maybeSingle();
   return !!data;
 }
+
+/** 내가 차단한 사용자 목록(설정 > 차단 관리) — GET /api/v1/blocks 와 같은 내용. userId 는 세션 사용자 본인. */
+export async function listBlockedUsers(userId: string) {
+  const { data } = await getAdminClient()
+    .from("user_blocks")
+    .select("blocked:users!user_blocks_blocked_id_fkey(username, display_name)")
+    .eq("blocker_id", userId);
+  return (data ?? [])
+    .map((row) => row.blocked as unknown as { username: string; display_name: string | null } | null)
+    .filter((u): u is { username: string; display_name: string | null } => !!u)
+    .map((u) => ({ username: u.username, displayName: u.display_name }));
+}

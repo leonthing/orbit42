@@ -1,3 +1,4 @@
+import { hiddenFrom } from "@/lib/profile-privacy";
 import type { Metadata } from "next";
 import { slotTypeLabel } from "@/lib/constants";
 import Image from "next/image";
@@ -76,11 +77,14 @@ export default async function FeedPage() {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const [following, viewerProfile, googleConnected] = await Promise.all([
+  const [followingAll, viewerProfile, googleConnected] = await Promise.all([
     listFollowing(session.username),
     getProfile(session.username),
     isGoogleCalendarConnected().catch(() => false),
   ]);
+
+  // 비공개로 바꾼 사람의 글·예약 링크·공개 일정은 팔로워 피드에도 내보내지 않는다(/api/v1/timeline 과 같게, lib/profile-privacy)
+  const following = followingAll.filter((u) => !hiddenFrom(u, session.username));
 
   const db = getAdminClient();
   const { data: viewerRow } = await db

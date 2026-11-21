@@ -18,16 +18,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const db = getAdminClient();
   const [users, slots, posts] = await Promise.all([
-    db.from("users").select("username, updated_at").limit(5000),
+    db.from("users").select("username, updated_at").or("is_private.is.null,is_private.eq.false").limit(5000), // 비공개 프로필 제외(lib/profile-privacy)
     db
       .from("time_slots")
-      .select("slug, updated_at, host:users!time_slots_host_id_fkey(username)")
+      .select("slug, updated_at, host:users!time_slots_host_id_fkey(username, is_private)")
       .eq("active", true)
       .limit(5000),
     db
       .from("blog_posts")
       .select(
-        "slug, published_at, user:users!blog_posts_user_id_fkey(username)",
+        "slug, published_at, user:users!blog_posts_user_id_fkey(username, is_private)",
       )
       .eq("origin", "web") // 앱 글·사진(1.10.0 시험)은 웹 블로그 경로에 내보내지 않는다
       .eq("published", true)
@@ -60,9 +60,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const slotRoutes: MetadataRoute.Sitemap = (slots.data ?? [])
     .map((s) => {
-      const hostArr = s.host as unknown as { username?: string } | { username?: string }[] | null;
+      const hostArr = s.host as unknown as { username?: string; is_private?: boolean | null } | { username?: string; is_private?: boolean | null }[] | null;
       const host = Array.isArray(hostArr) ? hostArr[0] : hostArr;
-      if (!host?.username) return null;
+      // 비공개 계정의 예약 링크는 동작하지만 검색엔진으로 찾게 하지는 않는다('직접 공유한' 링크)
+      if (!host?.username || host.is_private) return null;
       return {
         url: `${base}/${host.username}/s/${s.slug}`,
         changeFrequency: "daily" as const,
@@ -74,9 +75,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const postRoutes: MetadataRoute.Sitemap = (posts.data ?? [])
     .map((p) => {
-      const userArr = p.user as unknown as { username?: string } | { username?: string }[] | null;
+      const userArr = p.user as unknown as { username?: string; is_private?: boolean | null } | { username?: string; is_private?: boolean | null }[] | null;
       const user = Array.isArray(userArr) ? userArr[0] : userArr;
-      if (!user?.username) return null;
+      if (!user?.username || user.is_private) return null;
       return {
         url: `${base}/blog-public/${user.username}/${p.slug}`,
         changeFrequency: "weekly" as const,

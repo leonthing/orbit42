@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { hiddenFrom, PRIVATE_PROFILE_METADATA } from "@/lib/profile-privacy";
+import { PrivateProfileScreen } from "@/components/PrivateProfileScreen";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProfile, getSession } from "@/lib/auth";
@@ -15,6 +17,7 @@ export async function generateMetadata({
   params: { username: string };
 }): Promise<Metadata> {
   const profile = await getProfile(params.username);
+  if (hiddenFrom(profile, (await getSession())?.username)) return PRIVATE_PROFILE_METADATA;
   return {
     title: profile
       ? `${profile.display_name || profile.username} · 팔로잉`
@@ -29,6 +32,7 @@ export default async function FollowingPage({
 }) {
   const profile = await getProfile(params.username);
   if (!profile) notFound();
+  if (hiddenFrom(profile, (await getSession())?.username)) return <PrivateProfileScreen />;
 
   const [rows, session] = await Promise.all([listFollowing(params.username), getSession()]);
   // 남이 볼 때는 비공개 사용자·데모 계정(내부 계정 제외, 개선-33)을 뺀다 — 위 숫자도 이 목록 기준

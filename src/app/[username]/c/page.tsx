@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { hiddenFrom, PRIVATE_PROFILE_METADATA } from "@/lib/profile-privacy";
+import { PrivateProfileScreen } from "@/components/PrivateProfileScreen";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProfile, getSession } from "@/lib/auth";
@@ -21,6 +23,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const profile = await getProfile(params.username);
   if (!profile) return { title: "캘린더" };
+  if (hiddenFrom(profile, (await getSession())?.username)) return PRIVATE_PROFILE_METADATA;
   return { title: `${profile.display_name || profile.username}의 캘린더` };
 }
 
@@ -33,6 +36,7 @@ export default async function PublicCalendarPage({
 }) {
   const profile = await getProfile(params.username);
   if (!profile) notFound();
+  if (hiddenFrom(profile, (await getSession())?.username)) return <PrivateProfileScreen />;
 
   // Month navigation: m=YYYY-MM
   const now = new Date();

@@ -1,3 +1,4 @@
+import { isPrivateUsername } from "@/lib/profile-privacy";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AppStoreAwareLink } from "@/components/AppStoreAwareLink";
@@ -85,6 +86,8 @@ export default async function SlotPage({
 
   const session = await getSession();
   const isOwner = session?.username === params.username;
+  // 비공개 호스트: 예약 링크는 그대로 동작하되 '/{u}로 가기'(다른 시간도 보기)·구조화 데이터의 프로필 주소는 뺀다(lib/profile-privacy)
+  const hostPrivate = !isOwner && (await isPrivateUsername(params.username));
   const isAuction = slot.pricing_model === "auction";
 
   const [attachedMenus, hostRating, hostReviews] = await Promise.all([
@@ -106,7 +109,7 @@ export default async function SlotPage({
     brand: {
       "@type": "Person",
       name: host.display_name || host.username,
-      url: `${SITE.url}/${host.username}`,
+      ...(hostPrivate ? {} : { url: `${SITE.url}/${host.username}` }),
     },
     offers: isAuction
       ? {
@@ -144,8 +147,8 @@ export default async function SlotPage({
         </Link>
       ) : (
         // 방문자에게는 "누구의 시간인지"를 먼저 보여준다 (SNS 에서 바로 들어오는 링크)
-        <Link
-          href={`/${params.username}`}
+        <HostCardLink
+          href={hostPrivate ? null : `/${params.username}`}
           className="flex items-center gap-3 rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))] px-4 py-3 transition-colors hover:border-charcoal-700"
         >
           {host.avatar_url ? (
@@ -165,11 +168,11 @@ export default async function SlotPage({
               {host.display_name || host.username}
             </span>
             <span className="block truncate text-xs text-charcoal-500">
-              @{host.username} · 다른 시간도 보기
+              @{host.username}{hostPrivate ? "" : " · 다른 시간도 보기"}
             </span>
           </span>
-          <span className="text-charcoal-600">›</span>
-        </Link>
+          {!hostPrivate && <span className="text-charcoal-600">›</span>}
+        </HostCardLink>
       )}
 
       <header className="overflow-hidden rounded-xl border border-charcoal-800/60 bg-charcoal-900/30">
@@ -473,4 +476,9 @@ async function AuctionSection({
       isOwner={isOwner}
     />
   );
+}
+
+/** 호스트 카드 — 비공개 호스트면 링크 없이(그 프로필은 남에게 '비공개 프로필이에요'라 보낼 곳이 없다) */
+function HostCardLink({ href, className, children }: { href: string | null; className: string; children: React.ReactNode }) {
+  return href ? <Link href={href} className={className}>{children}</Link> : <div className={className}>{children}</div>;
 }

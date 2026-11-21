@@ -335,8 +335,9 @@ export async function ogDataForPost(
 ): Promise<{ photo: Buffer | null; title: string; body: string; authorName: string } | null> {
   const { postsPublic } = await import("@/lib/posts-access");
   if (!postsPublic()) return null;
-  const { data: u } = await db().from("users").select("id, username, display_name").eq("username", username).maybeSingle();
-  if (!u) return null;
+  const { data: u } = await db().from("users").select("id, username, display_name, is_private").eq("username", username).maybeSingle();
+  // 비공개 프로필의 글 OG(제목·사진·이름)는 내지 않는다 — 공유 미리보기라 세션 없음(lib/profile-privacy)
+  if (!u || u.is_private) return null;
   const { data: p } = await db()
     .from("blog_posts")
     .select("id, title, content")

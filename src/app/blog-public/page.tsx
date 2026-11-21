@@ -25,7 +25,8 @@ async function getBloggers() {
   const { data: users } = await db
     .from("users")
     .select("username, display_name, bio")
-    .in("id", userIds);
+    .in("id", userIds)
+    .or("is_private.is.null,is_private.eq.false"); // 비공개 프로필 제외(lib/profile-privacy)
 
   return (users ?? []) as { username: string; display_name: string | null; bio: string | null }[];
 }

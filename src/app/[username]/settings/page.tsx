@@ -24,6 +24,8 @@ import {
   DeleteAccountSection,
 } from "./AccountDangerZone";
 import { SectionNav } from "./SectionNav";
+import { PrivacySection } from "./PrivacySection";
+import { listBlockedUsers } from "@/lib/blocks";
 import { SettingsPhoneList } from "./SettingsPhoneList";
 import { HashToTab } from "./HashToTab";
 import Link from "next/link";
@@ -47,11 +49,13 @@ const SECTIONS = [
   { id: "work-hours", label: "근무시간" },
   { id: "payment", label: "결제 안내" },
   { id: "locations", label: "이동시간 버퍼" },
+  { id: "people-import", label: "캘린더에서 사람 찾기" },
   { id: "referral", label: "친구 초대" },
   { id: "notifications", label: "알림 설정" },
   { id: "theme", label: "화면 모드" },
   { id: "integrations", label: "연동 토큰" },
   { id: "account", label: "계정" },
+  { id: "privacy", label: "개인정보·안전" },
   { id: "danger", label: "계정 삭제" },
 ];
 
@@ -88,10 +92,12 @@ export default async function SettingsPage({
     ]);
 
   const { data: payRow } = userId
-    ? await getAdminClient().from("users").select("payment_instructions, week_start").eq("id", userId).single()
+    ? await getAdminClient().from("users").select("payment_instructions, week_start, is_private").eq("id", userId).single()
     : { data: null };
   const paymentInstructions =
     (payRow as { payment_instructions: string | null } | null)?.payment_instructions ?? null;
+  const isPrivate = Boolean((payRow as { is_private?: boolean } | null)?.is_private);
+  const blockedUsers = userId ? await listBlockedUsers(userId).catch(() => []) : [];
   const weekStart = normalizeWeekStart((payRow as { week_start?: string } | null)?.week_start);
 
   return (
@@ -197,6 +203,22 @@ export default async function SettingsPage({
             <LocationBuffersForm initial={locationBuffers} />
           </section>
 
+          {/* iOS 설정 '사람 찾기'와 같은 기능 — 켜기·끄기는 오르빗 화면의 카드에 이미 있어 그리로 보낸다(11/21 묶음 다) */}
+          <section id="people-import" className={`scroll-mt-16 ${ph("people-import")}`}>
+            <Link
+              href={`/${params.username}/people`}
+              className="flex items-center justify-between gap-3 rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 px-5 py-4 hover:bg-charcoal-800/40"
+            >
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold text-charcoal-200">캘린더에서 사람 찾기</span>
+                <span className="mt-1 block text-xs text-charcoal-500">
+                  캘린더 일정의 참석자 이름과 이메일만 읽어 자주 만난 사람을 오르빗에 제안해요. 상대에게는 아무것도 전송되지 않아요. 켜기·끄기는 오르빗에서 해요.
+                </span>
+              </span>
+              <span aria-hidden className="text-charcoal-500">›</span>
+            </Link>
+          </section>
+
           <section id="referral" className={`scroll-mt-16 ${ph("referral")}`}>
             <ReferralLink username={profile.username} />
           </section>
@@ -215,6 +237,10 @@ export default async function SettingsPage({
 
           <section id="account" className={`scroll-mt-16 ${ph("account")}`}>
             <PasswordForm username={profile.username} />
+          </section>
+
+          <section id="privacy" className={`scroll-mt-16 ${ph("privacy")}`}>
+            <PrivacySection initialPrivate={isPrivate} initialBlocked={blockedUsers} />
           </section>
 
           <section id="danger" className={`scroll-mt-16 ${ph("danger")}`}>

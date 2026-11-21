@@ -18,6 +18,7 @@ export function SettingsPhoneList({ username, cardsOpen }: { username: string; c
       rows: [
         { label: "프로필", href: t("profile"), sub: "사진·이름·소개·관심사·SNS" },
         { label: "계정", href: t("account"), sub: "비밀번호" },
+        { label: "개인정보·안전", href: t("privacy"), sub: "프로필 비공개 · 차단 관리" },
       ],
     },
     {
@@ -27,6 +28,7 @@ export function SettingsPhoneList({ username, cardsOpen }: { username: string; c
         { label: "Google 캘린더", href: t("google") },
         { label: "근무시간", href: t("work-hours") },
         { label: "이동시간 버퍼", href: t("locations") },
+        { label: "캘린더에서 사람 찾기", href: `/${username}/people`, sub: "오르빗에서 켜고 꺼요" },
         ...(cardsOpen ? [{ label: "명함 → 구글 연락처 (시험)", href: `/${username}/cards` }] : []),
       ],
     },
