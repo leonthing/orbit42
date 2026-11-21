@@ -342,7 +342,13 @@ function UnifiedScroll({
     // 다른 날로 넘어갔으면 더는 맞추지 않는다. 같은 날이면 일정이 늦게 도착해도 한 번 더 맞춘다.
     if ((days[0]?.date.toISOString() ?? "") !== firstDayKey.current) settled.current = true;
     if (settled.current) return;
-    el.scrollTop = anchorHour * ROW_HEIGHT - 12;
+    const apply = () => { if (!settled.current) el.scrollTop = anchorHour * ROW_HEIGHT - 12; };
+    apply();
+    // 휴대폰 하루 보기는 칸 높이를 바깥(CalendarView)이 JS로 맞춘다 — 그 전엔 스크롤할 길이가 없어 0에 걸린다(운영 11/22 실측 00:00).
+    // 칸 크기가 정해지거나 바뀌면 사람이 손대기 전까지 다시 맞춘다.
+    const ro = new ResizeObserver(apply);
+    ro.observe(el);
+    return () => ro.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ROW_HEIGHT, anchorHour, bare, single0]);
   // 사람이 직접 스크롤하면 그 뒤로는 손대지 않는다
