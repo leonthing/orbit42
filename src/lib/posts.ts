@@ -1,6 +1,7 @@
 // 일반 서버 모듈 — 서버 액션 아님. 글·사진(1.10.0) 앱 API 의 본체 (/api/v1/posts/*).
 // 설계: 업무기록/설계_1.10.0_블로그사진.md. 글은 blog_posts(origin 'app'), 사진은 post_photos + 비공개 버킷.
 // 시험 기간: 보는 사람·쓰는 사람 모두 허용 목록(posts-access)만. 웹 공개 경로에는 'app' 글이 나가지 않는다.
+import { privateUserIds } from "@/lib/profile-privacy";
 import { errorSummary } from "@/lib/log-safe";
 import { randomBytes, randomUUID } from "crypto";
 import { getAdminClient } from "@/lib/supabase";
@@ -176,7 +177,13 @@ async function visibleRow(me: string | null, id: string): Promise<PostRow | null
   if (me && r.user_id === me) return r;
   if (!r.published || r.hidden_at) return null;
   if (me && (await blockedEitherWay(me, r.user_id))) return null;
+  // 비공개 프로필의 글은 본인 말고는 못 본다(상세·좋아요·신고·웹 상세 모두 이 함수를 거침, lib/profile-privacy)
+  if (await isPrivateUserId(r.user_id)) return null;
   return r;
+}
+
+async function isPrivateUserId(id: string): Promise<boolean> {
+  return (await privateUserIds([id])).has(id);
 }
 
 async function ownRow(me: string, id: string): Promise<PostRow | null> {
@@ -230,6 +237,8 @@ export async function listPosts(me: string, opts: { username?: string | null; be
     if (!u) return { error: "사용자를 찾을 수 없어요.", code: "not_found" } as PostErr;
     authorId = u.id as string;
     if (authorId !== me && (await blockedEitherWay(me, authorId))) return { posts: [], nextBefore: null };
+    // 비공개 프로필: 남에게는 빈 목록(응답 모양 그대로, iOS 1.10.0 심사 중)
+    if (authorId !== me && (await isPrivateUserId(authorId))) return { posts: [], nextBefore: null };
   }
   let q = db()
     .from("blog_posts")
@@ -290,6 +299,7 @@ export async function listPostsForWeb(viewerId: string | null, authorId: string,
   const own = viewerId === authorId;
   if (own ? !postsOpenFor(viewerId) : !postsVisibleTo(viewerId)) return [];
   if (!own && viewerId && (await blockedEitherWay(viewerId, authorId))) return [];
+  if (!own && (await isPrivateUserId(authorId))) return [];
   let q = db()
     .from("blog_posts")
     .select(POST_COLS)
@@ -310,7 +320,7 @@ export async function listPublicAppPostsForFeeds(authorId?: string, limit = 5000
   if (!postsPublic()) return [];
   let q = db()
     .from("blog_posts")
-    .select("id, slug, title, content, published_at, created_at, user:users!blog_posts_user_id_fkey(username)")
+    .select("id, slug, title, content, published_at, created_at, user:users!blog_posts_user_id_fkey(username, is_private)")
     .eq("origin", "app")
     .eq("published", true)
     .is("hidden_at", null)
@@ -318,7 +328,8 @@ export async function listPublicAppPostsForFeeds(authorId?: string, limit = 5000
     .limit(limit);
   if (authorId) q = q.eq("user_id", authorId);
   const { data } = await q;
-  return (data ?? []).map((p) => ({
+  // 비공개 프로필의 글은 사이트맵·RSS 에 싣지 않는다
+  return (data ?? []).filter((p) => !(p.user as unknown as { is_private?: boolean | null } | null)?.is_private).map((p) => ({
     id: p.id as string,
     slug: p.slug as string,
     title: (p.title as string) || "",

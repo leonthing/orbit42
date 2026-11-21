@@ -38,6 +38,8 @@ const SURFACES: Array<[string, RegExp]> = [
   ["src/app/sitemap.ts", /select\("username, updated_at"\)\.or\("is_private\.is\.null,is_private\.eq\.false"\)[\s\S]*host\.is_private[\s\S]*user\.is_private/],
   ["src/app/[username]/s/[slug]/page.tsx", /hostPrivate = !isOwner && \(await isPrivateUsername/],
   ["src/lib/search.ts", /!u\.is_private \|\| u\.username === viewer/],
+  // v1·웹 앱 글(1.10.0): 상세·좋아요·신고(visibleRow), 목록(listPosts·listPostsForWeb), 사이트맵·RSS(listPublicAppPostsForFeeds)
+  ["src/lib/posts.ts", /if \(await isPrivateUserId\(r\.user_id\)\) return null;[\s\S]*authorId !== me && \(await isPrivateUserId\(authorId\)\)\) return \{ posts: \[\], nextBefore: null \}[\s\S]*!own && \(await isPrivateUserId\(authorId\)\)\) return \[\];[\s\S]*filter\(\(p\) => !\(p\.user as unknown as \{ is_private/],
 ];
 for (const [file, re] of SURFACES) {
   test(`비공개 표면: ${file}`, () => {
