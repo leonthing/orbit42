@@ -29,7 +29,7 @@ export default async function TodosPage({ params }: { params: { username: string
   ].filter((g) => g.items.length > 0);
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-2xl md:mx-auto">
       <h1 className="mb-1 text-xl font-semibold text-charcoal-100">할 일</h1>
       <p className="mb-4 text-xs text-charcoal-500">할 일을 누르면 고치거나 지울 수 있어요.</p>
       <TodoComposer />

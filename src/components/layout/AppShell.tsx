@@ -4,6 +4,7 @@ import { v190OpenFor } from "@/lib/dm-flags";
 import { TopBar } from "@/components/layout/TopBar";
 import { MobileMenuProvider } from "@/components/layout/MobileMenuContext";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
+import { ContentWidth } from "@/components/layout/ContentWidth";
 
 /**
  * Authenticated shell: sidebar + topbar wrapping the page content.
@@ -74,7 +75,7 @@ export async function AppShell({
                 main 의 아래 여백(탭 막대 자리)이 내용 뒤에 붙지 않아 마지막 줄이 탭 막대 뒤에 갇혔다 —
                 휴대폰은 내용만큼 늘어나게(min-h-full) 한다(11/21). */}
             <div className="h-full w-full px-4 py-4 max-md:h-auto max-md:min-h-full sm:px-5 md:px-6 md:py-5">
-              {children}
+              <ContentWidth>{children}</ContentWidth>
             </div>
           </main>
         </div>

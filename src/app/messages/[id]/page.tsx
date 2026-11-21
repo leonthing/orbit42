@@ -23,7 +23,7 @@ export default async function ConversationPage({ params }: { params: { id: strin
       // 휴대폰: 화면 높이에 맞춰 목록이 안에서 스크롤되고 입력칸이 아래에 붙게 높이를 정한다.
       // AppShell 이 휴대폰에서 내용만큼 늘어나게 바뀐(묶음 2) 뒤 h-full 만으로는 입력칸이 탭 막대 밑으로 밀렸다.
       // 제목 줄 48 + 위아래 여백 32 + 탭 막대 자리 92 = 172px
-      className="flex h-full min-h-0 max-w-2xl flex-col max-md:h-[calc(100dvh-172px-env(safe-area-inset-bottom))]"
+      className="flex h-full min-h-0 max-w-2xl flex-col md:mx-auto max-md:h-[calc(100dvh-172px-env(safe-area-inset-bottom))]"
     >
       <header className="flex items-center gap-3 border-b border-charcoal-800/40 pb-3">
         <Link href="/messages" className="flex shrink-0 items-center justify-center text-charcoal-500 hover:text-charcoal-200 max-md:-ml-3 max-md:h-11 max-md:w-11" aria-label="뒤로">

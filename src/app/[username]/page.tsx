@@ -309,8 +309,20 @@ export default async function PublicProfile({
     );
   }
 
+  // PC(lg 이상) 주인 프로필은 2단(11/21 묶음 바): 왼쪽 핵심(이름·소개·탭·카드) · 오른쪽 보조(내 캘린더·이번 주·다가오는 일정).
+  // 순서는 휴대폰과 같게 두고 새 기능은 없다. 오른쪽 세 장은 lg 에서만 오른쪽으로, 그 아래 폭에선 '홈' 탭 안 그대로.
+  const sideCards = (narrow: boolean) => (
+    <>
+      <ProfileCalendarCards username={params.username} isOwner narrow={narrow} />
+      {weekInsights && <InsightsCard username={params.username} insights={weekInsights} />}
+      {upcomingEvents.length > 0 && (
+        <ComingUpCard username={params.username} events={upcomingEvents} nowIso={now.toISOString()} />
+      )}
+    </>
+  );
   return (
-    <div className="space-y-6">
+    <div className={isOwner ? "lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-6" : ""}>
+    <div className="min-w-0 space-y-6">
       {isOwner && profile.is_private && (
         <p className="rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 px-4 py-2.5 text-sm text-charcoal-300" data-testid="privateOwnerNote">
           지금 비공개라 다른 사람에게는 안 보여요. 직접 공유한 예약 링크는 계속 동작해요.
@@ -599,19 +611,7 @@ export default async function PublicProfile({
                 </div>
               )}
 
-              <ProfileCalendarCards username={params.username} isOwner />
-
-              {weekInsights && (
-                <InsightsCard username={params.username} insights={weekInsights} />
-              )}
-
-              {upcomingEvents.length > 0 && (
-                <ComingUpCard
-                  username={params.username}
-                  events={upcomingEvents}
-                  nowIso={now.toISOString()}
-                />
-              )}
+              <div className="space-y-4 lg:hidden">{sideCards(false)}</div>
             </div>
           }
           slots={
@@ -733,7 +733,7 @@ export default async function PublicProfile({
           className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5 hover:border-charcoal-700"
         >
           <p className="text-xs font-semibold uppercase tracking-wider text-charcoal-500">
-            Calendar
+            캘린더
           </p>
           <p className="mt-1 text-sm text-charcoal-200">월별 캘린더 보기 →</p>
         </Link>
@@ -852,6 +852,12 @@ export default async function PublicProfile({
         </section>
       )}
 
+    </div>
+    {isOwner && (
+      <aside className="hidden space-y-4 lg:block" data-testid="profileSide">
+        {sideCards(true)}
+      </aside>
+    )}
     </div>
   );
 }

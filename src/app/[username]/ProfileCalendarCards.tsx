@@ -11,9 +11,12 @@ import { selectEventsInRange } from "@/lib/recurrence-db";
 export async function ProfileCalendarCards({
   username,
   isOwner,
+  narrow = false,
 }: {
   username: string;
   isOwner: boolean;
+  /** PC 프로필 오른쪽 칸(360px)처럼 좁은 자리 — 한 줄에 한 장 */
+  narrow?: boolean;
 }) {
   const db = getAdminClient();
   const { data: target } = await db
@@ -93,7 +96,7 @@ export async function ProfileCalendarCards({
           </Link>
         )}
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className={narrow ? "grid gap-3" : "grid gap-3 sm:grid-cols-2 lg:grid-cols-3"}>
         {calendars.map((cal) => {
           const active = daysByCalendar.get(cal.id as string) ?? new Set<number>();
           const color = (cal.color as string) ?? "#6366f1";

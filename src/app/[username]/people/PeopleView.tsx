@@ -59,8 +59,18 @@ export function PeopleView({
     });
   }, [router]);
 
+  // PC(lg 이상) 2단(11/21 묶음 바): 왼쪽 핵심(궤도 그림·사람 카드) · 오른쪽 보조(연락할 때·캘린더에서 찾기 제안·팔로우 중).
+  // 휴대폰·좁은 폭은 예전 한 줄 순서 그대로 — 같은 블록을 lg 에서만 오른쪽 칸으로 옮겨 보인다(새 기능 없음).
+  const nudges = orbit.nudges.length > 0 ? <NudgeList orbit={orbit} username={username} /> : null;
+  const importBlock = !orbit.importEnabled ? (
+    <ImportOptIn googleConnected={orbit.googleConnected} />
+  ) : orbit.suggestions.length > 0 ? (
+    <Suggestions people={orbit.suggestions} />
+  ) : null;
+  const followingOnly = orbit.followingOnly.length > 0 ? <FollowingOnly people={orbit.followingOnly} hrefFor={hrefFor} /> : null;
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-4 pb-16">
+    <div className="mx-auto w-full max-w-2xl pb-16 lg:grid lg:max-w-none lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:gap-6">
+    <div className="min-w-0 space-y-4">
       {/* 휴대폰: iOS 오르빗 머리 — 늘 보이는 검색칸 → 날짜 → 큰 인사 → '나를 중심으로…' (묶음 4) */}
       <div className="space-y-3 md:hidden" data-testid="orbitPhoneHeader">
         <form action="/search" className="relative">
@@ -129,14 +139,11 @@ export function PeopleView({
         />
       )}
 
-      {orbit.nudges.length > 0 && (
-        <NudgeList orbit={orbit} username={username} />
-      )}
-
-      {!orbit.importEnabled ? (
-        <ImportOptIn googleConnected={orbit.googleConnected} />
-      ) : (
-        orbit.suggestions.length > 0 && <Suggestions people={orbit.suggestions} />
+      {(nudges || importBlock) && (
+        <div className="space-y-4 lg:hidden">
+          {nudges}
+          {importBlock}
+        </div>
       )}
 
       {orbit.people.map((p) => (
@@ -151,32 +158,17 @@ export function PeopleView({
         </p>
       )}
 
-      {orbit.followingOnly.length > 0 && (
-        <section className="pt-4">
-          <p className="text-sm font-bold text-charcoal-200">팔로우 중</p>
-          <p className="text-xs text-charcoal-500">
-            아직 함께한 기록이 없어요 — 예약하거나 일정을 함께하면 궤도에 올라와요
-          </p>
-          <ul className="mt-2 divide-y divide-charcoal-800/50 rounded-2xl border border-charcoal-800/50 bg-[rgb(var(--bg-surface))] px-3">
-            {orbit.followingOnly.map((p) => (
-              <li key={p.id}>
-                <Link
-                  href={p.member ? `/${p.member.username}` : hrefFor(p)}
-                  className="flex items-center gap-3 py-2.5"
-                >
-                  <PersonAvatar person={p} size={32} />
-                  <span className="min-w-0 flex-1 truncate text-sm text-charcoal-100">{p.name}</span>
-                  {p.member && <span className="text-2xs text-charcoal-500">@{p.member.username}</span>}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      {followingOnly && <div className="lg:hidden">{followingOnly}</div>}
 
       {orbit.archived.length > 0 && <Archived people={orbit.archived} hrefFor={hrefFor} />}
 
       {orbit.importEnabled && <ImportFooter syncedAt={orbit.syncedAt} />}
+    </div>
+    <aside className="hidden space-y-4 lg:block" data-testid="orbitSide">
+      {nudges}
+      {importBlock}
+      {followingOnly}
+    </aside>
     </div>
   );
 }
@@ -529,5 +521,30 @@ function Greeting({ name }: { name: string }) {
       </h1>
       <p className="mt-1 text-sm text-charcoal-500">나를 중심으로, 요즘 만나는 사람들</p>
     </div>
+  );
+}
+
+function FollowingOnly({ people, hrefFor }: { people: OrbitPerson[]; hrefFor: (p: OrbitPerson) => string }) {
+  return (
+    <section className="pt-4">
+      <p className="text-sm font-bold text-charcoal-200">팔로우 중</p>
+      <p className="text-xs text-charcoal-500">
+        아직 함께한 기록이 없어요 — 예약하거나 일정을 함께하면 궤도에 올라와요
+      </p>
+      <ul className="mt-2 divide-y divide-charcoal-800/50 rounded-2xl border border-charcoal-800/50 bg-[rgb(var(--bg-surface))] px-3">
+        {people.map((p) => (
+          <li key={p.id}>
+            <Link
+              href={p.member ? `/${p.member.username}` : hrefFor(p)}
+              className="flex items-center gap-3 py-2.5"
+            >
+              <PersonAvatar person={p} size={32} />
+              <span className="min-w-0 flex-1 truncate text-sm text-charcoal-100">{p.name}</span>
+              {p.member && <span className="text-2xs text-charcoal-500">@{p.member.username}</span>}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
