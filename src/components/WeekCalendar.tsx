@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef } from "react";
 import type { WeekDay, WeekItem } from "@/lib/profile-week";
 import { ShareEventButton } from "@/components/ShareEventButton";
 import { useSlotPanel } from "@/components/SlotPanel";
-import { normalizeEventKey } from "@/lib/event-key";
+import { normalizeEventKey, toEventKey } from "@/lib/event-key";
 
 // Visible window: 00:00 – 24:00 (full day, 24 one-hour rows).
 const START_HOUR = 0;
@@ -38,6 +38,7 @@ export function WeekCalendar({
   emptyMessage,
   viewerIsOwner,
   completedKeys,
+  ratings,
   onToggleComplete,
   onEventClick,
   onEmptyClick,
@@ -49,6 +50,8 @@ export function WeekCalendar({
   emptyMessage?: string;
   viewerIsOwner?: boolean;
   completedKeys?: Set<string>;
+  /** 만족도(하트) — toEventKey 로 찾는다. 완료한 블록에 ♥n 으로 보인다 */
+  ratings?: Record<string, number>;
   onToggleComplete?: (eventId: string) => void;
   onEventClick?: (item: WeekItem) => void;
 }) {
@@ -70,6 +73,7 @@ export function WeekCalendar({
         username={username}
         viewerIsOwner={viewerIsOwner}
         completedKeys={completedKeys}
+        ratings={ratings}
         onToggleComplete={onToggleComplete}
         onEventClick={onEventClick}
         onEmptyClick={onEmptyClick}
@@ -149,21 +153,49 @@ function TimeAxis() {
   );
 }
 
-function AllDayColumn({ items }: { items: PositionedItem[] }) {
+function AllDayColumn({
+  items,
+  viewerIsOwner,
+  completedKeys,
+  ratings,
+  onToggleComplete,
+  onEventClick,
+}: {
+  items: PositionedItem[];
+  viewerIsOwner?: boolean;
+  completedKeys?: Set<string>;
+  ratings?: Record<string, number>;
+  onToggleComplete?: (eventId: string) => void;
+  onEventClick?: (item: WeekItem) => void;
+}) {
   const visible = items.slice(0, 3);
   const extra = items.length - visible.length;
   return (
     <div className="min-h-[28px] space-y-1 border-r border-charcoal-800/40 px-1 py-1 last:border-r-0">
       {visible.map((item) => {
         if (item.kind === "event") {
+          // 종일 일정도 iOS 하루 보기처럼 완료 체크·만족도(11/21 Leo) — 초대받은 남의 일정은 주인 몫
+          const done = !!completedKeys?.has(normalizeEventKey(item.id));
+          const canToggle = !!(viewerIsOwner && onToggleComplete && !item.id.startsWith("invite:"));
           return (
             <div
               key={item.id}
-              className="truncate rounded-sm border-l-[3px] bg-charcoal-800/60 px-1 py-0.5 text-2xs font-medium text-charcoal-100"
+              className={`flex items-center gap-1 rounded-sm border-l-[3px] bg-charcoal-800/60 px-1 py-0.5 text-2xs font-medium text-charcoal-100 ${done ? "opacity-50" : ""}`}
               style={{ borderColor: item.color }}
               title={item.title}
             >
-              {item.title}
+              {canToggle && (
+                <CompleteBox color={item.color} completed={done} onClick={() => onToggleComplete?.(item.id)} />
+              )}
+              <button
+                type="button"
+                disabled={!onEventClick}
+                onClick={() => onEventClick?.(item)}
+                className={`min-w-0 flex-1 truncate text-left ${done ? "line-through" : ""}`}
+              >
+                {item.title}
+              </button>
+              <RatingMark rating={ratings?.[toEventKey(item.id)] ?? null} />
             </div>
           );
         }
@@ -176,12 +208,53 @@ function AllDayColumn({ items }: { items: PositionedItem[] }) {
   );
 }
 
+/**
+ * 블록 안 완료 체크 — iOS 하루 보기처럼 휴대폰에서도 보인다(11/21 Leo "완료한 일정에 체크 표시").
+ * 휴대폰은 16px 상자 + 사방 10px 누르는 영역(36px), 데스크톱은 12px 상자 + 사방 6px.
+ */
+function CompleteBox({ color, completed, onClick }: { color: string; completed: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      data-testid="blockCheck"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      aria-label={completed ? "미완료로 표시" : "완료로 표시"}
+      className="relative mt-[2px] flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border before:absolute before:-inset-2.5 before:content-[''] md:h-3 md:w-3 md:before:-inset-1.5"
+      style={{
+        borderColor: color,
+        backgroundColor: completed ? color : "transparent",
+        color: "#fff",
+      }}
+    >
+      {completed && (
+        <svg className="h-3 w-3 md:h-2.5 md:w-2.5" fill="none" viewBox="0 0 24 24" strokeWidth={4} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
+/** 매긴 만족도 — 블록 제목 오른쪽 ♥n (나만 본다) */
+function RatingMark({ rating }: { rating?: number | null }) {
+  if (rating == null) return null;
+  return (
+    <span data-testid="blockRating" className="shrink-0 text-2xs font-semibold leading-tight text-pink-500" aria-label={`만족도 ${rating}`}>
+      ♥{rating}
+    </span>
+  );
+}
+
 function UnifiedScroll({
   positionedByDay,
   days,
   username,
   viewerIsOwner,
   completedKeys,
+  ratings,
   onToggleComplete,
   onEventClick,
   onEmptyClick,
@@ -192,6 +265,8 @@ function UnifiedScroll({
   username: string;
   viewerIsOwner?: boolean;
   completedKeys?: Set<string>;
+  /** 만족도(하트) — toEventKey 로 찾는다. 완료한 블록에 ♥n 으로 보인다 */
+  ratings?: Record<string, number>;
   onToggleComplete?: (eventId: string) => void;
   onEventClick?: (item: WeekItem) => void;
 }) {
@@ -245,6 +320,11 @@ function UnifiedScroll({
               <AllDayColumn
                 key={`ad-${days[idx].date.toISOString()}`}
                 items={items.filter((i) => i.allDay)}
+                viewerIsOwner={viewerIsOwner}
+                completedKeys={completedKeys}
+                ratings={ratings}
+                onToggleComplete={onToggleComplete}
+                onEventClick={onEventClick}
               />
             ))}
           </div>
@@ -265,6 +345,7 @@ function UnifiedScroll({
             username={username}
             viewerIsOwner={viewerIsOwner}
             completedKeys={completedKeys}
+            ratings={ratings}
             onToggleComplete={onToggleComplete}
             onEventClick={onEventClick}
             onEmptyClick={
@@ -284,6 +365,7 @@ function DayColumn({
   username,
   viewerIsOwner,
   completedKeys,
+  ratings,
   onToggleComplete,
   onEventClick,
   onEmptyClick,
@@ -294,6 +376,8 @@ function DayColumn({
   username: string;
   viewerIsOwner?: boolean;
   completedKeys?: Set<string>;
+  /** 만족도(하트) — toEventKey 로 찾는다. 완료한 블록에 ♥n 으로 보인다 */
+  ratings?: Record<string, number>;
   onToggleComplete?: (eventId: string) => void;
   onEventClick?: (item: WeekItem) => void;
 }) {
@@ -338,6 +422,7 @@ function DayColumn({
           username={username}
           viewerIsOwner={viewerIsOwner}
           completed={!!completedKeys?.has(normalizeEventKey(item.id))}
+          rating={ratings?.[toEventKey(item.id)] ?? null}
           onToggleComplete={onToggleComplete}
           onEventClick={onEventClick}
         />
@@ -403,6 +488,7 @@ function ItemBlock({
   username,
   viewerIsOwner,
   completed,
+  rating,
   onToggleComplete,
   onEventClick,
 }: {
@@ -410,6 +496,7 @@ function ItemBlock({
   username: string;
   viewerIsOwner?: boolean;
   completed?: boolean;
+  rating?: number | null;
   onToggleComplete?: (eventId: string) => void;
   onEventClick?: (item: WeekItem) => void;
 }) {
@@ -476,34 +563,11 @@ function ItemBlock({
       >
         <div className="flex items-start gap-1">
           {canToggle && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleComplete?.(item.id);
-              }}
-              aria-label={completed ? "미완료로 표시" : "완료로 표시"}
-              // 모바일(감사 후보): 블록 안 12px 체크는 누르기 어려워 숨기고, 블록을 눌러 여는 상세의 '완료로 표시'로.
-              // 데스크톱은 보이는 크기는 그대로 두고 누르는 영역만 사방 6px 넓힌다.
-              className="relative mt-[2px] flex h-3 w-3 shrink-0 items-center justify-center rounded-sm border before:absolute before:-inset-1.5 before:content-[''] max-md:hidden"
-              style={{
-                borderColor: item.color,
-                backgroundColor: completed ? item.color : "transparent",
-                color: "#fff",
-              }}
-            >
-              {completed && (
-                <svg
-                  className="h-2.5 w-2.5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={4}
-                  stroke="currentColor"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                </svg>
-              )}
-            </button>
+            <CompleteBox
+              color={item.color}
+              completed={!!completed}
+              onClick={() => onToggleComplete?.(item.id)}
+            />
           )}
           <p
             className={`min-w-0 flex-1 truncate text-2xs font-semibold leading-tight ${
@@ -513,6 +577,7 @@ function ItemBlock({
           >
             {item.title}
           </p>
+          <RatingMark rating={rating} />
         </div>
         {!item.allDay && height >= 32 && (
           <p
@@ -739,13 +804,9 @@ function position(items: WeekItem[], dayDate: Date): PositionedItem[] {
         Math.round((e.getTime() - dayStart.getTime()) / 60_000),
       ),
     );
-    // Trust the upstream `all_day` flag (Google sets it when the event
-    // has date-only start/end). We keep a timed-fallback guard using
-    // the raw string — if it somehow contains a clock component we
-    // still render it in the time grid.
-    const hasTimeComponent = item.start_at.includes("T");
-    const allDay =
-      item.kind === "event" && !!item.all_day && !hasTimeComponent;
+    // `all_day` 만 믿는다(iOS 하루 보기와 같은 규칙). 예전엔 시각이 붙은 문자열("…T00:00…")이면 시간표에
+    // 그렸는데, Orbit 캘린더의 종일 일정은 DB 에서 늘 시각이 붙어 와 하루 종일 긴 블록으로 시간축을 덮었다(11/21).
+    const allDay = item.kind === "event" && !!item.all_day;
     const travel =
       !allDay && item.kind === "event" && item.travel_min && item.travel_min > 0
         ? item.travel_min

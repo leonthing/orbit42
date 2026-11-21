@@ -1690,6 +1690,7 @@ export default function CalendarView({
             days={displayWeekDays}
             viewerIsOwner={viewerIsOwner}
             completedKeys={completed}
+            ratings={ratings}
             onToggleComplete={completeFromList}
             onEventClick={(item) => setDetailEvent(item)}
             onEmptyClick={
@@ -1729,6 +1730,7 @@ export default function CalendarView({
               days={dayOnly}
               viewerIsOwner={viewerIsOwner}
               completedKeys={completed}
+              ratings={ratings}
               onToggleComplete={completeFromList}
               onEventClick={(item) => setDetailEvent(item)}
               onEmptyClick={viewerIsOwner ? (date, h, m) => openCreateAt(date, h, m) : undefined}
