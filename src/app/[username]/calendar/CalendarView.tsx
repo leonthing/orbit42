@@ -650,7 +650,7 @@ export default function CalendarView({
   );
 
   // 처음 보기: 저장한 보기가 있으면 그것, 없으면 휴대폰은 iOS 처럼 하루 보기(시간축 + 주 띠),
-  // 데스크톱은 주 보기 그대로. 하루 보기는 휴대폰 전용이라 데스크톱에서는 주 보기로 연다.
+  // 데스크톱은 주 보기 그대로. 하루 보기는 데스크톱에서도 고를 수 있다(11/21 PO).
   useEffect(() => {
     let saved: string | null = null;
     try {
@@ -658,7 +658,6 @@ export default function CalendarView({
     } catch {}
     const phone = isPhone();
     let mode: ViewMode | null = VIEW_MODES.includes(saved as ViewMode) ? (saved as ViewMode) : null;
-    if (mode === "day" && !phone) mode = "week";
     // 휴대폰은 iOS 처럼 월/하루만 기억하고 기본은 월(PO 11/21). 라이프·분기는 휴대폰에서 숨김(Leo).
     if (phone && mode !== "month" && mode !== "day") mode = null;
     if (!mode) mode = phone ? "month" : "week";
@@ -1003,7 +1002,7 @@ export default function CalendarView({
         <button
           key={mode}
           onClick={() => switchView(mode)}
-          className={`${mode === "day" ? "md:hidden " : ""}shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium transition-colors max-md:min-h-11 max-md:min-w-11 ${
+          className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium transition-colors max-md:min-h-11 max-md:min-w-11 ${
             viewMode === mode
               ? "bg-navy-500 text-white"
               : "text-charcoal-400 hover:text-charcoal-200"
@@ -1715,11 +1714,16 @@ export default function CalendarView({
         const dayData = displayWeekDays.find((d) => isSameDay(new Date(d.date), sel));
         const dayOnly: WeekDay[] = [dayData ?? { date: sel, isToday: isSameDay(sel, new Date()), items: [] }];
         return (
-          <div className="flex h-[calc(100dvh-200px)] min-h-[420px] flex-col gap-2">
+          // 데스크톱(11/21): 주 띠 아래 왼쪽 시간축 · 오른쪽 하루 할 일. 그날 일정 목록은 시간축과 겹쳐 따로 두지 않는다.
+          <div className="flex h-[calc(100dvh-200px)] min-h-[420px] flex-col gap-2 md:h-auto md:min-h-0 md:flex-1 md:gap-3" data-testid="dayView">
             {renderWeekStrip(sel)}
+            <div className="flex min-h-0 flex-1 flex-col gap-2 md:flex-row md:gap-4">
             {viewerIsOwner && (
-              <DayTodoStrip date={`${sel.getFullYear()}-${String(sel.getMonth() + 1).padStart(2, "0")}-${String(sel.getDate()).padStart(2, "0")}`} />
+              <div className="md:order-last md:w-80 md:shrink-0">
+                <DayTodoStrip date={`${sel.getFullYear()}-${String(sel.getMonth() + 1).padStart(2, "0")}-${String(sel.getDate()).padStart(2, "0")}`} />
+              </div>
             )}
+            <div className="flex min-h-0 flex-1 flex-col">
             <WeekCalendar
               username={username}
               days={dayOnly}
@@ -1730,6 +1734,8 @@ export default function CalendarView({
               onEmptyClick={viewerIsOwner ? (date, h, m) => openCreateAt(date, h, m) : undefined}
               emptyMessage={viewerIsOwner ? "이날은 일정이 없어요. 빈 시간을 누르면 일정을 만들 수 있어요." : "이날 공개된 일정이나 예약 가능한 시간이 없어요."}
             />
+            </div>
+            </div>
           </div>
         );
       })()}
