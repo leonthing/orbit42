@@ -15,6 +15,7 @@ import {
 } from "./EventParticipantsPanel";
 import { useState, useTransition, useCallback, useMemo, useEffect, useRef } from "react";
 import { getCompletedKeys, toggleEventCompletion } from "@/lib/event-completions-actions";
+import { useHorizontalSwipe } from "@/lib/use-horizontal-swipe";
 import { normalizeEventKey, toEventKey } from "@/lib/event-key";
 import { Avatar } from "@/components/Avatar";
 import {
@@ -627,6 +628,15 @@ export default function CalendarView({
     [viewMode, navigateDay, navigateMonth, navigateWeek, navigateQuarter, navigateYear],
   );
 
+  // 휴대폰 좌우 밀기(11/21 Leo, iOS 같게): 시간축·날짜 목록 = 하루, 주 띠 = 한 주, 월 달력 = 한 달. PC 는 훅이 아무것도 안 한다.
+  const swipeDay = useHorizontalSwipe((d) => navigateDay(d));
+  const swipeDayCard = useHorizontalSwipe((d) => navigateDay(d));
+  const swipeWeekStrip = useHorizontalSwipe((d) => {
+    const x = new Date(year, month, (selectedDay ?? today.getDate()) + 7 * d);
+    goToDate(x);
+  });
+  const swipeMonth = useHorizontalSwipe((d) => navigateMonth(d));
+
   const goToToday = useCallback(() => {
     const t = new Date();
     setYear(t.getFullYear());
@@ -1062,7 +1072,7 @@ export default function CalendarView({
 
   // 주 띠(요일·날짜·일정 점) — 휴대폰 하루·주 보기 위(iOS 와 같게)
   const renderWeekStrip = (sel: Date) => (
-            <div className="grid grid-cols-7 gap-1" role="tablist" aria-label="이번 주">
+            <div ref={swipeWeekStrip} className="grid grid-cols-7 gap-1 max-md:touch-pan-y" role="tablist" aria-label="이번 주" data-testid="weekStrip">
               {displayWeekDays.map((d) => {
                 const date = new Date(d.date);
                 const active = isSameDay(date, sel);
@@ -1099,7 +1109,7 @@ export default function CalendarView({
 
   // 고른 날의 일정 목록 — 월 보기 옆(데스크톱)·아래(휴대폰), 휴대폰 주 보기(주 띠 + 목록)에서 같이 쓴다
   const selectedDayCard = (
-            <div className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 p-5 max-md:rounded-2xl max-md:p-4">
+            <div ref={swipeDayCard} data-testid="dayCard" className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 p-5 max-md:touch-pan-y max-md:rounded-2xl max-md:p-4">
               {selectedDay ? (
                 <>
                   <div className="mb-4 flex items-center justify-between">
@@ -1503,7 +1513,7 @@ export default function CalendarView({
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           {/* Month Calendar Grid */}
           {/* 모바일은 iOS 처럼 촘촘한 월 달력(주차·제목 없이 점) + 아래 선택한 날 목록 */}
-          <div className="rounded-2xl bg-[rgb(var(--bg-surface))] p-2 md:rounded-xl md:border md:border-charcoal-800/60 md:bg-charcoal-900/40 md:p-5 max-md:rounded-2xl">
+          <div ref={swipeMonth} data-testid="monthGrid" className="rounded-2xl bg-[rgb(var(--bg-surface))] p-2 max-md:touch-pan-y md:rounded-xl md:border md:border-charcoal-800/60 md:bg-charcoal-900/40 md:p-5 max-md:rounded-2xl">
             {/* Day headers with week number column */}
             <div className="grid grid-cols-7 gap-0.5 md:grid-cols-[2rem_repeat(7,minmax(0,1fr))] md:gap-1">
               <div className="py-2 text-center text-2xs font-medium text-charcoal-600 max-md:hidden">W</div>
@@ -1749,7 +1759,7 @@ export default function CalendarView({
                 <DayTodoStrip date={`${sel.getFullYear()}-${String(sel.getMonth() + 1).padStart(2, "0")}-${String(sel.getDate()).padStart(2, "0")}`} />
               </div>
             )}
-            <div className="flex min-h-0 flex-1 flex-col">
+            <div ref={swipeDay} data-testid="dayTimeline" className="flex min-h-0 flex-1 flex-col max-md:touch-pan-y">
             <WeekCalendar
               username={username}
               days={dayOnly}
