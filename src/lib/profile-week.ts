@@ -1,3 +1,4 @@
+import { addDays, kstStartOfWeek } from "@/lib/kst";
 import { listPublicSlotsByUsername, getBookableOptions } from "@/lib/slots";
 import { getPublicEvents } from "@/lib/public-calendar";
 
@@ -128,8 +129,7 @@ export async function getProfileWeek(
   const todayKey = dayKey(new Date());
   const days: WeekDay[] = [];
   for (let i = 0; i < 7; i++) {
-    const d = new Date(weekStart);
-    d.setDate(weekStart.getDate() + i);
+    const d = addDays(weekStart, i);
     const key = dayKey(d);
     days.push({
       date: d,
@@ -142,12 +142,8 @@ export async function getProfileWeek(
 }
 
 export function startOfWeek(d: Date, ws: "mon" | "sun" = "mon") {
-  // 주 시작 요일(설정)부터, local time
-  const out = new Date(d);
-  out.setHours(0, 0, 0, 0);
-  const dow = ws === "sun" ? out.getDay() : (out.getDay() + 6) % 7;
-  out.setDate(out.getDate() - dow);
-  return out;
+  // 주 시작 요일(설정)부터, 한국 시간 0시(lib/kst) — 서버(UTC) 0시로 자르면 월요일 0~9시 일정이 지난주로 갔다
+  return kstStartOfWeek(d, ws);
 }
 
 function dayKey(d: Date) {

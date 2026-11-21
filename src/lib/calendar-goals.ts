@@ -4,6 +4,7 @@
  * 목표 시작 시점 이후 그 캘린더에 쌓인 시간을 합산해 달성률·남은 기한·주간 페이스를 낸다.
  */
 
+import { kstYearStart } from "@/lib/kst";
 import { getAdminClient } from "@/lib/supabase";
 import { fetchTimeBlocks } from "@/lib/insights";
 
@@ -50,7 +51,7 @@ export async function listCalendarGoals(
     .filter((d): d is Date => !!d && !Number.isNaN(d.getTime()));
   const rangeStart = starts.length > 0
     ? new Date(Math.min(...starts.map((d) => d.getTime())))
-    : new Date(now.getFullYear(), 0, 1);
+    : kstYearStart(now); // 한국 1월 1일 0시(lib/kst)
   const blocks = await fetchTimeBlocks(userId, rangeStart, now);
 
   const hoursByCalendar = new Map<string, number>();

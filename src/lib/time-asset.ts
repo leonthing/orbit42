@@ -6,6 +6,7 @@
  * 토스/뱅크샐러드의 자산 홈처럼 "시간이 곧 자산"을 명확히 보여주는 게 목적.
  */
 
+import { kstMonthKey, kstMonthStart as kstMonthStartOf } from "@/lib/kst";
 import { errorSummary } from "@/lib/log-safe";
 import { getAdminClient } from "@/lib/supabase";
 import { fetchTimeBlocks, weekStartMonday } from "@/lib/insights";
@@ -579,15 +580,16 @@ export async function getTimeAssetSummary(
       const months = entries.map((e) => e.month).sort();
       const [fy, fm] = months[0].split("-").map(Number);
       const [ly, lm] = months[months.length - 1].split("-").map(Number);
-      const rangeStart = new Date(fy, fm - 1, 1);
-      const rangeEnd = new Date(ly, lm, 1);
+      // 달 경계는 한국 시간(lib/kst) — 서버(UTC)로 자르면 한국 1일 0~9시 일정이 전달로 갔다
+      const rangeStart = kstMonthStartOf(fy, fm - 1);
+      const rangeEnd = kstMonthStartOf(ly, lm);
       const blocks = await fetchTimeBlocks(userId, rangeStart, rangeEnd);
       const monthSet = new Set(months);
       let earnHours = 0;
       for (const b of blocks) {
         if (b.all_day) continue;
         // 기록된 달에 속한 수입 시간만 집계 (달 경계는 이벤트 시작 기준).
-        const key = `${b.start.getFullYear()}-${String(b.start.getMonth() + 1).padStart(2, "0")}`;
+        const key = kstMonthKey(b.start);
         if (!monthSet.has(key)) continue;
         if (bucketOf(b) !== "earn") continue;
         earnHours += (b.end.getTime() - b.start.getTime()) / 3_600_000;
