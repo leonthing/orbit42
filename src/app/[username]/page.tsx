@@ -1,4 +1,5 @@
 import { hiddenFrom, PRIVATE_PROFILE_METADATA } from "@/lib/profile-privacy";
+import { LineIcon } from "@/components/LineIcon";
 import { PrivateProfileScreen } from "@/components/PrivateProfileScreen";
 import { safeSocialLinks } from "@/lib/social-links";
 import { socialIconFor } from "@/components/SocialIcon";
@@ -561,7 +562,8 @@ export default async function PublicProfile({
           ]}
           overview={
             <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+              {/* 2단(lg)에서 왼쪽이 좁은 폭(W1280 등)은 3열×2줄, 넉넉하면(1400px~) 6열 한 줄 */}
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-6 lg:grid-cols-3 min-[1400px]:grid-cols-6">
                 <ActionTile href={`/${params.username}/slots`} label="예약 링크 만들기" highlight />
                 <ActionTile href="/feed" label="소식 공유" />
                 <ActionTile href={`/${params.username}/calendar`} label="일정 추가" />
@@ -942,7 +944,7 @@ function PostsList({
             )}
             {p.location_label && (
               <p className="mt-2 text-xs text-charcoal-500">
-                📍 {p.location_label}
+                <LineIcon name="mapPin" /> {p.location_label}
               </p>
             )}
             <div className="mt-3">

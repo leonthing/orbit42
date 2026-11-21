@@ -1,5 +1,6 @@
 "use client";
 
+import { LineIcon } from "@/components/LineIcon";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PostBody } from "@/components/posts/PostBody";
@@ -582,7 +583,7 @@ export function PhotoPostEditor({ username, initial, resumed = false }: { userna
                   { label: "H", aria: "소제목", cls: "font-bold", on: () => prefixLines("## ") },
                   { label: "•", aria: "목록", cls: "text-lg", on: () => prefixLines("- ") },
                   { label: "❝", aria: "인용", cls: "", on: () => prefixLines("> ") },
-                  { label: "🔗", aria: "링크", cls: "", on: link },
+                  { label: <LineIcon name="link" className="h-4 w-4" />, aria: "링크", cls: "", on: link },
                 ].map((b) => (
                   <button
                     key={b.aria}

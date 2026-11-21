@@ -68,8 +68,10 @@ export function PeopleView({
     <Suggestions people={orbit.suggestions} />
   ) : null;
   const followingOnly = orbit.followingOnly.length > 0 ? <FollowingOnly people={orbit.followingOnly} hrefFor={hrefFor} /> : null;
+  const hasSide = !!(nudges || importBlock || followingOnly);
   return (
-    <div className="mx-auto w-full max-w-2xl pb-16 lg:grid lg:max-w-none lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:gap-6">
+    // 오른쪽에 넣을 블록이 하나도 없으면(구글 연결됨·nudge 없음·팔로우만 없음) 2단 대신 가운데 한 단(672) — 빈 칸을 두지 않는다
+    <div className={`mx-auto w-full max-w-2xl pb-16 ${hasSide ? "lg:grid lg:max-w-none lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:gap-6" : ""}`}>
     <div className="min-w-0 space-y-4">
       {/* 휴대폰: iOS 오르빗 머리 — 늘 보이는 검색칸 → 날짜 → 큰 인사 → '나를 중심으로…' (묶음 4) */}
       <div className="space-y-3 md:hidden" data-testid="orbitPhoneHeader">
@@ -140,7 +142,7 @@ export function PeopleView({
       )}
 
       {(nudges || importBlock) && (
-        <div className="space-y-4 lg:hidden">
+        <div className={`space-y-4 ${hasSide ? "lg:hidden" : ""}`}>
           {nudges}
           {importBlock}
         </div>
@@ -158,17 +160,17 @@ export function PeopleView({
         </p>
       )}
 
-      {followingOnly && <div className="lg:hidden">{followingOnly}</div>}
+      {followingOnly && <div className={hasSide ? "lg:hidden" : ""}>{followingOnly}</div>}
 
       {orbit.archived.length > 0 && <Archived people={orbit.archived} hrefFor={hrefFor} />}
 
       {orbit.importEnabled && <ImportFooter syncedAt={orbit.syncedAt} />}
     </div>
-    <aside className="hidden space-y-4 lg:block" data-testid="orbitSide">
+    {hasSide && <aside className="hidden space-y-4 lg:block" data-testid="orbitSide">
       {nudges}
       {importBlock}
       {followingOnly}
-    </aside>
+    </aside>}
     </div>
   );
 }

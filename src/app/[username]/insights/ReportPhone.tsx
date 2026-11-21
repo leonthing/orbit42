@@ -3,6 +3,7 @@
 // 리포트 휴대폰 — iOS 1.10.0 리포트 탭과 같은 순서(웹 묶음 2, 11/21):
 // 시간으로 번 돈(주/월/년) → 이번 주 판매 현황 → 지난주 리포트 → 만족도 → '더 보기'
 
+import { LineIcon } from "@/components/LineIcon";
 import { useEffect, useState } from "react";
 import type { EarnPeriod, EarnPeriodStat } from "@/lib/time-asset";
 
@@ -141,7 +142,7 @@ export function RatingsCard({
     <section className="rounded-2xl bg-[rgb(var(--bg-surface))] p-4" data-testid="ratingsCard">
       <div className="flex items-center gap-2">
         <h2 className="text-base font-semibold text-charcoal-100">만족도</h2>
-        <span className="text-xs text-charcoal-500">🔒 나만 봐요</span>
+        <span className="inline-flex items-center gap-1 text-xs text-charcoal-500"><LineIcon name="lock" /> 나만 봐요</span>
         {!empty && (
           <button type="button" onClick={() => setAll((v) => !v)} className="ml-auto min-h-9 text-sm font-medium text-navy-500">
             {all ? "접기" : "모두 보기"}

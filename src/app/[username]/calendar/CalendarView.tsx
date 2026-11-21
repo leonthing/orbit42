@@ -1,5 +1,6 @@
 "use client";
 
+import { LineIcon } from "@/components/LineIcon";
 import {
   saturdayIndex,
   sundayIndex,
@@ -2915,7 +2916,7 @@ function EventDetailModal({
               <>
                 {invite?.location && (
                   <p className="mt-1 text-xs text-charcoal-400">
-                    📍 {invite.location}
+                    <LineIcon name="mapPin" /> {invite.location}
                   </p>
                 )}
                 <p className="mt-2 text-2xs text-purple-300">
@@ -2937,7 +2938,7 @@ function EventDetailModal({
         {!isInvite && (fullEvent?.location || fullEvent?.description) && (
           <div className="mt-4 space-y-2">
             {fullEvent?.location && (
-              <p className="text-sm text-charcoal-300">📍 {fullEvent.location}</p>
+              <p className="text-sm text-charcoal-300"><LineIcon name="mapPin" /> {fullEvent.location}</p>
             )}
             {fullEvent?.description && (
               <div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { LineIcon } from "@/components/LineIcon";
 import Link from "next/link";
 import { useEffect, useState, useTransition, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -718,7 +719,7 @@ function GuestSection({
                     )}
                     {b.slot.location_detail && (
                       <p className="mt-0.5 text-xs text-charcoal-500">
-                        📍 {b.slot.location_detail}
+                        <LineIcon name="mapPin" /> {b.slot.location_detail}
                       </p>
                     )}
                     {b.payment_status === "awaiting" && b.status === "pending" && b.host?.payment_instructions && (
