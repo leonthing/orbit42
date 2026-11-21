@@ -59,7 +59,7 @@ export function PeopleView({
     });
   }, [router]);
 
-  // PC(lg 이상) 2단(11/21 묶음 바): 왼쪽 핵심(궤도 그림·사람 카드) · 오른쪽 보조(연락할 때·캘린더에서 찾기 제안·팔로우 중).
+  // PC(xl=1280 이상) 2단(11/21 묶음 바): 왼쪽 핵심(궤도 그림·사람 카드) · 오른쪽 보조(연락할 때·캘린더에서 찾기 제안·팔로우 중).
   // 휴대폰·좁은 폭은 예전 한 줄 순서 그대로 — 같은 블록을 lg 에서만 오른쪽 칸으로 옮겨 보인다(새 기능 없음).
   const nudges = orbit.nudges.length > 0 ? <NudgeList orbit={orbit} username={username} /> : null;
   const importBlock = !orbit.importEnabled ? (
@@ -71,7 +71,7 @@ export function PeopleView({
   const hasSide = !!(nudges || importBlock || followingOnly);
   return (
     // 오른쪽에 넣을 블록이 하나도 없으면(구글 연결됨·nudge 없음·팔로우만 없음) 2단 대신 가운데 한 단(672) — 빈 칸을 두지 않는다
-    <div className={`mx-auto w-full max-w-2xl pb-16 ${hasSide ? "lg:grid lg:max-w-none lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:gap-6" : ""}`}>
+    <div className={`mx-auto w-full max-w-2xl pb-16 ${hasSide ? "xl:grid xl:max-w-none xl:grid-cols-[minmax(0,1fr)_340px] xl:items-start xl:gap-6" : ""}`}>
     <div className="min-w-0 space-y-4">
       {/* 휴대폰: iOS 오르빗 머리 — 늘 보이는 검색칸 → 날짜 → 큰 인사 → '나를 중심으로…' (묶음 4) */}
       <div className="space-y-3 md:hidden" data-testid="orbitPhoneHeader">
@@ -142,7 +142,7 @@ export function PeopleView({
       )}
 
       {(nudges || importBlock) && (
-        <div className={`space-y-4 ${hasSide ? "lg:hidden" : ""}`}>
+        <div className={`space-y-4 ${hasSide ? "xl:hidden" : ""}`}>
           {nudges}
           {importBlock}
         </div>
@@ -160,13 +160,13 @@ export function PeopleView({
         </p>
       )}
 
-      {followingOnly && <div className={hasSide ? "lg:hidden" : ""}>{followingOnly}</div>}
+      {followingOnly && <div className={hasSide ? "xl:hidden" : ""}>{followingOnly}</div>}
 
       {orbit.archived.length > 0 && <Archived people={orbit.archived} hrefFor={hrefFor} />}
 
       {orbit.importEnabled && <ImportFooter syncedAt={orbit.syncedAt} />}
     </div>
-    {hasSide && <aside className="hidden space-y-4 lg:block" data-testid="orbitSide">
+    {hasSide && <aside className="hidden space-y-4 xl:block" data-testid="orbitSide">
       {nudges}
       {importBlock}
       {followingOnly}
