@@ -844,7 +844,7 @@ function ManualWindows({
                 type="button"
                 onClick={() => setWindows((arr) => arr.filter((_, j) => j !== i))}
                 aria-label="Remove"
-                className="flex h-6 w-6 items-center justify-center rounded text-charcoal-500 hover:bg-charcoal-800 hover:text-navy-400"
+                className="flex h-6 w-6 items-center justify-center rounded text-charcoal-400 hover:bg-charcoal-800 hover:text-navy-400"
               >
                 ✕
               </button>
@@ -1265,7 +1265,7 @@ function SlotCard({
             <span
               className={`rounded-full px-2 py-0.5 text-2xs font-semibold ${
                 row.slot.active
-                  ? "bg-emerald-600/20 text-emerald-400"
+                  ? "bg-emerald-600/20 text-emerald-800 dark:text-emerald-400"
                   : "bg-charcoal-700/40 text-charcoal-500"
               }`}
             >
@@ -1274,7 +1274,7 @@ function SlotCard({
             <span className="rounded-full bg-charcoal-800/60 px-2 py-0.5 text-2xs font-medium text-charcoal-400">
               {row.slot.mode === "auto" ? "자동" : "직접"}
             </span>
-            <span className="rounded-full bg-navy-400/15 px-2 py-0.5 text-2xs font-bold text-navy-300">
+            <span className="rounded-full bg-navy-400/15 px-2 py-0.5 text-2xs font-bold text-navy-600 dark:text-navy-300">
               {priceLabel}
             </span>
             {cal && (
@@ -1442,7 +1442,7 @@ function SlotCard({
                       hour: "2-digit",
                       minute: "2-digit",
                     })}
-                    <span className="ml-2 text-charcoal-500">
+                    <span className="ml-2 text-charcoal-400">
                       {a.booked_count}/{a.capacity}
                     </span>
                   </span>
@@ -1456,7 +1456,7 @@ function SlotCard({
                       })
                     }
                     aria-label="Remove"
-                    className="flex h-6 w-6 items-center justify-center rounded text-charcoal-500 hover:bg-charcoal-800 hover:text-navy-400"
+                    className="flex h-6 w-6 items-center justify-center rounded text-charcoal-400 hover:bg-charcoal-800 hover:text-navy-400"
                   >
                     ✕
                   </button>

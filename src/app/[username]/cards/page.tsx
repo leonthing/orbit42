@@ -40,7 +40,7 @@ export default async function CardsPage({
   const st = await cardStatus(data.id as string);
   const err = searchParams?.error;
   return (
-    <div className="w-full min-w-0 max-w-2xl max-md:pb-[var(--mobile-nav-pb)]">
+    <div className="w-full min-w-0 max-w-2xl max-md:pb-[var(--mobile-nav-pb)] md:mx-auto">
       <h1 className="text-2xl font-bold text-charcoal-100 max-md:text-xl">명함 → 구글 연락처</h1>
       <p className="mt-1 text-sm text-charcoal-500">시험 기능 · 내 계정에만 보여요</p>
       {searchParams?.connected && st.connected && (

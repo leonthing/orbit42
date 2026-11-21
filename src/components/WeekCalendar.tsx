@@ -209,6 +209,8 @@ function AllDayColumn({
 }) {
   const visible = items.slice(0, 3);
   const extra = items.length - visible.length;
+  // 휴대폰 하루 보기(진한 안)에선 종일 칩도 시간 블록과 같은 진한 단색·흰 글자, 완료는 바탕 30%+진한 글자(PO 11/22)
+  const { solid } = useLook();
   return (
     <div className="min-h-[28px] space-y-1 border-r border-charcoal-800/40 px-1 py-1 last:border-r-0">
       {visible.map((item) => {
@@ -216,15 +218,32 @@ function AllDayColumn({
           // 종일 일정도 iOS 하루 보기처럼 완료 체크·만족도(11/21 Leo) — 초대받은 남의 일정은 주인 몫
           const done = !!completedKeys?.has(normalizeEventKey(item.id));
           const canToggle = !!(viewerIsOwner && onToggleComplete && !item.id.startsWith("invite:"));
+          const solidOn = solid && !done;
+          const doneSolid = solid && done;
+          const bg = solidBg(item.color);
           return (
             <div
               key={item.id}
-              className={`flex items-center gap-1 rounded-sm border-l-[3px] bg-charcoal-800/60 px-1 py-0.5 text-2xs font-medium text-charcoal-100 ${done ? "opacity-50" : ""}`}
-              style={{ borderColor: item.color }}
+              className={`flex items-center gap-1 px-1 py-0.5 font-medium ${
+                solid ? "rounded-md text-xs" : "rounded-sm border-l-[3px] bg-charcoal-800/60 text-2xs text-charcoal-100"
+              } ${done && !solid ? "opacity-50" : ""}`}
+              style={
+                solidOn
+                  ? { backgroundColor: bg, color: "#fff" }
+                  : doneSolid
+                    ? ({ backgroundColor: `color-mix(in srgb, ${bg} 30%, rgb(var(--bg-base)))`, "--done-tx": `color-mix(in srgb, ${item.color} 62%, #000)` } as React.CSSProperties)
+                    : { borderColor: item.color }
+              }
+              data-done-tx={doneSolid ? true : undefined}
               title={item.title}
             >
               {canToggle && (
-                <CompleteBox color={item.color} completed={done} onClick={() => onToggleComplete?.(item.id)} />
+                <CompleteBox
+                  color={solidOn ? "#fff" : item.color}
+                  checkColor={solidOn ? bg : undefined}
+                  completed={done}
+                  onClick={() => onToggleComplete?.(item.id)}
+                />
               )}
               <button
                 type="button"
@@ -234,7 +253,7 @@ function AllDayColumn({
               >
                 {item.title}
               </button>
-              <RatingMark rating={ratings?.[toEventKey(item.id)] ?? null} />
+              <RatingMark rating={ratings?.[toEventKey(item.id)] ?? null} onSolid={solidOn} />
             </div>
           );
         }
