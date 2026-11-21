@@ -16,13 +16,14 @@ export default async function Image({
   const hostName = data?.host.display_name || data?.host.username || "Orbit42";
   const slot = data?.slot;
   const isAuction = slot?.pricing_model === "auction";
+  // ₩ 는 OG 렌더러(@vercel/og)가 폰트를 못 받아 네모로 나온다(11/22 운영 실측) → '50,000원' 표기
   const priceLabel = !slot
     ? ""
     : isAuction
-      ? `경매 · 시작가 ₩${((slot.reserve_price_cents ?? 0) / 100).toLocaleString("ko-KR")}`
+      ? `경매 · 시작가 ${((slot.reserve_price_cents ?? 0) / 100).toLocaleString("ko-KR")}원`
       : slot.price_cents === 0
         ? "무료"
-        : `₩${(slot.price_cents / 100).toLocaleString("ko-KR")}`;
+        : `${(slot.price_cents / 100).toLocaleString("ko-KR")}원`;
   const duration = slot?.duration_min ? `${slot.duration_min}분` : "";
   const locations =
     slot?.locations && slot.locations.length > 0
