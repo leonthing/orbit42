@@ -346,7 +346,7 @@ export function AfterCompletionSheet({
 }
 
 /** 하루 보기 맨 위 할 일 띠 — 접으면 '할 일 N · 지남 M' */
-export function DayTodoStrip({ date }: { date: string }) {
+export function DayTodoStrip({ date, compactEmpty = false }: { date: string; /** 휴대폰 하루 보기: 할 일이 없으면 카드 대신 얇은 한 줄 */ compactEmpty?: boolean }) {
   const toast = useToast();
   const [todos, setTodos] = useState<Todo[] | null>(null);
   const [overdue, setOverdue] = useState(0);
@@ -389,6 +389,22 @@ export function DayTodoStrip({ date }: { date: string }) {
     setText("");
     load();
   };
+
+  // 휴대폰 하루 보기(11/22): 할 일 0개·지난 것 0개면 카드(44px+테두리) 대신 얇은 한 줄 — 시간표를 위로 올린다
+  if (compactEmpty && !open && todos.length === 0 && overdue === 0) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        data-testid="dayTodoStrip"
+        data-compact
+        className="relative flex h-6 w-full items-center gap-1.5 px-1 text-left text-xs text-charcoal-400 before:absolute before:-inset-y-2.5 before:inset-x-0 before:content-['']"
+      >
+        <span>할 일 없음</span>
+        <span className="ml-auto font-medium text-navy-500 dark:text-navy-400">+ 할 일</span>
+      </button>
+    );
+  }
 
   return (
     <div className="rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))]" data-testid="dayTodoStrip">

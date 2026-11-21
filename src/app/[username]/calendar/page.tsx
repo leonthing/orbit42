@@ -84,12 +84,13 @@ export default async function CalendarPage({
     <SlotPanelProvider username={params.username}>
       {/* 체크리스트와 캘린더를 한 flex 컬럼에 둔다. 캘린더에 h-full 을 주면
           체크리스트 높이를 무시하고 화면 전체를 차지해 아래로 넘친다. */}
-      <div className="flex h-full flex-col gap-4">
+      <div className="group/cal flex h-full flex-col gap-4">
         {/* 홈이 캘린더로 옮겨오면서 시작하기 체크리스트도 함께 이주했다.
             내 캘린더일 때만 보여준다 (남의 캘린더에서는 의미 없음). */}
         {/* 휴대폰: 시작하기 줄은 달력·목록 아래 맨 끝으로(iOS, PO 11/21 안 B) — 하루·주 보기도 같다 */}
         {isOwner && (
-          <div className="max-md:order-last">
+          // 휴대폰 하루 보기는 시간표가 화면 아래 끝까지라 이 줄이 탭 막대 뒤로 밀린다 → 여기선 숨기고, 하루 보기 안에 얇은 한 줄(onboardingThin)로 보인다
+          <div className="max-md:order-last max-md:group-has-[[data-testid=dayView]]/cal:hidden">
             <OnboardingSection />
           </div>
         )}
@@ -113,6 +114,7 @@ export default async function CalendarPage({
           weekStart={weekStartPref}
           todoCount={todoCount}
           unreadNotifications={unreadNotifications}
+          onboardingThin={isOwner ? <OnboardingSection thin /> : null}
         />
       </div>
     </SlotPanelProvider>

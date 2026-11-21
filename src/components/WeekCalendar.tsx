@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef } from "react";
 import type { WeekDay, WeekItem } from "@/lib/profile-week";
 import { ShareEventButton } from "@/components/ShareEventButton";
 import { useSlotPanel } from "@/components/SlotPanel";
@@ -10,12 +10,35 @@ import { normalizeEventKey, toEventKey } from "@/lib/event-key";
 // Visible window: 00:00 – 24:00 (full day, 24 one-hour rows).
 const START_HOUR = 0;
 const END_HOUR = 24;
-const ROW_HEIGHT = 44; // px per hour — 32 은 이벤트 두 줄이 안 들어가 뭉개졌다
-const ROWS = END_HOUR - START_HOUR; // 18
-const GRID_HEIGHT = ROWS * ROW_HEIGHT; // 24 * 32 = 768
+const ROW_HEIGHT = 44; // px per hour(기본·PC) — 32 은 이벤트 두 줄이 안 들어가 뭉개졌다
+const ROWS = END_HOUR - START_HOUR;
 const START_MIN = START_HOUR * 60;
 const END_MIN = END_HOUR * 60;
-const PX_PER_MIN = ROW_HEIGHT / 60;
+
+/**
+ * 1시간 높이·블록 모양 — 휴대폰 하루 보기만 바꾼다(11/22 Leo "구글보다 작고 답답").
+ * PC·주 보기는 기본값(44px·연한 바탕) 그대로.
+ */
+type Look = { hour: number; solid: boolean; bare: boolean };
+const LookCtx = createContext<Look>({ hour: ROW_HEIGHT, solid: false, bare: false });
+const useLook = () => useContext(LookCtx);
+
+/** 진한 바탕 안: 캘린더 색을 흰 글자 대비 4.5 이상이 될 때까지 검정 쪽으로 섞는다 */
+function solidBg(color: string): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(color.trim());
+  if (!m) return `color-mix(in srgb, ${color} 70%, #000)`;
+  const n = parseInt(m[1], 16);
+  const rgb = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  const lum = (c: number[]) => {
+    const f = (v: number) => { const x = v / 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; };
+    return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]);
+  };
+  for (let k = 0; k <= 0.9; k += 0.05) {
+    const c = rgb.map((v) => Math.round(v * (1 - k)));
+    if (1.05 / (lum(c) + 0.05) >= 4.6) return `rgb(${c.join(" ")})`;
+  }
+  return "rgb(0 0 0)";
+}
 
 type PositionedItem = WeekItem & {
   /** Minutes from midnight (clamped to [0, 1440]). */
@@ -42,7 +65,16 @@ export function WeekCalendar({
   onToggleComplete,
   onEventClick,
   onEmptyClick,
+  hourPx = ROW_HEIGHT,
+  solidBlocks = false,
+  bare = false,
 }: {
+  /** 1시간 높이(px). 휴대폰 하루 보기만 크게 준다 */
+  hourPx?: number;
+  /** 일정 블록을 진한 단색 + 흰 글자로 */
+  solidBlocks?: boolean;
+  /** 카드 상자(테두리·둥근 모서리·바탕) 없이 — 휴대폰 하루 보기에서 화면 끝까지 */
+  bare?: boolean;
   /** 빈 칸을 누르면 그 날짜·시각(30분 단위)으로 새 일정을 연다 */
   onEmptyClick?: (date: Date, hour: number, minute: number) => void;
   username: string;
@@ -61,8 +93,11 @@ export function WeekCalendar({
   );
 
 
+  const look = useMemo(() => ({ hour: hourPx, solid: solidBlocks, bare }), [hourPx, solidBlocks, bare]);
+
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-charcoal-800/60 bg-charcoal-900/40">
+    <LookCtx.Provider value={look}>
+    <div className={`flex min-h-0 flex-1 flex-col overflow-hidden ${bare ? "" : "rounded-xl border border-charcoal-800/60 bg-charcoal-900/40"}`}>
       {/* 가로·세로를 한 컨테이너(UnifiedScroll)에서 스크롤한다.
           가로 스크롤을 바깥 div 로 빼면 시간축의 sticky left 가 그 스크롤포트를
           조상으로 잡지 못해 동작하지 않는다. 헤더·종일·시간표가 같은 폭을
@@ -80,11 +115,13 @@ export function WeekCalendar({
       />
 
       {days.every((d) => d.items.length === 0) && emptyMessage && (
-        <div className="border-t border-charcoal-800/50 px-5 py-4 text-center text-xs text-charcoal-500">
+        // 상자 없는 휴대폰 하루 보기는 아래가 탭 막대 뒤라 안내를 위로 올린다
+        <div className={`px-5 py-4 text-center text-xs text-charcoal-500 ${bare ? "order-first border-b border-charcoal-800/50 py-2" : "border-t border-charcoal-800/50"}`}>
           {emptyMessage}
         </div>
       )}
     </div>
+    </LookCtx.Provider>
   );
 }
 
@@ -121,11 +158,13 @@ function DayHeader({ day }: { day: WeekDay }) {
 }
 
 function TimeAxis() {
+  const { hour: ROW_HEIGHT, bare } = useLook();
+  const GRID_HEIGHT = ROWS * ROW_HEIGHT;
   return (
     <div
       // sticky 는 relative 처럼 containing block 이 되므로 시간 라벨의
       // absolute 위치 기준은 그대로 유지된다.
-      className="sticky left-0 z-10 border-r border-charcoal-800/40 bg-[rgb(var(--bg-surface))]"
+      className={`sticky left-0 z-10 border-r border-charcoal-800/40 ${bare ? "bg-[rgb(var(--bg-base))]" : "bg-[rgb(var(--bg-surface))]"}`}
       style={{ height: GRID_HEIGHT }}
     >
       {Array.from({ length: ROWS + 1 }).map((_, i) => {
@@ -212,7 +251,7 @@ function AllDayColumn({
  * 블록 안 완료 체크 — iOS 하루 보기처럼 휴대폰에서도 보인다(11/21 Leo "완료한 일정에 체크 표시").
  * 휴대폰은 16px 상자 + 사방 10px 누르는 영역(36px), 데스크톱은 12px 상자 + 사방 6px.
  */
-function CompleteBox({ color, completed, onClick }: { color: string; completed: boolean; onClick: () => void }) {
+function CompleteBox({ color, checkColor, completed, onClick }: { color: string; checkColor?: string; completed: boolean; onClick: () => void }) {
   return (
     <button
       type="button"
@@ -226,7 +265,7 @@ function CompleteBox({ color, completed, onClick }: { color: string; completed: 
       style={{
         borderColor: color,
         backgroundColor: completed ? color : "transparent",
-        color: "#fff",
+        color: checkColor ?? "#fff",
       }}
     >
       {completed && (
@@ -239,10 +278,10 @@ function CompleteBox({ color, completed, onClick }: { color: string; completed: 
 }
 
 /** 매긴 만족도 — 블록 제목 오른쪽 ♥n (나만 본다) */
-function RatingMark({ rating }: { rating?: number | null }) {
+function RatingMark({ rating, onSolid }: { rating?: number | null; onSolid?: boolean }) {
   if (rating == null) return null;
   return (
-    <span data-testid="blockRating" className="shrink-0 text-2xs font-semibold leading-tight text-pink-500" aria-label={`만족도 ${rating}`}>
+    <span data-testid="blockRating" className={`shrink-0 text-2xs font-semibold leading-tight ${onSolid ? "text-white" : "text-pink-500"}`} aria-label={`만족도 ${rating}`}>
       ♥{rating}
     </span>
   );
@@ -271,13 +310,53 @@ function UnifiedScroll({
   onEventClick?: (item: WeekItem) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const { hour: ROW_HEIGHT, bare } = useLook();
+  const GRID_HEIGHT = ROWS * ROW_HEIGHT;
   // Scroll to 06:00 on mount so the grid opens where most events live.
   // Sticky headers stay pinned; the time-grid portion scrolls beneath.
+  // 휴대폰 하루 보기(상자 없음)는 iOS 와 같은 규칙으로 연다(11/22 PO): 오늘이면 지금-1시간, 다른 날은 첫 일정-1시간, 없으면 8시.
+  // 처음 한 번만 — 좌우로 밀어 날짜를 넘길 때는 스크롤 위치를 그대로 둔다(넘길 때마다 튀지 않게).
+  const single0 = days.length === 1;
+  const anchorHour = (() => {
+    if (!bare || !single0) return 8;
+    const d = days[0];
+    let h = 8;
+    if (d?.isToday) h = new Date().getHours() - 1;
+    else {
+      const first = (positionedByDay[0] ?? []).filter((i) => !i.allDay).map((i) => i.startMin).sort((a, b) => a - b)[0];
+      if (first != null) h = Math.floor(first / 60) - 1;
+    }
+    return Math.max(0, Math.min(h, 17));
+  })();
+  const firstDayKey = useRef(days[0]?.date.toISOString() ?? "");
+  const settled = useRef(false);
   useEffect(() => {
-    // 새벽 시간대를 보여줄 이유가 없다. 업무 시간대부터 보이게 맞춘다.
-    // 08:00 라벨은 선 가운데에 걸려 있어(-translate-y-1/2) 딱 맞춰 내리면 머리줄에 반쯤 가린다 — 12px 덜 내린다(감사 7).
-    if (ref.current) ref.current.scrollTop = 8 * ROW_HEIGHT - 12;
-  }, []);
+    const el = ref.current;
+    if (!el) return;
+    if (!bare || !single0) {
+      // 새벽 시간대를 보여줄 이유가 없다. 업무 시간대부터 보이게 맞춘다.
+      // 08:00 라벨은 선 가운데에 걸려 있어(-translate-y-1/2) 딱 맞춰 내리면 머리줄에 반쯤 가린다 — 12px 덜 내린다(감사 7).
+      el.scrollTop = 8 * ROW_HEIGHT - 12;
+      return;
+    }
+    // 다른 날로 넘어갔으면 더는 맞추지 않는다. 같은 날이면 일정이 늦게 도착해도 한 번 더 맞춘다.
+    if ((days[0]?.date.toISOString() ?? "") !== firstDayKey.current) settled.current = true;
+    if (settled.current) return;
+    el.scrollTop = anchorHour * ROW_HEIGHT - 12;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ROW_HEIGHT, anchorHour, bare, single0]);
+  // 사람이 직접 스크롤하면 그 뒤로는 손대지 않는다
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !bare) return;
+    const stop = () => { settled.current = true; };
+    el.addEventListener("touchstart", stop, { passive: true });
+    el.addEventListener("wheel", stop, { passive: true });
+    return () => {
+      el.removeEventListener("touchstart", stop);
+      el.removeEventListener("wheel", stop);
+    };
+  }, [bare]);
   // 휴대폰(한 화면 3일): 월요일부터 열면 오늘이 화면 밖일 수 있다 → 이번 주면 오늘, 아니면 그 주 첫날로 맞춘다(웹 점검 11/20, 묶음 A).
   const weekKey = days[0]?.date.toISOString() ?? "";
   const todayIdx = days.findIndex((d) => d.isToday);
@@ -296,7 +375,7 @@ function UnifiedScroll({
       ref={ref}
       // 모바일에서는 요일 단위로 스냅되고(scroll-pl-11 로 44px 시간축을 비켜
       // 정렬), 데스크톱은 7일이 다 들어가므로 가로 스크롤을 끈다.
-      className={`min-h-0 flex-1 overflow-auto ${single ? "overflow-x-hidden" : "snap-x snap-mandatory scroll-pl-11 md:snap-none md:overflow-x-hidden"}`}
+      className={`min-h-0 flex-1 overflow-auto ${single ? "overflow-x-hidden" : "snap-x snap-mandatory scroll-pl-11 md:snap-none md:overflow-x-hidden"} ${bare ? "pb-[calc(4.5rem+env(safe-area-inset-bottom))] [overflow-anchor:none]" : ""}`}
     >
       {/* 모바일은 132px 고정이라 2.6일이 걸쳐 보였다. 뷰포트에서 페이지 좌우
           여백(32)·카드 테두리(2)·시간축(44)을 뺀 폭을 3으로 나눠, 한 화면에
@@ -304,7 +383,7 @@ function UnifiedScroll({
           하루 보기(휴대폰, 묶음 B)는 하루 한 칸이 화면 폭을 다 쓴다. */}
       <div className={single ? "w-full" : "w-[calc(44px+7*((100vw-78px)/3))] sm:w-[calc(44px+7*168px)] md:w-full"}>
       {/* Sticky header stack: day labels + (optionally) all-day lane. */}
-      <div className="sticky top-0 z-20 bg-[rgb(var(--bg-surface))]">
+      <div className={`sticky top-0 z-20 ${bare ? "bg-[rgb(var(--bg-base))]" : "bg-[rgb(var(--bg-surface))]"}`}>
         <div className={`${cols} border-b border-charcoal-800/40 bg-charcoal-900/60 ${single ? "hidden" : ""}`}>
           <div className="sticky left-0 z-30 border-r border-charcoal-800/40 bg-[rgb(var(--bg-surface))]" />
           {days.map((day) => (
@@ -313,7 +392,7 @@ function UnifiedScroll({
         </div>
         {hasAllDay && (
           <div className={`${cols} border-b border-charcoal-800/40 bg-charcoal-900/40`}>
-            <div className="sticky left-0 z-30 flex items-start justify-end border-r border-charcoal-800/40 bg-[rgb(var(--bg-surface))] px-1.5 pt-1.5 text-2xs font-medium text-charcoal-500">
+            <div className={`sticky left-0 z-30 flex items-start justify-end border-r border-charcoal-800/40 px-1.5 pt-1.5 text-2xs font-medium text-charcoal-500 ${bare ? "bg-[rgb(var(--bg-base))]" : "bg-[rgb(var(--bg-surface))]"}`}>
               종일
             </div>
             {positionedByDay.map((items, idx) => (
@@ -381,6 +460,7 @@ function DayColumn({
   onToggleComplete?: (eventId: string) => void;
   onEventClick?: (item: WeekItem) => void;
 }) {
+  const { hour: ROW_HEIGHT } = useLook();
   return (
     <div
       className={`relative border-r border-charcoal-800/40 last:border-r-0 ${
@@ -432,6 +512,8 @@ function DayColumn({
 }
 
 function NowLine() {
+  const { hour } = useLook();
+  const PX_PER_MIN = hour / 60;
   const now = new Date();
   const min = now.getHours() * 60 + now.getMinutes();
   if (min < START_MIN || min > END_MIN) return null;
@@ -448,7 +530,9 @@ function NowLine() {
 }
 
 function TravelBand({ item }: { item: PositionedItem }) {
+  const { hour } = useLook();
   if (item.kind !== "event") return null;
+  const PX_PER_MIN = hour / 60;
   const top = (item.travelStartMin - START_MIN) * PX_PER_MIN;
   const height = (item.startMin - item.travelStartMin) * PX_PER_MIN;
   const widthPct = 100 / item.columnCount;
@@ -501,6 +585,8 @@ function ItemBlock({
   onEventClick?: (item: WeekItem) => void;
 }) {
   const panel = useSlotPanel();
+  const { hour, solid, bare } = useLook();
+  const PX_PER_MIN = hour / 60;
   // Clamp to visible window and translate into grid coordinates.
   const visibleStart = Math.max(item.startMin, START_MIN);
   const visibleEnd = Math.min(item.endMin, END_MIN);
@@ -511,7 +597,8 @@ function ItemBlock({
 
   const style: React.CSSProperties = {
     top,
-    height,
+    // 상자 없는 휴대폰 하루 보기: 이어 붙은 일정(10:00–10:30, 10:30–)이 한 덩어리로 보이지 않게 1px 띄운다
+    height: bare ? height - 1 : height,
     left: `calc(${leftPct}% + 2px)`,
     width: `calc(${widthPct}% - 4px)`,
   };
@@ -524,8 +611,18 @@ function ItemBlock({
       !item.id.startsWith("invite:")
     );
     const clickable = !!onEventClick;
-    const tint = `color-mix(in srgb, ${item.color} 10%, transparent)`;
-    const tintHover = `color-mix(in srgb, ${item.color} 16%, transparent)`;
+    // 진한 안(solid): 캘린더 색 단색 + 흰 글자(대비 4.5↑). 확정 대기 예약(점선)은 그대로 비운다.
+    const solidFull = solid && !item.tentative;
+    // 완료한 일정은 통째 반투명(대비 2.0~2.9) 대신 바탕만 30%로 흐리게, 글자는 진하게(라이트 진한 색·다크 흰 80%) — 대비 6 이상(11/22)
+    const doneSolid = solidFull && !!completed;
+    const solidOn = solidFull && !completed;
+    const doneTx = `color-mix(in srgb, ${item.color} 62%, #000)`;
+    const tint = solidOn
+      ? solidBg(item.color)
+      : doneSolid
+        ? `color-mix(in srgb, ${solidBg(item.color)} 30%, rgb(var(--bg-base)))`
+        : `color-mix(in srgb, ${item.color} 10%, transparent)`;
+    const tintHover = solidOn ? tint : `color-mix(in srgb, ${item.color} 16%, transparent)`;
     return (
       <div
         role={clickable ? "button" : undefined}
@@ -551,9 +648,9 @@ function ItemBlock({
             ? (e) => { e.currentTarget.style.backgroundColor = tint; }
             : undefined
         }
-        className={`group absolute overflow-hidden rounded-sm px-1.5 py-0.5 transition-colors ${
-          item.tentative ? "border border-dashed" : "border-l-[3px]"
-        } ${clickable ? "cursor-pointer" : ""} ${completed ? "opacity-50" : ""}`}
+        className={`group absolute overflow-hidden px-1.5 py-0.5 transition-colors ${bare ? "rounded-md" : "rounded-sm"} ${
+          item.tentative ? "border border-dashed" : solidFull ? "" : "border-l-[3px]"
+        } ${clickable ? "cursor-pointer" : ""} ${completed && !doneSolid ? "opacity-50" : ""}`}
         style={{
           ...style,
           borderColor: item.color,
@@ -564,27 +661,30 @@ function ItemBlock({
         <div className="flex items-start gap-1">
           {canToggle && (
             <CompleteBox
-              color={item.color}
+              color={solidOn ? "#fff" : item.color}
+              checkColor={solidOn ? tint : undefined}
               completed={!!completed}
               onClick={() => onToggleComplete?.(item.id)}
             />
           )}
           <p
-            className={`min-w-0 flex-1 truncate text-2xs font-semibold leading-tight ${
+            className={`min-w-0 flex-1 truncate font-semibold leading-tight ${bare ? "text-xs" : "text-2xs"} ${
               completed ? "line-through" : ""
             }`}
-            style={{ "--ev": item.color } as React.CSSProperties}
-            data-ev-text
+            style={solidOn ? { color: "#fff" } : doneSolid ? ({ "--done-tx": doneTx } as React.CSSProperties) : ({ "--ev": item.color } as React.CSSProperties)}
+            data-ev-text={solidFull ? undefined : true}
+            data-done-tx={doneSolid ? true : undefined}
           >
             {item.title}
           </p>
-          <RatingMark rating={rating} />
+          <RatingMark rating={rating} onSolid={solidOn} />
         </div>
         {!item.allDay && height >= 32 && (
           <p
-            className="truncate text-2xs leading-tight dark:opacity-70"
-            style={{ "--ev": item.color } as React.CSSProperties}
-            data-ev-text
+            className={`truncate text-2xs leading-tight ${solidFull ? "" : "dark:opacity-70"}`}
+            style={solidOn ? { color: "#fff" } : doneSolid ? ({ "--done-tx": doneTx } as React.CSSProperties) : ({ "--ev": item.color } as React.CSSProperties)}
+            data-ev-text={solidFull ? undefined : true}
+            data-done-tx={doneSolid ? true : undefined}
           >
             {minToHM(item.startMin)}
           </p>

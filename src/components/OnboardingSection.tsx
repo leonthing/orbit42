@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { getAdminClient } from "@/lib/supabase";
 import { getSession, getProfile } from "@/lib/auth";
 import { listFollowing } from "@/lib/follows";
@@ -11,7 +12,14 @@ import { OnboardingChecklist } from "@/components/OnboardingChecklist";
  * 어느 화면에서든 붙일 수 있도록 분리했다. 모든 단계가 끝나면 컴포넌트가
  * 스스로 사라지므로(내부 OnboardingChecklist) 호출부는 조건을 몰라도 된다.
  */
-export async function OnboardingSection() {
+export async function OnboardingSection({ thin = false }: { thin?: boolean } = {}) {
+  const steps = await loadSteps();
+  if (!steps) return null;
+  return <OnboardingChecklist steps={steps} thin={thin} />;
+}
+
+// 캘린더 페이지는 보통 줄 + 휴대폰 하루 보기용 얇은 줄 두 군데에 붙인다 — 한 요청에서 조회는 한 번만(11/22)
+const loadSteps = cache(async () => {
   const session = await getSession();
   if (!session) return null;
 
@@ -92,5 +100,5 @@ export async function OnboardingSection() {
     },
   ];
 
-  return <OnboardingChecklist steps={steps} />;
-}
+  return steps;
+});

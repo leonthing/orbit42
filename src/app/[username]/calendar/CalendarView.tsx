@@ -97,6 +97,9 @@ function parseWeekItemId(
 
 type ViewMode = "life" | "year" | "quarter" | "month" | "week" | "day";
 const VIEW_KEY = "orbit42.calendarView";
+// 휴대폰 하루 보기(11/22 Leo "구글보다 작고 답답") — 1시간 높이·블록 모양. PC·주 보기는 그대로.
+const PHONE_DAY_HOUR_PX = 72;
+const PHONE_DAY_SOLID = true;
 const VIEW_MODES: ViewMode[] = ["life", "year", "quarter", "month", "week", "day"];
 const isPhone = () => window.matchMedia("(max-width: 767px)").matches;
 /** 휴대폰에서 달을 옮길 때 고를 날 — 이번 달이면 오늘, 아니면 1일. 데스크톱은 예전처럼 비움(null). */
@@ -203,7 +206,10 @@ export default function CalendarView({
   weekStart = "mon",
   todoCount = 0,
   unreadNotifications = 0,
+  onboardingThin = null,
 }: {
+  /** 휴대폰 하루 보기 안에 얇은 한 줄로 넣는 '시작하기'(다 끝낸 회원이면 스스로 안 그림) */
+  onboardingThin?: React.ReactNode;
   /** 휴대폰 도구 줄 '할 일' 배지(오늘 기한 + 지난 미완료) */
   todoCount?: number;
   /** 휴대폰 도구 줄 알림 배지 — 캘린더에서는 공통 제목 줄을 숨기고 이 줄이 알림을 가진다 */
@@ -631,6 +637,36 @@ export default function CalendarView({
 
   // 휴대폰 좌우 밀기(11/21 Leo, iOS 같게): 시간축·날짜 목록 = 하루, 주 띠 = 한 주, 월 달력 = 한 달. PC 는 훅이 아무것도 안 한다.
   const swipeDay = useHorizontalSwipe((d) => navigateDay(d));
+  // 휴대폰(768 미만)인지 — 하루 보기 시간표를 상자 밖으로 꺼내 화면 끝까지 쓰는 데만 쓴다
+  const [phoneW, setPhoneW] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const f = () => setPhoneW(mq.matches);
+    f();
+    mq.addEventListener("change", f);
+    return () => mq.removeEventListener("change", f);
+  }, []);
+  // 휴대폰 하루 보기: 시간표가 화면 아래 끝(떠 있는 탭 막대 뒤)까지 — 바깥 스크롤 없이 시간표 한 겹만 스크롤
+  const dayViewRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = dayViewRef.current;
+    if (!el || !phoneW || viewMode !== "day") return;
+    const fit = () => {
+      const main = el.closest("main");
+      const top = el.getBoundingClientRect().top + (main?.scrollTop ?? 0);
+      const h = `${Math.max(360, Math.round(window.innerHeight - top))}px`;
+      if (el.style.height !== h) el.style.height = h;
+    };
+    fit();
+    window.addEventListener("resize", fit);
+    const ro = new ResizeObserver(fit);
+    if (el.parentElement) ro.observe(el.parentElement);
+    return () => {
+      window.removeEventListener("resize", fit);
+      ro.disconnect();
+      el.style.height = "";
+    };
+  }, [phoneW, viewMode]);
   const swipeDayCard = useHorizontalSwipe((d) => navigateDay(d));
   const swipeWeekStrip = useHorizontalSwipe((d) => {
     const x = new Date(year, month, (selectedDay ?? today.getDate()) + 7 * d);
@@ -1073,8 +1109,8 @@ export default function CalendarView({
   }, [weekDays, viewerIsOwner, invites]);
 
   // 주 띠(요일·날짜·일정 점) — 휴대폰 하루·주 보기 위(iOS 와 같게)
-  const renderWeekStrip = (sel: Date) => (
-            <div ref={swipeWeekStrip} className="grid grid-cols-7 gap-1 max-md:touch-pan-y" role="tablist" aria-label="이번 주" data-testid="weekStrip">
+  const renderWeekStrip = (sel: Date, compact = false) => (
+            <div ref={swipeWeekStrip} className={`grid grid-cols-7 gap-1 max-md:touch-pan-y ${compact ? "max-md:gap-0.5" : ""}`} role="tablist" aria-label="이번 주" data-testid="weekStrip">
               {displayWeekDays.map((d) => {
                 const date = new Date(d.date);
                 const active = isSameDay(date, sel);
@@ -1088,7 +1124,7 @@ export default function CalendarView({
                     aria-selected={active}
                     aria-label={date.toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "long" })}
                     onClick={() => goToDate(date)}
-                    className={`flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-xl text-sm transition-colors ${
+                    className={`flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-xl text-sm transition-colors ${compact ? "max-md:min-h-11 max-md:gap-0" : ""} ${
                       active ? "bg-navy-500 text-white" : "text-charcoal-200 hover:bg-charcoal-800/40"
                     }`}
                   >
@@ -1234,7 +1270,7 @@ export default function CalendarView({
   return (
     // 주간 뷰가 남은 높이를 전부 쓰도록 세로 flex 로 잡는다 (space-y 대신 gap).
     // h-full 이 아니라 flex-1 — 위에 체크리스트 같은 형제가 있어도 그만큼 줄어든다.
-    <div className="flex min-h-0 flex-1 flex-col gap-4 sm:gap-6">
+    <div className={`flex min-h-0 flex-1 flex-col gap-4 sm:gap-6 ${viewMode === "day" ? "max-sm:gap-2" : ""}`}>
       {/* 한 줄 툴바 — 뷰 전환 · 날짜 이동 · 캘린더 선택 · 새 일정.
           "캘린더 / 일정 및 시간 관리" 제목과 날짜 줄이 각각 한 줄씩 먹고 있었는데,
           사이드바에서 이미 현재 위치를 알 수 있어 지우고 높이를 격자에 넘겼다. */}
@@ -1753,15 +1789,17 @@ export default function CalendarView({
         const dayOnly: WeekDay[] = [dayData ?? { date: sel, isToday: isSameDay(sel, new Date()), items: [] }];
         return (
           // 데스크톱(11/21): 주 띠 아래 왼쪽 시간축 · 오른쪽 하루 할 일. 그날 일정 목록은 시간축과 겹쳐 따로 두지 않는다.
-          <div className="flex h-[calc(100dvh-200px)] min-h-[420px] flex-col gap-2 md:h-auto md:min-h-0 md:flex-1 md:gap-3" data-testid="dayView">
-            {renderWeekStrip(sel)}
+          // 휴대폰(11/22): 높이는 dayViewRef 가 화면 아래 끝까지 맞추고, 아래 음수 여백으로 main 의 탭 막대 자리(5.75rem)+아래 여백(1rem)을 지운다 → 바깥 스크롤 없음
+          <div ref={dayViewRef} className="flex flex-col gap-1 max-md:-mb-[calc(6.75rem+env(safe-area-inset-bottom))] md:h-auto md:min-h-0 md:flex-1 md:gap-3" data-testid="dayView">
+            {renderWeekStrip(sel, true)}
             <div className="flex min-h-0 flex-1 flex-col gap-2 md:flex-row md:gap-4">
+            {phoneW && onboardingThin}
             {viewerIsOwner && (
               <div className="md:order-last md:w-80 md:shrink-0">
-                <DayTodoStrip date={`${sel.getFullYear()}-${String(sel.getMonth() + 1).padStart(2, "0")}-${String(sel.getDate()).padStart(2, "0")}`} />
+                <DayTodoStrip compactEmpty={phoneW} date={`${sel.getFullYear()}-${String(sel.getMonth() + 1).padStart(2, "0")}-${String(sel.getDate()).padStart(2, "0")}`} />
               </div>
             )}
-            <div ref={swipeDay} data-testid="dayTimeline" className="flex min-h-0 flex-1 flex-col max-md:touch-pan-y">
+            <div ref={swipeDay} data-testid="dayTimeline" className="flex min-h-0 flex-1 flex-col max-md:-mx-4 max-md:touch-pan-y sm:max-md:-mx-5">
             <WeekCalendar
               username={username}
               days={dayOnly}
@@ -1772,6 +1810,9 @@ export default function CalendarView({
               onEventClick={(item) => setDetailEvent(item)}
               onEmptyClick={viewerIsOwner ? (date, h, m) => openCreateAt(date, h, m) : undefined}
               emptyMessage={viewerIsOwner ? "이날은 일정이 없어요. 빈 시간을 누르면 일정을 만들 수 있어요." : "이날 공개된 일정이나 예약 가능한 시간이 없어요."}
+              hourPx={phoneW ? PHONE_DAY_HOUR_PX : undefined}
+              solidBlocks={phoneW && PHONE_DAY_SOLID}
+              bare={phoneW}
             />
             </div>
             </div>

@@ -188,3 +188,10 @@
 .dark [data-app-shell] [data-ev-text] {
   color: var(--ev);
 }
+/* 휴대폰 하루 보기 진한 안의 '완료한 일정' 글자(11/22) — 라이트는 캘린더 색을 진하게, 다크는 흰 80% */
+[data-done-tx] {
+  color: var(--done-tx);
+}
+.dark [data-app-shell] [data-done-tx] {
+  color: rgb(255 255 255 / 0.8);
+}

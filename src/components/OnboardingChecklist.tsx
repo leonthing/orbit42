@@ -18,7 +18,7 @@ const DISMISS_KEY = "orbit42:onboarding-dismissed";
  * comes back next visit until every step is done, so a stray click
  * can't lose it forever. Defaults to visible to avoid a load flash.
  */
-export function OnboardingChecklist({ steps }: { steps: OnboardingStep[] }) {
+export function OnboardingChecklist({ steps, thin = false }: { steps: OnboardingStep[]; /** 휴대폰 하루 보기: 접힘을 얇은 한 줄로(11/22) */ thin?: boolean }) {
   const [dismissed, setDismissed] = useState(false);
   // 늘 접어 둔다 — 펼쳐져 있으면 캘린더 첫 화면을 1/4~절반 먹는다.
   // 휴대폰(묶음 A)에 이어 데스크톱도 한 줄(11/21 묶음 나: 1280 에서 달력 5주 이상).
@@ -37,6 +37,23 @@ export function OnboardingChecklist({ steps }: { steps: OnboardingStep[] }) {
     sessionStorage.setItem(DISMISS_KEY, "1");
     setDismissed(true);
   };
+
+  if (thin && !expanded) {
+    // 휴대폰 하루 보기(11/22 PO): 시간표를 위로 올리려고 '할 일 없음' 줄과 같은 높이(28px)로. 누르면 아래 펼친 카드.
+    return (
+      <button
+        type="button"
+        onClick={() => setExpanded(true)}
+        aria-expanded={false}
+        data-testid="onboardingThin"
+        className="relative flex h-6 w-full items-center gap-1.5 px-1 text-left text-xs before:absolute before:-inset-y-2.5 before:inset-x-0 before:content-['']"
+      >
+        <span className="shrink-0 font-semibold tabular-nums text-navy-500 dark:text-navy-400">시작하기 {doneCount}/{steps.length}</span>
+        {nextStep && <span className="min-w-0 flex-1 truncate text-charcoal-400">· {nextStep.label}</span>}
+        <span className="ml-auto shrink-0 text-charcoal-400" aria-hidden>▾</span>
+      </button>
+    );
+  }
 
   return (
     <>
