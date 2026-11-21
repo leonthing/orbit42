@@ -352,7 +352,7 @@ export default function CalendarView({
 
   const handleToggleComplete = useCallback(async (eventId: string) => {
     // 남의 일정에 초대받은 것 — 완료 표시는 일정 주인의 몫이다.
-    if (eventId.startsWith(INVITE_PREFIX)) return;
+    if (eventId.startsWith(INVITE_PREFIX)) return false;
     const key = normalizeEventKey(eventId);
     const isDone = completed.has(key);
     // Optimistic update.
@@ -362,8 +362,14 @@ export default function CalendarView({
       else next.add(key);
       return next;
     });
-    const res = await toggleEventCompletion(key, !isDone);
+    let res: Awaited<ReturnType<typeof toggleEventCompletion>>;
+    try {
+      res = await toggleEventCompletion(key, !isDone);
+    } catch {
+      res = { error: "완료 상태를 저장하지 못했어요. 잠시 후 다시 시도해 주세요." };
+    }
     if ("error" in res) {
+      toast.error(res.error ?? "완료 상태를 저장하지 못했어요.");
       // Roll back.
       setCompleted((prev) => {
         const next = new Set(prev);
@@ -371,8 +377,10 @@ export default function CalendarView({
         else next.delete(key);
         return next;
       });
+      return false;
     }
-  }, [completed]);
+    return true;
+  }, [completed, toast]);
 
   // ── 만족도·후속(웹 묶음 1b, iOS 와 같은 흐름) ──
   const [ratings, setRatings] = useState<Record<string, number>>({});
@@ -391,10 +399,21 @@ export default function CalendarView({
     });
   }, []);
   const rate = useCallback(async (id: string, v: number | null) => {
+    const prev = ratings[toEventKey(id)] ?? null;
     setRatingLocal(id, v);
-    const res = await setMyRating(id, v);
-    if ("error" in res) toast.error(res.error);
-  }, [toast, setRatingLocal]);
+    // 저장 실패(오류 응답·네트워크 끊김)면 화면을 되돌리고 알린다 — 하트만 바뀌고 저장 안 된 채로 두지 않는다(11/21)
+    let failed: string | null = null;
+    try {
+      const res = await setMyRating(id, v);
+      if ("error" in res) failed = res.error;
+    } catch {
+      failed = "만족도를 저장하지 못했어요. 잠시 후 다시 시도해 주세요.";
+    }
+    if (failed) {
+      setRatingLocal(id, prev);
+      toast.error(failed);
+    }
+  }, [toast, setRatingLocal, ratings]);
   const askFollowUp = () => {
     try {
       return localStorage.getItem(ASK_FOLLOW_UP_KEY) !== "0";
@@ -405,14 +424,20 @@ export default function CalendarView({
   // 목록·격자에서 체크 → iOS 하루 보기처럼 잠깐 만족도 하트 줄
   const completeFromList = useCallback(async (id: string) => {
     const wasDone = completed.has(normalizeEventKey(id));
-    await handleToggleComplete(id);
-    if (!wasDone && viewerIsOwner && !id.startsWith(INVITE_PREFIX)) {
+    // 하트 줄은 체크와 동시에 이 일정으로 바꿔 띄운다 — 저장 응답을 기다리면 그사이 앞 일정의 하트 줄이 남아
+    // 빠르게 이어 누른 하트가 앞 일정에 매겨졌다(11/21 실측). 저장이 실패하면 이 일정의 하트 줄만 닫는다.
+    const ask = !wasDone && viewerIsOwner && !id.startsWith(INVITE_PREFIX);
+    if (ask) {
       const title =
         events.find((e) => toEventKey(e.id) === toEventKey(id))?.title ??
         weekDays.flatMap((d) => d.items).find((i) => toEventKey(i.id) === toEventKey(id))?.title ??
         "";
       setRatePrompt({ id, title });
+    } else {
+      setRatePrompt((cur) => (cur?.id === id ? null : cur));
     }
+    const ok = await handleToggleComplete(id);
+    if (!ok && ask) setRatePrompt((cur) => (cur?.id === id ? null : cur));
   }, [completed, handleToggleComplete, viewerIsOwner, events, weekDays]);
   useEffect(() => {
     if (!viewerIsOwner) return;
@@ -1769,10 +1794,14 @@ export default function CalendarView({
         >
           <span className="max-w-[8rem] truncate text-sm text-charcoal-300">{ratePrompt.title || "만족도"}</span>
           <Hearts
+            key={ratePrompt.id}
             value={rateOf(ratePrompt.id)}
+            toggle={false}
             onPick={(v) => {
-              rate(ratePrompt.id, v);
-              setTimeout(() => setRatePrompt(null), 600);
+              const id = ratePrompt.id;
+              rate(id, v);
+              // 그사이 다른 일정을 체크해 하트 줄이 바뀌었으면 그 줄은 닫지 않는다
+              setTimeout(() => setRatePrompt((cur) => (cur?.id === id ? null : cur)), 600);
             }}
           />
         </div>
@@ -1803,9 +1832,9 @@ export default function CalendarView({
           canToggleComplete={!!viewerIsOwner}
           onToggleComplete={async () => {
             const wasDone = completed.has(normalizeEventKey(detailEvent.id));
-            await handleToggleComplete(detailEvent.id);
-            // iOS: 완료하면 '후속으로 할 일이 있나요?'(이 기기에서 끌 수 있음)
-            if (!wasDone && viewerIsOwner && askFollowUp()) setAfterDone({ id: detailEvent.id, title: detailEvent.title });
+            const ok = await handleToggleComplete(detailEvent.id);
+            // iOS: 완료하면 '후속으로 할 일이 있나요?'(이 기기에서 끌 수 있음) — 저장 실패면 묻지 않는다
+            if (ok && !wasDone && viewerIsOwner && askFollowUp()) setAfterDone({ id: detailEvent.id, title: detailEvent.title });
           }}
           rating={rateOf(detailEvent.id)}
           onRate={(v) => setRatingLocal(detailEvent.id, v)}

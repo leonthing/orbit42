@@ -30,10 +30,13 @@ export function Hearts({
   value,
   onPick,
   size = "md",
+  toggle = true,
 }: {
   value: number | null;
   onPick: (v: number | null) => void;
   size?: "md" | "lg";
+  /** 같은 하트를 다시 누르면 지우기(상세). 체크 직후 하트 줄은 iOS 처럼 늘 그 값으로(false) */
+  toggle?: boolean;
 }) {
   const box = size === "lg" ? "h-11 w-11 text-2xl" : "h-11 w-10 text-xl";
   return (
@@ -47,7 +50,7 @@ export function Hearts({
             role="radio"
             aria-checked={value === n}
             aria-label={`만족도 ${n}`}
-            onClick={() => onPick(value === n ? null : n)}
+            onClick={() => onPick(toggle && value === n ? null : n)}
             className={`inline-flex ${box} items-center justify-center transition-transform active:scale-90 ${on ? "text-pink-500" : "text-charcoal-600"}`}
           >
             {on ? "♥" : "♡"}
