@@ -17,10 +17,14 @@ function formatWhen(iso: string | null) {
   return d.toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul", month: "short", day: "numeric" });
 }
 
-function Row({ c }: { c: DmSummary }) {
+function Row({ c, selected }: { c: DmSummary; selected?: boolean }) {
   const name = c.peer.display_name || c.peer.username;
   return (
-    <Link href={`/messages/${c.id}`} className="flex items-center gap-3 p-3 hover:bg-charcoal-800/40">
+    <Link
+      href={`/messages/${c.id}`}
+      aria-current={selected ? "page" : undefined}
+      className={`flex items-center gap-3 p-3 hover:bg-charcoal-800/40 ${selected ? "md:bg-charcoal-800/60" : ""}`}
+    >
       <Avatar url={c.peer.avatar_url} name={name} size={40} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
@@ -38,21 +42,24 @@ function Row({ c }: { c: DmSummary }) {
   );
 }
 
-/** 1:1 대화 목록 — 예약 탭 '대화' 세그먼트(iOS 와 같은 자리)에서 보여 준다 */
-export async function DmList() {
+/**
+ * 1:1 대화 목록 — 예약 탭 '대화' 세그먼트(iOS 와 같은 자리)에서 보여 준다.
+ * pane: PC(md 이상) 2단의 왼쪽 칸으로 쓸 때 — 칸 높이 안에서 스크롤, 고른 대화(selectedId)를 칠한다. 휴대폰 모양은 그대로.
+ */
+export async function DmList({ selectedId, pane }: { selectedId?: string; pane?: boolean } = {}) {
   const me = await currentUserId();
   if (!v190OpenFor(me)) return <DmClosed />;
   const { items, requests } = me ? await listDm(me) : { items: [], requests: [] };
 
   return (
-    <div className="max-w-2xl">
+    <div className={pane ? "max-w-2xl md:h-full md:max-w-none md:overflow-y-auto" : "max-w-2xl"} data-testid={pane ? "dmPane" : undefined}>
       {requests.length > 0 && (
         <section className="mb-6">
           <h2 className="mb-2 text-sm font-semibold text-charcoal-200">대화 요청 {requests.length}</h2>
           <ul className="divide-y divide-charcoal-800/40 overflow-hidden rounded-xl border border-navy-400/30 bg-[rgb(var(--bg-surface))]">
             {requests.map((c) => (
               <li key={c.id}>
-                <Row c={c} />
+                <Row c={c} selected={c.id === selectedId} />
                 <div className="px-3 pb-3">
                   <RequestActions conversationId={c.id} />
                 </div>
@@ -72,7 +79,7 @@ export async function DmList() {
         <ul className="divide-y divide-charcoal-800/40 overflow-hidden rounded-xl border border-charcoal-800/60 bg-[rgb(var(--bg-surface))]">
           {items.map((c) => (
             <li key={c.id}>
-              <Row c={c} />
+              <Row c={c} selected={c.id === selectedId} />
             </li>
           ))}
         </ul>
