@@ -345,7 +345,7 @@ export default async function InsightsPage({
                   ))}
                 </div>
                 <div className="text-center">
-                  <p className="text-2xs text-charcoal-500">{label}</p>
+                  <p className="text-2xs text-charcoal-400">{label}</p>
                   <p className="text-xs font-semibold text-charcoal-200">
                     {fmtHours(total)}
                   </p>

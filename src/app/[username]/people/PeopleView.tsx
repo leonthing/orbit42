@@ -306,7 +306,7 @@ function ImportOptIn({ googleConnected }: { googleConnected: boolean }) {
           구글 캘린더 연결하기
         </Link>
       )}
-      <p className="mt-3 text-2xs text-charcoal-500">
+      <p className="mt-3 text-2xs text-charcoal-400">
         iPhone 앱에서는 iCloud·Outlook 등 기기 캘린더에서도 찾을 수 있어요.
       </p>
     </div>

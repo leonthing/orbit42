@@ -188,7 +188,7 @@ export function SettingsForm({
         <form onSubmit={handleProfileSave} className="space-y-4 p-5">
           <div>
             <label className="mb-1.5 block text-xs font-medium text-charcoal-400">아이디</label>
-            <div className="flex items-center rounded-lg border border-charcoal-800 bg-charcoal-800/30 px-4 py-2.5 text-sm text-charcoal-500 max-md:min-h-11">
+            <div className="flex items-center rounded-lg border border-charcoal-800 bg-charcoal-800/30 px-4 py-2.5 text-sm text-charcoal-400 max-md:min-h-11">
               {username}
             </div>
             <p className="mt-1 text-xs text-charcoal-500">orbit42.org/{username}</p>
@@ -238,7 +238,6 @@ export function SettingsForm({
               onChange={(e) => setBirthDate(e.target.value)}
               className={`${inputClass} max-w-[10rem] sm:max-w-xs`}
             />
-            <p className="mt-1 text-xs text-charcoal-500">라이프 캘린더에 쓰여요</p>
           </div>
 
           <div>

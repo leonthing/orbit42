@@ -573,7 +573,8 @@ function ItemBlock({
             className={`min-w-0 flex-1 truncate text-2xs font-semibold leading-tight ${
               completed ? "line-through" : ""
             }`}
-            style={{ color: item.color }}
+            style={{ "--ev": item.color } as React.CSSProperties}
+            data-ev-text
           >
             {item.title}
           </p>
@@ -581,8 +582,9 @@ function ItemBlock({
         </div>
         {!item.allDay && height >= 32 && (
           <p
-            className="truncate text-2xs leading-tight opacity-70"
-            style={{ color: item.color }}
+            className="truncate text-2xs leading-tight dark:opacity-70"
+            style={{ "--ev": item.color } as React.CSSProperties}
+            data-ev-text
           >
             {minToHM(item.startMin)}
           </p>

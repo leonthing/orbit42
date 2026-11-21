@@ -36,7 +36,7 @@ function stepRow(n: number, href: string, title: string, desc: string): string {
     <tr>
       <td width="20" class="o-sub" style="vertical-align:top;padding:10px 8px 10px 0;font-family:${FONT};font-size:13px;line-height:1.5;color:#71717a">${n}</td>
       <td class="o-line" style="padding:10px 0;border-bottom:1px solid #e5e5ea">
-        <a href="${href}" style="font-family:${FONT};font-size:15px;font-weight:600;color:#6366f1;text-decoration:none">${title}</a>
+        <a href="${href}" style="font-family:${FONT};font-size:15px;font-weight:600;color:#4f46e5;text-decoration:none">${title}</a>
         <div class="o-sub" style="font-family:${FONT};font-size:13px;line-height:1.55;color:#71717a;margin-top:2px">${desc}</div>
       </td>
     </tr>`;

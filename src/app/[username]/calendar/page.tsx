@@ -63,8 +63,9 @@ export default async function CalendarPage({
     ).catch(() => []),
   ]);
 
-  const birthDate = profile?.birth_date || null;
   const isOwner = session?.username === params.username;
+  // 생년월일은 본인에게만 — 지금은 미들웨어가 /{u}/calendar 를 본인 전용으로 막지만, 그 막이 바뀌어도 남에게 실리지 않게(11/21)
+  const birthDate = isOwner ? profile?.birth_date || null : null;
   // 할 일(1.9.0): 오늘 기한 + 기한 지난 미완료가 있으면 위에 링크 한 줄
   let todoCount = 0;
   if (isOwner && session) {

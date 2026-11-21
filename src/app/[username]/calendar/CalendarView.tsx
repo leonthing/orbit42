@@ -1091,7 +1091,7 @@ export default function CalendarView({
                       active ? "bg-navy-500 text-white" : "text-charcoal-200 hover:bg-charcoal-800/40"
                     }`}
                   >
-                    <span className={`text-xs ${active ? "text-white/80" : dow === 0 ? "text-red-400" : "text-charcoal-500"}`}>
+                    <span className={`text-xs ${active ? "text-white/80" : dow === 0 ? "text-red-500" : "text-charcoal-500"}`}>
                       {date.toLocaleDateString("ko-KR", { weekday: "short" })}
                     </span>
                     <span

@@ -735,7 +735,7 @@ function ChoiceCard({
         >
           {title}
         </span>
-        <span className="mt-0.5 block text-xs text-charcoal-500">{hint}</span>
+        <span className="mt-0.5 block text-xs text-charcoal-400">{hint}</span>
       </span>
     </button>
   );
@@ -922,7 +922,7 @@ function AutoConfig({
                   className={`flex h-8 w-10 shrink-0 items-center justify-center rounded-lg text-xs font-bold transition-colors ${
                     enabled
                       ? "bg-navy-500 text-white"
-                      : "bg-charcoal-800/60 text-charcoal-500 hover:bg-charcoal-800"
+                      : "bg-charcoal-800/60 text-charcoal-400 hover:bg-charcoal-800"
                   }`}
                 >
                   {d.label}
