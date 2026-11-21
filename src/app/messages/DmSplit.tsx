@@ -1,12 +1,13 @@
 /**
- * PC(md 이상) 대화 2단 — 왼쪽 대화 목록, 오른쪽 고른 대화(묶음 사, PO 11/22).
- * 휴대폰은 지금처럼 목록(예약 탭 '대화') → 방(/messages/{id}) 이동 그대로: 방에선 목록 칸을, 목록에선 빈 오른쪽 칸을 숨긴다.
+ * PC(lg 1024 이상) 대화 2단 — 왼쪽 대화 목록, 오른쪽 고른 대화(묶음 사, PO 11/22).
+ * (lg 아래에선 칸이 h-full 이라 방 높이가 지금처럼 화면에 맞는다 — W900 입력칸 화면 밖 막음)
+ * W900 에선 오른쪽 방이 300 남짓이라 좁아 lg 부터(PO 11/22 5번). 그 아래(휴대폰·태블릿)는 지금처럼 목록(예약 탭 '대화') → 방(/messages/{id}) 이동 그대로: 방에선 목록 칸을, 목록에선 빈 오른쪽 칸을 숨긴다.
  */
 export function DmSplit({ list, children, inThread }: { list: React.ReactNode; children: React.ReactNode; inThread: boolean }) {
   return (
-    <div className="md:grid md:min-h-0 md:flex-1 md:grid-cols-[300px_minmax(0,1fr)] md:gap-4 lg:grid-cols-[340px_minmax(0,1fr)]" data-testid="dmSplit">
-      <div className={inThread ? "max-md:hidden md:min-h-0" : "md:min-h-0"}>{list}</div>
-      <div className={inThread ? "md:min-h-0" : "max-md:hidden md:min-h-0"}>{children}</div>
+    <div className="h-full lg:grid lg:h-auto lg:min-h-0 lg:flex-1 lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-4 xl:grid-cols-[340px_minmax(0,1fr)]" data-testid="dmSplit">
+      <div className={inThread ? "max-lg:hidden lg:min-h-0" : "lg:min-h-0"}>{list}</div>
+      <div className={inThread ? "h-full lg:min-h-0" : "max-lg:hidden lg:min-h-0"}>{children}</div>
     </div>
   );
 }

@@ -14,7 +14,7 @@ import { usePathname } from "next/navigation";
 export function ContentWidth({ children }: { children: React.ReactNode }) {
   const path = usePathname() ?? "";
   const seg = (() => {
-    // 대화방은 PC 2단(목록 + 방)이라 예약 탭과 같은 896(묶음 사)
+    // 대화방은 PC 2단(목록 + 방, lg~)이라 예약 탭과 같은 896(묶음 사)
     if (path.startsWith("/messages")) return "list";
     if (path.startsWith("/notifications")) return "narrow";
     if (path.startsWith("/explore") || path.startsWith("/feed")) return "wide";

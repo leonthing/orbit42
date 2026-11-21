@@ -23,7 +23,7 @@ function Row({ c, selected }: { c: DmSummary; selected?: boolean }) {
     <Link
       href={`/messages/${c.id}`}
       aria-current={selected ? "page" : undefined}
-      className={`flex items-center gap-3 p-3 hover:bg-charcoal-800/40 ${selected ? "md:bg-charcoal-800/60" : ""}`}
+      className={`flex items-center gap-3 p-3 hover:bg-charcoal-800/40 ${selected ? "lg:bg-navy-500/10 lg:shadow-[inset_3px_0_0_rgb(var(--n-500))] lg:hover:bg-navy-500/15" : ""}`}
     >
       <Avatar url={c.peer.avatar_url} name={name} size={40} />
       <div className="min-w-0 flex-1">
@@ -32,7 +32,7 @@ function Row({ c, selected }: { c: DmSummary; selected?: boolean }) {
           <span className="shrink-0 text-2xs text-charcoal-500">{formatWhen(c.lastMessageAt)}</span>
         </div>
         <div className="flex items-center gap-2">
-          <p className={`truncate text-xs ${c.unread ? "font-semibold text-charcoal-200" : "text-charcoal-500"}`}>
+          <p className={`truncate text-xs ${c.unread ? "font-semibold text-charcoal-200" : selected ? "text-charcoal-500 lg:text-charcoal-400" : "text-charcoal-500"}`}>
             {c.view === "pending" ? "요청을 보냈어요 · 아직 답이 없어요" : `${c.lastSenderIsMe ? "나: " : ""}${c.preview ?? ""}`}
           </p>
           {c.unread && <span className="h-2 w-2 shrink-0 rounded-full bg-navy-400" />}
@@ -44,7 +44,7 @@ function Row({ c, selected }: { c: DmSummary; selected?: boolean }) {
 
 /**
  * 1:1 대화 목록 — 예약 탭 '대화' 세그먼트(iOS 와 같은 자리)에서 보여 준다.
- * pane: PC(md 이상) 2단의 왼쪽 칸으로 쓸 때 — 칸 높이 안에서 스크롤, 고른 대화(selectedId)를 칠한다. 휴대폰 모양은 그대로.
+ * pane: PC(lg 이상) 2단의 왼쪽 칸으로 쓸 때 — 칸 높이 안에서 스크롤, 고른 대화(selectedId)를 칠한다. 휴대폰 모양은 그대로.
  */
 export async function DmList({ selectedId, pane }: { selectedId?: string; pane?: boolean } = {}) {
   const me = await currentUserId();
@@ -52,7 +52,7 @@ export async function DmList({ selectedId, pane }: { selectedId?: string; pane?:
   const { items, requests } = me ? await listDm(me) : { items: [], requests: [] };
 
   return (
-    <div className={pane ? "max-w-2xl md:h-full md:max-w-none md:overflow-y-auto" : "max-w-2xl"} data-testid={pane ? "dmPane" : undefined}>
+    <div className={pane ? "max-w-2xl lg:h-full lg:max-w-none lg:overflow-y-auto" : "max-w-2xl"} data-testid={pane ? "dmPane" : undefined}>
       {requests.length > 0 && (
         <section className="mb-6">
           <h2 className="mb-2 text-sm font-semibold text-charcoal-200">대화 요청 {requests.length}</h2>

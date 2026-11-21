@@ -25,8 +25,8 @@ export default async function BookingsPage({
   // 1:1 대화 — iOS 예약 탭 '대화' 세그먼트(옛 /messages 는 여기로 넘긴다)
   if (searchParams?.tab === "chats" && dmOpen) {
     return (
-      // PC(md 이상): 세그먼트 아래 2단 — 왼쪽 목록, 오른쪽은 고른 대화가 없다는 안내(묶음 사). 휴대폰은 목록만, 그대로.
-      <div className="space-y-4 md:flex md:h-full md:min-h-0 md:flex-col md:space-y-0 md:gap-4">
+      // PC(lg 이상): 세그먼트 아래 2단 — 왼쪽 목록, 오른쪽은 고른 대화가 없다는 안내(묶음 사). 휴대폰은 목록만, 그대로.
+      <div className="space-y-4 lg:flex lg:h-full lg:min-h-0 lg:flex-col lg:gap-4 lg:space-y-0">
         <Segmented value="chats" items={bookingsTabs(params.username, true)} />
         <DmSplit list={<DmList pane />} inThread={false}>
           <DmPickHint />

@@ -25,11 +25,11 @@ export default async function ConversationPage({ params }: { params: { id: strin
 
   const session = await getSession();
 
-  // PC(md 이상): 예약 탭 '대화'와 같은 틀 — 세그먼트 + 왼쪽 목록(이 방을 칠함) + 오른쪽 방. 휴대폰은 방만, 그대로(묶음 사).
+  // PC(lg 이상): 예약 탭 '대화'와 같은 틀 — 세그먼트 + 왼쪽 목록(이 방을 칠함) + 오른쪽 방. 휴대폰은 방만, 그대로(묶음 사).
   return (
-    <div className="h-full md:flex md:min-h-0 md:flex-col md:gap-4">
+    <div className="h-full lg:flex lg:min-h-0 lg:flex-col lg:gap-4">
       {session && (
-        <div className="max-md:hidden">
+        <div className="max-lg:hidden">
           <Segmented value="chats" items={bookingsTabs(session.username, true)} />
         </div>
       )}
@@ -38,10 +38,10 @@ export default async function ConversationPage({ params }: { params: { id: strin
             // 휴대폰: 화면 높이에 맞춰 목록이 안에서 스크롤되고 입력칸이 아래에 붙게 높이를 정한다.
             // AppShell 이 휴대폰에서 내용만큼 늘어나게 바뀐(묶음 2) 뒤 h-full 만으로는 입력칸이 탭 막대 밑으로 밀렸다.
             // 제목 줄 48 + 위아래 여백 32 + 탭 막대 자리 92 = 172px
-            className="flex h-full min-h-0 max-w-2xl flex-col md:max-w-none max-md:h-[calc(100dvh-172px-env(safe-area-inset-bottom))]"
+            className="flex h-full min-h-0 max-w-2xl flex-col md:mx-auto lg:mx-0 lg:max-w-none max-md:h-[calc(100dvh-172px-env(safe-area-inset-bottom))]"
           >
             <header className="flex items-center gap-3 border-b border-charcoal-800/40 pb-3">
-              <Link href="/messages" className="flex shrink-0 items-center justify-center text-charcoal-500 hover:text-charcoal-200 max-md:-ml-3 max-md:h-11 max-md:w-11 md:hidden" aria-label="뒤로">
+              <Link href="/messages" className="flex shrink-0 items-center justify-center text-charcoal-500 hover:text-charcoal-200 max-md:-ml-3 max-md:h-11 max-md:w-11 lg:hidden" aria-label="뒤로">
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
                 </svg>

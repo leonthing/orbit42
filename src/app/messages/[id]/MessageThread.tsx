@@ -47,6 +47,14 @@ export function MessageThread({
     bottomRef.current?.scrollIntoView({ block: "end" });
   }, [messages.length]);
 
+  // PC 2단(lg~, 묶음 사): 왼쪽 목록·위 안 읽음 배지는 서버에서 그린다 → 방을 연 뒤·새 글을 주고받은 뒤 한 번 새로 받는다.
+  // (방→방 이동은 레이아웃이 다시 그려지지 않아 배지가 그대로였다.) 휴대폰·태블릿은 목록이 안 보이므로 하지 않는다.
+  const wide = () => typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches;
+  useEffect(() => {
+    if (wide()) router.refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversationId]);
+
   // 5초마다 새 글 (열면 읽음 처리는 서버가 한다)
   useEffect(() => {
     let cancelled = false;
@@ -58,6 +66,7 @@ export function MessageThread({
         if (!res.ok) return;
         const data = (await res.json()) as { messages: DmMessage[] };
         if (cancelled || !data.messages?.length) return;
+        if (wide()) router.refresh();
         setMessages((prev) => {
           const seen = new Set(prev.map((m) => m.id));
           return [...prev, ...data.messages.filter((m) => !seen.has(m.id))];
@@ -71,7 +80,7 @@ export function MessageThread({
       cancelled = true;
       clearInterval(id);
     };
-  }, [conversationId, messages]);
+  }, [conversationId, messages, router]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,7 +100,7 @@ export function MessageThread({
       const data = (await res.json()) as { message?: DmMessage; error?: string };
       if (!res.ok || !data.message) throw new Error(data.error || "보내지 못했어요.");
       setMessages((prev) => prev.map((m) => (m.id === tmp.id ? data.message! : m)));
-      if (!canWrite || reason) router.refresh();
+      if (!canWrite || reason || wide()) router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "보내지 못했어요.");
       setMessages((prev) => prev.filter((m) => m.id !== tmp.id));
