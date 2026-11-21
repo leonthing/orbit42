@@ -390,7 +390,7 @@ async function BookingSection({
       <h2 className="text-sm font-semibold text-charcoal-200">예약 가능한 시간</h2>
       {!slot.active ? (
         <p className="mt-3 text-sm text-charcoal-500">지금은 예약을 받지 않는 링크예요.</p>
-      ) : options.length === 0 ? (
+      ) : options.length === 0 && isOwner ? (
         <p className="mt-3 text-sm text-charcoal-500">
           예약 가능한 시간이 없어요. 잠시 후 다시 확인해주세요.
         </p>
@@ -407,7 +407,8 @@ async function BookingSection({
           }
         />
       ) : (
-        <div className="mt-4">
+        // 방문자는 시간이 0개여도 BookingForm 을 그대로 둔다 — 예약 완료 뒤 새로고침으로 0개가 돼도 완료 화면이 사라지지 않게
+        <div className={options.length === 0 ? "mt-3" : "mt-4"}>
           <BookingForm
             slotId={slot.id}
             options={options}

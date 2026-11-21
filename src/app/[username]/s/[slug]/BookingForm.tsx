@@ -289,6 +289,12 @@ export default function BookingForm({
     );
   }
 
+  // 열린 시간이 없을 때(처음부터 없거나 남이 먼저 예약) — 폼 대신 안내. 완료 화면(stage done)은 위에서 먼저 그려지므로
+  // 마지막 시간을 예약한 뒤 router.refresh 로 시간이 0개가 되어도 완료 화면이 남는다(11/21 버그 수정).
+  if (options.length === 0) {
+    return <p className="text-sm text-charcoal-500">예약 가능한 시간이 없어요. 잠시 후 다시 확인해주세요.</p>;
+  }
+
   return (
     <form onSubmit={proceed} className="space-y-5">
       {locations.length >= 1 && (

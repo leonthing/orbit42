@@ -780,13 +780,13 @@ export async function getTimeAssetSummary(
 
   // 올해 남은 시간 자산 — 12/31까지 깨어있는 시간 (수면 제외).
   // 평생(기대수명) 환산은 고령 사용자에게 불쾌할 수 있어 1년 단위로 잡는다.
-  const yearStart = new Date(anchor.getFullYear(), 0, 1);
-  const yearEnd = new Date(anchor.getFullYear() + 1, 0, 1);
+  // 연 경계는 한국 시간(KST) — 서버(UTC)의 1월 1일 0시로 자르면 늘 약 7시간 많게, 한국 1/1 0~9시엔 '작년 0시간'이 됐다(11/21)
+  const { kstYear, yearStart, yearEnd } = yearBoundsKst(anchor);
   const remainDays = Math.max(0, yearEnd.getTime() - anchor.getTime()) / 86_400_000;
   const awakePerDay = 24 - income.sleepHoursPerDay;
   const remainingAwakeHours = Math.round(remainDays * awakePerDay);
   const yearRemaining: TimeAssetSummary["yearRemaining"] = {
-    year: anchor.getFullYear(),
+    year: kstYear,
     remainingAwakeHours,
     remainingValueKrw:
       hourly != null ? Math.round(remainingAwakeHours * hourly) : null,
@@ -1211,4 +1211,11 @@ export async function getTimeAssetSummary(
     incomeType: income.incomeType,
     freelance,
   };
+}
+
+/** 한국 시간 기준 그해 시작·끝(서버 시간대와 무관). '올해 남은 시간'용 */
+export function yearBoundsKst(anchor: Date): { kstYear: number; yearStart: Date; yearEnd: Date } {
+  const KST = 9 * 3_600_000;
+  const kstYear = new Date(anchor.getTime() + KST).getUTCFullYear();
+  return { kstYear, yearStart: new Date(Date.UTC(kstYear, 0, 1) - KST), yearEnd: new Date(Date.UTC(kstYear + 1, 0, 1) - KST) };
 }
