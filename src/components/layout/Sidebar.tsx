@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { NAV_ITEMS, NAV_MORE_ITEMS } from "@/lib/constants";
+import { NAV_ITEMS } from "@/lib/constants";
 import { useState } from "react";
 import { useMobileMenu } from "./MobileMenuContext";
 import { FeedbackBox } from "./FeedbackBox";
@@ -143,9 +143,8 @@ export function Sidebar({
   bookingsBadge = 0,
   weekStart = "mon",
   dmOpen = false,
-  postsOpen = false,
 }: {
-  /** 글·사진(1.10.0) 통합 — '블로그' 메뉴 이름을 '글·사진'으로 */
+  /** 글·사진(1.10.0) 통합 — 예전 '블로그' 메뉴 이름용. 메뉴를 뺀 뒤(묶음 라)엔 쓰지 않지만 부르는 쪽 모양은 그대로 둔다 */
   postsOpen?: boolean;
   weekStart?: "mon" | "sun";
   /** 1:1 대화(1.9.0) 메뉴 — 서버가 v190Open() 으로 정해 넘긴다(기기 날짜를 보지 않게) */
@@ -206,43 +205,9 @@ export function Sidebar({
           );
         })}
 
-        <div className="my-3 border-t border-charcoal-800/40" />
-        {!collapsed && (
-          <p className="px-3 pb-1 text-2xs font-semibold uppercase tracking-wider text-charcoal-500">
-            둘러보기
-          </p>
-        )}
-
-        <NavLink
-          href="/explore"
-          label="탐색"
-          icon={icons.users}
-          active={pathname === "/explore"}
-          collapsed={collapsed}
-          onClick={close}
-        />
-        <NavLink
-          href="/feed"
-          label="피드"
-          icon={icons.home}
-          active={pathname === "/feed"}
-          collapsed={collapsed}
-          onClick={close}
-        />
-        {NAV_MORE_ITEMS.map((item) => {
-          const href = `/${username}${item.href}`;
-          return (
-            <NavLink
-              key={item.label}
-              href={href}
-              label={postsOpen && item.href === "/blog" ? "글·사진" : item.label}
-              icon={icons[item.icon]}
-              active={pathname === href || pathname.startsWith(href + "/")}
-              collapsed={collapsed}
-              onClick={close}
-            />
-          );
-        })}
+        {/* '둘러보기' 묶음(탐색·피드·타임라인·서비스 메뉴·블로그)은 없앴다(11/21 묶음 라) — 휴대폰과 같은 길:
+            탐색·서비스 메뉴는 설정 안, 타임라인·블로그(글·사진)는 프로필 안. 피드는 휴대폰에도 메뉴 길이 없어
+            주소만 살려 둔다. */}
       </nav>
 
       {/* Bottom: Feedback + Collapse */}

@@ -48,8 +48,10 @@ const SECTIONS = [
   { id: "calendars", label: "내 캘린더" },
   { id: "work-hours", label: "근무시간" },
   { id: "payment", label: "결제 안내" },
+  { id: "services", label: "서비스 메뉴" },
   { id: "locations", label: "이동시간 버퍼" },
   { id: "people-import", label: "캘린더에서 사람 찾기" },
+  { id: "explore", label: "탐색" },
   { id: "referral", label: "친구 초대" },
   { id: "notifications", label: "알림 설정" },
   { id: "theme", label: "화면 모드" },
@@ -199,6 +201,21 @@ export default async function SettingsPage({
             <PaymentInstructionsForm initial={paymentInstructions} />
           </section>
 
+          {/* PC 왼쪽 메뉴의 '둘러보기' 묶음을 없애며(11/21 묶음 라) 휴대폰 설정 목록과 같은 자리로 옮긴 바로가기.
+              휴대폰은 SettingsPhoneList 가 같은 줄을 그리므로 여기는 PC 만. */}
+          <section id="services" className="scroll-mt-16 max-md:hidden">
+            <Link
+              href={`/${params.username}/services`}
+              className="flex items-center justify-between gap-3 rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 px-5 py-4 hover:bg-charcoal-800/40"
+            >
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold text-charcoal-200">서비스 메뉴</span>
+                <span className="mt-1 block text-xs text-charcoal-500">예약에 붙이는 추가 메뉴</span>
+              </span>
+              <span aria-hidden className="text-charcoal-500">›</span>
+            </Link>
+          </section>
+
           <section id="locations" className={`scroll-mt-16 ${ph("locations")}`}>
             <LocationBuffersForm initial={locationBuffers} />
           </section>
@@ -214,6 +231,21 @@ export default async function SettingsPage({
                 <span className="mt-1 block text-xs text-charcoal-500">
                   캘린더 일정의 참석자 이름과 이메일만 읽어 자주 만난 사람을 오르빗에 제안해요. 상대에게는 아무것도 전송되지 않아요. 켜기·끄기는 오르빗에서 해요.
                 </span>
+              </span>
+              <span aria-hidden className="text-charcoal-500">›</span>
+            </Link>
+          </section>
+
+          {/* PC 왼쪽 메뉴의 '둘러보기' 묶음을 없애며(11/21 묶음 라) 휴대폰 설정 목록과 같은 자리로 옮긴 바로가기.
+              휴대폰은 SettingsPhoneList 가 같은 줄을 그리므로 여기는 PC 만. */}
+          <section id="explore" className="scroll-mt-16 max-md:hidden">
+            <Link
+              href={"/explore"}
+              className="flex items-center justify-between gap-3 rounded-xl border border-charcoal-800/60 bg-charcoal-900/40 px-5 py-4 hover:bg-charcoal-800/40"
+            >
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold text-charcoal-200">탐색</span>
+                <span className="mt-1 block text-xs text-charcoal-500">다른 사람들의 열린 시간</span>
               </span>
               <span aria-hidden className="text-charcoal-500">›</span>
             </Link>

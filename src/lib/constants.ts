@@ -43,12 +43,5 @@ export const NAV_ITEMS = [
   { href: "", label: "프로필", icon: "user", match: [] },
 ] as const;
 
-/** 사이드바 '더보기' — 쓰는 사람만 쓰는 메뉴는 아래로 (주소는 그대로 살아 있다) */
-export const NAV_MORE_ITEMS = [
-  { href: "/timeline", label: "타임라인", icon: "blog" },
-  { href: "/services", label: "서비스 메뉴", icon: "ticket" },
-  { href: "/blog", label: "블로그", icon: "blog" },
-] as const;
-
 /** iOS 앱 App Store 주소 — 아이폰 방문자의 가입/로그인 링크는 여기로 보낸다. */
 export const APP_STORE_URL = "https://apps.apple.com/kr/app/id6795434941";

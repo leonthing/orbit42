@@ -695,6 +695,8 @@ export default function CalendarView({
     let mode: ViewMode | null = VIEW_MODES.includes(saved as ViewMode) ? (saved as ViewMode) : null;
     // 휴대폰은 iOS 처럼 월/하루만 기억하고 기본은 월(PO 11/21). 라이프·분기는 휴대폰에서 숨김(Leo).
     if (phone && mode !== "month" && mode !== "day") mode = null;
+    // 라이프·분기는 숨긴 보기 — 예전에 저장해 둔 값이면 월로(PC 도, Leo 11/21)
+    if (mode === "life" || mode === "quarter") mode = "month";
     if (!mode) mode = phone ? "month" : "week";
     if (mode !== "week") switchView(mode, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1026,9 +1028,8 @@ export default function CalendarView({
     <div className="flex shrink-0 overflow-x-auto rounded-lg border border-charcoal-800/60 bg-charcoal-900/40 p-0.5">
       {(
         [
-          ["life", "라이프"],
+          // 라이프·분기는 PC 에서도 숨긴다(Leo 11/21 "필요 없는 것 같아, 숨겨") — 코드·데이터는 그대로
           ["year", "연"],
-          ["quarter", "분기"],
           ["month", "월"],
           ["week", "주"],
           ["day", "일"],

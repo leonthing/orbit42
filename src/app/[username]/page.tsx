@@ -478,7 +478,10 @@ export default async function PublicProfile({
               href={`/${params.username}/settings?tab=profile`}
               className="flex min-h-11 items-center justify-center gap-1.5 rounded-full bg-charcoal-800/50 text-sm font-medium text-charcoal-100"
             >
-              ✎ 프로필 편집
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.6} stroke="currentColor" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
+              </svg>
+              프로필 편집
             </Link>
             <ShareMenu
               url={profileUrl}
@@ -489,14 +492,17 @@ export default async function PublicProfile({
             />
           </div>
           {[
-            { href: `/${params.username}?view=guest`, icon: "👁", label: "내 공개 페이지 보기", sub: "링크를 받은 사람에게 보이는 화면" },
-            { href: `/${params.username}/timeline`, icon: "🗂", label: "타임라인", sub: "완료한 일정과 팔로잉의 기록" },
+            { href: `/${params.username}?view=guest`, icon: "eye", label: "내 공개 페이지 보기", sub: "링크를 받은 사람에게 보이는 화면" },
+            { href: `/${params.username}/timeline`, icon: "stack", label: "타임라인", sub: "완료한 일정과 팔로잉의 기록" },
             ...(postsUnified
-              ? [{ href: `/${params.username}/blog`, icon: "🖼", label: "글·사진", sub: "작업 사진과 소식을 올려요" }]
+              ? [{ href: `/${params.username}/blog`, icon: "photo", label: "글·사진", sub: "작업 사진과 소식을 올려요" }]
               : []),
           ].map((r) => (
             <Link key={r.href} href={r.href} className="flex min-h-14 items-center gap-3 rounded-2xl bg-[rgb(var(--bg-surface))] px-4 py-3">
-              <span aria-hidden className="text-lg">{r.icon}</span>
+              {/* iOS 프로필 행처럼 SF 심볼 뜻의 선 아이콘(eye·square.stack·photo), accent 색, 26px 칸(11/21 Leo '심플한 아이콘') */}
+              <span aria-hidden className="flex w-[26px] shrink-0 justify-center text-navy-500 dark:text-navy-300">
+                <ProfileRowIcon name={r.icon} />
+              </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-semibold text-charcoal-100">{r.label}</span>
                 <span className="block truncate text-xs text-charcoal-500">{r.sub}</span>
@@ -721,7 +727,7 @@ export default async function PublicProfile({
         </>
       )}
 
-      <div className={`grid gap-3 md:grid-cols-2 ${isOwner ? "max-md:hidden" : ""}`}>
+      <div className={`grid gap-3 ${isOwner ? "max-md:hidden md:grid-cols-3" : "md:grid-cols-2"}`}>
         <Link
           href={`/${params.username}/c`}
           className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5 hover:border-charcoal-700"
@@ -740,6 +746,16 @@ export default async function PublicProfile({
           </p>
           <p className="mt-1 text-sm text-charcoal-200">{postsUnified ? "글·사진 둘러보기 →" : "블로그 둘러보기 →"}</p>
         </Link>
+        {/* 타임라인 — 휴대폰은 프로필 목록 줄, PC 는 여기(왼쪽 메뉴 '둘러보기'를 없애며 옮김, 11/21 묶음 라). 본인만 */}
+        {isOwner && (
+          <Link
+            href={`/${params.username}/timeline`}
+            className="rounded-xl border border-charcoal-800/60 bg-charcoal-900/30 p-5 hover:border-charcoal-700"
+          >
+            <p className="text-xs font-semibold uppercase tracking-wider text-charcoal-500">타임라인</p>
+            <p className="mt-1 text-sm text-charcoal-200">완료한 일정과 팔로잉의 기록 →</p>
+          </Link>
+        )}
       </div>
 
       {experience.length > 0 && (
@@ -993,5 +1009,28 @@ function ActionTile({
     >
       {label}
     </Link>
+  );
+}
+
+/** 프로필 행 선 아이콘 — 프로필 공유 아이콘과 같은 굵기(1.6) */
+function ProfileRowIcon({ name }: { name: string }) {
+  const d: Record<string, string[]> = {
+    eye: [
+      "M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z",
+      "M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z",
+    ],
+    stack: [
+      "M16.5 8.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v8.25A2.25 2.25 0 0 0 6 16.5h2.25m8.25-8.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-7.5A2.25 2.25 0 0 1 8.25 18v-1.5m8.25-8.25h-6a2.25 2.25 0 0 0-2.25 2.25v6",
+    ],
+    photo: [
+      "m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z",
+    ],
+  };
+  return (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.6} stroke="currentColor">
+      {(d[name] ?? []).map((p) => (
+        <path key={p} strokeLinecap="round" strokeLinejoin="round" d={p} />
+      ))}
+    </svg>
   );
 }
