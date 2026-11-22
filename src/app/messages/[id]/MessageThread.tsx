@@ -47,11 +47,13 @@ export function MessageThread({
     bottomRef.current?.scrollIntoView({ block: "end" });
   }, [messages.length]);
 
-  // PC 2단(lg~, 묶음 사): 왼쪽 목록·위 안 읽음 배지는 서버에서 그린다 → 방을 연 뒤·새 글을 주고받은 뒤 한 번 새로 받는다.
-  // (방→방 이동은 레이아웃이 다시 그려지지 않아 배지가 그대로였다.) 휴대폰·태블릿은 목록이 안 보이므로 하지 않는다.
+  // 안 읽음 배지·목록은 서버에서 그린다. 레이아웃(배지 숫자)과 이 방 페이지(읽음 처리)가 동시에 그려져 배지는 읽기 전 숫자로 오고,
+  // 뒤로 가면 라우터 캐시의 옛 목록이 나온다 → 방을 열면 한 번 새로 받는다(휴대폰·PC 모두, 11/22 PO).
+  // 새로 받아도 이 컴포넌트는 다시 만들어지지 않아 입력 중 글자·포커스·스크롤은 그대로다.
+  // 보내기·받기 뒤 새로 받기는 왼쪽 목록이 보이는 PC 2단(lg~)에서만.
   const wide = () => typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches;
   useEffect(() => {
-    if (wide()) router.refresh();
+    router.refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId]);
 
