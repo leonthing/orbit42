@@ -45,7 +45,9 @@ export async function AppShell({
         unreadChatThreadCount(viewerId).catch(() => 0),
       ])
     : [0, 0];
-  const bookingsBadge = needReply + unreadChats;
+  // + 1:1 안 읽음(iOS 예약 탭 배지와 같은 셈: 대기 예약 + 예약 대화 + 1:1, 11/22 PO). 숫자는 unreadDmCount 한 곳에서 세어 레이아웃이 넘긴다 —
+  // 휴대폰 탭 막대·PC 왼쪽 메뉴가 같은 bookingsBadge 를 쓴다(PC 의 '1:1만 있을 때 빨간 점'은 이제 숫자로 보인다).
+  const bookingsBadge = needReply + unreadChats + unreadMessages;
   const postsOpen = (await import("@/lib/posts-access")).postsOpenFor(viewerId);
 
   return (

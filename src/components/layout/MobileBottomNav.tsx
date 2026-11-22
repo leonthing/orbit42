@@ -91,6 +91,7 @@ export function MobileBottomNav({
 
   return (
     <nav
+      data-mobile-nav
       className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 md:hidden"
       style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom))" }}
     >

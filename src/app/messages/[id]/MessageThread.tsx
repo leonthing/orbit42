@@ -7,6 +7,7 @@ import { DM_MAX_LEN } from "@/lib/dm-limits";
 import { PendingButton } from "@/components/PendingButton";
 import { useToast } from "@/components/Toast";
 import { dmAction } from "../dm-client";
+import { useChatTyping } from "@/lib/use-chat-typing";
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString("ko-KR", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit", hour12: false });
@@ -42,6 +43,7 @@ export function MessageThread({
   const [error, setError] = useState<string | null>(null);
   const [menu, setMenu] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const typing = useChatTyping();
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
@@ -188,6 +190,8 @@ export function MessageThread({
           <div className="flex items-end gap-2">
             <textarea
               value={text}
+              onFocus={typing.onFocus}
+              onBlur={typing.onBlur}
               maxLength={DM_MAX_LEN}
               onChange={(e) => setText(e.target.value)}
               onKeyDown={(e) => {

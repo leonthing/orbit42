@@ -35,6 +35,7 @@ export default async function ConversationPage({ params }: { params: { id: strin
       )}
       <DmSplit list={<DmList pane selectedId={t.id} />} inThread>
           <div
+            data-chat-room
             // 휴대폰: 화면 높이에 맞춰 목록이 안에서 스크롤되고 입력칸이 아래에 붙게 높이를 정한다.
             // AppShell 이 휴대폰에서 내용만큼 늘어나게 바뀐(묶음 2) 뒤 h-full 만으로는 입력칸이 탭 막대 밑으로 밀렸다.
             // 제목 줄 48 + 위아래 여백 32 + 탭 막대 자리 92 = 172px

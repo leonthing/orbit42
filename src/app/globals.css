@@ -195,3 +195,16 @@
 .dark [data-app-shell] [data-done-tx] {
   color: rgb(255 255 255 / 0.8);
 }
+
+/* 휴대폰 대화 입력 중(useChatTyping → <html data-chat-typing>) — 떠 있는 탭 막대를 숨기고 그 자리(92px)를 대화 칸에 돌려준다(11/22) */
+@media (max-width: 767px) {
+  html[data-chat-typing] [data-mobile-nav] {
+    display: none;
+  }
+  html[data-chat-typing] [data-app-shell] main {
+    padding-bottom: 0 !important;
+  }
+  html[data-chat-typing] [data-chat-room] {
+    height: calc(100dvh - 80px - env(safe-area-inset-bottom)) !important;
+  }
+}
