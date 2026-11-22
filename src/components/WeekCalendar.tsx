@@ -40,6 +40,33 @@ function solidBg(color: string): string {
   return "rgb(0 0 0)";
 }
 
+/**
+ * 완료 블록 글자(라이트) — 캘린더 색 62% + 검정에서 시작해, 완료 바탕(solidBg 30% + 라이트 배경 #F2F2F7) 위 4.5:1 이 될 때까지
+ * 5%씩 더 진하게(11/22 PO — 밝은 주황·초록은 62% 고정으로 3.2 안팎이었다). 다크는 globals.css 가 흰 80% 로 덮는다.
+ * iOS BlockPalette.doneText 와 같은 규칙.
+ */
+function doneText(color: string): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(color.trim());
+  if (!m) return `color-mix(in srgb, ${color} 45%, #000)`;
+  const n = parseInt(m[1], 16);
+  const rgb = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  const sb = /rgb\((\d+) (\d+) (\d+)\)/.exec(solidBg(color));
+  const s = sb ? [Number(sb[1]), Number(sb[2]), Number(sb[3])] : [0, 0, 0];
+  const base = [242, 242, 247];
+  const bg = s.map((v, i) => v * 0.3 + base[i] * 0.7);
+  const lum = (c: number[]) => {
+    const f = (v: number) => { const x = v / 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; };
+    return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]);
+  };
+  const lb = lum(bg);
+  for (let f = 0.62; f > 0.05; f -= 0.05) {
+    const t = rgb.map((v) => Math.round(v * f));
+    const lt = lum(t);
+    if ((Math.max(lt, lb) + 0.05) / (Math.min(lt, lb) + 0.05) >= 4.5) return `rgb(${t.join(" ")})`;
+  }
+  return "rgb(0 0 0)";
+}
+
 type PositionedItem = WeekItem & {
   /** Minutes from midnight (clamped to [0, 1440]). */
   startMin: number;
@@ -231,7 +258,7 @@ function AllDayColumn({
                 solidOn
                   ? { backgroundColor: bg, color: "#fff" }
                   : doneSolid
-                    ? ({ backgroundColor: `color-mix(in srgb, ${bg} 30%, rgb(var(--bg-base)))`, "--done-tx": `color-mix(in srgb, ${item.color} 62%, #000)` } as React.CSSProperties)
+                    ? ({ backgroundColor: `color-mix(in srgb, ${bg} 30%, rgb(var(--bg-base)))`, "--done-tx": doneText(item.color) } as React.CSSProperties)
                     : { borderColor: item.color }
               }
               data-done-tx={doneSolid ? true : undefined}
@@ -642,7 +669,7 @@ function ItemBlock({
     // 완료한 일정은 통째 반투명(대비 2.0~2.9) 대신 바탕만 30%로 흐리게, 글자는 진하게(라이트 진한 색·다크 흰 80%) — 대비 6 이상(11/22)
     const doneSolid = solidFull && !!completed;
     const solidOn = solidFull && !completed;
-    const doneTx = `color-mix(in srgb, ${item.color} 62%, #000)`;
+    const doneTx = doneText(item.color);
     const tint = solidOn
       ? solidBg(item.color)
       : doneSolid
