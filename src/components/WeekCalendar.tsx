@@ -400,7 +400,8 @@ function UnifiedScroll({
       ref={ref}
       // 모바일에서는 요일 단위로 스냅되고(scroll-pl-11 로 44px 시간축을 비켜
       // 정렬), 데스크톱은 7일이 다 들어가므로 가로 스크롤을 끈다.
-      className={`min-h-0 flex-1 overflow-auto ${single ? "overflow-x-hidden" : "snap-x snap-mandatory scroll-pl-11 md:snap-none md:overflow-x-hidden"} ${bare ? "pb-[calc(4.5rem+env(safe-area-inset-bottom))] [overflow-anchor:none]" : ""}`}
+      // 스크롤 앵커링 끔(모든 보기): 처음 위치(8시)를 맞춘 뒤 종일 줄이 늘면 브라우저가 그만큼 더 내려 8시가 종일 줄 뒤로 숨었다(11/22 PC 주·하루, 휴대폰은 앞서 고침)
+      className={`min-h-0 flex-1 overflow-auto [overflow-anchor:none] ${single ? "overflow-x-hidden" : "snap-x snap-mandatory scroll-pl-11 md:snap-none md:overflow-x-hidden"} ${bare ? "pb-[calc(4.5rem+env(safe-area-inset-bottom))]" : ""}`}
     >
       {/* 모바일은 132px 고정이라 2.6일이 걸쳐 보였다. 뷰포트에서 페이지 좌우
           여백(32)·카드 테두리(2)·시간축(44)을 뺀 폭을 3으로 나눠, 한 화면에
