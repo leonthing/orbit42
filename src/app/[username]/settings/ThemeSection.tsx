@@ -7,7 +7,7 @@ import { useTheme } from "@/components/ThemeProvider";
  * (공개 링크 페이지 테마는 LinkThemePicker 로 따로 있다.)
  */
 export function ThemeSection() {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, locked } = useTheme();
   const options: { value: "light" | "dark" | "system"; label: string; icon: React.ReactNode }[] = [
     {
       value: "light",
@@ -43,23 +43,29 @@ export function ThemeSection() {
       <div className="border-b border-charcoal-800/40 px-5 py-3">
         <h2 className="text-sm font-semibold text-charcoal-200">화면 모드</h2>
       </div>
-      <div className="flex gap-3 p-5">
-        {options.map((opt) => (
-          <button
-            key={opt.value}
-            type="button"
-            onClick={() => setTheme(opt.value)}
-            className={`flex flex-1 flex-col items-center gap-2 rounded-lg border px-4 py-4 transition-colors ${
-              theme === opt.value
-                ? "border-navy-400 bg-navy-500/10 text-navy-400"
-                : "border-charcoal-800/60 text-charcoal-500 hover:border-charcoal-700 hover:text-charcoal-300"
-            }`}
-          >
-            {opt.icon}
-            <span className="text-xs font-medium">{opt.label}</span>
-          </button>
-        ))}
-      </div>
+      {locked ? (
+        <p className="px-5 py-4 text-sm text-charcoal-400" data-testid="themeLockedNote">
+          안드로이드 앱에서는 휴대폰의 화면 모드 설정을 따릅니다.
+        </p>
+      ) : (
+        <div className="flex gap-3 p-5">
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setTheme(opt.value)}
+              className={`flex flex-1 flex-col items-center gap-2 rounded-lg border px-4 py-4 transition-colors ${
+                theme === opt.value
+                  ? "border-navy-400 bg-navy-500/10 text-navy-400"
+                  : "border-charcoal-800/60 text-charcoal-500 hover:border-charcoal-700 hover:text-charcoal-300"
+              }`}
+            >
+              {opt.icon}
+              <span className="text-xs font-medium">{opt.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
