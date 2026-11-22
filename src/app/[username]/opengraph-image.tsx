@@ -82,7 +82,7 @@ export default async function Image({
           display: "flex",
           flexDirection: "column",
           background:
-            "linear-gradient(135deg, #0a0a0f 0%, #1a0606 70%, #3a0a0a 100%)",
+            "linear-gradient(135deg, #0a0a0f 0%, #0d0d24 70%, #1e1b4b 100%)",
           color: "#fff",
           padding: "64px 80px",
           fontFamily: "system-ui, -apple-system, Segoe UI, sans-serif",
@@ -100,7 +100,7 @@ export default async function Image({
               fontWeight: 600,
               letterSpacing: 4,
               textTransform: "uppercase",
-              color: "#f87171",
+              color: "#818cf8",
             }}
           >
             Profile
@@ -127,7 +127,7 @@ export default async function Image({
                 height: 150,
                 borderRadius: 75,
                 objectFit: "cover",
-                border: "4px solid rgba(239, 68, 68, 0.6)",
+                border: "4px solid rgba(99, 102, 241, 0.6)",
               }}
             />
           ) : (
@@ -136,7 +136,7 @@ export default async function Image({
                 width: 150,
                 height: 150,
                 borderRadius: 75,
-                background: "linear-gradient(135deg, #dc2626 0%, #ef4444 100%)",
+                background: "linear-gradient(135deg, #4338ca 0%, #4f46e5 100%)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -190,11 +190,11 @@ export default async function Image({
                   gap: 8,
                   padding: "10px 22px",
                   borderRadius: 999,
-                  background: "rgba(239, 68, 68, 0.12)",
-                  border: "1px solid rgba(239, 68, 68, 0.35)",
+                  background: "rgba(99, 102, 241, 0.12)",
+                  border: "1px solid rgba(99, 102, 241, 0.35)",
                 }}
               >
-                <span style={{ fontSize: 26, fontWeight: 800, color: "#f87171" }}>
+                <span style={{ fontSize: 26, fontWeight: 800, color: "#818cf8" }}>
                   {chip.value}
                 </span>
                 <span style={{ fontSize: 20, color: "#d4d4d4" }}>

@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
           display: "flex",
           flexDirection: "column",
           background:
-            "linear-gradient(135deg, #0a0a0f 0%, #14060a 65%, #3a0a0a 100%)",
+            "linear-gradient(135deg, #0a0a0f 0%, #0c0b1f 65%, #1e1b4b 100%)",
           color: "#fff",
           padding: "64px 72px",
           fontFamily:
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
               fontWeight: 700,
               letterSpacing: 4,
               textTransform: "uppercase",
-              color: "#f87171",
+              color: "#818cf8",
             }}
           >
             Time Asset
@@ -132,11 +132,11 @@ export async function GET(request: NextRequest) {
               flexDirection: "column",
               padding: "28px 32px",
               borderRadius: 20,
-              background: "rgba(220,38,38,0.14)",
-              border: "1px solid rgba(248,113,113,0.45)",
+              background: "rgba(79,70,229,0.14)",
+              border: "1px solid rgba(129,140,248,0.45)",
             }}
           >
-            <div style={{ fontSize: 20, color: "#fca5a5" }}>누적 거래액</div>
+            <div style={{ fontSize: 20, color: "#a5b4fc" }}>누적 거래액</div>
             <div style={{ marginTop: 8, fontSize: 52, fontWeight: 800 }}>
               {fmtWon(valueNum)}
             </div>
@@ -169,7 +169,7 @@ export async function GET(request: NextRequest) {
           }}
         >
           <span>내 시간을 자산으로 — </span>
-          <span style={{ color: "#f87171", fontWeight: 700, marginLeft: 8 }}>
+          <span style={{ color: "#818cf8", fontWeight: 700, marginLeft: 8 }}>
             orbit42.org
           </span>
         </div>

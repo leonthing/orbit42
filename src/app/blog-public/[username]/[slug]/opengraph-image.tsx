@@ -41,7 +41,7 @@ export default async function Image({
           display: "flex",
           flexDirection: "column",
           background:
-            "linear-gradient(135deg, #0a0a0f 0%, #1a0606 70%, #3a0a0a 100%)",
+            "linear-gradient(135deg, #0a0a0f 0%, #0d0d24 70%, #1e1b4b 100%)",
           color: "#fff",
           padding: "72px 80px",
           fontFamily: "system-ui, -apple-system, Segoe UI, sans-serif",
@@ -76,7 +76,7 @@ export default async function Image({
               fontWeight: 600,
               letterSpacing: 4,
               textTransform: "uppercase",
-              color: "#f87171",
+              color: "#818cf8",
             }}
           >
             Blog

@@ -44,7 +44,7 @@ export default async function Image({
           display: "flex",
           flexDirection: "column",
           background:
-            "linear-gradient(135deg, #0a0a0f 0%, #1a0606 70%, #3a0a0a 100%)",
+            "linear-gradient(135deg, #0a0a0f 0%, #0d0d24 70%, #1e1b4b 100%)",
           color: "#fff",
           padding: "72px 80px",
           fontFamily: "system-ui, -apple-system, Segoe UI, sans-serif",
@@ -79,7 +79,7 @@ export default async function Image({
               fontWeight: 600,
               letterSpacing: 4,
               textTransform: "uppercase",
-              color: "#f87171",
+              color: "#818cf8",
             }}
           >
             Timeslot
@@ -105,7 +105,7 @@ export default async function Image({
             style={{
               marginTop: 28,
               fontSize: 28,
-              color: "#fca5a5",
+              color: "#a5b4fc",
               fontWeight: 600,
             }}
           >
@@ -126,7 +126,7 @@ export default async function Image({
               width: 64,
               height: 64,
               borderRadius: 32,
-              background: "linear-gradient(135deg, #dc2626 0%, #ef4444 100%)",
+              background: "linear-gradient(135deg, #4338ca 0%, #4f46e5 100%)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
