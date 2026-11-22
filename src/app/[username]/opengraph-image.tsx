@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { OgLogo } from "@/lib/og-logo";
 import { getProfile } from "@/lib/auth";
 import { getFollowStats } from "@/lib/follows";
 import { listPublicSlotsByUsername } from "@/lib/slots";
@@ -88,22 +89,7 @@ export default async function Image({
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div
-            style={{
-              width: 48,
-              height: 48,
-              borderRadius: 12,
-              background: "linear-gradient(135deg, #dc2626 0%, #ef4444 100%)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontWeight: 800,
-              fontSize: 26,
-              color: "#fff",
-            }}
-          >
-            O
-          </div>
+          <OgLogo size={48} />
           <div style={{ fontSize: 24, fontWeight: 600, color: "#e5e5e5" }}>
             Orbit42
           </div>

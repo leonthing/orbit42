@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { OgLogo } from "@/lib/og-logo";
 import type { NextRequest } from "next/server";
 
 export const runtime = "nodejs";
@@ -69,22 +70,7 @@ export async function GET(request: NextRequest) {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 11,
-              background: "linear-gradient(135deg, #dc2626 0%, #ef4444 100%)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontWeight: 800,
-              fontSize: 24,
-              color: "#fff",
-            }}
-          >
-            O
-          </div>
+          <OgLogo size={44} />
           <div style={{ fontSize: 22, fontWeight: 600, color: "#e5e5e5" }}>
             Orbit42
           </div>
