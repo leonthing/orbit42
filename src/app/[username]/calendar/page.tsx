@@ -14,6 +14,7 @@ import { OnboardingSection } from "@/components/OnboardingSection";
 import { getUserId } from "@/lib/db";
 import { getAdminClient } from "@/lib/supabase";
 import { normalizeWeekStart } from "@/lib/week-start";
+import { kstYearMonth } from "@/lib/kst";
 
 export const metadata: Metadata = { title: "캘린더" };
 export const dynamic = "force-dynamic";
@@ -23,9 +24,10 @@ export default async function CalendarPage({
 }: {
   params: { username: string };
 }) {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = today.getMonth();
+  // 첫 화면 달은 KST(11/22) — 서버(UTC) 달로 잡으면 1일 0~9시에 앞달을 그렸다. 클라이언트는 이 값을 그대로 쓴다(다시 받지 않음)
+  const kstNow = kstYearMonth();
+  const year = kstNow.year;
+  const month = kstNow.month - 1;
   // 보는 사람의 주 시작 요일 설정 (월/일)
   const viewerId = await getUserId().catch(() => null);
   const { data: wsRow } = viewerId
