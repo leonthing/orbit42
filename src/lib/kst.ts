@@ -92,3 +92,47 @@ export function eventOnKstDate(e: { start_at: string; end_at?: string | null; al
   if (e.all_day) return allDayKstDates(e.start_at, e.end_at).includes(key);
   return kstDateKey(new Date(e.start_at)) === key;
 }
+
+// ── 프로필 캘린더 카드 달 집계(11/22 버그 1, lib/calendar-month-stats) ──
+
+/** KST 기준 그 달의 [시작, 끝) — 1일 00:00 KST ~ 다음 달 1일 00:00 KST */
+export function kstMonthRange(
+  year: number,
+  month: number,
+): { from: Date; to: Date } {
+  // kstMonthStart 의 달은 0부터 — month(1~12)-1 이 그 달, month 가 다음 달(12월이면 다음 해 1월로 넘어간다)
+  const from = kstMonthStart(year, month - 1);
+  const to = kstMonthStart(year, month);
+  return { from, to };
+}
+
+/** 지금 KST 의 연·월(1~12) */
+export function kstYearMonth(now = new Date()): {
+  year: number;
+  month: number;
+} {
+  const k = new Date(now.getTime() + 9 * 3600_000);
+  return { year: k.getUTCFullYear(), month: k.getUTCMonth() + 1 };
+}
+
+export type KstEv = {
+  start_at: string;
+  end_at?: string | null;
+  all_day?: boolean | null;
+};
+
+/** 일정 하나가 그 달에서 차지하는 날(1~31) — 종일은 걸치는 날 모두, 시간 일정은 KST 시작 날 */
+export function eventDaysInMonth(e: KstEv, year: number, month: number): number[] {
+  const prefix = `${year}-${String(month).padStart(2, "0")}-`;
+  const keys = e.all_day
+    ? allDayKstDates(e.start_at, e.end_at)
+    : [
+        new Date(new Date(e.start_at).getTime() + 9 * 3600_000)
+          .toISOString()
+          .slice(0, 10),
+      ];
+  return keys
+    .filter((k) => k.startsWith(prefix))
+    .map((k) => Number(k.slice(-2)));
+}
+

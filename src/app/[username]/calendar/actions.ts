@@ -122,7 +122,7 @@ export async function getEvents(
   calendarIds?: string[],
 ): Promise<Event[]> {
   const userId = await requireUserId();
-  return listEventsForUser(userId, year, month, calendarIds, { spanAllDay: true });
+  return listEventsForUser(userId, year, month, calendarIds, { spanAllDay: true, kstMonth: true });
 }
 
 export async function isGoogleCalendarConnected(): Promise<boolean> {

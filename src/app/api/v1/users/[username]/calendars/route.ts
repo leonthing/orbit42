@@ -1,7 +1,7 @@
 import { apiSession, apiUserId } from "@/lib/api-auth";
 import { getAdminClient } from "@/lib/supabase";
 import { isBlockedEitherWay } from "@/lib/blocks";
-import { selectEventsInRange } from "@/lib/recurrence-db";
+import { calendarMonthStats, kstYearMonth } from "@/lib/calendar-month-stats";
 
 export const dynamic = "force-dynamic";
 
@@ -56,7 +56,7 @@ export async function GET(
   const { data: cals } = await db
     .from("calendars")
     .select(
-      "id, name, color, purpose, visibility, source, is_default, goal_title, goal_target_hours, goal_deadline, archived_at",
+      "id, name, color, purpose, visibility, source, google_calendar_id, is_default, goal_title, goal_target_hours, goal_deadline, archived_at",
     )
     .eq("user_id", target.id as string)
     .in("visibility", allowed)
@@ -66,34 +66,22 @@ export async function GET(
   const calendars = cals ?? [];
   if (calendars.length === 0) return Response.json({ calendars: [] });
 
-  // 표시할 달 (기본: 이번 달)
+  // 표시할 달 (기본: 이번 달, KST) — 11/22 버그 1: DB 만 세던 것을 캘린더 화면과 같은 출처(DB + 구글)·KST 달로.
+  // 응답 모양은 그대로(activeDays·eventCount). 구글이 실패·시간 초과면 그 캘린더는 0·[] (200 유지).
   const url = new URL(request.url);
-  const now = new Date();
-  const year = Number(url.searchParams.get("year")) || now.getFullYear();
-  const month = Number(url.searchParams.get("month")) || now.getMonth() + 1;
-  const monthStart = new Date(year, month - 1, 1);
-  const monthEnd = new Date(year, month, 0, 23, 59, 59, 999);
-
-  const events = await selectEventsInRange<Record<string, unknown> & { id: string; start_at: string }>({
-    columns: "calendar_id, start_at",
-    scope: (q) => q.in("calendar_id", calendars.map((c) => c.id as string)),
-    from: monthStart,
-    to: monthEnd,
-  });
-
-  // 캘린더별 "일정 있는 날(1~31)" 집합 — KST 기준.
-  const daysByCalendar = new Map<string, Set<number>>();
-  for (const e of events ?? []) {
-    const day = Number(
-      new Date(e.start_at as string).toLocaleDateString("en-CA", {
-        timeZone: "Asia/Seoul",
-      }).slice(-2),
-    );
-    if (!Number.isFinite(day)) continue;
-    const key = e.calendar_id as string;
-    if (!daysByCalendar.has(key)) daysByCalendar.set(key, new Set());
-    daysByCalendar.get(key)?.add(day);
-  }
+  const kst = kstYearMonth();
+  const year = Number(url.searchParams.get("year")) || kst.year;
+  const month = Number(url.searchParams.get("month")) || kst.month;
+  const stats = await calendarMonthStats(
+    target.id as string,
+    calendars.map((c) => ({
+      id: c.id as string,
+      source: c.source as string | null,
+      google_calendar_id: c.google_calendar_id as string | null,
+    })),
+    year,
+    month,
+  ).catch(() => null);
 
   return Response.json({
     year,
@@ -109,10 +97,8 @@ export async function GET(
       goalTitle: c.goal_title ?? null,
       goalTargetHours: c.goal_target_hours ?? null,
       goalDeadline: c.goal_deadline ?? null,
-      activeDays: Array.from(daysByCalendar.get(c.id as string) ?? []).sort(
-        (a, b) => a - b,
-      ),
-      eventCount: (events ?? []).filter((e) => e.calendar_id === c.id).length,
+      activeDays: stats?.get(c.id as string)?.days ?? [],
+      eventCount: stats?.get(c.id as string)?.count ?? 0,
     })),
   });
 }

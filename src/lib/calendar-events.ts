@@ -6,6 +6,7 @@
  * one implementation. Callers are responsible for resolving a trusted userId.
  */
 
+import { kstMonthRange } from "@/lib/kst";
 import { googleErrorSummary } from "@/lib/google-error";
 import type { calendar_v3 } from "googleapis";
 import { getAdminClient } from "@/lib/supabase";
@@ -247,12 +248,16 @@ export async function listEventsForUser(
   month: number,
   calendarIds?: string[],
   /** spanAllDay: 앞달에서 시작해 이 달까지 이어지는 종일도(웹 캘린더 월 보기만, 11/22). v1 은 켜지 않는다 */
-  opts: { spanAllDay?: boolean } = {},
+  /** kstMonth: 달 범위를 KST(1일 0시~)로 — 웹 캘린더 화면만(11/22 버그 1: 서버가 UTC 라 1일 0~9시 일정이 빠졌다). v1·리포트는 그대로 */
+  opts: { spanAllDay?: boolean; kstMonth?: boolean } = {},
 ): Promise<CalendarEvent[]> {
   const db = getAdminClient();
 
-  const startOfMonth = new Date(year, month, 1).toISOString();
-  const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59, 999).toISOString();
+  const kstRange = opts.kstMonth ? kstMonthRange(year, month + 1) : null;
+  const startOfMonth = kstRange ? kstRange.from.toISOString() : new Date(year, month, 1).toISOString();
+  const endOfMonth = kstRange
+    ? new Date(kstRange.to.getTime() - 1).toISOString()
+    : new Date(year, month + 1, 0, 23, 59, 59, 999).toISOString();
 
   // Resolve the user's calendars so we can translate the filter.
   const { sharedCalendarsFor: sharedFor } = await import("@/lib/calendar-members");
