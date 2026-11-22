@@ -1,4 +1,4 @@
-import { addDays, kstStartOfWeek } from "@/lib/kst";
+import { addDays, eventOnKstDate, kstStartOfWeek } from "@/lib/kst";
 import { listPublicSlotsByUsername, getBookableOptions } from "@/lib/slots";
 import { getPublicEvents } from "@/lib/public-calendar";
 
@@ -51,7 +51,7 @@ export async function getProfileWeek(
   calendarIds?: string[],
 ): Promise<WeekDay[]> {
   const [events, slots] = await Promise.all([
-    getPublicEvents(username, weekStart, weekEnd, calendarIds).catch(() => []),
+    getPublicEvents(username, weekStart, weekEnd, calendarIds, false, { spanAllDay: true }).catch(() => []),
     listPublicSlotsByUsername(username),
   ]);
 
@@ -134,7 +134,10 @@ export async function getProfileWeek(
     days.push({
       date: d,
       isToday: key === todayKey,
-      items: all.filter((it) => dayKey(new Date(it.start_at)) === key),
+      // 종일 일정은 걸치는 날 모두(여러 날 종일, 11/22 PO), 나머지는 시작한 날
+      items: all.filter((it) =>
+        it.kind === "event" && it.all_day ? eventOnKstDate(it, key) : dayKey(new Date(it.start_at)) === key,
+      ),
     });
   }
 

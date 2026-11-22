@@ -22,6 +22,11 @@ export async function selectEventsInRange<T extends { id: string; start_at: stri
   to: Date;
   /** 결과 정렬 (예전 조회의 order("start_at")와 같게) */
   orderByStart?: boolean;
+  /**
+   * 기간 앞에서 시작해 기간 안까지 이어지는 종일 일정도 함께(11/22 PO — 여러 날 종일이 다음 주·다음 달에 안 보였다).
+   * 캘린더 화면(하루·주·월)만 켠다. v1 응답·리포트 집계는 지금 규칙 그대로라 켜지 않는다.
+   */
+  spanAllDay?: boolean;
 }): Promise<T[]> {
   const db = getAdminClient();
   const cols = opts.columns.trim() === "*" ? "*" : withNeeded(opts.columns);
@@ -37,8 +42,18 @@ export async function selectEventsInRange<T extends { id: string; start_at: stri
     .not("rrule", "is", null)
     .lte("start_at", opts.to.toISOString());
 
-  const [singleRes, seriesRes] = await Promise.all([single, series]);
-  const singles = (singleRes.data ?? []) as T[];
+  // 앞에서 시작한 종일: 시작이 기간 앞(최대 366일 전) · 끝이 기간 시작 하루 전 이후(날짜만 형식은 UTC 0시라 넉넉히)
+  const spanning = opts.spanAllDay
+    ? opts.scope(db.from("events").select(cols))
+        .is("rrule", null)
+        .eq("all_day", true)
+        .lt("start_at", opts.from.toISOString())
+        .gte("start_at", new Date(opts.from.getTime() - 366 * 86_400_000).toISOString())
+        .gte("end_at", new Date(opts.from.getTime() - 86_400_000).toISOString())
+    : null;
+
+  const [singleRes, seriesRes, spanRes] = await Promise.all([single, series, spanning]);
+  const singles = [...((spanRes?.data ?? []) as T[]), ...((singleRes.data ?? []) as T[])];
   const seriesRows = ((seriesRes.data ?? []) as Array<T & { recurrence_until?: string | null }>).filter(
     (r) => !r.recurrence_until || Date.parse(r.recurrence_until) >= opts.from.getTime() - 366 * 86_400_000,
   );

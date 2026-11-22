@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { getEvents } from "@/app/[username]/calendar/actions";
+import { allDayKstDates } from "@/lib/kst";
 import { saturdayIndex, sundayIndex, weekdayIndex, weekdayLabels, type WeekStart } from "@/lib/week-start";
 
 const DAYS_SUN_FIRST = ["일", "월", "화", "수", "목", "금", "토"];
@@ -59,6 +60,14 @@ export function MiniMonth({ username, weekStart = "mon" }: { username: string; w
         if (cancelled) return;
         const set = new Set<string>();
         for (const ev of events) {
+          // 여러 날 종일은 걸치는 날 모두에 점(11/22 PO, lib/kst allDayKstDates)
+          if (ev.all_day) {
+            for (const k of allDayKstDates(ev.start_at, ev.end_at)) {
+              const [y, m, dd] = k.split("-").map(Number);
+              set.add(ymd(y, m - 1, dd));
+            }
+            continue;
+          }
           const d = new Date(ev.start_at);
           set.add(ymd(d.getFullYear(), d.getMonth(), d.getDate()));
         }

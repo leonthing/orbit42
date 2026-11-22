@@ -77,6 +77,7 @@ export async function listNativeEventsInCalendars(
   calendarIds: string[],
   rangeStart: Date,
   rangeEnd: Date,
+  opts: { spanAllDay?: boolean } = {},
 ): Promise<NativeEventWithCalendar[]> {
   if (calendarIds.length === 0) return [];
   // 공유·공개 캘린더(calendar_id 로 읽는 길)도 반복 회차로 펼친다(1.5.1)
@@ -87,6 +88,7 @@ export async function listNativeEventsInCalendars(
     from: rangeStart,
     to: rangeEnd,
     orderByStart: true,
+    spanAllDay: opts.spanAllDay,
   });
 
   return ((data ?? []) as unknown[] as Array<{

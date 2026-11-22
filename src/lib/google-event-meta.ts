@@ -9,6 +9,7 @@
  *   (이 정리 쓰기만 예외). 한꺼번에 지우는 일괄 작업은 하지 않는다.
  * 반복 회차 키(gcal_<master>_<날짜>)에 기록이 없으면 시리즈 키(gcal_<master>)를 본다 — 기념일은 시리즈 키에만 둔다.
  */
+import { onlySwitchNulls } from "@/lib/google-switch";
 import { errorSummary } from "@/lib/log-safe";
 import type { calendar_v3 } from "googleapis";
 import { getAdminClient } from "@/lib/supabase";
@@ -195,7 +196,7 @@ export async function applyGoogleEdit(args: {
   if (!isEmptyPatch(meta) || clear) {
     await setGoogleMeta(userId, key, meta, clear ? legacy : null);
   }
-  const requestBody: calendar_v3.Schema$Event = { ...body };
+  const requestBody: calendar_v3.Schema$Event = onlySwitchNulls({ ...body }, item);
   if (clear) {
     requestBody.extendedProperties = { private: clear as unknown as Record<string, string> };
   }

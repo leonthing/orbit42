@@ -246,6 +246,8 @@ export async function listEventsForUser(
   year: number,
   month: number,
   calendarIds?: string[],
+  /** spanAllDay: 앞달에서 시작해 이 달까지 이어지는 종일도(웹 캘린더 월 보기만, 11/22). v1 은 켜지 않는다 */
+  opts: { spanAllDay?: boolean } = {},
 ): Promise<CalendarEvent[]> {
   const db = getAdminClient();
 
@@ -296,6 +298,7 @@ export async function listEventsForUser(
           from: new Date(startOfMonth),
           to: new Date(endOfMonth),
           orderByStart: true,
+          spanAllDay: opts.spanAllDay,
           scope: (q) => {
             let scoped =
               sharedIds.length > 0

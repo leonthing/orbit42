@@ -1,6 +1,7 @@
 "use client";
 
 import { LineIcon } from "@/components/LineIcon";
+import { allDayKstDates } from "@/lib/kst";
 import {
   saturdayIndex,
   sundayIndex,
@@ -50,6 +51,15 @@ import { useRouter, useSearchParams } from "next/navigation";
 /** 초대받은 일정은 내 이벤트가 아니라 `invite:<참석행 id>` 로 구분한다. */
 const INVITE_PREFIX = "invite:";
 const INVITE_COLOR = "#a855f7";
+
+/** 받은 초대가 그 날에 보이는지 — 종일은 걸치는 날 모두(11/22), 시간 일정은 시작한 날 */
+function inviteOnDay(inv: { start_at: string; end_at?: string | null; all_day?: boolean | null }, day: Date) {
+  if (inv.all_day) {
+    const key = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
+    return allDayKstDates(inv.start_at, inv.end_at).includes(key);
+  }
+  return isSameDay(new Date(inv.start_at), day);
+}
 
 function isSameDay(a: Date, b: Date) {
   return (
@@ -302,9 +312,7 @@ export default function CalendarView({
 
   const invitesForDay = useCallback(
     (y: number, m: number, day: number) =>
-      invites.filter((inv) =>
-        isSameDay(new Date(inv.start_at), new Date(y, m, day)),
-      ),
+      invites.filter((inv) => inviteOnDay(inv, new Date(y, m, day))),
     [invites],
   );
 
@@ -766,11 +774,15 @@ export default function CalendarView({
   // ── Helpers ──
 
   const eventsForDay = useCallback(
-    (y: number, m: number, day: number) =>
-      events.filter((e) => {
+    (y: number, m: number, day: number) => {
+      // 종일은 걸치는 날 모두(여러 날 종일, 11/22 PO — lib/kst allDayKstDates), 시간 일정은 시작한 날(지금 그대로)
+      const key = `${y}-${String(m + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      return events.filter((e) => {
+        if (e.all_day) return allDayKstDates(e.start_at, e.end_at).includes(key);
         const d = new Date(e.start_at);
         return d.getFullYear() === y && d.getMonth() === m && d.getDate() === day;
-      }),
+      });
+    },
     [events],
   );
 
@@ -1100,9 +1112,7 @@ export default function CalendarView({
     if (!viewerIsOwner || invites.length === 0) return base;
     // 받은 초대를 같은 격자에 겹쳐 그린다 — 내 일정과 나란히 봐야 겹치는지 안다.
     return base.map((d) => {
-      const dayInvites = invites.filter((inv) =>
-        isSameDay(new Date(inv.start_at), new Date(d.date)),
-      );
+      const dayInvites = invites.filter((inv) => inviteOnDay(inv, new Date(d.date)));
       if (dayInvites.length === 0) return d;
       return { ...d, items: [...d.items, ...dayInvites.map(inviteToWeekItem)] };
     });

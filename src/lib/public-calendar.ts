@@ -41,6 +41,8 @@ export async function getPublicEvents(
   rangeEnd: Date,
   calendarIds?: string[],
   forPublicFeed = false,
+  /** spanAllDay: 기간 앞에서 시작한 여러 날 종일도(캘린더 주·하루 보기만, 11/22) */
+  opts: { spanAllDay?: boolean } = {},
 ): Promise<PublicEvent[]> {
   const db = getAdminClient();
 
@@ -186,6 +188,7 @@ export async function getPublicEvents(
     nativeCalendarIds,
     rangeStart,
     rangeEnd,
+    opts,
   );
   const nativeEvents: PublicEvent[] = nativeRows.map((e) => ({
     id: `native:${e.id}`,
