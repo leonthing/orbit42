@@ -36,6 +36,16 @@ export function MiniMonth({ username, weekStart = "mon" }: { username: string; w
   const [month, setMonth] = useState(today.getMonth());
   const [collapsed, setCollapsed] = useState(false);
   const [eventDates, setEventDates] = useState<Set<string>>(new Set());
+  // 실제로 보일 때만 일정을 받는다(11/22 버그 2) — 휴대폰에선 데스크톱 사이드바가 숨겨진 채 붙어 있어
+  // 보이지도 않는 달력이 구글 포함 한 달치를 받느라 캘린더 화면의 서버 액션 줄을 막았다.
+  const [rootEl, setRootEl] = useState<HTMLDivElement | null>(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    if (!rootEl) return;
+    const io = new IntersectionObserver(([e]) => setVisible(e.isIntersecting));
+    io.observe(rootEl);
+    return () => io.disconnect();
+  }, [rootEl]);
 
   // Load persisted collapse state (+ flip the mounted gate).
   useEffect(() => {
@@ -52,7 +62,7 @@ export function MiniMonth({ username, weekStart = "mon" }: { username: string; w
   }, []);
 
   useEffect(() => {
-    if (collapsed) return;
+    if (collapsed || !visible) return;
     let cancelled = false;
     (async () => {
       try {
@@ -79,7 +89,7 @@ export function MiniMonth({ username, weekStart = "mon" }: { username: string; w
     return () => {
       cancelled = true;
     };
-  }, [year, month, collapsed]);
+  }, [year, month, collapsed, visible]);
 
   const toggle = () => {
     const next = !collapsed;
@@ -117,11 +127,11 @@ export function MiniMonth({ username, weekStart = "mon" }: { username: string; w
 
   if (!mounted) {
     // Static shell — must match the SSR output exactly.
-    return <div className="px-2 pb-2" />;
+    return <div ref={setRootEl} className="px-2 pb-2" />;
   }
 
   return (
-    <div className="px-2 pb-2">
+    <div ref={setRootEl} className="px-2 pb-2">
       <div className="flex items-center gap-1">
         <button
           type="button"

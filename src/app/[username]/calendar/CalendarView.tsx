@@ -275,6 +275,8 @@ export default function CalendarView({
     PendingParticipant[]
   >([]);
   const [isPending, startTransition] = useTransition();
+  // '불러오는 중...'은 내가 누른 이동(날짜·주·달·보기·캘린더 고르기) 때만(11/22 버그 2) — 저장 등 다른 일과 isPending 을 나누지 않는다
+  const [navPending, startNav] = useTransition();
   const [selectedCalendars, setSelectedCalendars] = useState<string[]>(() => {
     if (initialSelectedCalendars && initialSelectedCalendars.length > 0) {
       return initialSelectedCalendars;
@@ -343,7 +345,8 @@ export default function CalendarView({
   // Load completion marks whenever visible events change. We pull keys
   // from BOTH the month events and the week-day items so checkboxes
   // work in whichever view the user lands on.
-  useEffect(() => {
+  // 일정 키 묶음이 실제로 바뀔 때만 완료 표시를 다시 받는다(11/22 버그 2 — events·weekDays 가 새 배열로만 바뀌어도 3번씩 불렀다)
+  const completionKeysSig = useMemo(() => {
     const keySet = new Set<string>();
     for (const e of events) keySet.add(normalizeEventKey(e.id));
     for (const d of weekDays) {
@@ -351,7 +354,10 @@ export default function CalendarView({
         if (it.kind === "event") keySet.add(normalizeEventKey(it.id));
       }
     }
-    const keys = Array.from(keySet);
+    return Array.from(keySet).sort().join("\n");
+  }, [events, weekDays]);
+  useEffect(() => {
+    const keys = completionKeysSig ? completionKeysSig.split("\n") : [];
     if (keys.length === 0) {
       setCompleted(new Set());
       return;
@@ -364,7 +370,7 @@ export default function CalendarView({
     return () => {
       cancelled = true;
     };
-  }, [events, weekDays]);
+  }, [completionKeysSig]);
 
   const handleToggleComplete = useCallback(async (eventId: string) => {
     // 남의 일정에 초대받은 것 — 완료 표시는 일정 주인의 몫이다.
@@ -455,21 +461,24 @@ export default function CalendarView({
     const ok = await handleToggleComplete(id);
     if (!ok && ask) setRatePrompt((cur) => (cur?.id === id ? null : cur));
   }, [completed, handleToggleComplete, viewerIsOwner, events, weekDays]);
-  useEffect(() => {
-    if (!viewerIsOwner) return;
+  // 평점도 키 묶음이 바뀔 때만(11/22 버그 2)
+  const ratingKeysSig = useMemo(() => {
     const ids = [
       ...events.map((e) => e.id),
       ...weekDays.flatMap((d) => d.items.filter((i) => i.kind === "event").map((i) => i.id)),
     ];
-    if (ids.length === 0) return;
+    return Array.from(new Set(ids.map(toEventKey))).slice(0, 1000).join("\n");
+  }, [events, weekDays]);
+  useEffect(() => {
+    if (!viewerIsOwner || !ratingKeysSig) return;
     let cancelled = false;
-    myRatings(Array.from(new Set(ids.map(toEventKey))).slice(0, 1000)).then((r) => {
+    myRatings(ratingKeysSig.split("\n")).then((r) => {
       if (!cancelled) setRatings(r);
     });
     return () => {
       cancelled = true;
     };
-  }, [events, weekDays, viewerIsOwner]);
+  }, [ratingKeysSig, viewerIsOwner]);
   useEffect(() => {
     if (!ratePrompt) return;
     const t = setTimeout(() => setRatePrompt(null), 4000);
@@ -477,12 +486,12 @@ export default function CalendarView({
   }, [ratePrompt]);
 
   const refetchWeekDays = useCallback(
-    (anchor: Date, cals?: string[]) => {
+    (anchor: Date, cals?: string[], quiet = false) => {
       // Monday of the week containing the anchor date
       const a = new Date(anchor);
       a.setHours(0, 0, 0, 0);
       a.setDate(a.getDate() - weekdayIndex(a, weekStart));
-      startTransition(async () => {
+      const run = async () => {
         const days = await fetchWeekDays(
           username,
           a.toISOString(),
@@ -493,7 +502,10 @@ export default function CalendarView({
           date: new Date(d.date),
         }));
         setWeekDays(revived);
-      });
+      };
+      // quiet: 저장·삭제 뒤 새로 받기 — 문구 없이
+      if (quiet) void run().catch(() => {});
+      else startNav(run);
     },
     [username, selectedCalendars, weekStart],
   );
@@ -501,7 +513,7 @@ export default function CalendarView({
   const today = useMemo(() => new Date(), []);
   // 일정을 만들고·고치고·지운 뒤 주·하루 보기 격자도 다시 받는다. weekDays 는 처음 서버 값으로만
   // 채워지고 router.refresh() 로는 바뀌지 않아, 새 일정이 격자에 안 보였다(TWA 점검 11/20).
-  const refreshWeek = () => refetchWeekDays(new Date(year, month, selectedDay ?? today.getDate()));
+  const refreshWeek = () => refetchWeekDays(new Date(year, month, selectedDay ?? today.getDate()), undefined, true);
   const isCurrentMonth = year === today.getFullYear() && month === today.getMonth();
   const days = getCalendarDays(year, month, weekStart);
 
@@ -509,11 +521,13 @@ export default function CalendarView({
   // ── Fetch events for a given month ──
 
   const fetchEvents = useCallback(
-    (y: number, m: number, cals?: string[]) => {
-      startTransition(async () => {
+    (y: number, m: number, cals?: string[], quiet = false) => {
+      const run = async () => {
         const data = await getEvents(y, m, cals ?? selectedCalendars);
         setEvents(data);
-      });
+      };
+      if (quiet) return run().catch(() => {});
+      startNav(run);
     },
     [selectedCalendars],
   );
@@ -522,7 +536,7 @@ export default function CalendarView({
 
   const fetchMultiMonthEvents = useCallback(
     (y: number, months: number[], cals?: string[]) => {
-      startTransition(async () => {
+      startNav(async () => {
         const calendars = cals ?? selectedCalendars;
         const allEvents: Event[] = [];
         for (const m of months) {
@@ -704,7 +718,17 @@ export default function CalendarView({
   }, [viewMode, fetchEvents, fetchMultiMonthEvents, refetchWeekDays]);
 
   const switchView = useCallback(
-    (mode: ViewMode, save = true) => {
+    (mode: ViewMode, save = true, initial = false) => {
+      // 처음 열 때(initial)는 서버가 그려 보낸 그 달 일정·그 주를 그대로 쓴다(11/22 버그 2) — 오늘이 서버가 준 달·주 안이면
+      // 다시 받지 않는다. 전에는 들어오자마자 같은 달을 구글 포함으로 또 받아 '불러오는 중'이 몇 초 떠 있었다.
+      const now = new Date();
+      const serverMonth = initial && now.getFullYear() === initialYear && now.getMonth() === initialMonth;
+      const serverWeek =
+        initial &&
+        initialWeekDays.some((d) => {
+          const x = new Date(d.date);
+          return x.getFullYear() === now.getFullYear() && x.getMonth() === now.getMonth() && x.getDate() === now.getDate();
+        });
       setViewMode(mode);
       // 고른 보기를 기억한다 — 다음에 열 때 기기 기본값보다 먼저(묶음 B)
       if (save && (!isPhone() || mode === "month" || mode === "day")) {
@@ -720,12 +744,13 @@ export default function CalendarView({
         fetchMultiMonthEvents(year, getQuarterMonths(q));
       } else if (mode === "week" || mode === "day") {
         if (!selectedDay) setSelectedDay(today.getDate());
-        fetchEvents(year, month);
-        refetchWeekDays(new Date(year, month, selectedDay ?? today.getDate()));
-      } else {
+        if (!serverMonth) fetchEvents(year, month);
+        if (!serverWeek) refetchWeekDays(new Date(year, month, selectedDay ?? today.getDate()));
+      } else if (!serverMonth) {
         fetchEvents(year, month);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [year, month, today, selectedDay, fetchEvents, fetchMultiMonthEvents, refetchWeekDays],
   );
 
@@ -743,7 +768,7 @@ export default function CalendarView({
     // 라이프·분기는 숨긴 보기 — 예전에 저장해 둔 값이면 월로(PC 도, Leo 11/21)
     if (mode === "life" || mode === "quarter") mode = "month";
     if (!mode) mode = phone ? "month" : "week";
-    if (mode !== "week") switchView(mode, false);
+    if (mode !== "week") switchView(mode, false, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -1027,7 +1052,7 @@ export default function CalendarView({
       ? selectedCalendars.filter((c) => c !== calId)
       : [...selectedCalendars, calId];
     setSelectedCalendars(next);
-    startTransition(async () => {
+    startNav(async () => {
       const data = await getEvents(year, month, next);
       setEvents(data);
     });
@@ -1335,7 +1360,7 @@ export default function CalendarView({
                           onClick={() => {
                             const all = myCalendars.map((c) => c.id);
                             setSelectedCalendars(all);
-                            startTransition(async () => {
+                            startNav(async () => {
                               const data = await getEvents(year, month, all);
                               setEvents(data);
                             });
@@ -1352,7 +1377,7 @@ export default function CalendarView({
                           type="button"
                           onClick={() => {
                             setSelectedCalendars([]);
-                            startTransition(async () => {
+                            startNav(async () => {
                               const data = await getEvents(year, month, []);
                               setEvents(data);
                             });
@@ -1745,7 +1770,7 @@ export default function CalendarView({
               })}
             </div>
 
-            {isPending && (
+            {navPending && (
               <div className="mt-2 text-center text-xs text-charcoal-500">불러오는 중...</div>
             )}
           </div>
@@ -1968,7 +1993,7 @@ export default function CalendarView({
             }
             toast.success("삭제했어요.");
             setDetailEvent(null);
-            await fetchEvents(year, month);
+            await fetchEvents(year, month, undefined, true);
             router.refresh();
             refreshWeek();
           }}
@@ -2014,7 +2039,7 @@ export default function CalendarView({
         <LifeCalendarViewExternal birthDate={birthDate} initialMemories={initialMemories} />
       )}
 
-      {isPending && viewMode !== "month" && viewMode !== "life" && (
+      {navPending && viewMode !== "month" && viewMode !== "life" && (
         <div className="text-center text-xs text-charcoal-500">불러오는 중...</div>
       )}
 
@@ -2286,7 +2311,7 @@ export default function CalendarView({
           onClose={() => setQuickEdit(null)}
           onSaved={async () => {
             setQuickEdit(null);
-            await fetchEvents(year, month);
+            await fetchEvents(year, month, undefined, true);
             router.refresh();
             refreshWeek();
           }}
@@ -2297,7 +2322,7 @@ export default function CalendarView({
           }}
           onDeleted={async () => {
             setQuickEdit(null);
-            await fetchEvents(year, month);
+            await fetchEvents(year, month, undefined, true);
             router.refresh();
             refreshWeek();
           }}
